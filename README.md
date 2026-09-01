@@ -36,7 +36,7 @@ namespaced (`/pincer:plan` … `/pincer:release`) and update automatically
 through the marketplace:
 
 ```
-/plugin marketplace add lexanderg/pincer-workflow
+/plugin marketplace add orchestratedbyalex/pincer-workflow
 /plugin install pincer@pincer-workflow
 ```
 

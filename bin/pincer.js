@@ -237,6 +237,6 @@ Usage:
   npx pincer-workflow update
   npx pincer-workflow doctor
 
-Docs: https://github.com/lexanderg/pincer-workflow`);
+Docs: https://github.com/orchestratedbyalex/pincer-workflow`);
   process.exit(cmd ? 1 : 0);
 }
