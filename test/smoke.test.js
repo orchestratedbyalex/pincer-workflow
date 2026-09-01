@@ -1,0 +1,53 @@
+// Smoke test for the pincer CLI: init → edit → update → doctor, in a temp dir.
+// Run with: npm test
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import assert from 'node:assert';
+import { fileURLToPath } from 'node:url';
+
+const bin = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'bin', 'pincer.js');
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pincer-smoke-'));
+const run = (...args) => execFileSync('node', [bin, ...args], { cwd: dir, encoding: 'utf8' });
+// runs a command expected to exit non-zero; returns its combined output
+const runFail = (...args) => {
+  try {
+    run(...args);
+  } catch (err) {
+    return `${err.stdout ?? ''}${err.stderr ?? ''}`;
+  }
+  throw new assert.AssertionError({ message: `expected \`pincer ${args.join(' ')}\` to fail` });
+};
+
+try {
+  // init installs the full kit and writes the manifest
+  const out = run('init', '--platform', 'all');
+  assert.match(out, /wrote\s+\d+ file/);
+  for (const f of ['AGENTS.md', 'CLAUDE.md', '.pincer.json', '.claude/settings.json', '.codex/README.md', '.github/copilot-instructions.md', 'scripts/sync-prompts.sh']) {
+    assert.ok(fs.existsSync(path.join(dir, f)), `missing ${f}`);
+  }
+  assert.ok(fs.statSync(path.join(dir, '.claude/hooks/block-dangerous.sh')).mode & 0o100, 'hook not executable');
+
+  // second init refuses
+  assert.match(runFail('init', '--platform', 'all'), /already has PINCER/);
+
+  // update preserves a local edit as .new and leaves the edit in place
+  fs.appendFileSync(path.join(dir, 'AGENTS.md'), '\n- local edit\n');
+  const manifest = JSON.parse(fs.readFileSync(path.join(dir, '.pincer.json'), 'utf8'));
+  manifest.files['AGENTS.md'] = 'stale-hash-simulating-template-change';
+  fs.writeFileSync(path.join(dir, '.pincer.json'), JSON.stringify(manifest));
+  const up = run('update');
+  assert.match(up, /CONFLICT AGENTS\.md/);
+  assert.ok(fs.existsSync(path.join(dir, 'AGENTS.md.new')));
+  assert.match(fs.readFileSync(path.join(dir, 'AGENTS.md'), 'utf8'), /local edit/);
+
+  // doctor flags the unmerged .new file, passes once merged
+  assert.match(runFail('doctor'), /AGENTS\.md\.new/);
+  fs.rmSync(path.join(dir, 'AGENTS.md.new'));
+  assert.match(run('doctor'), /All good/);
+
+  console.log('smoke test passed');
+} finally {
+  fs.rmSync(dir, { recursive: true, force: true });
+}

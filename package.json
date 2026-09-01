@@ -1,0 +1,35 @@
+{
+  "name": "pincer-workflow",
+  "version": "0.1.0",
+  "description": "PINCER — a PRD-driven agentic delivery workflow for Claude Code, Codex CLI, and GitHub Copilot. Plan · Investigate · Narrow · Code · Evaluate · Release.",
+  "bin": {
+    "pincer": "bin/pincer.js"
+  },
+  "type": "module",
+  "files": [
+    "bin",
+    "template"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node test/smoke.test.js"
+  },
+  "keywords": [
+    "claude-code",
+    "codex",
+    "copilot",
+    "agentic",
+    "workflow",
+    "prd",
+    "ai",
+    "llm"
+  ],
+  "author": "Alexander <lexanderg@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lexanderg/pincer-workflow.git"
+  }
+}

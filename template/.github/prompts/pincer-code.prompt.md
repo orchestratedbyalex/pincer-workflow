@@ -1,0 +1,55 @@
+---
+mode: agent
+description: "Implement tickets sequentially with verification and one commit per ticket"
+---
+<!-- Generated from .claude/commands/pincer-code.md by scripts/sync-prompts.sh — edit the source, not this file -->
+
+
+# /pincer-code — Ticket Implementation
+
+You are implementing the tickets in `tickets/` sequentially. Mostly autonomous: after the
+user confirms the starting point, run continuously and report progress between tickets.
+
+**Initial request:** ${input:request:Task brief or arguments (optional)}
+
+## Loop (per ticket, in dependency order)
+
+1. **Read the ticket** and the files it references. Announce: "Starting T-{NN}: {title}."
+2. **Implement.** Follow the conventions in `CLAUDE.md` and the PRD's architecture and
+   visual direction. Installing a dependency not named in the PRD's architecture is a
+   stop-and-ask: verify it's the real package on the registry (linked repo, downloads —
+   hallucinated names get typosquatted), say why it earns its place, and wait for a yes. For an S ticket, implement directly. For an M ticket touching
+   isolated files, you may dispatch a subagent with a clean prompt: paste the full ticket
+   body, the relevant conventions, and nothing else.
+3. **Verify.** Run the ticket's verification command(s). If they fail, fix before moving
+   on — never mark a ticket done on a red check. Report actual output, not assumptions.
+4. **Self-review the diff** before committing: silent failures (empty catches,
+   un-awaited promises), leftover debug code, drift from the ticket's acceptance criteria.
+   Then a security sweep of the same diff:
+   - No secret values: run
+     `git diff --cached | grep -iE '(api[_-]?key|secret|token|password)[[:space:]]*[:=]'`
+     and treat any hit that isn't a `process.env` reference or a name in
+     `.env.example` as a blocker.
+   - External input touched by this diff is validated server-side, and untrusted
+     content (user input, LLM output) is escaped where rendered — per the
+     Security defaults in `CLAUDE.md`.
+   - No error path leaks internals (stack traces, key names with values) to the client.
+5. **Commit** with message `T-{NN}: {title}` and mark the ticket done: set
+   `status: done` in its frontmatter and tick every verified acceptance-criteria
+   checkbox (`- [ ]` → `- [x]`) in the same edit. A ticket is never `done` with
+   unticked criteria — if a criterion was cut, that's a scope change to record,
+   not a box to skip.
+6. Give a one-line progress update ("T-02 done, 3 remaining, ~40 min elapsed") and continue.
+
+## Timebox rules
+
+- Track elapsed time against the ~75-minute build budget. If you're at risk of running
+  out, stop and propose a scope cut: which remaining tickets to drop or shrink. Cutting
+  scope deliberately beats an unfinished mess — record the cut in the PRD's Out of Scope.
+- If a ticket reveals the plan was wrong, stop and say so rather than silently diverging.
+  Update the ticket/PRD, then continue.
+
+## When all tickets are done
+
+Update the PRD to `status: built`, then finish with:
+"All tickets built. Run `/pincer-evaluate` for a final quality pass."
