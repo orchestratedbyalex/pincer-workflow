@@ -29,6 +29,25 @@ Per-platform notes printed by `init`:
 - **Copilot (VS Code)** — enable `"chat.promptFiles": true`, then run
   `/pincer-plan` in chat; `.github/copilot-instructions.md` is wired to `AGENTS.md`.
 
+## Claude Code plugin (alternative)
+
+Claude users can install PINCER as a plugin instead — commands arrive
+namespaced (`/pincer:plan` … `/pincer:release`) and update automatically
+through the marketplace:
+
+```
+/plugin marketplace add lexanderg/pincer-workflow
+/plugin install pincer@pincer-workflow
+```
+
+Pick one channel per project: the plugin makes the commands, subagents, and
+the guardrail hook available everywhere, while `npx pincer-workflow init`
+installs everything project-locally *plus* the repo-side files (`AGENTS.md`
+rules, `.env` deny rules in `.claude/settings.json`, the adapters for Codex
+and Copilot). Installing both gives you duplicate commands. Plugin users who
+want the repo-side rules too can copy `AGENTS.md` from the
+[template](template/AGENTS.md).
+
 ## Update
 
 ```bash
@@ -50,6 +69,7 @@ alone — the new version lands next to them as `<file>.new` for a manual merge.
 | `.claude/hooks/` + `settings.json` | Mechanical guardrails: `.env` files unreadable, destructive commands blocked |
 | `.codex/` · `.github/` | Generated Codex and Copilot adapters + platform wiring |
 | `scripts/sync-prompts.sh` | Regenerates the adapters after you edit a playbook |
+| `scripts/build-plugin.sh` | Regenerates the Claude Code plugin (`plugin/`) from the template |
 | `docs/dry-run-checklist.md` | The workflow's own test — audited by `/pincer-release` |
 
 ## Design principles

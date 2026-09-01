@@ -1,0 +1,13 @@
+{
+  "name": "pincer-workflow",
+  "owner": {
+    "name": "Alexander"
+  },
+  "plugins": [
+    {
+      "name": "pincer",
+      "source": "./plugin",
+      "description": "PRD-driven agentic delivery workflow — Plan · Investigate · Narrow · Code · Evaluate · Release. Five namespaced commands, two review subagents, and a destructive-command guardrail hook."
+    }
+  ]
+}
