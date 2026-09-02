@@ -72,7 +72,7 @@ Use a throwaway copy of this repo and a cheap model (`claude --model sonnet`).
 - [ ] Brownfield only: untested load-bearing code got a characterization test
       before being modified
 - [ ] Platform adapters in sync: `scripts/sync-prompts.sh` then `git status`
-      shows no changes in `.codex/prompts/` or `.github/prompts/`
+      shows no changes in `.agents/skills/` or `.github/prompts/`
 - [ ] `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-status.sh` says `Next /pincer:release` and its build elapsed
       figure fit the ~75-minute build budget (note where time went if not)
 - [ ] Total wall-clock time fit the ~2-hour budget

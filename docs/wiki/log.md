@@ -43,3 +43,9 @@ docs/wiki/* created; CLAUDE.md note appended.
 - Why: 0.2.0 on npm still prints the broken Codex `cp` step.
 - Files: package.json, plugin/.claude-plugin/plugin.json, docs/index.html, README.md, template/.codex/README.md, wiki.
 - Outcome: tests green, tag v0.2.1 created locally; publish + push left to the user (2FA).
+
+## [2026-09-02] end | Codex adapter re-done as skills (v0.2.2)
+- What: second clean Codex dry run — install ran, but `/pincer-status` was "Unrecognized". Investigation: openai/codex#16115 (2026-03-28) removed custom prompts entirely; the binary has no `/prompts:` and no prompts dir. Codex now loads `.agents/skills/<name>/SKILL.md` from the repo, invoked as `$name`.
+- Why: 0.2.0 and 0.2.1 both pointed at a feature that no longer exists.
+- Files: template/scripts/sync-prompts.sh (emits .agents/skills, rewrites $ARGUMENTS and /pincer-*→$pincer-*), template/.agents/skills/* (new), template/.codex/prompts/ (deleted), bin/pincer.js (codex root adds .agents, copy hint gone), template/.codex/README.md, template/AGENTS.md, dry-run-checklist, README, site sheet 112, CLAUDE.md, tests, wiki.
+- Outcome: tests green, v0.2.2 tagged; publish/push left to the user.

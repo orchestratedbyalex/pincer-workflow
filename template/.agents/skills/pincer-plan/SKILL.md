@@ -1,21 +1,25 @@
+---
+name: pincer-plan
+description: "Create a PRD through brief discovery, codebase scan, and an architecture gate"
+---
 <!-- Generated from .claude/commands/pincer-plan.md by scripts/sync-prompts.sh — edit the source, not this file -->
 
 
-# /pincer-plan — PRD Creation
+# $pincer-plan — PRD Creation
 
 You are turning a task brief into a compact PRD. This runs inside a short delivery
 timebox (~2 hours total), so discovery is brief and the PRD is lean. The PRD feeds
-`/pincer-narrow` next.
+`$pincer-narrow` next.
 
-**Initial request:** $ARGUMENTS
+**Initial request:** the text that follows the `$pincer-plan` mention in the user's message (ask for it if there is none)
 
 First run `scripts/pincer-status.sh`. If a PRD already exists, say so and ask whether
 this is a new version of it (`.prd/prd-v{N+1}.md` — old versions are never overwritten)
-or a fresh start; if tickets are in progress, stop and point at `/pincer-code` instead.
+or a fresh start; if tickets are in progress, stop and point at `$pincer-code` instead.
 
 ## Phase 1: Discovery (~5 min)
 
-1. If `$ARGUMENTS` contains the brief, extract what you can before asking anything.
+1. If `the text that follows the `$pincer-plan` mention in the user's message (ask for it if there is none)` contains the brief, extract what you can before asking anything.
    Never ask a question the brief already answers.
 2. Ask only the questions whose answers would change the architecture or scope.
    Batch them (max 3–4 at once). Typical ones:
@@ -74,4 +78,4 @@ Propose the architecture: components, data flow, integration points, and key dec
 4. If `.git/` doesn't exist, run `git init` and make an initial commit containing the
    PRD and this `.claude/` setup — planning should be visible in the history.
 
-Finish with: "PRD saved to `.prd/prd-v1.md`. Run `/pincer-narrow` to break it into work items."
+Finish with: "PRD saved to `.prd/prd-v1.md`. Run `$pincer-narrow` to break it into work items."

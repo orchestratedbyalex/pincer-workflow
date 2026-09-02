@@ -32,10 +32,15 @@
 
 - `execFileSync` failures in tests: the CLI's message is in `err.stdout`/`err.stderr`,
   NOT the Error message — the test's `runFail` helper exists for this.
-- `update` for Codex users prints a reminder to re-copy prompts to
-  `~/.codex/prompts/` — Codex has no repo-local prompt loading
-  ([[distribution-channels]]). The hint (shared `CODEX_INSTALL` const in
-  `bin/pincer.js`) must start with `mkdir -p ~/.codex/prompts`: Codex never
-  creates that directory, and on a fresh machine a bare `cp` dies with
-  "Not a directory" (found 2026-09-02 on the first clean Codex dry run).
-  Codex invokes custom prompts as `/prompts:pincer-plan`, not `/pincer-plan`.
+- Codex channel = repo-local **skills**: `PLATFORM_ROOTS.codex` is
+  `['.codex', '.agents']`; `sync-prompts.sh` emits
+  `.agents/skills/pincer-*/SKILL.md` (frontmatter `name`+`description`,
+  `$ARGUMENTS` → prose, `/pincer-*` → `$pincer-*` with a guard so
+  `scripts/pincer-status.sh` survives). Codex **removed custom prompts and
+  `~/.codex/prompts/`** in openai/codex#16115 (2026-03-28); 0.2.0/0.2.1 shipped
+  a dead copy step (0.2.1 even invented a `/prompts:` prefix from stale docs) —
+  the two clean Codex dry runs on 2026-09-02 caught both. Skills are invoked by
+  `$pincer-plan <brief>` mention, listed via `/skills`
+  ([[distribution-channels]]).
+- BSD sed has no `\|` alternation in basic regex — use two `-e` expressions
+  (bit the `/pincer-*` rewrite in `sync-prompts.sh`).

@@ -27,10 +27,9 @@ Then follow the chain — the same five steps on every platform:
 `/pincer-status` shows where the workflow stands at any point (PRD, tickets,
 receipts, elapsed time, next command) — run it first in a new session.
 
-On Codex CLI the same commands carry the `/prompts:` prefix Codex gives every
-custom prompt: `/prompts:pincer-plan <brief>` → `/prompts:pincer-narrow` →
-`/prompts:pincer-code` → `/prompts:pincer-evaluate` → `/prompts:pincer-release`,
-and `/prompts:pincer-status`.
+On Codex CLI the commands are skills, invoked by mention rather than slash:
+`$pincer-plan <brief>` → `$pincer-narrow` → `$pincer-code` → `$pincer-evaluate`
+→ `$pincer-release`, and `$pincer-status`.
 
 ### Claude Code
 
@@ -40,20 +39,13 @@ the destructive-command and ticket-guard hooks install to `.claude/`. Start
 
 ### Codex CLI
 
-`AGENTS.md` loads natively, so the rules apply with no setup. Codex reads
-custom prompts only from `~/.codex/prompts/` (there is no repo-local location)
-and does not create that directory itself, so install the prompts once:
-
-```bash
-mkdir -p ~/.codex/prompts && cp .codex/prompts/*.md ~/.codex/prompts/
-codex
-```
-
-Then `/prompts:pincer-plan <brief>` and the rest of the chain are available in
-every Codex session. The playbooks refer to each other by their short names
-(`/pincer-narrow` etc.) — read those as `/prompts:pincer-narrow` in Codex.
-Re-run the copy after `npx pincer-workflow@latest update` or after editing a
-playbook; `update` prints the reminder.
+Works immediately as well: `AGENTS.md` loads natively, and the six commands
+install as skills under `.agents/skills/`, which Codex discovers from the repo
+(no copying into your home directory — Codex removed custom prompts and
+`~/.codex/prompts/` in early 2026). Start `codex` in the repo, then type
+`$pincer-plan <brief>`; `$` opens the skill picker and `/skills` lists what
+loaded. Inside the Codex skills every cross-reference already reads
+`$pincer-narrow`, `$pincer-status` and so on.
 
 Codex has no PreToolUse hooks, so the guardrail posture lives in
 `~/.codex/config.toml` instead — `approval_policy = "on-request"` and
@@ -61,7 +53,7 @@ Codex has no PreToolUse hooks, so the guardrail posture lives in
 ticket scripts (`scripts/pincer-ticket.sh`, `scripts/pincer-status.sh`) are
 plain bash and work unchanged; the rule in `AGENTS.md` against hand-editing
 ticket state carries the weight the hook carries on Claude Code, and
-`/prompts:pincer-status` flags any ticket marked done without a receipt.
+`$pincer-status` flags any ticket marked done without a receipt.
 Full notes in `.codex/README.md`.
 
 ### GitHub Copilot (VS Code)
@@ -94,7 +86,7 @@ want the repo-side rules too can copy `AGENTS.md` from the
 npx pincer-workflow@latest update
 ```
 
-Files you never touched are refreshed in place. (Installs older than v0.2.0 gain the ticket state machine, the status report and the ticket-guard hook on update; `.claude/settings.json` conflicts if you edited it — merge the new hook entry from the `.new` file. v0.2.1 corrects the Codex install step: `~/.codex/prompts/` must be created first, and the commands are invoked as `/prompts:pincer-*`.) Files you edited are left
+Files you never touched are refreshed in place. (Installs older than v0.2.0 gain the ticket state machine, the status report and the ticket-guard hook on update; `.claude/settings.json` conflicts if you edited it — merge the new hook entry from the `.new` file. v0.2.2 replaces the Codex adapter: the commands are now skills in `.agents/skills/` invoked as `$pincer-*`, since Codex no longer loads `~/.codex/prompts/` — you can delete the copies there.) Files you edited are left
 alone — the new version lands next to them as `<file>.new` for a manual merge.
 `npx pincer-workflow doctor` checks the health of an install (hook executable,
 `.gitignore` covering `.env*`, no unmerged `*.new` files, version current).
@@ -109,7 +101,7 @@ alone — the new version lands next to them as `<file>.new` for a manual merge.
 | `scripts/pincer-ticket.sh` | The ticket state machine: `start` (enforces dependency order) → `verify` (runs the ticket's check, stamps a receipt only on green) → `done` (refuses without a matching receipt or with unticked criteria) |
 | `scripts/pincer-status.sh` | Read-only state report: PRD, every ticket with clock-based elapsed time, blocked tickets, build time vs budget, next command |
 | `.claude/hooks/` + `settings.json` | Mechanical guardrails: `.env` files unreadable, destructive commands blocked, ticket state fields writable only through the script |
-| `.codex/` · `.github/` | Generated Codex and Copilot adapters + platform wiring (`.codex/README.md` covers the Codex install and posture) |
+| `.agents/skills/` · `.codex/` · `.github/` | Generated Codex skills and Copilot prompt files + platform wiring (`.codex/README.md` covers the Codex posture) |
 | `scripts/sync-prompts.sh` | Regenerates the adapters after you edit a playbook |
 | `scripts/build-plugin.sh` | Regenerates the Claude Code plugin (`plugin/`) from the template |
 | `docs/dry-run-checklist.md` | The workflow's own test — audited by `/pincer-release` |

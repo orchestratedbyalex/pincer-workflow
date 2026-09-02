@@ -1,7 +1,11 @@
+---
+name: pincer-status
+description: "Where the workflow stands — PRD, tickets, receipts, elapsed time, next action"
+---
 <!-- Generated from .claude/commands/pincer-status.md by scripts/sync-prompts.sh — edit the source, not this file -->
 
 
-# /pincer-status — Where are we?
+# $pincer-status — Where are we?
 
 You are orienting in a repo that uses PINCER, typically after a context reset or at the
 start of a session. Read-only: change nothing.
@@ -15,5 +19,5 @@ start of a session. Read-only: change nothing.
 2. Report in three lines: where the workflow is, what is in progress or blocked, and the
    next command. Quote the `Next` line as-is.
 3. If a ticket is `in_progress`, read it and `git status`, then offer to resume it with
-   `/pincer-code T-{NN}`. If the script printed a warning, surface it — a done ticket
+   `$pincer-code T-{NN}`. If the script printed a warning, surface it — a done ticket
    without a receipt was marked by hand and needs `scripts/pincer-ticket.sh verify T-{NN}`.

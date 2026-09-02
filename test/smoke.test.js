@@ -31,9 +31,17 @@ try {
     assert.ok(fs.statSync(path.join(dir, f)).mode & 0o100, `${f} not executable`);
   }
   assert.match(fs.readFileSync(path.join(dir, '.claude/settings.json'), 'utf8'), /ticket-guard\.sh/);
-  // the Codex hint must create ~/.codex/prompts first (Codex never does) and name the /prompts: prefix
-  assert.match(out, /mkdir -p ~\/\.codex\/prompts && cp \.codex\/prompts\/\*\.md ~\/\.codex\/prompts\//);
-  assert.match(out, /\/prompts:pincer-plan/);
+  // Codex dropped custom prompts (openai/codex#16115); it loads skills from .agents/skills/ in the repo
+  for (const n of ['plan', 'narrow', 'code', 'evaluate', 'release', 'status']) {
+    const skill = fs.readFileSync(path.join(dir, `.agents/skills/pincer-${n}/SKILL.md`), 'utf8');
+    assert.match(skill, new RegExp(`^---\\nname: pincer-${n}\\ndescription: `));
+    assert.doesNotMatch(skill, /\$ARGUMENTS/);
+  }
+  assert.ok(!fs.existsSync(path.join(dir, '.codex/prompts')), '.codex/prompts should no longer ship');
+  assert.match(out, /\$pincer-plan/);
+  assert.match(out, /\$pincer-status on Codex/);
+  assert.match(execFileSync('node', [bin, 'init', '--platform', 'codex'], { cwd: fs.mkdtempSync(path.join(os.tmpdir(), 'pincer-codex-')), encoding: 'utf8' }), /\(also \$pincer-status\)/);
+  assert.doesNotMatch(out, /~\/\.codex\/prompts/);
 
   // second init refuses
   assert.match(runFail('init', '--platform', 'all'), /already has PINCER/);
@@ -45,7 +53,7 @@ try {
   fs.writeFileSync(path.join(dir, '.pincer.json'), JSON.stringify(manifest));
   const up = run('update');
   assert.match(up, /CONFLICT AGENTS\.md/);
-  assert.match(up, /mkdir -p ~\/\.codex\/prompts && cp/);
+  assert.doesNotMatch(up, /~\/\.codex\/prompts/);
   assert.ok(fs.existsSync(path.join(dir, 'AGENTS.md.new')));
   assert.match(fs.readFileSync(path.join(dir, 'AGENTS.md'), 'utf8'), /local edit/);
 

@@ -1,12 +1,16 @@
+---
+name: pincer-code
+description: "Implement tickets sequentially with verification and one commit per ticket"
+---
 <!-- Generated from .claude/commands/pincer-code.md by scripts/sync-prompts.sh — edit the source, not this file -->
 
 
-# /pincer-code — Ticket Implementation
+# $pincer-code — Ticket Implementation
 
 You are implementing the tickets in `tickets/` sequentially. Mostly autonomous: after the
 user confirms the starting point, run continuously and report progress between tickets.
 
-**Initial request:** $ARGUMENTS
+**Initial request:** the text that follows the `$pincer-code` mention in the user's message (ask for it if there is none)
 
 Ticket state lives in the ticket file's frontmatter and is written **only** by
 `scripts/pincer-ticket.sh` (`start` → `verify` → `done`). `verify` runs the ticket's
@@ -67,4 +71,4 @@ from wherever the receipt says you are. Confirm the starting point with the user
 ## When all tickets are done
 
 Update the PRD to `status: built`, then finish with:
-"All tickets built. Run `/pincer-evaluate` for a final quality pass."
+"All tickets built. Run `$pincer-evaluate` for a final quality pass."

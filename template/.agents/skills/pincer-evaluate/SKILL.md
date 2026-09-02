@@ -1,7 +1,11 @@
+---
+name: pincer-evaluate
+description: "Final quality pass over everything built — high-confidence findings only"
+---
 <!-- Generated from .claude/commands/pincer-evaluate.md by scripts/sync-prompts.sh — edit the source, not this file -->
 
 
-# /pincer-evaluate — Final Quality Pass
+# $pincer-evaluate — Final Quality Pass
 
 You are reviewing all work built this session against the PRD and tickets. Autonomous —
 run the pipeline, then present results.
@@ -10,7 +14,7 @@ run the pipeline, then present results.
 
 1. Run `scripts/pincer-status.sh`. Every ticket should be `done` with a receipt; if one
    is still open or in progress, stop and ask whether it was cut (then it goes in the
-   PRD's Out of Scope) or should be finished first via `/pincer-code`. Then get the full
+   PRD's Out of Scope) or should be finished first via `$pincer-code`. Then get the full
    diff of the session: `git log --oneline` and `git diff <first-commit>..HEAD`.
 2. Dispatch a `code-quality-reviewer` agent with: the diff, the PRD's Success Criteria and
    Scope sections, and the list of tickets. If the diff is large, split by area and
@@ -44,5 +48,5 @@ run the pipeline, then present results.
    its place, and what breaks first as the code ages (the riskiest assumption, the
    least-tested path). Commit it. This is the first document a reviewer of this repo
    should read.
-10. Suggest `/pincer-release` as the final step: "Run `/pincer-release` for a pass/fail audit of the
+10. Suggest `$pincer-release` as the final step: "Run `$pincer-release` for a pass/fail audit of the
    whole workflow's artifacts."

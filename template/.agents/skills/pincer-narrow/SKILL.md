@@ -1,19 +1,23 @@
+---
+name: pincer-narrow
+description: "Turn the approved PRD into local, AI-ready ticket files"
+---
 <!-- Generated from .claude/commands/pincer-narrow.md by scripts/sync-prompts.sh — edit the source, not this file -->
 
 
-# /pincer-narrow — PRD to Local Tickets
+# $pincer-narrow — PRD to Local Tickets
 
 You are decomposing the PRD into small, independently verifiable tickets stored as local
 markdown files (no external tracker needed). Target: 4–7 tickets that fit a ~75-minute
 build window.
 
-**Initial request:** $ARGUMENTS
+**Initial request:** the text that follows the `$pincer-narrow` mention in the user's message (ask for it if there is none)
 
 ## Steps
 
 1. Run `scripts/pincer-status.sh`. If tickets already exist, ask before adding to them —
    new tickets continue the numbering, existing ones are never renumbered. Then read the
-   PRD (`$ARGUMENTS` or the latest `.prd/prd-v*.md`). If its status isn't `draft`, ask
+   PRD (`the text that follows the `$pincer-narrow` mention in the user's message (ask for it if there is none)` or the latest `.prd/prd-v*.md`). If its status isn't `draft`, ask
    which PRD to use.
 2. Decompose into tickets. Rules:
    - Each ticket is one coherent unit: sized S or M, never L. Split anything larger.
@@ -46,4 +50,4 @@ build window.
 
 5. After approval, update the PRD frontmatter to `status: ticketed`, commit the tickets
    (`git add .prd tickets && git commit`), and finish with:
-   "Tickets ready in `tickets/`. Run `/pincer-code` to start implementing."
+   "Tickets ready in `tickets/`. Run `$pincer-code` to start implementing."

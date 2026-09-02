@@ -22,7 +22,7 @@ the next command — run it first in any new session. Do not write feature code 
 a PRD exists and tickets are approved.
 
 The commands live as playbooks in `.claude/commands/` (canonical), with
-generated adapters in `.codex/prompts/` and `.github/prompts/`. If your
+generated adapters in `.agents/skills/` (Codex) and `.github/prompts/` (Copilot). If your
 platform has no slash commands, read the playbook file and follow it directly.
 
 ## Conventions

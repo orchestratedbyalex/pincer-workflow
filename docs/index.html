@@ -204,7 +204,7 @@ section.present #ga .node, section.present #ga .node-label { transition: opacity
 
 <!-- ═══════════ SHEET 101 · COVER ═══════════ -->
 <section class="sheet" id="cover" data-title="Cover sheet" data-dwg="PRDD-101">
-  <span class="stamp">Released<span class="sub">v0.2.1 · 2026-09-02</span></span>
+  <span class="stamp">Released<span class="sub">v0.2.2 · 2026-09-02</span></span>
   <span class="label">Drawing set · PRD-driven delivery workflow</span>
   <h1>PINCER</h1>
   <div class="rule"></div>
@@ -506,7 +506,7 @@ Mark a task complete from the CLI and persist it.
       <tr><td class="mono">.claude/settings.json</td><td>Secret-file deny rules + the PreToolUse guardrail wiring</td></tr>
       <tr><td class="mono">.claude/hooks/block-dangerous.sh · ticket-guard.sh</td><td>Mechanical block on destructive and pipe-to-shell commands · ticket state fields writable only through the script</td></tr>
       <tr><td class="mono">AGENTS.md · CLAUDE.md</td><td>Project rules, single cross-platform source · one-line Claude Code import of it</td></tr>
-      <tr><td class="mono">scripts/sync-prompts.sh</td><td>Generates the Codex (<code class="inline">.codex/prompts/</code>) and Copilot (<code class="inline">.github/prompts/</code>) command adapters from the playbooks</td></tr>
+      <tr><td class="mono">scripts/sync-prompts.sh</td><td>Generates the Codex skills (<code class="inline">.agents/skills/</code>) and Copilot (<code class="inline">.github/prompts/</code>) command adapters from the playbooks</td></tr>
       <tr><td class="mono">docs/dry-run-checklist.md</td><td>The workflow's own test — audited by /pincer-release</td></tr>
     </tbody>
   </table>
@@ -526,9 +526,9 @@ npx pincer-workflow init       <span class="cmt"># asks which platform(s) you us
 claude
 <span class="ok">/pincer-plan</span> a CLI todo app — add, list, complete, delete
 
-<span class="cmt"># 2b · Codex CLI — rules load natively; install the prompts once</span>
-mkdir -p ~/.codex/prompts &amp;&amp; cp .codex/prompts/*.md ~/.codex/prompts/
-codex          <span class="cmt"># then /prompts:pincer-plan …  (posture: .codex/README.md)</span>
+<span class="cmt"># 2b · Codex CLI — rules load natively, commands are repo-local skills</span>
+codex
+<span class="ok">$pincer-plan</span> a CLI todo app — add, list, complete, delete   <span class="cmt"># (posture: .codex/README.md)</span>
 
 <span class="cmt"># 2c · VS Code Copilot — AGENTS.md is already wired;</span>
 <span class="cmt">#      enable prompt files in settings, then /pincer-plan in chat</span>
@@ -536,7 +536,7 @@ codex          <span class="cmt"># then /prompts:pincer-plan …  (posture: .cod
 
 <span class="cmt"># 3 · then follow the chain, identical everywhere</span>
 <span class="ok">/pincer-narrow → /pincer-code → /pincer-evaluate → /pincer-release</span>
-<span class="cmt">#     (Codex prefixes custom prompts: /prompts:pincer-narrow → … → /prompts:pincer-release)</span>
+<span class="cmt">#     (Codex skills are mentioned, not slashed: $pincer-narrow → … → $pincer-release)</span>
 
 <span class="cmt"># later · refresh the kit (edited files get a .new sidecar, never clobbered)</span>
 npx pincer-workflow@latest update

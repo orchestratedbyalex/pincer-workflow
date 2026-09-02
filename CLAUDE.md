@@ -10,7 +10,7 @@ bash scripts/build-plugin.sh            # regenerates plugin/ (Claude Code plugi
 npm test                                # smoke-tests the installer lifecycle
 ```
 
-Never hand-edit `template/.codex/prompts/`, `template/.github/prompts/`, or
+Never hand-edit `template/.agents/skills/`, `template/.github/prompts/`, or
 `plugin/` — they are generated. Release flow: `npm version patch` →
 `npm publish` (needs 2FA) → `git push --follow-tags`.
 

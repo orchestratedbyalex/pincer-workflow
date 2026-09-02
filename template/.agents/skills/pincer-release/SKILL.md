@@ -1,18 +1,22 @@
+---
+name: pincer-release
+description: "Audit the repo against the workflow checklist — pass/fail per item, no fixes"
+---
 <!-- Generated from .claude/commands/pincer-release.md by scripts/sync-prompts.sh — edit the source, not this file -->
 
 
-# /pincer-release — Workflow Audit
+# $pincer-release — Workflow Audit
 
 You are auditing the current repo state against `docs/dry-run-checklist.md`. Read-only:
 report pass/fail, never fix anything — fixes belong to the stage commands.
 
-**Requested stage:** $ARGUMENTS
+**Requested stage:** the text that follows the `$pincer-release` mention in the user's message (ask for it if there is none)
 
 ## Steps
 
 1. Read `docs/dry-run-checklist.md` — it is the source of truth for what to check.
 2. Run `scripts/pincer-status.sh` to determine which stages have run (it reads `.prd/`,
-   `tickets/`, `NOTES.md`; add `git log`). If `$ARGUMENTS` names a stage, check only up
+   `tickets/`, `NOTES.md`; add `git log`). If `the text that follows the `$pincer-release` mention in the user's message (ask for it if there is none)` names a stage, check only up
    to that stage.
 3. Check every applicable item mechanically where possible:
    - File existence and frontmatter: read the files.
