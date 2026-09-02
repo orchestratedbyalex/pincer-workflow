@@ -4,7 +4,8 @@
 # of truth: edit them, re-run this script, commit the result.
 #
 #   .codex/prompts/pincer-*.md          — Codex CLI custom prompts
-#                                         (install: cp .codex/prompts/*.md ~/.codex/prompts/)
+#                                         (install: mkdir -p ~/.codex/prompts && cp .codex/prompts/*.md ~/.codex/prompts/;
+#                                          invoked as /prompts:pincer-*)
 #   .github/prompts/pincer-*.prompt.md  — VS Code Copilot prompt files
 #                                         (enable: "chat.promptFiles": true)
 set -euo pipefail

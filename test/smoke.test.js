@@ -31,6 +31,9 @@ try {
     assert.ok(fs.statSync(path.join(dir, f)).mode & 0o100, `${f} not executable`);
   }
   assert.match(fs.readFileSync(path.join(dir, '.claude/settings.json'), 'utf8'), /ticket-guard\.sh/);
+  // the Codex hint must create ~/.codex/prompts first (Codex never does) and name the /prompts: prefix
+  assert.match(out, /mkdir -p ~\/\.codex\/prompts && cp \.codex\/prompts\/\*\.md ~\/\.codex\/prompts\//);
+  assert.match(out, /\/prompts:pincer-plan/);
 
   // second init refuses
   assert.match(runFail('init', '--platform', 'all'), /already has PINCER/);
@@ -42,6 +45,7 @@ try {
   fs.writeFileSync(path.join(dir, '.pincer.json'), JSON.stringify(manifest));
   const up = run('update');
   assert.match(up, /CONFLICT AGENTS\.md/);
+  assert.match(up, /mkdir -p ~\/\.codex\/prompts && cp/);
   assert.ok(fs.existsSync(path.join(dir, 'AGENTS.md.new')));
   assert.match(fs.readFileSync(path.join(dir, 'AGENTS.md'), 'utf8'), /local edit/);
 

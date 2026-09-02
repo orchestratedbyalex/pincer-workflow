@@ -32,7 +32,8 @@ Per-platform notes printed by `init`:
 - **Claude Code** — works immediately; commands, subagents, permission deny
   rules, and a destructive-command hook install to `.claude/`.
 - **Codex CLI** — rules load natively from `AGENTS.md`; copy the prompts once:
-  `cp .codex/prompts/*.md ~/.codex/prompts/` (posture notes in `.codex/README.md`).
+  `mkdir -p ~/.codex/prompts && cp .codex/prompts/*.md ~/.codex/prompts/`, then run
+  `/prompts:pincer-plan` (Codex prefixes custom prompts; posture notes in `.codex/README.md`).
 - **Copilot (VS Code)** — enable `"chat.promptFiles": true`, then run
   `/pincer-plan` in chat; `.github/copilot-instructions.md` is wired to `AGENTS.md`.
 

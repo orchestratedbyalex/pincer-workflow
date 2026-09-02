@@ -123,13 +123,18 @@ function report({ written, skipped, conflicted }) {
   }
 }
 
+// Codex loads custom prompts from ~/.codex/prompts/ only and never creates that
+// directory itself — a bare `cp` there fails with "Not a directory" on a fresh machine.
+const CODEX_INSTALL = 'mkdir -p ~/.codex/prompts && cp .codex/prompts/*.md ~/.codex/prompts/';
+
 function nextSteps(platforms) {
   console.log('\nNext steps:');
   if (platforms.includes('claude')) {
     console.log('  Claude Code   start `claude` in this repo and run /pincer-plan <brief>');
   }
   if (platforms.includes('codex')) {
-    console.log('  Codex CLI     cp .codex/prompts/*.md ~/.codex/prompts/   (once; posture notes in .codex/README.md)');
+    console.log(`  Codex CLI     ${CODEX_INSTALL}`);
+    console.log('                (once; Codex has no repo-local prompts) then `codex` and /prompts:pincer-plan <brief> — posture notes in .codex/README.md');
   }
   if (platforms.includes('copilot')) {
     console.log('  Copilot       enable "chat.promptFiles": true in VS Code settings, then /pincer-plan in chat');
@@ -181,7 +186,7 @@ async function cmdUpdate() {
   console.log(`\nUpdating PINCER ${manifest.version} -> ${VERSION} for: ${manifest.platforms.join(', ')}\n`);
   report(install(dir, manifest.platforms, manifest.files));
   if (manifest.platforms.includes('codex')) {
-    console.log('\n  Codex uses global prompts — re-run: cp .codex/prompts/*.md ~/.codex/prompts/');
+    console.log(`\n  Codex uses global prompts — re-run: ${CODEX_INSTALL}`);
   }
 }
 

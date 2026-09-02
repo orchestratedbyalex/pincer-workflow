@@ -527,8 +527,8 @@ claude
 <span class="ok">/pincer-plan</span> a CLI todo app — add, list, complete, delete
 
 <span class="cmt"># 2b · Codex CLI — rules load natively; install the prompts once</span>
-cp .codex/prompts/*.md ~/.codex/prompts/
-codex          <span class="cmt"># then /pincer-plan …  (posture: .codex/README.md)</span>
+mkdir -p ~/.codex/prompts &amp;&amp; cp .codex/prompts/*.md ~/.codex/prompts/
+codex          <span class="cmt"># then /prompts:pincer-plan …  (posture: .codex/README.md)</span>
 
 <span class="cmt"># 2c · VS Code Copilot — AGENTS.md is already wired;</span>
 <span class="cmt">#      enable prompt files in settings, then /pincer-plan in chat</span>

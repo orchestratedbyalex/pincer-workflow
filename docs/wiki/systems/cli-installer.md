@@ -34,4 +34,8 @@
   NOT the Error message — the test's `runFail` helper exists for this.
 - `update` for Codex users prints a reminder to re-copy prompts to
   `~/.codex/prompts/` — Codex has no repo-local prompt loading
-  ([[distribution-channels]]).
+  ([[distribution-channels]]). The hint (shared `CODEX_INSTALL` const in
+  `bin/pincer.js`) must start with `mkdir -p ~/.codex/prompts`: Codex never
+  creates that directory, and on a fresh machine a bare `cp` dies with
+  "Not a directory" (found 2026-09-02 on the first clean Codex dry run).
+  Codex invokes custom prompts as `/prompts:pincer-plan`, not `/pincer-plan`.

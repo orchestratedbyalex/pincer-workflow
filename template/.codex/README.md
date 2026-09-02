@@ -5,11 +5,16 @@ with no setup. The workflow commands need one install step, because Codex
 loads custom prompts from your home directory, not the repo:
 
 ```bash
-cp .codex/prompts/*.md ~/.codex/prompts/
+mkdir -p ~/.codex/prompts && cp .codex/prompts/*.md ~/.codex/prompts/
 ```
 
-Then `/pincer-plan`, `/pincer-narrow`, `/pincer-code`, `/pincer-evaluate`,
-and `/pincer-release` are available in any Codex session. These files are
+(`mkdir -p` matters: Codex does not create `~/.codex/prompts/` on its own, and
+`cp` into a missing directory fails with "Not a directory".) Codex exposes custom
+prompts under a `/prompts:` prefix, so the commands are `/prompts:pincer-plan`,
+`/prompts:pincer-narrow`, `/prompts:pincer-code`, `/prompts:pincer-evaluate`,
+`/prompts:pincer-release` and `/prompts:pincer-status` in any Codex session.
+The playbooks refer to each other by their short names (`/pincer-narrow` etc.);
+read those as `/prompts:pincer-narrow` here. These files are
 generated from `.claude/commands/` by `scripts/sync-prompts.sh` — edit the
 source playbooks, not these copies, and re-copy after a re-sync.
 
