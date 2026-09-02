@@ -25,3 +25,9 @@ docs/wiki/* created; CLAUDE.md note appended.
 - What: package.json 0.1.0 -> 0.2.0, plugin.json rebuilt at 0.2.0, marketplace.json description updated, README (six playbooks, update note) and website (release stamp v0.2.0, command/BOM wording) refreshed; commit tagged v0.2.0 and pushed with tags.
 - Why: ship items 1 and 2 to npx users; publish needs the user's 2FA, and the classifier blocked `npm publish` from this session.
 - Outcome: `npm pack --dry-run` shows all new files (37 files, 28 kB). Registry still at 0.1.0 until `npm publish` runs.
+
+## [2026-09-02] end | v0.2.0 published to npm; publish-failure diagnosis
+- What: user's `npm publish` failed with E404 on PUT; root cause was an expired session token (`npm whoami` → 401), fixed by `npm login` + republish. 0.2.0 now on the registry with the correct repository URL.
+- Why: durable gotcha — npm reports auth failure on publish as 404, not 401.
+- Files: docs/wiki only (briefing, systems/distribution-channels, open-threads).
+- Outcome: stale-URL thread closed; remaining threads: dry run of the new loop, plugin install test, CI publishing, kit upstream decision, roadmap items 3–5.

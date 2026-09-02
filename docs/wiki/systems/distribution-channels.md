@@ -6,9 +6,16 @@ One repo, three ways in. All feed from [[template-kit]].
 
 `npx pincer-workflow init` — the primary channel, works for all three
 platforms. Package contents: `bin/` + `template/` only (`files` in
-package.json; `plugin/`, `test/`, wiki excluded). Publishing requires 2FA.
-Release flow: edit template → run both generators → `npm version patch` →
-`npm publish` → `git push --follow-tags`. Users update with
+package.json; `plugin/`, `test/`, wiki excluded). Publishing requires 2FA. Release gotchas: an expired
+session token makes `npm publish` fail with `E404 Not Found - PUT` (verify with
+`npm whoami`, fix with `npm login`); the Claude Code auto-mode classifier
+blocks `npm publish` from a session, so the user runs it. Bump with
+`npm version <level> --no-git-tag-version`, then `scripts/build-plugin.sh` (it
+embeds the version in plugin.json), commit, `git tag -a vX.Y.Z`, push
+`--follow-tags`, publish.
+Release flow: edit template → run both generators → bump → rebuild plugin →
+commit + tag → push → `npm publish` (see gotchas above). Versions: 0.1.0
+(2026-09-01), 0.2.0 (2026-09-02, ticket state machine). Users update with
 `npx pincer-workflow@latest update` ([[cli-installer]], [[never-clobber-updates]]).
 
 ## 2. Claude Code plugin (Claude-native)

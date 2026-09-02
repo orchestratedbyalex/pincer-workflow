@@ -8,23 +8,20 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 
 ## Current state
 
-v0.1.0 is **live on npm** (published 2026-09-01, verified end-to-end from the
-registry: `npx pincer-workflow init` + `doctor` pass). The repo is **public on
+**v0.2.0 is live on npm** (published 2026-09-02; 0.1.0 was verified
+end-to-end from the registry the day before). The repo is **public on
 GitHub** (`orchestratedbyalex/pincer-workflow`, pushed 2026-09-02), so the
 plugin marketplace channel is reachable. The **website is live** at
 https://orchestratedbyalex.github.io/pincer-workflow/ (GitHub Pages from
-`main:/docs`, linked from README, set as repo homepage — [[github-pages-site]]). Smoke + ticket lifecycle tests green (`npm test`). **v0.2.0 is tagged and pushed** (2026-09-02:
-ticket state machine, status report, guard hook, `/pincer-status`) but
-**`npm publish` is pending** — the registry still serves 0.1.0 until the user
-publishes with their 2FA code. Extracted from the
+`main:/docs`, linked from README, set as repo homepage — [[github-pages-site]]). Smoke + ticket lifecycle tests green (`npm test`). 0.2.0 adds the ticket state
+machine, status report, guard hook and `/pincer-status`; its metadata carries
+the correct repository URL. Extracted from the
 private `lead-engineer-role-alexander` repo, minus the confidential brief and
 the personal /llm-wiki section.
 
 ## Active / next task
 
-User runs `npm publish` (2FA) for the already-tagged v0.2.0 so npx users get
-the state machine — this also fixes the stale repository URL in 0.1.0 metadata.
-Then a dry run of the full chain on a toy repo to shake out the new loop, test
+A dry run of the full chain on a toy repo to shake out the new loop, test
 the public plugin install, and consider items 3–5 of the improvement list
 (size tracks, test-first tickets, learning loop back into AGENTS.md).
 
@@ -37,6 +34,10 @@ the public plugin install, and consider items 3–5 of the improvement list
 ## Landmines
 
 - npm publishing requires 2FA on the account (403 otherwise) — enabled 2026-09-01.
+  An **expired npm session token shows up as `E404 Not Found - PUT`** on publish,
+  not as 401: check `npm whoami` first, then `npm login` (seen 2026-09-02).
+  `npm publish` is also blocked by the Claude Code auto-mode classifier — the
+  user runs it (`! npm login`, `! npm publish`).
 - The bare npm name `pincer` is taken; the package is `pincer-workflow`, the
   plugin (and its command namespace) is `pincer` → `/pincer:plan`.
 - Dot-directories inside `template/` DO survive `npm pack`, but a
