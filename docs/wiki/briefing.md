@@ -13,16 +13,17 @@ registry: `npx pincer-workflow init` + `doctor` pass). The repo is **public on
 GitHub** (`orchestratedbyalex/pincer-workflow`, pushed 2026-09-02), so the
 plugin marketplace channel is reachable. The **website is live** at
 https://orchestratedbyalex.github.io/pincer-workflow/ (GitHub Pages from
-`main:/docs`, linked from README, set as repo homepage — [[github-pages-site]]). Smoke + ticket lifecycle tests green (`npm test`). **Unreleased on npm:** the
-ticket state machine, status report, guard hook and `/pincer-status` landed
-2026-09-02 in template/ (and plugin/) but 0.1.0 on the registry predates them. Extracted from the
+`main:/docs`, linked from README, set as repo homepage — [[github-pages-site]]). Smoke + ticket lifecycle tests green (`npm test`). **v0.2.0 is tagged and pushed** (2026-09-02:
+ticket state machine, status report, guard hook, `/pincer-status`) but
+**`npm publish` is pending** — the registry still serves 0.1.0 until the user
+publishes with their 2FA code. Extracted from the
 private `lead-engineer-role-alexander` repo, minus the confidential brief and
 the personal /llm-wiki section.
 
 ## Active / next task
 
-Release 0.2.0 (`npm version minor && npm publish`, 2FA) so npx users get the
-state machine — this also fixes the stale repository URL in 0.1.0 metadata.
+User runs `npm publish` (2FA) for the already-tagged v0.2.0 so npx users get
+the state machine — this also fixes the stale repository URL in 0.1.0 metadata.
 Then a dry run of the full chain on a toy repo to shake out the new loop, test
 the public plugin install, and consider items 3–5 of the improvement list
 (size tracks, test-first tickets, learning loop back into AGENTS.md).

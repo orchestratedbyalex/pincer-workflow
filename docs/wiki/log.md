@@ -20,3 +20,8 @@ docs/wiki/* created; CLAUDE.md note appended.
 - Why: "done" was an agent assertion and elapsed time a model estimate; now both come from the harness/clock.
 - Files: template/scripts/*, template/.claude/hooks/ticket-guard.sh, template/.claude/commands/*.md, bin/pincer.js, scripts/build-plugin.sh, test/ticket.test.js, README.md, docs/index.html, plugin/ + adapters regenerated.
 - Outcome: npm test green (smoke + lifecycle, incl. hook block/allow cases); not yet released to npm.
+
+## [2026-09-02] end | v0.2.0 bump, README/site refreshed, publish left to user
+- What: package.json 0.1.0 -> 0.2.0, plugin.json rebuilt at 0.2.0, marketplace.json description updated, README (six playbooks, update note) and website (release stamp v0.2.0, command/BOM wording) refreshed; commit tagged v0.2.0 and pushed with tags.
+- Why: ship items 1 and 2 to npx users; publish needs the user's 2FA, and the classifier blocked `npm publish` from this session.
+- Outcome: `npm pack --dry-run` shows all new files (37 files, 28 kB). Registry still at 0.1.0 until `npm publish` runs.
