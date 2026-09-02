@@ -21,9 +21,12 @@ the personal /llm-wiki section.
 
 ## Active / next task
 
-A dry run of the full chain on a toy repo to shake out the new loop, test
-the public plugin install, and consider items 3–5 of the improvement list
-(size tracks, test-first tickets, learning loop back into AGENTS.md).
+**Release 0.2.1**: commit dbfa2a5 fixes the Codex install hint (the first
+clean Codex dry run died at `cp` into a missing `~/.codex/prompts/`; docs now
+say `mkdir -p … && cp …` and `/prompts:pincer-plan`) but npm still serves
+0.2.0. Then continue the dry run of the full chain on a toy repo (Claude Code
+and Codex), test the public plugin install, and consider items 3–5 of the
+improvement list (size tracks, test-first tickets, learning loop into AGENTS.md).
 
 ## Recent decisions
 
@@ -51,6 +54,9 @@ the public plugin install, and consider items 3–5 of the improvement list
 - Ticket state fields are hook-protected: never hand-edit `status`/`started`/
   `verified`/`finished` in tickets — use `scripts/pincer-ticket.sh`. The
   ticket template must not contain those keys ([[ticket-state-machine]]).
+- Codex: custom prompts live ONLY in `~/.codex/prompts/` (Codex never creates
+  it — every install hint must `mkdir -p` first) and are invoked as
+  `/prompts:pincer-plan`, not `/pincer-plan` ([[cli-installer]]).
 - `docs/index.html` is the website source now, not the Claude artifact it
   came from. Sheet 112 (installation) must be kept in step with the README's
   install instructions ([[github-pages-site]]).

@@ -31,3 +31,9 @@ docs/wiki/* created; CLAUDE.md note appended.
 - Why: durable gotcha — npm reports auth failure on publish as 404, not 401.
 - Files: docs/wiki only (briefing, systems/distribution-channels, open-threads).
 - Outcome: stale-URL thread closed; remaining threads: dry run of the new loop, plugin install test, CI publishing, kit upstream decision, roadmap items 3–5.
+
+## [2026-09-02] end | Codex install hint fixed after first clean dry run
+- What: user's clean `npx pincer-workflow init` (Codex) failed at the printed next step — `cp` into a missing `~/.codex/prompts/` ("Not a directory"). Hint now `mkdir -p … && cp …` via a shared `CODEX_INSTALL` const; Codex docs also corrected to `/prompts:pincer-*` invocation.
+- Why: Codex never creates its prompts dir, and exposes custom prompts under a `/prompts:` prefix.
+- Files: bin/pincer.js, template/.codex/README.md, template/scripts/sync-prompts.sh, README.md, docs/index.html (sheet 112), test/smoke.test.js, wiki cli-installer page.
+- Outcome: tests green, commit dbfa2a5; NOT yet released to npm (see open-threads).
