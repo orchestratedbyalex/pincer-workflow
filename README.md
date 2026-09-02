@@ -61,7 +61,7 @@ want the repo-side rules too can copy `AGENTS.md` from the
 npx pincer-workflow@latest update
 ```
 
-Files you never touched are refreshed in place. Files you edited are left
+Files you never touched are refreshed in place. (Installs older than v0.2.0 gain the ticket state machine, the status report and the ticket-guard hook on update; `.claude/settings.json` conflicts if you edited it — merge the new hook entry from the `.new` file.) Files you edited are left
 alone — the new version lands next to them as `<file>.new` for a manual merge.
 `npx pincer-workflow doctor` checks the health of an install (hook executable,
 `.gitignore` covering `.env*`, no unmerged `*.new` files, version current).
@@ -71,7 +71,7 @@ alone — the new version lands next to them as `<file>.new` for a manual merge.
 | Piece | Purpose |
 | --- | --- |
 | `AGENTS.md` | Project rules, single cross-platform source (workflow order, security defaults, secrets, untrusted-content and dependency rules) |
-| `.claude/commands/` | The five playbooks (canonical — adapters are generated from them) |
+| `.claude/commands/` | The five playbooks plus `/pincer-status` (canonical — adapters are generated from them) |
 | `.claude/agents/` | `codebase-explorer` and `code-quality-reviewer` subagents, with inline fallbacks for platforms without subagents |
 | `scripts/pincer-ticket.sh` | The ticket state machine: `start` (enforces dependency order) → `verify` (runs the ticket's check, stamps a receipt only on green) → `done` (refuses without a matching receipt or with unticked criteria) |
 | `scripts/pincer-status.sh` | Read-only state report: PRD, every ticket with clock-based elapsed time, blocked tickets, build time vs budget, next command |

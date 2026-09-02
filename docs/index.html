@@ -204,14 +204,14 @@ section.present #ga .node, section.present #ga .node-label { transition: opacity
 
 <!-- ═══════════ SHEET 101 · COVER ═══════════ -->
 <section class="sheet" id="cover" data-title="Cover sheet" data-dwg="PRDD-101">
-  <span class="stamp">Released<span class="sub">v1.0 · 2026-08-21</span></span>
+  <span class="stamp">Released<span class="sub">v0.2.0 · 2026-09-02</span></span>
   <span class="label">Drawing set · PRD-driven delivery workflow</span>
   <h1>PINCER</h1>
   <div class="rule"></div>
   <div class="cover-grid">
     <div>
       <p class="mono small" style="max-width: 26em; letter-spacing: 0.04em;"><strong>P</strong>lan · <strong>I</strong>nvestigate · <strong>N</strong>arrow · <strong>C</strong>ode · <strong>E</strong>valuate · <strong>R</strong>elease</p>
-      <p style="max-width: 19em;">A compact workflow for <strong>Claude&nbsp;Code</strong>: six letters, five commands, taking one idea from brief to reviewed, verified code — inside a two-hour timebox.</p>
+      <p style="max-width: 19em;">A compact workflow for <strong>Claude&nbsp;Code</strong>: six letters, five commands (plus a status check), taking one idea from brief to reviewed, verified code — inside a two-hour timebox.</p>
       <p class="dim small" style="max-width: 22em;">These sheets explain what it does, why every step leaves an artifact, and how to install it in any repo. No prior agentic-tooling experience required.</p>
     </div>
     <div class="register" aria-label="Index of sheets">
@@ -238,7 +238,7 @@ section.present #ga .node, section.present #ga .node-label { transition: opacity
     <div class="col">
       <p>An AI agent given one big prompt will produce code — but no record of <strong>what was decided</strong>, no line between in-scope and out, and "done" means "it stopped typing".</p>
       <p>This workflow makes the agent work the way a disciplined team does: requirements first, small verified steps, review at the end. Each command produces a <strong>file you can read</strong> — the thinking is auditable, not vibes.</p>
-      <p class="dim small">The whole thing is markdown and git: rules live once in <code class="inline">AGENTS.md</code> (the cross-platform standard), plus five command playbooks, two specialist subagents, two templates, a permission guardrail, and a hook that blocks destructive commands. Adapters make it run on Claude Code, Codex CLI, and GitHub Copilot. No servers, no external tracker.</p>
+      <p class="dim small">The whole thing is markdown and git: rules live once in <code class="inline">AGENTS.md</code> (the cross-platform standard), plus five command playbooks and a status check, two specialist subagents, two templates, two shell scripts that own ticket state, a permission guardrail, and two hooks — one blocks destructive commands, one keeps ticket state honest. Adapters make it run on Claude Code, Codex CLI, and GitHub Copilot. No servers, no external tracker.</p>
     </div>
     <div class="col-wide">
       <table class="schedule">

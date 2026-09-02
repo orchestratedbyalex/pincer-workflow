@@ -7,7 +7,7 @@
     {
       "name": "pincer",
       "source": "./plugin",
-      "description": "PRD-driven agentic delivery workflow — Plan · Investigate · Narrow · Code · Evaluate · Release. Five namespaced commands, two review subagents, and a destructive-command guardrail hook."
+      "description": "PRD-driven agentic delivery workflow — Plan · Investigate · Narrow · Code · Evaluate · Release. Six namespaced commands (plan · narrow · code · evaluate · release · status), two review subagents, a ticket state machine with verification receipts, and guardrail hooks."
     }
   ]
 }
