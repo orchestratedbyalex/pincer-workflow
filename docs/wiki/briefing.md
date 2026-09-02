@@ -8,7 +8,7 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 
 ## Current state
 
-**v0.2.2 is tagged, publish pending** (0.2.0 and 0.2.1 went live 2026-09-02; 0.1.0 was verified
+**v0.2.3 is tagged, publish pending** (0.2.0–0.2.2 went live 2026-09-02; 0.1.0 was verified
 end-to-end from the registry the day before). The repo is **public on
 GitHub** (`orchestratedbyalex/pincer-workflow`, pushed 2026-09-02), so the
 plugin marketplace channel is reachable. The **website is live** at
@@ -21,11 +21,12 @@ the personal /llm-wiki section.
 
 ## Active / next task
 
-**Publish 0.2.2** (tag v0.2.2 exists locally; user runs `! npm publish`
-then `git push --follow-tags`). 0.2.2 replaces the Codex adapter: Codex
-dropped custom prompts (openai/codex#16115), so the commands are now
-repo-local skills in `.agents/skills/` invoked as `$pincer-plan <brief>`;
-0.2.1's `~/.codex/prompts` + `/prompts:` advice was wrong. Then continue the dry run of the full chain on a toy repo (Claude Code
+**Publish 0.2.3** (tag v0.2.3 exists locally; user runs `! npm publish`
+then `git push --follow-tags`). 0.2.2 made the Codex channel repo-local
+skills (`.agents/skills/`, `$pincer-plan <brief>`) and the user confirmed
+they load. 0.2.3 ships `.claude/commands|agents|references` on every
+platform (Codex-only installs lacked the templates narrow/plan load) and
+fixes `pincer-code` citing CLAUDE.md instead of AGENTS.md. Then continue the dry run of the full chain on a toy repo (Claude Code
 and Codex), test the public plugin install, and consider items 3–5 of the
 improvement list (size tracks, test-first tickets, learning loop into AGENTS.md).
 

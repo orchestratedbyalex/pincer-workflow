@@ -40,7 +40,17 @@ try {
   assert.ok(!fs.existsSync(path.join(dir, '.codex/prompts')), '.codex/prompts should no longer ship');
   assert.match(out, /\$pincer-plan/);
   assert.match(out, /\$pincer-status on Codex/);
-  assert.match(execFileSync('node', [bin, 'init', '--platform', 'codex'], { cwd: fs.mkdtempSync(path.join(os.tmpdir(), 'pincer-codex-')), encoding: 'utf8' }), /\(also \$pincer-status\)/);
+  // a Codex-only install still needs the canonical playbooks, rubrics and templates the skills point at,
+  // but none of Claude Code's own wiring
+  const codexDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pincer-codex-'));
+  assert.match(execFileSync('node', [bin, 'init', '--platform', 'codex'], { cwd: codexDir, encoding: 'utf8' }), /\(also \$pincer-status\)/);
+  for (const f of ['.claude/commands/pincer-plan.md', '.claude/agents/codebase-explorer.md', '.claude/references/ticket-template.md', '.claude/references/prd-template.md']) {
+    assert.ok(fs.existsSync(path.join(codexDir, f)), `codex-only install missing ${f}`);
+  }
+  for (const f of ['CLAUDE.md', '.claude/settings.json', '.claude/hooks/ticket-guard.sh']) {
+    assert.ok(!fs.existsSync(path.join(codexDir, f)), `codex-only install should not ship ${f}`);
+  }
+  assert.doesNotMatch(fs.readFileSync(path.join(codexDir, '.agents/skills/pincer-code/SKILL.md'), 'utf8'), /CLAUDE\.md/);
   assert.doesNotMatch(out, /~\/\.codex\/prompts/);
 
   // second init refuses

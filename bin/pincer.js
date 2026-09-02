@@ -20,9 +20,13 @@ const TEMPLATE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '
 const VERSION = createRequire(import.meta.url)('../package.json').version;
 const MANIFEST = '.pincer.json';
 
+// The playbooks, subagent rubrics and PRD/ticket templates under .claude/ are
+// the canonical kit and are read by every platform's adapter (the Codex skills
+// and Copilot prompts point at them), so they ship everywhere; only Claude
+// Code's own wiring (CLAUDE.md, settings.json, hooks) is platform-specific.
 const PLATFORM_ROOTS = {
-  common: ['AGENTS.md', 'docs/dry-run-checklist.md', 'scripts/sync-prompts.sh', 'scripts/pincer-ticket.sh', 'scripts/pincer-status.sh'],
-  claude: ['CLAUDE.md', '.claude'],
+  common: ['AGENTS.md', 'docs/dry-run-checklist.md', 'scripts/sync-prompts.sh', 'scripts/pincer-ticket.sh', 'scripts/pincer-status.sh', '.claude/commands', '.claude/agents', '.claude/references'],
+  claude: ['CLAUDE.md', '.claude/settings.json', '.claude/hooks'],
   codex: ['.codex', '.agents'],
   copilot: ['.github'],
 };

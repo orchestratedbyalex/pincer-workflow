@@ -28,7 +28,7 @@ from wherever the receipt says you are. Confirm the starting point with the user
 1. **Start:** `scripts/pincer-ticket.sh start T-{NN}` — refuses while a `depends_on` ticket
    isn't done, and stamps the start time. Read the ticket and the files it references.
    Announce: "Starting T-{NN}: {title}."
-2. **Implement.** Follow the conventions in `CLAUDE.md` and the PRD's architecture and
+2. **Implement.** Follow the conventions in `AGENTS.md` and the PRD's architecture and
    visual direction. Installing a dependency not named in the PRD's architecture is a
    stop-and-ask: verify it's the real package on the registry (linked repo, downloads —
    hallucinated names get typosquatted), say why it earns its place, and wait for a yes.
@@ -47,7 +47,7 @@ from wherever the receipt says you are. Confirm the starting point with the user
      `.env.example` as a blocker.
    - External input touched by this diff is validated server-side, and untrusted
      content (user input, LLM output) is escaped where rendered — per the
-     Security defaults in `CLAUDE.md`.
+     Security defaults in `AGENTS.md`.
    - No error path leaks internals (stack traces, key names with values) to the client.
    If the review changed code, run `verify` again — the receipt must match the code you commit.
 5. **Close the ticket:** tick every verified acceptance-criteria checkbox (`- [ ]` → `- [x]`;

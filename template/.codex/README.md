@@ -15,6 +15,10 @@ $pincer-narrow   →   $pincer-code   →   $pincer-evaluate   →   $pincer-rel
 $pincer-status
 ```
 
+The skills point at the canonical playbooks, the two subagent rubrics and the
+PRD/ticket templates under `.claude/` — those ship on every platform, so the
+directory is expected here even without Claude Code.
+
 `/skills` lists what Codex has loaded — the six `pincer-*` entries should be
 there whenever you start `codex` inside this repo. The skills are generated
 from `.claude/commands/` by `scripts/sync-prompts.sh` (cross-references are

@@ -5,10 +5,12 @@
 
 ## How it works
 
-- **Platform sets** (`PLATFORM_ROOTS`): `common` (AGENTS.md, checklist, sync
-  script) always installs; `claude`/`codex`/`copilot` add their roots.
-  `init --platform` flag, or an interactive readline prompt on a TTY;
-  non-TTY defaults to all three.
+- **Platform sets** (`PLATFORM_ROOTS`): `common` = AGENTS.md, checklist, the
+  three scripts AND `.claude/commands|agents|references` (the canonical
+  playbooks, rubrics and templates every adapter points at — since 0.2.3;
+  before that a Codex- or Copilot-only install had skills pointing at files
+  that were never installed); `claude` = CLAUDE.md, `.claude/settings.json`,
+  `.claude/hooks`; `codex` = `.codex`, `.agents`; `copilot` = `.github`.
 - **Manifest** `.pincer.json`: `{ version, platforms, files: {rel: sha256} }`.
   Written on every install/update. It is the baseline that lets `update`
   distinguish "user edited this" from "template changed."

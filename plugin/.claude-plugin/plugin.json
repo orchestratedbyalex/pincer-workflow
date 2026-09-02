@@ -1,6 +1,6 @@
 {
   "name": "pincer",
   "description": "PINCER — PRD-driven agentic delivery workflow: /pincer:plan → /pincer:narrow → /pincer:code → /pincer:evaluate → /pincer:release (+ /pincer:status)",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "author": { "name": "Alexander" }
 }
