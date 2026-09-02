@@ -15,7 +15,7 @@ embeds the version in plugin.json), commit, `git tag -a vX.Y.Z`, push
 `--follow-tags`, publish.
 Release flow: edit template → run both generators → bump → rebuild plugin →
 commit + tag → push → `npm publish` (see gotchas above). Versions: 0.1.0
-(2026-09-01), 0.2.0 (2026-09-02, ticket state machine). Users update with
+(2026-09-01), 0.2.0 (2026-09-02, ticket state machine), 0.2.1 (2026-09-02, Codex install hint: `mkdir -p ~/.codex/prompts`, `/prompts:` names). Users update with
 `npx pincer-workflow@latest update` ([[cli-installer]], [[never-clobber-updates]]).
 
 ## 2. Claude Code plugin (Claude-native)

@@ -1,6 +1,6 @@
 {
   "name": "pincer-workflow",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "PINCER — a PRD-driven agentic delivery workflow for Claude Code, Codex CLI, and GitHub Copilot. Plan · Investigate · Narrow · Code · Evaluate · Release.",
   "bin": {
     "pincer": "bin/pincer.js"

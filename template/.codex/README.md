@@ -14,7 +14,11 @@ prompts under a `/prompts:` prefix, so the commands are `/prompts:pincer-plan`,
 `/prompts:pincer-narrow`, `/prompts:pincer-code`, `/prompts:pincer-evaluate`,
 `/prompts:pincer-release` and `/prompts:pincer-status` in any Codex session.
 The playbooks refer to each other by their short names (`/pincer-narrow` etc.);
-read those as `/prompts:pincer-narrow` here. These files are
+read those as `/prompts:pincer-narrow` here.
+
+The copy is not tracked by `pincer update`: after `npx pincer-workflow@latest update`
+(or after editing a playbook and re-running `scripts/sync-prompts.sh`), run the
+`mkdir -p … && cp …` line again so `~/.codex/prompts/` matches the repo. These files are
 generated from `.claude/commands/` by `scripts/sync-prompts.sh` — edit the
 source playbooks, not these copies, and re-copy after a re-sync.
 

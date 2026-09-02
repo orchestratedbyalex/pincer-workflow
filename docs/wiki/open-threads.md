@@ -8,6 +8,6 @@
   marketplace add path documented in README) ([[distribution-channels]])
 - [2026-09-02] No end-to-end dry run of the new code loop (start/verify/done + hook) in a real Claude Code session yet — only unit-level tests ([[ticket-state-machine]])
 - [2026-09-02] Improvement list items 3–5 not built: change-size tracks, test-first for test-runner tickets, learning loop into AGENTS.md Conventions + cross-model review ([[mechanical-done]])
-- [2026-09-02] The Codex fix (mkdir -p + /prompts: names) is committed but UNRELEASED — npm still serves 0.2.0 with the broken hint; needs `npm version patch` → `! npm publish` → `git push --follow-tags` ([[cli-installer]])
+- [2026-09-02] v0.2.1 (Codex install fix) is tagged locally but not published/pushed — user runs `! npm publish` then `git push --follow-tags` ([[distribution-channels]])
 - [2026-09-02] `.codex/README.md` claims Codex has no hooks; the codex-cli 0.149 binary carries hook-trust flags (`--dangerously-bypass-hook-trust`), so Codex may now support hooks — check the docs and consider porting ticket-guard/block-dangerous ([[distribution-channels]])
 - [2026-09-02] Codex dry run only reached the install step; the actual /prompts:pincer-plan → release chain is still untested on Codex ([[cli-installer]])

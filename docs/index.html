@@ -204,7 +204,7 @@ section.present #ga .node, section.present #ga .node-label { transition: opacity
 
 <!-- ═══════════ SHEET 101 · COVER ═══════════ -->
 <section class="sheet" id="cover" data-title="Cover sheet" data-dwg="PRDD-101">
-  <span class="stamp">Released<span class="sub">v0.2.0 · 2026-09-02</span></span>
+  <span class="stamp">Released<span class="sub">v0.2.1 · 2026-09-02</span></span>
   <span class="label">Drawing set · PRD-driven delivery workflow</span>
   <h1>PINCER</h1>
   <div class="rule"></div>
@@ -536,6 +536,7 @@ codex          <span class="cmt"># then /prompts:pincer-plan …  (posture: .cod
 
 <span class="cmt"># 3 · then follow the chain, identical everywhere</span>
 <span class="ok">/pincer-narrow → /pincer-code → /pincer-evaluate → /pincer-release</span>
+<span class="cmt">#     (Codex prefixes custom prompts: /prompts:pincer-narrow → … → /prompts:pincer-release)</span>
 
 <span class="cmt"># later · refresh the kit (edited files get a .new sidecar, never clobbered)</span>
 npx pincer-workflow@latest update

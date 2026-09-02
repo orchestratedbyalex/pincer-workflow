@@ -37,3 +37,9 @@ docs/wiki/* created; CLAUDE.md note appended.
 - Why: Codex never creates its prompts dir, and exposes custom prompts under a `/prompts:` prefix.
 - Files: bin/pincer.js, template/.codex/README.md, template/scripts/sync-prompts.sh, README.md, docs/index.html (sheet 112), test/smoke.test.js, wiki cli-installer page.
 - Outcome: tests green, commit dbfa2a5; NOT yet released to npm (see open-threads).
+
+## [2026-09-02] end | v0.2.1 bump + README per-platform sections
+- What: version 0.2.1 in package.json, plugin.json (via build-plugin), website stamp; README gained Claude Code / Codex CLI / Copilot subsections with the full Codex install, `/prompts:` naming, posture and re-copy-on-update notes; `.codex/README.md` says the copy must be redone after `update`.
+- Why: 0.2.0 on npm still prints the broken Codex `cp` step.
+- Files: package.json, plugin/.claude-plugin/plugin.json, docs/index.html, README.md, template/.codex/README.md, wiki.
+- Outcome: tests green, tag v0.2.1 created locally; publish + push left to the user (2FA).

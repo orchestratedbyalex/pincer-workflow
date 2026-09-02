@@ -8,7 +8,7 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 
 ## Current state
 
-**v0.2.0 is live on npm** (published 2026-09-02; 0.1.0 was verified
+**v0.2.1 is tagged, publish pending** (0.2.0 went live 2026-09-02; 0.1.0 was verified
 end-to-end from the registry the day before). The repo is **public on
 GitHub** (`orchestratedbyalex/pincer-workflow`, pushed 2026-09-02), so the
 plugin marketplace channel is reachable. The **website is live** at
@@ -21,10 +21,11 @@ the personal /llm-wiki section.
 
 ## Active / next task
 
-**Release 0.2.1**: commit dbfa2a5 fixes the Codex install hint (the first
-clean Codex dry run died at `cp` into a missing `~/.codex/prompts/`; docs now
-say `mkdir -p … && cp …` and `/prompts:pincer-plan`) but npm still serves
-0.2.0. Then continue the dry run of the full chain on a toy repo (Claude Code
+**Publish 0.2.1** (tag v0.2.1 exists locally; user runs `! npm publish`
+then `git push --follow-tags`). 0.2.1 fixes the Codex install hint (the first
+clean Codex dry run died at `cp` into a missing `~/.codex/prompts/`; docs and
+README now say `mkdir -p … && cp …` and `/prompts:pincer-*`, README has a
+per-platform section). Then continue the dry run of the full chain on a toy repo (Claude Code
 and Codex), test the public plugin install, and consider items 3–5 of the
 improvement list (size tracks, test-first tickets, learning loop into AGENTS.md).
 
