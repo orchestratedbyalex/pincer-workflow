@@ -7,6 +7,10 @@ GitHub Copilot. One idea goes from brief to reviewed, verified code through five
 commands, and every step leaves an auditable artifact: a PRD, tickets, one
 commit per ticket, review notes, and a pass/fail release audit.
 
+**Website:** [orchestratedbyalex.github.io/pincer-workflow](https://orchestratedbyalex.github.io/pincer-workflow/) —
+a twelve-sheet walkthrough of the workflow: why it exists, each command, the
+safety guardrails, and installation.
+
 ## Install
 
 ```bash

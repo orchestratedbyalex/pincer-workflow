@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PINCER — PRD-driven agentic delivery workflow</title>
+<meta name="description" content="PINCER: Plan · Investigate · Narrow · Code · Evaluate · Release. A PRD-driven delivery workflow for Claude Code, Codex CLI, and GitHub Copilot, explained as a set of drawing sheets.">
+<link rel="canonical" href="https://orchestratedbyalex.github.io/pincer-workflow/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📐</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=B612:wght@400;700&family=B612+Mono:wght@400;700&display=swap">
+<style>
+/* ── Sibling sheet-set to sdlc.firebots.cloud: cyanotype drafting ground, chalk linework,
+      B612 cockpit lettering, one signal-red approval stamp. Single-theme by design. ── */
+:root {
+  --ground: #0D2B4E;
+  --ground-deep: #0A2340;
+  --panel: #10315A;
+  --ink: #EAF2FA;
+  --ink-dim: #AECBE8;
+  --hairline: rgba(202, 226, 248, 0.32);
+  --hairline-soft: rgba(202, 226, 248, 0.16);
+  --stamp: #FF5C49;
+  --ok: #7FD8A4;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+* { margin: 0; box-sizing: border-box; }
+html, body { height: 100%; background: var(--ground-deep); }
+body {
+  font-family: 'B612', system-ui, sans-serif;
+  color: var(--ink);
+  overflow: hidden;
+}
+
+/* ── Sheet chrome: border frame, title block, nav ── */
+#sheet-frame { position: fixed; inset: 12px; border: 1.5px solid var(--hairline); pointer-events: none; z-index: 30; }
+#sheet-frame::after { content: ''; position: absolute; inset: 6px; border: 1px solid var(--hairline-soft); }
+
+#title-block {
+  position: fixed; right: 18px; bottom: 18px; z-index: 32; display: flex;
+  border: 1.5px solid var(--hairline); background: var(--ground-deep);
+  font-family: 'B612 Mono', monospace; color: var(--ink);
+}
+#title-block .cell { padding: 7px 14px; border-left: 1px solid var(--hairline-soft); }
+#title-block .cell:first-child { border-left: none; }
+#title-block .k { display: block; font-size: 8.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 2px; }
+#title-block .v { display: block; font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+
+#nav-hint {
+  position: fixed; left: 22px; bottom: 22px; z-index: 32;
+  font-family: 'B612 Mono', monospace; font-size: 10.5px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-dim);
+}
+#nav-hint kbd { border: 1px solid var(--hairline); padding: 1px 5px; font-family: inherit; }
+
+#progress { position: fixed; left: 0; bottom: 0; width: 100%; height: 3px; background: rgba(202,226,248,0.12); z-index: 33; }
+#progress span { display: block; height: 100%; width: 0; background: var(--ink-dim); transition: width .35s var(--ease-out); }
+
+.nav-arrow {
+  position: fixed; bottom: 8px; right: 50%; z-index: 32; cursor: pointer;
+  background: none; border: none; color: var(--ink-dim);
+  font-family: 'B612 Mono', monospace; font-size: 20px; padding: 6px 14px;
+}
+.nav-arrow:hover, .nav-arrow:focus-visible { color: var(--stamp); }
+.nav-arrow:focus-visible { outline: 2px dashed var(--ink-dim); outline-offset: 2px; }
+#nav-next { right: auto; left: 50%; }
+.nav-arrow[disabled] { opacity: 0.25; cursor: default; }
+.nav-arrow[disabled]:hover { color: var(--ink-dim); }
+
+/* ── Stage & slides ── */
+#stage { position: absolute; top: 30px; right: 40px; bottom: 78px; left: 40px; }
+/* faint drafting grid on the sheet */
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(234,242,250,0.030) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(234,242,250,0.030) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+body { background: var(--ground); }
+
+section.sheet {
+  position: absolute; inset: 0; padding: 20px 26px; overflow-y: auto;
+  opacity: 0; visibility: hidden; transform: translateX(24px);
+  transition: opacity .4s var(--ease-out), transform .4s var(--ease-out), visibility 0s .4s;
+}
+section.sheet.present {
+  opacity: 1; visibility: visible; transform: none;
+  transition: opacity .4s var(--ease-out), transform .4s var(--ease-out), visibility 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+  section.sheet, section.sheet.present { transition: none; transform: none; }
+}
+
+/* ── Type ── */
+h1, h2 {
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.015em;
+  line-height: 1.08; text-wrap: balance;
+}
+h1 { font-size: clamp(44px, 7vw, 88px); }
+h2 { font-size: clamp(21px, 2.6vw, 30px); margin-bottom: 22px; padding-bottom: 12px; border-bottom: 1px solid var(--hairline); }
+p, li { line-height: 1.55; font-size: clamp(14px, 1.55vw, 18px); }
+p { margin-bottom: 0.7em; max-width: 32em; }
+strong { font-weight: 700; }
+em { font-style: italic; }
+.dim { color: var(--ink-dim); }
+.small { font-size: 0.82em; }
+a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--hairline); text-underline-offset: 4px; }
+a:hover { color: var(--stamp); text-decoration-color: var(--stamp); }
+:focus-visible { outline: 2px dashed var(--ink-dim); outline-offset: 3px; }
+
+.mono, code, pre { font-family: 'B612 Mono', monospace; }
+.label {
+  display: block; font-family: 'B612 Mono', monospace; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 10px;
+}
+pre {
+  margin: 14px 0; background: var(--panel); border: 1px solid var(--hairline);
+  font-size: clamp(11px, 1.15vw, 13.5px); line-height: 1.55; overflow-x: auto;
+}
+pre code { display: block; padding: 16px 20px; }
+code.inline { background: var(--panel); border: 1px solid var(--hairline-soft); padding: 1px 8px; font-size: 0.85em; }
+.ok { color: var(--ok); }
+.bad { color: #FF9C8F; }
+.cmt { color: var(--ink-dim); }
+.red { color: var(--stamp); }
+
+/* ── Schedules (drawing tables) ── */
+table.schedule { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: clamp(11.5px, 1.25vw, 14.5px); font-variant-numeric: tabular-nums; }
+table.schedule th {
+  font-family: 'B612 Mono', monospace; font-weight: 700; font-size: 0.78em;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-dim);
+  text-align: left; padding: 9px 13px; border: 1px solid var(--hairline);
+}
+table.schedule td { padding: 8px 13px; border: 1px solid var(--hairline-soft); line-height: 1.45; vertical-align: top; }
+table.schedule td.mono { font-size: 0.88em; white-space: nowrap; }
+
+/* ── Approval stamp ── */
+.stamp {
+  display: inline-block; padding: 10px 22px; transform: rotate(-5deg);
+  border: 3px double var(--stamp); color: var(--stamp);
+  font-family: 'B612 Mono', monospace; font-weight: 700; letter-spacing: 0.16em;
+  text-transform: uppercase; font-size: 13px; line-height: 1.3;
+}
+.stamp .sub { display: block; font-size: 0.68em; letter-spacing: 0.1em; opacity: 0.85; }
+
+/* ── Columns ── */
+.cols { display: flex; gap: 44px; align-items: flex-start; }
+.cols > .col { flex: 1 1 0; min-width: 0; }
+.cols > .col-wide { flex: 1.35 1 0; min-width: 0; }
+
+/* ── SVG linework ── */
+.drawing { width: 100%; height: auto; display: block; margin: 8px 0; }
+.drawing text { font-family: 'B612 Mono', monospace; fill: var(--ink); }
+.drawing .t-dim { fill: var(--ink-dim); }
+.drawing .t-red { fill: var(--stamp); }
+.drawing .t-ok { fill: var(--ok); }
+.drawing .ln { stroke: var(--ink); stroke-width: 1.6; fill: none; }
+.drawing .ln-dim { stroke: var(--ink-dim); stroke-width: 1.2; fill: none; }
+.drawing .ln-red { stroke: var(--stamp); stroke-width: 1.6; fill: none; }
+.drawing .construction { stroke: var(--hairline); stroke-width: 1; stroke-dasharray: 6 6; fill: none; }
+.drawing .fill-panel { fill: var(--panel); }
+
+/* ── The one authored motion: the delivery line draws itself on the GA sheet ── */
+#ga .draw-path { stroke-dasharray: 1400; stroke-dashoffset: 1400; }
+#ga .node, #ga .node-label { opacity: 0; }
+section.present #ga .draw-path { transition: stroke-dashoffset 2.2s var(--ease-out) 0.25s; stroke-dashoffset: 0; }
+section.present #ga .node, section.present #ga .node-label { transition: opacity 0.7s var(--ease-out) 0.5s; opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  #ga .draw-path { stroke-dashoffset: 0 !important; transition: none !important; }
+  #ga .node, #ga .node-label { opacity: 1 !important; transition: none !important; }
+}
+
+/* ── Cover ── */
+#cover .rule { width: 190px; height: 3px; background: var(--ink); margin: 26px 0; }
+#cover .cover-grid { display: flex; gap: 60px; align-items: flex-end; flex-wrap: wrap; }
+#cover .register { font-family: 'B612 Mono', monospace; font-size: 13px; line-height: 2.05; color: var(--ink-dim); letter-spacing: 0.04em; white-space: nowrap; }
+#cover .register .no { display: inline-block; width: 3.4em; color: var(--ink); }
+#cover .stamp { position: absolute; top: 10px; right: 30px; }
+
+/* ── Command strip used on command sheets ── */
+.cmd-strip { display: flex; margin: 0 0 18px 0; font-family: 'B612 Mono', monospace; font-size: 11px; }
+.cmd-strip span { flex: 1; text-align: center; padding: 7px 2px; border: 1px solid var(--hairline-soft); border-left: none; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-dim); }
+.cmd-strip span:first-child { border-left: 1px solid var(--hairline-soft); }
+.cmd-strip span.hot { color: var(--ink); border-color: var(--hairline); border-left: 1px solid var(--hairline); font-weight: 700; }
+
+@media (max-width: 820px) {
+  #stage { top: 20px; right: 18px; bottom: 52px; left: 18px; }
+  #sheet-frame { inset: 8px; }
+  #nav-hint { display: none; }
+  #title-block { right: 10px; bottom: 10px; }
+  #title-block .cell { padding: 4px 9px; }
+  #title-block .cell.hide-m { display: none; }
+  #title-block .k { font-size: 7px; }
+  #title-block .v { font-size: 10px; }
+  .cols { flex-direction: column; gap: 12px; }
+  #cover .stamp { position: static; margin-bottom: 18px; }
+}
+</style>
+</head>
+<body>
+<div id="stage">
+
+<!-- ═══════════ SHEET 101 · COVER ═══════════ -->
+<section class="sheet" id="cover" data-title="Cover sheet" data-dwg="PRDD-101">
+  <span class="stamp">Released<span class="sub">v1.0 · 2026-08-21</span></span>
+  <span class="label">Drawing set · PRD-driven delivery workflow</span>
+  <h1>PINCER</h1>
+  <div class="rule"></div>
+  <div class="cover-grid">
+    <div>
+      <p class="mono small" style="max-width: 26em; letter-spacing: 0.04em;"><strong>P</strong>lan · <strong>I</strong>nvestigate · <strong>N</strong>arrow · <strong>C</strong>ode · <strong>E</strong>valuate · <strong>R</strong>elease</p>
+      <p style="max-width: 19em;">A compact workflow for <strong>Claude&nbsp;Code</strong>: six letters, five commands, taking one idea from brief to reviewed, verified code — inside a two-hour timebox.</p>
+      <p class="dim small" style="max-width: 22em;">These sheets explain what it does, why every step leaves an artifact, and how to install it in any repo. No prior agentic-tooling experience required.</p>
+    </div>
+    <div class="register" aria-label="Index of sheets">
+      <span class="no">101</span>COVER SHEET<br>
+      <span class="no">102</span>WHY A WORKFLOW AT ALL<br>
+      <span class="no">103</span>GENERAL ARRANGEMENT — 5 COMMANDS<br>
+      <span class="no">104</span>/PINCER-PLAN — THE PRD<br>
+      <span class="no">105</span>/PINCER-NARROW — THE BREAKDOWN<br>
+      <span class="no">106</span>/PINCER-CODE — THE LOOP<br>
+      <span class="no">107</span>/PINCER-EVALUATE + /PINCER-RELEASE — THE PROOF<br>
+      <span class="no">108</span>THE SAFETY DRAWINGS<br>
+      <span class="no">109</span>STRESS TEST — THE HARD QUESTIONS<br>
+      <span class="no">110</span>REVISIONS — ITERATING AFTER V1<br>
+      <span class="no">111</span>BILL OF MATERIALS<br>
+      <span class="no">112</span>INSTALLATION — CLAUDE · CODEX · COPILOT
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SHEET 102 · WHY ═══════════ -->
+<section class="sheet" data-title="Why a workflow" data-dwg="PRDD-102">
+  <h2>Why not just prompt?</h2>
+  <div class="cols">
+    <div class="col">
+      <p>An AI agent given one big prompt will produce code — but no record of <strong>what was decided</strong>, no line between in-scope and out, and "done" means "it stopped typing".</p>
+      <p>This workflow makes the agent work the way a disciplined team does: requirements first, small verified steps, review at the end. Each command produces a <strong>file you can read</strong> — the thinking is auditable, not vibes.</p>
+      <p class="dim small">The whole thing is markdown and git: rules live once in <code class="inline">AGENTS.md</code> (the cross-platform standard), plus five command playbooks, two specialist subagents, two templates, a permission guardrail, and a hook that blocks destructive commands. Adapters make it run on Claude Code, Codex CLI, and GitHub Copilot. No servers, no external tracker.</p>
+    </div>
+    <div class="col-wide">
+      <table class="schedule">
+        <thead><tr><th>One big prompt</th><th>This workflow</th></tr></thead>
+        <tbody>
+          <tr><td>Scope lives in the model's head</td><td>Scope table in the PRD — in <em>and</em> out</td></tr>
+          <tr><td>One giant diff at the end</td><td>One commit per ticket, story in <code class="inline">git log</code></td></tr>
+          <tr><td>"Done" is unverified</td><td>Every ticket carries a runnable check</td></tr>
+          <tr><td>Cuts happen silently</td><td>Cuts recorded in Out of Scope, with reasons</td></tr>
+          <tr><td>Review is optional</td><td>Review + audit are commands in the chain</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SHEET 103 · GENERAL ARRANGEMENT ═══════════ -->
+<section class="sheet" data-title="General arrangement" data-dwg="PRDD-103">
+  <h2>General arrangement — six letters, five commands</h2>
+  <svg id="ga" class="drawing" viewBox="0 0 960 300" role="img" aria-label="Flow diagram: /pincer-plan produces the PRD, /pincer-narrow produces ticket files, /pincer-code produces one commit per ticket, /pincer-evaluate produces NOTES.md, /pincer-release returns a pass or fail audit. A dashed revision loop returns from /pincer-release to /pincer-plan: bugs become new tickets, scope changes become PRD v2.">
+    <path class="ln draw-path" d="M 60 90 H 900" marker-end="url(#ar)"/>
+    <defs>
+      <marker id="ar" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--ink)"/></marker>
+    </defs>
+    <g class="node">
+      <rect x="40" y="60" width="130" height="60" class="ln fill-panel"/>
+      <text x="105" y="92" font-size="24" font-weight="700" text-anchor="middle">P · I</text>
+      <text x="105" y="110" font-size="9" class="t-dim" text-anchor="middle">/pincer-plan</text>
+    </g>
+    <g class="node">
+      <rect x="225" y="60" width="130" height="60" class="ln fill-panel"/>
+      <text x="290" y="92" font-size="24" font-weight="700" text-anchor="middle">N</text>
+      <text x="290" y="110" font-size="9" class="t-dim" text-anchor="middle">/pincer-narrow</text>
+    </g>
+    <g class="node">
+      <rect x="410" y="60" width="130" height="60" class="ln fill-panel"/>
+      <text x="475" y="92" font-size="24" font-weight="700" text-anchor="middle">C</text>
+      <text x="475" y="110" font-size="9" class="t-dim" text-anchor="middle">/pincer-code</text>
+    </g>
+    <g class="node">
+      <rect x="595" y="60" width="130" height="60" class="ln fill-panel"/>
+      <text x="660" y="92" font-size="24" font-weight="700" text-anchor="middle">E</text>
+      <text x="660" y="110" font-size="9" class="t-dim" text-anchor="middle">/pincer-evaluate</text>
+    </g>
+    <g class="node">
+      <rect x="780" y="60" width="130" height="60" class="ln fill-panel"/>
+      <text x="845" y="92" font-size="24" font-weight="700" text-anchor="middle">R</text>
+      <text x="845" y="110" font-size="9" class="t-dim" text-anchor="middle">/pincer-release</text>
+    </g>
+    <g class="node-label">
+      <line x1="105" y1="120" x2="105" y2="160" class="ln-dim"/>
+      <text x="105" y="180" font-size="10.5" text-anchor="middle">.prd/prd-v1.md</text>
+      <text x="105" y="196" font-size="9" class="t-dim" text-anchor="middle">the contract</text>
+      <line x1="290" y1="120" x2="290" y2="160" class="ln-dim"/>
+      <text x="290" y="180" font-size="10.5" text-anchor="middle">tickets/T-01…NN.md</text>
+      <text x="290" y="196" font-size="9" class="t-dim" text-anchor="middle">4–7 small work items</text>
+      <line x1="475" y1="120" x2="475" y2="160" class="ln-dim"/>
+      <text x="475" y="180" font-size="10.5" text-anchor="middle">one commit per ticket</text>
+      <text x="475" y="196" font-size="9" class="t-dim" text-anchor="middle">each check green</text>
+      <line x1="660" y1="120" x2="660" y2="160" class="ln-dim"/>
+      <text x="660" y="180" font-size="10.5" text-anchor="middle">NOTES.md</text>
+      <text x="660" y="196" font-size="9" class="t-dim" text-anchor="middle">what shipped, what was cut</text>
+      <line x1="845" y1="120" x2="845" y2="160" class="ln-dim"/>
+      <text x="845" y="180" font-size="10.5" class="t-ok" text-anchor="middle">PASS / FAIL</text>
+      <text x="845" y="196" font-size="9" class="t-dim" text-anchor="middle">vs the checklist</text>
+      <text x="60" y="40" font-size="10" class="t-red">GATES: light after discovery · heavy before architecture · autonomous during build</text>
+      <text x="900" y="40" font-size="9" class="t-dim" text-anchor="end">I — INVESTIGATE RUNS INSIDE /PINCER-PLAN (PHASES 2–3)</text>
+      <path d="M 845 205 V 228 H 105 V 205" fill="none" class="ln-dim" stroke-dasharray="5 5" marker-end="url(#ar)"/>
+      <text x="475" y="222" font-size="9" class="t-dim" text-anchor="middle">REVISION LOOP — BUGS BECOME NEW TICKETS · SCOPE CHANGES BECOME PRD v2 (SHEET 110)</text>
+      <text x="60" y="260" font-size="10" class="t-dim">EVERY ARROW LEAVES A FILE BEHIND — THE PATH FROM IDEA TO CODE STAYS AUDITABLE</text>
+    </g>
+  </svg>
+</section>
+
+<!-- ═══════════ SHEET 104 · /PINCER-PLAN ═══════════ -->
+<section class="sheet" data-title="/pincer-plan" data-dwg="PRDD-104">
+  <h2>/pincer-plan — turn a brief into a contract</h2>
+  <div class="cmd-strip" aria-hidden="true"><span class="hot">/pincer-plan</span><span>/pincer-narrow</span><span>/pincer-code</span><span>/pincer-evaluate</span><span>/pincer-release</span></div>
+  <div class="cols">
+    <div class="col">
+      <p>The PRD is a <strong>two-page contract</strong>: problem, solution, scope (in <em>and</em> out), architecture, success criteria. No code, no file paths — those come later.</p>
+      <p>Discovery is deliberately short: the agent extracts everything it can from your brief first, then asks at most 3–4 questions — only ones whose answers would change the architecture or the scope.</p>
+      <p class="dim small">If the repo already has code, read-only <strong>explorer subagents</strong> scan it in parallel so the architecture is grounded in what actually exists.</p>
+    </div>
+    <div class="col-wide">
+      <table class="schedule">
+        <thead><tr><th style="width:9em">Phase</th><th>What happens</th><th style="width:8em">Gate</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">1 · Discovery</td><td>Batch of targeted questions; design direction if there's a UI</td><td>light — confirm summary</td></tr>
+          <tr><td class="mono">2 · Codebase scan</td><td>Explorer agents map structure and patterns (skipped if repo is empty)</td><td>—</td></tr>
+          <tr><td class="mono">3 · Architecture</td><td>Components, data flow, verified dependency versions</td><td class="red">heavy — explicit approval</td></tr>
+          <tr><td class="mono">4 · Write PRD</td><td>Saved to <code class="inline">.prd/prd-v1.md</code>, committed</td><td>—</td></tr>
+        </tbody>
+      </table>
+      <p class="dim small">The heavy gate sits exactly where a wrong decision is most expensive to undo. After it, the plan is locked and execution speeds up.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SHEET 105 · /PINCER-NARROW ═══════════ -->
+<section class="sheet" data-title="/pincer-narrow" data-dwg="PRDD-105">
+  <h2>/pincer-narrow — cut the contract into safe steps</h2>
+  <div class="cmd-strip" aria-hidden="true"><span>/pincer-plan</span><span class="hot">/pincer-narrow</span><span>/pincer-code</span><span>/pincer-evaluate</span><span>/pincer-release</span></div>
+  <div class="cols">
+    <div class="col">
+      <p>The PRD becomes <strong>4–7 local ticket files</strong> — no external tracker. Every ticket is small (≤30 min), ordered by dependency, and carries a <strong>runnable verification command</strong>: the proof it's done.</p>
+      <p><strong>T-01 is always the walking skeleton</strong> — scaffold plus one thin end-to-end slice that runs. For a web app that means frontend talking to backend from the first ticket on.</p>
+      <p class="dim small">If the brief implies automated tests, at least one ticket's verification command must be the test runner itself — a manual check alone doesn't count as proof.</p>
+    </div>
+    <div class="col-wide">
+      <pre><code><span class="cmt">tickets/T-03-complete-task.md</span>
+---
+ticket: T-03
+status: open
+size: S            <span class="cmt"># S ≤15 min · M ≤30 min · never L</span>
+depends_on: [T-01]
+---
+## Objective
+Mark a task complete from the CLI and persist it.
+
+## Acceptance Criteria
+- [ ] `todo done 2` sets task 2 to completed
+- [ ] completed tasks render with a check mark
+
+## Verification
+<span class="ok">npm test -- --run complete</span></code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SHEET 106 · /PINCER-CODE ═══════════ -->
+<section class="sheet" data-title="/pincer-code" data-dwg="PRDD-106">
+  <h2>/pincer-code — the loop that never lies</h2>
+  <div class="cmd-strip" aria-hidden="true"><span>/pincer-plan</span><span>/pincer-narrow</span><span class="hot">/pincer-code</span><span>/pincer-evaluate</span><span>/pincer-release</span></div>
+  <div class="cols">
+    <div class="col">
+      <p>Per ticket: <strong>implement → run the ticket's check → self-review the diff → commit</strong>. A ticket is never marked done while its verification fails — green output is the definition of done, not the agent's confidence.</p>
+      <p>The loop tracks the timebox. Running out of time triggers a <strong>proposed scope cut</strong>, recorded in the PRD's Out of Scope — a deliberate cut beats an unfinished mess, and it's never silent.</p>
+      <p class="dim small">Isolated M-sized tickets can go to a subagent with a clean prompt: the ticket, the conventions, and nothing else.</p>
+    </div>
+    <div class="col-wide">
+      <span class="label">Resulting history — readable as a story</span>
+      <pre><code><span class="cmt">$ git log --oneline</span>
+<span class="ok">a41f2c9</span> review: fixes
+<span class="ok">7c03e1d</span> T-05: filter and list views
+<span class="ok">5b91af0</span> T-04: delete with confirmation
+<span class="ok">e8d22b7</span> T-03: complete a task
+<span class="ok">c17f440</span> T-02: add and persist tasks
+<span class="ok">90ab3ce</span> T-01: walking skeleton — CLI runs end to end
+<span class="ok">308dad9</span> PRD v1 + workflow setup</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SHEET 107 · /PINCER-EVALUATE + /PINCER-RELEASE ═══════════ -->
+<section class="sheet" data-title="/pincer-evaluate + /pincer-release" data-dwg="PRDD-107">
+  <h2>/pincer-evaluate + /pincer-release — proof before the handshake</h2>
+  <div class="cmd-strip" aria-hidden="true"><span>/pincer-plan</span><span>/pincer-narrow</span><span>/pincer-code</span><span class="hot">/pincer-evaluate</span><span class="hot">/pincer-release</span></div>
+  <div class="cols">
+    <div class="col">
+      <p><strong>/pincer-evaluate</strong> dispatches a quality-reviewer subagent over the whole session's diff while the main agent checks spec compliance against every acceptance criterion. Findings below <span class="mono">70</span> confidence are dropped — you see real bugs, silent failures, and security issues, not style opinions.</p>
+      <p class="dim small">If the project has a UI, review means <em>looking</em> at it: the app is started and checked in the browser against the PRD's visual direction — never code-read alone.</p>
+      <p>It closes by writing <code class="inline">NOTES.md</code>: what was built, what was cut and why, known issues, next steps — the first file a reviewer of the repo should read.</p>
+    </div>
+    <div class="col">
+      <p><strong>/pincer-release</strong> is the workflow auditing itself. It reads <code class="inline">docs/dry-run-checklist.md</code> as its source of truth and checks the repo mechanically: files exist, statuses correct, commit format right, ticket checks re-run.</p>
+      <p>Output is a pass/fail table with evidence per item. A failed item names the command file to fix — so the workflow, like the code, is testable.</p>
+      <p class="dim small">One source of truth: update the checklist and the audit updates with it.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SHEET 108 · SAFETY ═══════════ -->
+<section class="sheet" data-title="Safety drawings" data-dwg="PRDD-108">
+  <h2>The safety drawings</h2>
+  <div class="cols">
+    <div class="col">
+      <p><strong>Gates scale with decision cost.</strong> A light confirmation after discovery, one heavy gate before the architecture locks, then autonomy during build. Human attention is spent where mistakes are expensive, not sprinkled everywhere.</p>
+      <p><strong>Secrets never enter the conversation.</strong> Permission rules make <code class="inline">.env</code> files unreadable to the agent; code references secrets by name via <code class="inline">.env.example</code>; debugging logs only whether a key is set — never its value.</p>
+      <p><strong>Keys stay server-side.</strong> LLM and API calls run in the backend only — the key never reaches frontend code or the browser. The review pass explicitly hunts for hardcoded secrets, client-exposed keys, unescaped untrusted output, and unvalidated input flowing into shells, queries, or prompts.</p>
+      <p><strong>Untrusted content is data, never instructions.</strong> Whatever a README, changelog, or model output says to the agent — it gets reported as a security finding, not followed. Instructions come only from the human and the workflow files.</p>
+    </div>
+    <div class="col-wide">
+      <pre><code><span class="cmt">.claude/settings.json — enforced by the harness, not by good intentions</span>
+{
+  "permissions": {
+    "deny": [ <span class="cmt">.env files are unreadable to the agent</span>
+      "Read(./.env)", "Read(./.env.*)",
+      "Read(./**/.env)", "Read(./**/.env.*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [ <span class="cmt">every Bash call passes this gate first</span>
+      { "matcher": "Bash", "hooks": [ { "type": "command",
+        "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-dangerous.sh" } ] }
+    ]
+  }
+}</code></pre>
+      <p class="dim small">The hook mechanically blocks absolute-path deletes, force-pushes, <code class="inline">curl | sh</code>, and mass permission changes — never auto-approved; a human runs them in their own terminal if truly intended. Plus the standing rules in <code class="inline">CLAUDE.md</code>: nothing is done on a red check, every scope cut is written down, and post-review changes go through a ticket — never an ad-hoc patch.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SHEET 109 · STRESS TEST ═══════════ -->
+<section class="sheet" data-title="Stress test" data-dwg="PRDD-109">
+  <h2>Stress test — the hard questions, answered in the drawings</h2>
+  <div class="cols">
+    <div class="col">
+      <p>Two critiques every agentic workflow must survive: the <strong>realist's</strong> — AI turbocharges greenfield but stumbles on load-bearing code, and floods the world with abandonware — and the <strong>attacker's</strong> — untrusted inputs and unsupervised automation are a new attack surface.</p>
+      <p class="dim small">PINCER's answer to both is the same move: don't rely on the model's judgment in the moment — write the rule into the workflow, and where possible have the harness enforce it mechanically.</p>
+    </div>
+    <div class="col-wide">
+      <table class="schedule">
+        <thead><tr><th style="width:16em">The critique</th><th>The drawing that answers it</th></tr></thead>
+        <tbody>
+          <tr><td>"AI stumbles on load-bearing code"</td><td>Brownfield scaling: Investigate grows, coverage is measured not assumed, blast radius + rollback named in the PRD; untested load-bearing paths get a characterization test before any change</td></tr>
+          <tr><td>"AI-generated abandonware"</td><td><code class="inline">NOTES.md</code> ends with a handover written for the stranger who inherits the repo: orientation, why each dependency earned its place, what breaks first</td></tr>
+          <tr><td>"Models hallucinate the outside world"</td><td>Dependency versions and external API contracts verified live (<code class="inline">npm view</code>, one real request) — never from training data</td></tr>
+          <tr><td class="red">"Untrusted inputs get weaponized"</td><td>Prompt injection defused by rule: file, web, and model content is data — embedded "instructions" become security findings, in both subagents too</td></tr>
+          <tr><td class="red">"Hallucinated packages get typosquatted"</td><td>New dependencies are a human gate: verified on the registry before install, versions pinned, lockfile committed</td></tr>
+          <tr><td class="red">"Why auto-approve anything?"</td><td>Destructive commands blocked by a PreToolUse hook (sheet 108); a human owns every architecture, scope, and merge — autonomy runs only between gates, bounded by timebox and one revision loop</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SHEET 110 · REVISIONS ═══════════ -->
+<section class="sheet" data-title="Revisions" data-dwg="PRDD-110">
+  <h2>Revisions — iterating after v1</h2>
+  <div class="cols">
+    <div class="col">
+      <p>Delivery isn't the end of the drawing set. The chain <strong>loops back</strong> — and the entry point depends on the size of the change, so small fixes stay cheap and big changes stay honest.</p>
+      <p class="dim small">The rule that keeps the history clean: after <code class="inline">/pincer-evaluate</code>, every change goes through a ticket, never an ad-hoc patch. Done still means a green check and one commit.</p>
+    </div>
+    <div class="col-wide">
+      <table class="schedule">
+        <thead><tr><th style="width:15em">Change</th><th>Route</th><th style="width:11em">Artifact</th></tr></thead>
+        <tbody>
+          <tr><td>Bug the reviewer finds</td><td>Fixed inside <code class="inline">/pincer-evaluate</code>; declined findings become known-issues</td><td class="mono">review: fixes · NOTES.md</td></tr>
+          <tr><td>Bug found later, or a small addition in scope</td><td>One new S/M ticket whose verification reproduces the bug, then <code class="inline">/pincer-code T-{NN}</code></td><td class="mono">tickets/T-08-fix-*.md</td></tr>
+          <tr><td class="red">New feature that changes scope or architecture</td><td>Back to <code class="inline">/pincer-plan</code> — a new PRD version; <code class="inline">/pincer-narrow</code> continues numbering; the chain runs again</td><td class="mono">.prd/prd-v2.md</td></tr>
+        </tbody>
+      </table>
+      <p class="dim small">Old PRD versions are never overwritten — <code class="inline">.prd/</code> keeps the history of what the product was supposed to be at every point.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SHEET 111 · BILL OF MATERIALS ═══════════ -->
+<section class="sheet" data-title="Bill of materials" data-dwg="PRDD-111">
+  <h2>Bill of materials — 14 source files, adapters generated</h2>
+  <table class="schedule">
+    <thead><tr><th style="width:22em">File</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">.claude/commands/pincer-plan.md</td><td>PRD playbook — discovery, scan, architecture gate, write</td></tr>
+      <tr><td class="mono">.claude/commands/pincer-narrow.md</td><td>Decomposition playbook — S/M sizing, walking skeleton, verification per ticket</td></tr>
+      <tr><td class="mono">.claude/commands/pincer-code.md</td><td>Implementation loop — verify, commit, timebox and scope-cut rules</td></tr>
+      <tr><td class="mono">.claude/commands/pincer-evaluate.md · pincer-release.md</td><td>Quality pass with security audit · pass/fail workflow audit</td></tr>
+      <tr><td class="mono">.claude/agents/codebase-explorer.md</td><td>Read-only scout — reports facts with file:line references</td></tr>
+      <tr><td class="mono">.claude/agents/code-quality-reviewer.md</td><td>Diff reviewer — bugs, silent failures, security issues, spec drift; ≥70 confidence only</td></tr>
+      <tr><td class="mono">.claude/references/prd-template.md · ticket-template.md</td><td>The two artifact formats</td></tr>
+      <tr><td class="mono">.claude/settings.json</td><td>Secret-file deny rules + the PreToolUse guardrail wiring</td></tr>
+      <tr><td class="mono">.claude/hooks/block-dangerous.sh</td><td>Mechanical block on destructive and pipe-to-shell commands</td></tr>
+      <tr><td class="mono">AGENTS.md · CLAUDE.md</td><td>Project rules, single cross-platform source · one-line Claude Code import of it</td></tr>
+      <tr><td class="mono">scripts/sync-prompts.sh</td><td>Generates the Codex (<code class="inline">.codex/prompts/</code>) and Copilot (<code class="inline">.github/prompts/</code>) command adapters from the playbooks</td></tr>
+      <tr><td class="mono">docs/dry-run-checklist.md</td><td>The workflow's own test — audited by /pincer-release</td></tr>
+    </tbody>
+  </table>
+  <p class="dim small">Plain markdown, one JSON file, and two shell scripts — read all of it in ten minutes, change any of it with a text editor. The generated adapters are never edited by hand.</p>
+</section>
+
+<!-- ═══════════ SHEET 112 · INSTALLATION ═══════════ -->
+<section class="sheet" data-title="Installation" data-dwg="PRDD-112">
+  <h2>Installation — any repo, any platform, two minutes</h2>
+  <div class="cols">
+    <div class="col-wide">
+      <pre><code><span class="cmt"># 1 · install the workflow into your project (all platforms)</span>
+cd your-project
+npx pincer-workflow init       <span class="cmt"># asks which platform(s) you use</span>
+
+<span class="cmt"># 2a · Claude Code — everything works as-is</span>
+claude
+<span class="ok">/pincer-plan</span> a CLI todo app — add, list, complete, delete
+
+<span class="cmt"># 2b · Codex CLI — rules load natively; install the prompts once</span>
+cp .codex/prompts/*.md ~/.codex/prompts/
+codex          <span class="cmt"># then /pincer-plan …  (posture: .codex/README.md)</span>
+
+<span class="cmt"># 2c · VS Code Copilot — AGENTS.md is already wired;</span>
+<span class="cmt">#      enable prompt files in settings, then /pincer-plan in chat</span>
+"chat.promptFiles": true
+
+<span class="cmt"># 3 · then follow the chain, identical everywhere</span>
+<span class="ok">/pincer-narrow → /pincer-code → /pincer-evaluate → /pincer-release</span>
+
+<span class="cmt"># later · refresh the kit (edited files get a .new sidecar, never clobbered)</span>
+npx pincer-workflow@latest update
+npx pincer-workflow doctor</code></pre>
+    </div>
+    <div class="col">
+      <p><strong>One source, three platforms.</strong> Rules live once in <code class="inline">AGENTS.md</code> — Codex and the Copilot coding agent read it natively, Claude Code imports it via <code class="inline">CLAUDE.md</code>, VS Code Copilot is pointed at it by <code class="inline">.github/copilot-instructions.md</code>. The playbooks in <code class="inline">.claude/commands/</code> are canonical; <code class="inline">scripts/sync-prompts.sh</code> regenerates the Codex and Copilot command adapters after any edit.</p>
+      <p>Fill in the <strong>Conventions</strong> section of <code class="inline">AGENTS.md</code> once you know the stack; everything else works as-is.</p>
+      <p><strong>Claude Code plugin</strong> (alternative): <code class="inline">/plugin marketplace add orchestratedbyalex/pincer-workflow</code> then <code class="inline">/plugin install pincer@pincer-workflow</code> — commands arrive as <code class="inline">/pincer:plan</code> … <code class="inline">/pincer:release</code>. Pick one channel per project.</p>
+      <p class="dim small">The honest caveat: the process ports fully, but mechanical enforcement (deny rules + the command-blocking hook) is strongest on Claude Code — elsewhere the same posture is sandbox and approval settings, and <code class="inline">/pincer-release</code> still audits the git artifacts afterwards on every platform.</p>
+      <p class="small"><a href="https://github.com/orchestratedbyalex/pincer-workflow">Source on GitHub</a> · <a href="https://www.npmjs.com/package/pincer-workflow">pincer-workflow on npm</a> · MIT</p>
+      <p style="margin-top: 12px;"><span class="stamp">Approved<span class="sub">for construction</span></span></p>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<div id="sheet-frame" aria-hidden="true"></div>
+<div id="nav-hint" aria-hidden="true"><kbd>←</kbd> <kbd>→</kbd> to leaf through the set</div>
+<button class="nav-arrow" id="nav-prev" aria-label="Previous sheet">◀</button>
+<button class="nav-arrow" id="nav-next" aria-label="Next sheet">▶</button>
+<div id="title-block" aria-hidden="true">
+  <div class="cell hide-m"><span class="k">Project</span><span class="v">PINCER</span></div>
+  <div class="cell hide-m"><span class="k">Sheet title</span><span class="v" id="tb-title">Cover sheet</span></div>
+  <div class="cell"><span class="k">DWG №</span><span class="v" id="tb-dwg">PRDD-101</span></div>
+  <div class="cell"><span class="k">Sheet</span><span class="v" id="tb-sheet">01 / 10</span></div>
+</div>
+<div id="progress"><span id="progress-bar"></span></div>
+
+<script>
+(function () {
+  var sheets = Array.prototype.slice.call(document.querySelectorAll('section.sheet'));
+  var i = 0;
+  var tbTitle = document.getElementById('tb-title');
+  var tbDwg = document.getElementById('tb-dwg');
+  var tbSheet = document.getElementById('tb-sheet');
+  var bar = document.getElementById('progress-bar');
+  var prev = document.getElementById('nav-prev');
+  var next = document.getElementById('nav-next');
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  function go(n) {
+    n = Math.max(0, Math.min(sheets.length - 1, n));
+    sheets[i].classList.remove('present');
+    i = n;
+    var s = sheets[i];
+    s.classList.add('present');
+    s.scrollTop = 0;
+    tbTitle.textContent = s.getAttribute('data-title');
+    tbDwg.textContent = s.getAttribute('data-dwg');
+    tbSheet.textContent = pad(i + 1) + ' / ' + pad(sheets.length);
+    bar.style.width = ((i + 1) / sheets.length * 100) + '%';
+    prev.disabled = i === 0;
+    next.disabled = i === sheets.length - 1;
+    try { history.replaceState(null, '', '#' + (i + 1)); } catch (e) {}
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(i + 1); }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(i - 1); }
+    if (e.key === 'Home') { e.preventDefault(); go(0); }
+    if (e.key === 'End') { e.preventDefault(); go(sheets.length - 1); }
+  });
+  prev.addEventListener('click', function () { go(i - 1); });
+  next.addEventListener('click', function () { go(i + 1); });
+
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.changedTouches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 60) go(dx < 0 ? i + 1 : i - 1);
+    tx = null;
+  }, { passive: true });
+
+  var start = parseInt((location.hash || '').slice(1), 10);
+  go(isNaN(start) ? 0 : start - 1);
+})();
+</script>
+</body>
+</html>
