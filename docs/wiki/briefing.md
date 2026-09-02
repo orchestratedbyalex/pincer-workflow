@@ -13,18 +13,23 @@ registry: `npx pincer-workflow init` + `doctor` pass). The repo is **public on
 GitHub** (`orchestratedbyalex/pincer-workflow`, pushed 2026-09-02), so the
 plugin marketplace channel is reachable. The **website is live** at
 https://orchestratedbyalex.github.io/pincer-workflow/ (GitHub Pages from
-`main:/docs`, linked from README, set as repo homepage — [[github-pages-site]]). Smoke test green (`npm test`). Extracted from the
+`main:/docs`, linked from README, set as repo homepage — [[github-pages-site]]). Smoke + ticket lifecycle tests green (`npm test`). **Unreleased on npm:** the
+ticket state machine, status report, guard hook and `/pincer-status` landed
+2026-09-02 in template/ (and plugin/) but 0.1.0 on the registry predates them. Extracted from the
 private `lead-engineer-role-alexander` repo, minus the confidential brief and
 the personal /llm-wiki section.
 
 ## Active / next task
 
-Test the public plugin install in a real Claude Code session, optionally a
-GitHub Actions trusted-publishing workflow, and `npm version patch && npm
-publish` to fix the stale repository URL inside the published 0.1.0 metadata.
+Release 0.2.0 (`npm version minor && npm publish`, 2FA) so npx users get the
+state machine — this also fixes the stale repository URL in 0.1.0 metadata.
+Then a dry run of the full chain on a toy repo to shake out the new loop, test
+the public plugin install, and consider items 3–5 of the improvement list
+(size tracks, test-first tickets, learning loop back into AGENTS.md).
 
 ## Recent decisions
 
+- [[mechanical-done]] — `done` needs a script-stamped receipt from a green check; hook enforces on Claude Code ([[ticket-state-machine]])
 - [[single-source-template]] — template/ is canonical; adapters and plugin are generated
 - [[never-clobber-updates]] — hash manifest in .pincer.json; edited files get `.new` sidecars
 
@@ -41,6 +46,9 @@ publish` to fix the stale repository URL inside the published 0.1.0 metadata.
   does not catch stale generated output.
 - The private lead-engineer-role-alexander repo still holds its own copy of
   the kit; no back-sync mechanism exists yet ([[template-kit]]).
+- Ticket state fields are hook-protected: never hand-edit `status`/`started`/
+  `verified`/`finished` in tickets — use `scripts/pincer-ticket.sh`. The
+  ticket template must not contain those keys ([[ticket-state-machine]]).
 - `docs/index.html` is the website source now, not the Claude artifact it
   came from. Sheet 112 (installation) must be kept in step with the README's
   install instructions ([[github-pages-site]]).

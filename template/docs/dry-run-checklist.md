@@ -23,7 +23,8 @@ Use a throwaway copy of this repo and a cheap model (`claude --model sonnet`).
 - [ ] 4–7 files exist in `tickets/`, named `T-{NN}-{slug}.md`
 - [ ] Every ticket is sized S or M — none L
 - [ ] T-01 is a walking skeleton (scaffold + thin end-to-end slice that runs)
-- [ ] Every ticket has a runnable command in its Verification block
+- [ ] Every ticket has a runnable, non-interactive command in its fenced
+      Verification block (it is what `scripts/pincer-ticket.sh verify` runs)
 - [ ] Dependencies are declared where they exist (`depends_on`)
 - [ ] If the brief or stack implies automated tests, at least one ticket's
       verification command is the test runner
@@ -38,8 +39,11 @@ Use a throwaway copy of this repo and a cheap model (`claude --model sonnet`).
 
 - [ ] One commit per ticket, messages formatted `T-{NN}: {title}`
 - [ ] Every ticket file now says `status: done`
+- [ ] Every done ticket carries `started`, `verified` (receipt) and `finished`
+      stamps — `scripts/pincer-status.sh` prints no "done without a receipt" warning
 - [ ] Every done ticket has all acceptance-criteria checkboxes ticked
-- [ ] Running each ticket's verification command passes (spot-check at least two)
+- [ ] `scripts/pincer-ticket.sh verify T-{NN}` passes on done tickets (spot-check
+      at least two)
 - [ ] Any scope cut made during build is recorded in the PRD's Out of Scope section
 - [ ] PRD frontmatter now says `status: built`
 
@@ -69,4 +73,6 @@ Use a throwaway copy of this repo and a cheap model (`claude --model sonnet`).
       before being modified
 - [ ] Platform adapters in sync: `scripts/sync-prompts.sh` then `git status`
       shows no changes in `.codex/prompts/` or `.github/prompts/`
-- [ ] Total wall-clock time fit the ~2-hour budget (note where time went if not)
+- [ ] `scripts/pincer-status.sh` says `Next /pincer-release` and its build elapsed
+      figure fit the ~75-minute build budget (note where time went if not)
+- [ ] Total wall-clock time fit the ~2-hour budget

@@ -27,7 +27,10 @@ try {
   for (const f of ['AGENTS.md', 'CLAUDE.md', '.pincer.json', '.claude/settings.json', '.codex/README.md', '.github/copilot-instructions.md', 'scripts/sync-prompts.sh']) {
     assert.ok(fs.existsSync(path.join(dir, f)), `missing ${f}`);
   }
-  assert.ok(fs.statSync(path.join(dir, '.claude/hooks/block-dangerous.sh')).mode & 0o100, 'hook not executable');
+  for (const f of ['.claude/hooks/block-dangerous.sh', '.claude/hooks/ticket-guard.sh', 'scripts/pincer-ticket.sh', 'scripts/pincer-status.sh']) {
+    assert.ok(fs.statSync(path.join(dir, f)).mode & 0o100, `${f} not executable`);
+  }
+  assert.match(fs.readFileSync(path.join(dir, '.claude/settings.json'), 'utf8'), /ticket-guard\.sh/);
 
   // second init refuses
   assert.match(runFail('init', '--platform', 'all'), /already has PINCER/);

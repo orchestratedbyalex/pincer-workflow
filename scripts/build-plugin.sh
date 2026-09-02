@@ -8,12 +8,13 @@
 #   .claude/references/…  ->  ${CLAUDE_PLUGIN_ROOT}/references/…
 #   .claude/commands/…    ->  ${CLAUDE_PLUGIN_ROOT}/commands/…
 #   docs/dry-run-checklist.md -> ${CLAUDE_PLUGIN_ROOT}/docs/dry-run-checklist.md
+#   scripts/pincer-*.sh   ->  ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-*.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 VERSION=$(node -p "require('./package.json').version")
 rm -rf plugin
-mkdir -p plugin/.claude-plugin plugin/commands plugin/agents plugin/references plugin/docs plugin/hooks
+mkdir -p plugin/.claude-plugin plugin/commands plugin/agents plugin/references plugin/docs plugin/hooks plugin/scripts
 
 xform() {
   # slash-command rename only where /pincer- is a command mention (not inside a
@@ -24,6 +25,7 @@ xform() {
       s{\.claude/references/}{\${CLAUDE_PLUGIN_ROOT}/references/}g;
       s{\.claude/commands/}{\${CLAUDE_PLUGIN_ROOT}/commands/}g;
       s{docs/dry-run-checklist\.md}{\${CLAUDE_PLUGIN_ROOT}/docs/dry-run-checklist.md}g;
+      s{(?<![\w/])scripts/(pincer-(?:ticket|status)\.sh)}{\${CLAUDE_PLUGIN_ROOT}/scripts/$1}g;
     '
 }
 
@@ -35,8 +37,9 @@ for f in template/.claude/agents/*.md; do xform "$f" > "plugin/agents/$(basename
 for f in template/.claude/references/*.md; do xform "$f" > "plugin/references/$(basename "$f")"; done
 xform template/docs/dry-run-checklist.md > plugin/docs/dry-run-checklist.md
 
-cp template/.claude/hooks/block-dangerous.sh plugin/hooks/
-chmod +x plugin/hooks/block-dangerous.sh
+cp template/.claude/hooks/block-dangerous.sh template/.claude/hooks/ticket-guard.sh plugin/hooks/
+cp template/scripts/pincer-ticket.sh template/scripts/pincer-status.sh plugin/scripts/
+chmod +x plugin/hooks/*.sh plugin/scripts/*.sh
 
 cat > plugin/hooks/hooks.json <<EOF
 {
@@ -50,6 +53,15 @@ cat > plugin/hooks/hooks.json <<EOF
             "command": "bash \"\${CLAUDE_PLUGIN_ROOT}\"/hooks/block-dangerous.sh"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"\${CLAUDE_PLUGIN_ROOT}\"/hooks/ticket-guard.sh"
+          }
+        ]
       }
     ]
   }
@@ -59,7 +71,7 @@ EOF
 cat > plugin/.claude-plugin/plugin.json <<EOF
 {
   "name": "pincer",
-  "description": "PINCER — PRD-driven agentic delivery workflow: /pincer:plan → /pincer:narrow → /pincer:code → /pincer:evaluate → /pincer:release",
+  "description": "PINCER — PRD-driven agentic delivery workflow: /pincer:plan → /pincer:narrow → /pincer:code → /pincer:evaluate → /pincer:release (+ /pincer:status)",
   "version": "$VERSION",
   "author": { "name": "Alexander" }
 }

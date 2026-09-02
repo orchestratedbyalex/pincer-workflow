@@ -10,40 +10,59 @@ user confirms the starting point, run continuously and report progress between t
 
 **Initial request:** $ARGUMENTS
 
+Ticket state lives in the ticket file's frontmatter and is written **only** by
+`${CLAUDE_PLUGIN_ROOT}/scripts/pincer-ticket.sh` (`start` → `verify` → `done`). `verify` runs the ticket's
+Verification block and stamps a receipt only on a green exit; `done` refuses without a
+receipt that matches the current check, or with unticked acceptance criteria. Never edit
+`status`, `started`, `verified`, or `finished` by hand — on Claude Code a hook blocks it.
+
+## Before the loop
+
+Run `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-status.sh`. It lists every ticket's state, what is blocked, elapsed
+build time from the clock, and the next action. If a ticket is `in_progress`, you are
+resuming: read it, check `git status` / `git diff` for uncommitted work, and continue
+from wherever the receipt says you are. Confirm the starting point with the user, then go.
+
 ## Loop (per ticket, in dependency order)
 
-1. **Read the ticket** and the files it references. Announce: "Starting T-{NN}: {title}."
+1. **Start:** `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-ticket.sh start T-{NN}` — refuses while a `depends_on` ticket
+   isn't done, and stamps the start time. Read the ticket and the files it references.
+   Announce: "Starting T-{NN}: {title}."
 2. **Implement.** Follow the conventions in `CLAUDE.md` and the PRD's architecture and
    visual direction. Installing a dependency not named in the PRD's architecture is a
    stop-and-ask: verify it's the real package on the registry (linked repo, downloads —
-   hallucinated names get typosquatted), say why it earns its place, and wait for a yes. For an S ticket, implement directly. For an M ticket touching
-   isolated files, you may dispatch a subagent with a clean prompt: paste the full ticket
-   body, the relevant conventions, and nothing else.
-3. **Verify.** Run the ticket's verification command(s). If they fail, fix before moving
-   on — never mark a ticket done on a red check. Report actual output, not assumptions.
+   hallucinated names get typosquatted), say why it earns its place, and wait for a yes.
+   For an S ticket, implement directly. For an M ticket touching isolated files, you may
+   dispatch a subagent with a clean prompt: paste the full ticket body, the relevant
+   conventions, and nothing else.
+3. **Verify:** `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-ticket.sh verify T-{NN}` — runs the Verification block and
+   writes the receipt only if it exits 0. Red → fix and re-run; report the actual output,
+   not assumptions. Green output is the definition of done, not your confidence.
 4. **Self-review the diff** before committing: silent failures (empty catches,
    un-awaited promises), leftover debug code, drift from the ticket's acceptance criteria.
    Then a security sweep of the same diff:
    - No secret values: run
-     `git diff --cached | grep -iE '(api[_-]?key|secret|token|password)[[:space:]]*[:=]'`
+     `git diff | grep -iE '(api[_-]?key|secret|token|password)[[:space:]]*[:=]'`
      and treat any hit that isn't a `process.env` reference or a name in
      `.env.example` as a blocker.
    - External input touched by this diff is validated server-side, and untrusted
      content (user input, LLM output) is escaped where rendered — per the
      Security defaults in `CLAUDE.md`.
    - No error path leaks internals (stack traces, key names with values) to the client.
-5. **Commit** with message `T-{NN}: {title}` and mark the ticket done: set
-   `status: done` in its frontmatter and tick every verified acceptance-criteria
-   checkbox (`- [ ]` → `- [x]`) in the same edit. A ticket is never `done` with
-   unticked criteria — if a criterion was cut, that's a scope change to record,
-   not a box to skip.
-6. Give a one-line progress update ("T-02 done, 3 remaining, ~40 min elapsed") and continue.
+   If the review changed code, run `verify` again — the receipt must match the code you commit.
+5. **Close the ticket:** tick every verified acceptance-criteria checkbox (`- [ ]` → `- [x]`;
+   editing the checkboxes is allowed), then `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-ticket.sh done T-{NN}`. A
+   criterion that was cut is a scope change to record in the PRD, not a box to skip.
+   Commit code and ticket file together: `git add -A && git commit -m "T-{NN}: {title}"`.
+6. Give a one-line progress update using the elapsed figure from
+   `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-status.sh` ("T-02 done, 3 remaining, 38m elapsed of 75m") and continue.
 
 ## Timebox rules
 
-- Track elapsed time against the ~75-minute build budget. If you're at risk of running
-  out, stop and propose a scope cut: which remaining tickets to drop or shrink. Cutting
-  scope deliberately beats an unfinished mess — record the cut in the PRD's Out of Scope.
+- The budget is ~75 minutes of build time, measured by `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-status.sh` from
+  the first ticket's start stamp — never estimated. If the remaining tickets won't fit,
+  stop and propose a scope cut: which remaining tickets to drop or shrink. Cutting scope
+  deliberately beats an unfinished mess — record the cut in the PRD's Out of Scope.
 - If a ticket reveals the plan was wrong, stop and say so rather than silently diverging.
   Update the ticket/PRD, then continue.
 

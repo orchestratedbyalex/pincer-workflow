@@ -21,12 +21,12 @@ const VERSION = createRequire(import.meta.url)('../package.json').version;
 const MANIFEST = '.pincer.json';
 
 const PLATFORM_ROOTS = {
-  common: ['AGENTS.md', 'docs/dry-run-checklist.md', 'scripts/sync-prompts.sh'],
+  common: ['AGENTS.md', 'docs/dry-run-checklist.md', 'scripts/sync-prompts.sh', 'scripts/pincer-ticket.sh', 'scripts/pincer-status.sh'],
   claude: ['CLAUDE.md', '.claude'],
   codex: ['.codex'],
   copilot: ['.github'],
 };
-const EXECUTABLES = ['scripts/sync-prompts.sh', '.claude/hooks/block-dangerous.sh'];
+const EXECUTABLES = ['scripts/sync-prompts.sh', 'scripts/pincer-ticket.sh', 'scripts/pincer-status.sh', '.claude/hooks/block-dangerous.sh', '.claude/hooks/ticket-guard.sh'];
 const GITIGNORE_LINES = ['.env', '.env.*', '!.env.example'];
 
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
@@ -135,6 +135,7 @@ function nextSteps(platforms) {
     console.log('  Copilot       enable "chat.promptFiles": true in VS Code settings, then /pincer-plan in chat');
   }
   console.log('  All rules live in AGENTS.md — fill in its Conventions section once you know the stack.');
+  console.log('  Any session     scripts/pincer-status.sh shows where the workflow stands (also /pincer-status)');
 }
 
 async function askPlatforms() {

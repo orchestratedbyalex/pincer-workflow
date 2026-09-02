@@ -24,6 +24,9 @@ Then follow the chain — identical on every platform:
 /pincer-plan <brief>  →  /pincer-narrow  →  /pincer-code  →  /pincer-evaluate  →  /pincer-release
 ```
 
+`/pincer-status` shows where the workflow stands at any point (PRD, tickets,
+receipts, elapsed time, next command) — run it first in a new session.
+
 Per-platform notes printed by `init`:
 
 - **Claude Code** — works immediately; commands, subagents, permission deny
@@ -70,7 +73,9 @@ alone — the new version lands next to them as `<file>.new` for a manual merge.
 | `AGENTS.md` | Project rules, single cross-platform source (workflow order, security defaults, secrets, untrusted-content and dependency rules) |
 | `.claude/commands/` | The five playbooks (canonical — adapters are generated from them) |
 | `.claude/agents/` | `codebase-explorer` and `code-quality-reviewer` subagents, with inline fallbacks for platforms without subagents |
-| `.claude/hooks/` + `settings.json` | Mechanical guardrails: `.env` files unreadable, destructive commands blocked |
+| `scripts/pincer-ticket.sh` | The ticket state machine: `start` (enforces dependency order) → `verify` (runs the ticket's check, stamps a receipt only on green) → `done` (refuses without a matching receipt or with unticked criteria) |
+| `scripts/pincer-status.sh` | Read-only state report: PRD, every ticket with clock-based elapsed time, blocked tickets, build time vs budget, next command |
+| `.claude/hooks/` + `settings.json` | Mechanical guardrails: `.env` files unreadable, destructive commands blocked, ticket state fields writable only through the script |
 | `.codex/` · `.github/` | Generated Codex and Copilot adapters + platform wiring |
 | `scripts/sync-prompts.sh` | Regenerates the adapters after you edit a playbook |
 | `scripts/build-plugin.sh` | Regenerates the Claude Code plugin (`plugin/`) from the template |
@@ -82,7 +87,11 @@ alone — the new version lands next to them as `<file>.new` for a manual merge.
   every scope, and every merge; autonomy runs only between gates, bounded by a
   timebox and one revision loop.
 - **Nothing is done while its verification fails** — every ticket carries a
-  runnable check.
+  runnable check, and "done" is a state only a passing run of that check can
+  unlock: the receipt is stamped by the script, never typed by the agent.
+- **State lives in files, not in the conversation** — a new session runs
+  `/pincer-status` and knows exactly where to resume; elapsed time comes from
+  timestamps, not from the model's sense of time.
 - **Scope is a first-class artifact** — cuts are recorded, never silent.
 - **Security is threaded through every stage** — designed in at Plan, specified
   as reject-path criteria at Narrow, enforced by a pre-commit sweep at Code,

@@ -375,9 +375,9 @@ Mark a task complete from the CLI and persist it.
   <div class="cmd-strip" aria-hidden="true"><span>/pincer-plan</span><span>/pincer-narrow</span><span class="hot">/pincer-code</span><span>/pincer-evaluate</span><span>/pincer-release</span></div>
   <div class="cols">
     <div class="col">
-      <p>Per ticket: <strong>implement → run the ticket's check → self-review the diff → commit</strong>. A ticket is never marked done while its verification fails — green output is the definition of done, not the agent's confidence.</p>
+      <p>Per ticket: <strong>start → implement → verify → self-review → done → commit</strong>. A ticket's state is written only by <code class="inline">scripts/pincer-ticket.sh</code>: <em>verify</em> runs the ticket's check and stamps a receipt only on a green exit; <em>done</em> refuses without a receipt matching the current check. Green output is the definition of done, not the agent's confidence — and on Claude Code a hook makes it the only way through.</p>
       <p>The loop tracks the timebox. Running out of time triggers a <strong>proposed scope cut</strong>, recorded in the PRD's Out of Scope — a deliberate cut beats an unfinished mess, and it's never silent.</p>
-      <p class="dim small">Isolated M-sized tickets can go to a subagent with a clean prompt: the ticket, the conventions, and nothing else.</p>
+      <p class="dim small">State lives in the ticket files, not the conversation: <code class="inline">/pincer-status</code> reads them back — what's done, what's in progress, what's blocked, elapsed time from the clock — and names the next command. A fresh session resumes where the last one stopped.</p>
     </div>
     <div class="col-wide">
       <span class="label">Resulting history — readable as a story</span>
@@ -490,7 +490,7 @@ Mark a task complete from the CLI and persist it.
 
 <!-- ═══════════ SHEET 111 · BILL OF MATERIALS ═══════════ -->
 <section class="sheet" data-title="Bill of materials" data-dwg="PRDD-111">
-  <h2>Bill of materials — 14 source files, adapters generated</h2>
+  <h2>Bill of materials — 18 source files, adapters generated</h2>
   <table class="schedule">
     <thead><tr><th style="width:22em">File</th><th>Role</th></tr></thead>
     <tbody>
@@ -498,11 +498,13 @@ Mark a task complete from the CLI and persist it.
       <tr><td class="mono">.claude/commands/pincer-narrow.md</td><td>Decomposition playbook — S/M sizing, walking skeleton, verification per ticket</td></tr>
       <tr><td class="mono">.claude/commands/pincer-code.md</td><td>Implementation loop — verify, commit, timebox and scope-cut rules</td></tr>
       <tr><td class="mono">.claude/commands/pincer-evaluate.md · pincer-release.md</td><td>Quality pass with security audit · pass/fail workflow audit</td></tr>
+      <tr><td class="mono">.claude/commands/pincer-status.md</td><td>Where are we — wraps the status script, names the next command, offers to resume</td></tr>
+      <tr><td class="mono">scripts/pincer-ticket.sh · pincer-status.sh</td><td>Ticket state machine (start · verify · done, receipts) · read-only state report with clock-based elapsed time</td></tr>
       <tr><td class="mono">.claude/agents/codebase-explorer.md</td><td>Read-only scout — reports facts with file:line references</td></tr>
       <tr><td class="mono">.claude/agents/code-quality-reviewer.md</td><td>Diff reviewer — bugs, silent failures, security issues, spec drift; ≥70 confidence only</td></tr>
       <tr><td class="mono">.claude/references/prd-template.md · ticket-template.md</td><td>The two artifact formats</td></tr>
       <tr><td class="mono">.claude/settings.json</td><td>Secret-file deny rules + the PreToolUse guardrail wiring</td></tr>
-      <tr><td class="mono">.claude/hooks/block-dangerous.sh</td><td>Mechanical block on destructive and pipe-to-shell commands</td></tr>
+      <tr><td class="mono">.claude/hooks/block-dangerous.sh · ticket-guard.sh</td><td>Mechanical block on destructive and pipe-to-shell commands · ticket state fields writable only through the script</td></tr>
       <tr><td class="mono">AGENTS.md · CLAUDE.md</td><td>Project rules, single cross-platform source · one-line Claude Code import of it</td></tr>
       <tr><td class="mono">scripts/sync-prompts.sh</td><td>Generates the Codex (<code class="inline">.codex/prompts/</code>) and Copilot (<code class="inline">.github/prompts/</code>) command adapters from the playbooks</td></tr>
       <tr><td class="mono">docs/dry-run-checklist.md</td><td>The workflow's own test — audited by /pincer-release</td></tr>

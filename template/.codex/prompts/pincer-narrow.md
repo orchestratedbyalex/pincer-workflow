@@ -11,14 +11,19 @@ build window.
 
 ## Steps
 
-1. Read the PRD (`$ARGUMENTS` or the latest `.prd/prd-v*.md`). If its status isn't
-   `draft`, ask which PRD to use.
+1. Run `scripts/pincer-status.sh`. If tickets already exist, ask before adding to them —
+   new tickets continue the numbering, existing ones are never renumbered. Then read the
+   PRD (`$ARGUMENTS` or the latest `.prd/prd-v*.md`). If its status isn't `draft`, ask
+   which PRD to use.
 2. Decompose into tickets. Rules:
    - Each ticket is one coherent unit: sized S or M, never L. Split anything larger.
    - Ticket 1 is always the walking skeleton: project scaffold + a thin end-to-end slice
      that runs. Everything after builds on a working base.
    - Order by dependency; note blockers explicitly ("depends on T-01").
-   - Every ticket gets a verification command or check the builder can actually run.
+   - Every ticket gets a runnable command in its Verification block — a fenced `bash`
+     block that exits 0 only when the ticket is done. `scripts/pincer-ticket.sh verify`
+     runs it verbatim and stamps the receipt that `done` requires, so it must be
+     non-interactive and self-contained (no "check by hand").
    - If the brief or stack implies automated tests, at least one ticket's verification
      command must be the test runner (e.g. `npm test`) — manual checks alone don't count.
    - Any ticket whose surface accepts external input (HTTP endpoint, form, file,
@@ -32,7 +37,9 @@ build window.
      is preceded by a characterization ticket — a test that pins the current
      behavior before any ticket is allowed to change it.
 3. Write each ticket to `tickets/T-{NN}-{slug}.md` using
-   `.claude/references/ticket-template.md`.
+   `.claude/references/ticket-template.md`, with `status: open`. The other state fields
+   (`started`, `verified`, `finished`) are added later by `scripts/pincer-ticket.sh` —
+   never write them yourself.
 4. Present the ticket list (number, title, size, dependencies) as a table.
 
 **Gate (medium):** Ask for approval of the breakdown and build order. Adjust if pushed back.

@@ -8,7 +8,10 @@ run the pipeline, then present results.
 
 ## Steps
 
-1. Get the full diff of the session: `git log --oneline` and `git diff <first-commit>..HEAD`.
+1. Run `scripts/pincer-status.sh`. Every ticket should be `done` with a receipt; if one
+   is still open or in progress, stop and ask whether it was cut (then it goes in the
+   PRD's Out of Scope) or should be finished first via `/pincer-code`. Then get the full
+   diff of the session: `git log --oneline` and `git diff <first-commit>..HEAD`.
 2. Dispatch a `code-quality-reviewer` agent with: the diff, the PRD's Success Criteria and
    Scope sections, and the list of tickets. If the diff is large, split by area and
    dispatch two in parallel. (No subagents on this platform? Review the diff yourself

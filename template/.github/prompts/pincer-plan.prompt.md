@@ -13,6 +13,10 @@ timebox (~2 hours total), so discovery is brief and the PRD is lean. The PRD fee
 
 **Initial request:** ${input:request:Task brief or arguments (optional)}
 
+First run `scripts/pincer-status.sh`. If a PRD already exists, say so and ask whether
+this is a new version of it (`.prd/prd-v{N+1}.md` — old versions are never overwritten)
+or a fresh start; if tickets are in progress, stop and point at `/pincer-code` instead.
+
 ## Phase 1: Discovery (~5 min)
 
 1. If `${input:request:Task brief or arguments (optional)}` contains the brief, extract what you can before asking anything.

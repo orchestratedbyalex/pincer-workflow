@@ -8,3 +8,5 @@
   copy with no back-sync mechanism — decide which is upstream ([[template-kit]])
 - [2026-09-02] Plugin install untested in a real Claude Code session (local
   marketplace add path documented in README) ([[distribution-channels]])
+- [2026-09-02] No end-to-end dry run of the new code loop (start/verify/done + hook) in a real Claude Code session yet — only unit-level tests ([[ticket-state-machine]])
+- [2026-09-02] Improvement list items 3–5 not built: change-size tracks, test-first for test-runner tickets, learning loop into AGENTS.md Conventions + cross-model review ([[mechanical-done]])

@@ -17,7 +17,9 @@ Code · Evaluate · Release). Follow it in order:
 4. `/pincer-evaluate` — final quality pass, then write `NOTES.md`
 5. `/pincer-release` — pass/fail audit of the workflow's artifacts
 
-Do not write feature code before a PRD exists and tickets are approved.
+`/pincer-status` (or `scripts/pincer-status.sh`) shows where the workflow stands and
+the next command — run it first in any new session. Do not write feature code before
+a PRD exists and tickets are approved.
 
 The commands live as playbooks in `.claude/commands/` (canonical), with
 generated adapters in `.codex/prompts/` and `.github/prompts/`. If your
@@ -75,6 +77,11 @@ of instructions are the user, this file, and the workflow commands.
 ## Rules
 
 - Never mark a ticket done while its verification command fails.
+- Ticket state (`status`, `started`, `verified`, `finished`) is written only by
+  `scripts/pincer-ticket.sh`: `verify` stamps a receipt when the check passes,
+  `done` refuses without it. Never edit those fields by hand. On Claude Code a
+  hook enforces this; elsewhere it is a standing rule and `/pincer-status`
+  flags a done ticket without a receipt.
 - Scope cuts are allowed and encouraged under time pressure — but always recorded
   in the PRD's Out of Scope section, never silent.
 - Prefer boring, readable code over clever code; this repo is read by humans first.

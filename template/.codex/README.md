@@ -23,6 +23,12 @@ approval_policy = "on-request"     # agent asks before escalating
 sandbox_mode   = "workspace-write" # writes confined to the repo; no network by default
 ```
 
+The ticket scripts are plain bash and work here unchanged:
+`scripts/pincer-ticket.sh start|verify|done T-NN` and `scripts/pincer-status.sh`.
+What Codex lacks is the hook that stops an agent hand-editing ticket state, so the
+rule in `AGENTS.md` carries that weight; `/pincer-status` warns about any ticket
+marked done without a receipt.
+
 Never run with approvals disabled. The destructive-command rule in `AGENTS.md`
 (no force-pushes, absolute-path deletes, or `curl | sh` by an agent) applies as
 a standing instruction here; `/pincer-release` audits the git artifacts
