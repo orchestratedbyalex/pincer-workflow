@@ -9,20 +9,19 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 ## Current state
 
 v0.1.0 is **live on npm** (published 2026-09-01, verified end-to-end from the
-registry: `npx pincer-workflow init` + `doctor` pass). The plugin channel is
-built and committed (`plugin/` generated from `template/`, marketplace.json at
-root) but **not yet public — the GitHub push to
-`orchestratedbyalex/pincer-workflow` is pending** (repo URL already updated in
-package.json/README/CLI). Smoke test green (`npm test`). Extracted from the
+registry: `npx pincer-workflow init` + `doctor` pass). The repo is **public on
+GitHub** (`orchestratedbyalex/pincer-workflow`, pushed 2026-09-02), so the
+plugin marketplace channel is reachable. The **website is live** at
+https://orchestratedbyalex.github.io/pincer-workflow/ (GitHub Pages from
+`main:/docs`, linked from README, set as repo homepage — [[github-pages-site]]). Smoke test green (`npm test`). Extracted from the
 private `lead-engineer-role-alexander` repo, minus the confidential brief and
 the personal /llm-wiki section.
 
 ## Active / next task
 
-User pushes to GitHub (`gh repo create pincer-workflow --public --source .
---push`), then: test the public plugin install, optionally a GitHub Actions
-trusted-publishing workflow, and `npm version patch && npm publish` to fix the
-stale repository URL inside the published 0.1.0 metadata.
+Test the public plugin install in a real Claude Code session, optionally a
+GitHub Actions trusted-publishing workflow, and `npm version patch && npm
+publish` to fix the stale repository URL inside the published 0.1.0 metadata.
 
 ## Recent decisions
 
@@ -42,3 +41,6 @@ stale repository URL inside the published 0.1.0 metadata.
   does not catch stale generated output.
 - The private lead-engineer-role-alexander repo still holds its own copy of
   the kit; no back-sync mechanism exists yet ([[template-kit]]).
+- `docs/index.html` is the website source now, not the Claude artifact it
+  came from. Sheet 112 (installation) must be kept in step with the README's
+  install instructions ([[github-pages-site]]).

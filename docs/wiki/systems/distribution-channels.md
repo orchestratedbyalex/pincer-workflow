@@ -24,6 +24,10 @@ The perl rename uses a negative lookbehind `(?<![\w/.])` so file paths like
 
 ## 3. Raw files (fallback)
 
+Public repo: https://github.com/orchestratedbyalex/pincer-workflow (pushed
+2026-09-02). The website ([[github-pages-site]]) is served from the same
+repo's `docs/` folder.
+
 Clone/copy the repo, read `template/` directly. Any agent can follow the
 playbooks as plain markdown.
 

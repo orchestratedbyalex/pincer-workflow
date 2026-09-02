@@ -10,6 +10,7 @@
 - [[cli-installer]] — bin/pincer.js: init/update/doctor, the .pincer.json manifest, copy logic
 - [[template-kit]] — template/: the PINCER kit itself, its invariants, provenance
 - [[distribution-channels]] — npm/npx, Claude plugin marketplace, raw files; release flow and enforcement parity
+- [[github-pages-site]] — docs/index.html served by GitHub Pages from main:/docs; the 12-sheet walkthrough, provenance, sync rules
 
 ## Meta
 
