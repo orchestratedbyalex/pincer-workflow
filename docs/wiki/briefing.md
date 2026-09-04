@@ -8,7 +8,7 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 
 ## Current state
 
-**v0.2.3 is tagged, publish pending** (0.2.0–0.2.2 went live 2026-09-02; 0.1.0 was verified
+**v0.2.3 is live on npm and pushed (2026-09-04)** (0.2.0–0.2.2 went live 2026-09-02; 0.1.0 was verified
 end-to-end from the registry the day before). The repo is **public on
 GitHub** (`orchestratedbyalex/pincer-workflow`, pushed 2026-09-02), so the
 plugin marketplace channel is reachable. The **website is live** at
@@ -21,12 +21,16 @@ the personal /llm-wiki section.
 
 ## Active / next task
 
-**Publish 0.2.3** (tag v0.2.3 exists locally; user runs `! npm publish`
-then `git push --follow-tags`). 0.2.2 made the Codex channel repo-local
+**Dry-run 0.2.3 on Copilot and Codex in a brownfield repo.** 0.2.3 was published and pushed on 2026-09-04
+(publish needed `npm login` first — the npm token had lapsed, and npm reports an
+unauthenticated publish as a 404 on the package; the registry took ~20 s to show
+the new version after `PUT 202`). 0.2.2 made the Codex channel repo-local
 skills (`.agents/skills/`, `$pincer-plan <brief>`) and the user confirmed
 they load. 0.2.3 ships `.claude/commands|agents|references` on every
 platform (Codex-only installs lacked the templates narrow/plan load) and
-fixes `pincer-code` citing CLAUDE.md instead of AGENTS.md. Then continue the dry run of the full chain on a toy repo (Claude Code
+fixes `pincer-code` citing CLAUDE.md instead of AGENTS.md. The user is now
+testing the Copilot channel in a brownfield repo (needs `npx pincer-workflow@latest update`
+there, since it was installed from 0.2.2). Then continue the dry run of the full chain on a toy repo (Claude Code
 and Codex), test the public plugin install, and consider items 3–5 of the
 improvement list (size tracks, test-first tickets, learning loop into AGENTS.md).
 

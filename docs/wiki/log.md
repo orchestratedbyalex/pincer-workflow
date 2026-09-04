@@ -54,3 +54,11 @@ docs/wiki/* created; CLAUDE.md note appended.
 - What: user asked to fix `pincer-code` pointing at CLAUDE.md (absent on Codex-only installs); while checking, found Codex-/Copilot-only installs got none of `.claude/` although plan/narrow/evaluate load `.claude/references/*` and `.claude/agents/*` and the shipped sync script reads `.claude/commands/`. `PLATFORM_ROOTS.common` now includes those three dirs; `claude` keeps CLAUDE.md, settings.json, hooks.
 - Files: template/.claude/commands/pincer-code.md, bin/pincer.js, test/smoke.test.js (codex-only tree asserted), template/.codex/README.md, README, site stamp, wiki.
 - Outcome: tests green, v0.2.3 tagged; publish/push left to the user.
+
+## [2026-09-04] end | v0.2.3 published and pushed; Copilot brownfield dry run started
+
+- Published 0.2.3 to npm (needed `npm login` + `--otp`), verified the tarball carries
+  `.claude/{agents,commands,references}`, pushed commit 91ad466 and tag v0.2.3.
+- User's brownfield Copilot install (0.2.2) showed `.github/` but no `.claude/` — exactly
+  the 0.2.3 gap; next step there is `npx pincer-workflow@latest update`.
+- Recorded the npm auth/404 and 202-delay gotchas in [[distribution-channels]].
