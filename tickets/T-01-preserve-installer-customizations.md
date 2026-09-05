@@ -1,9 +1,12 @@
 ---
 ticket: T-01
-status: open
+status: done
 size: M
 prd: .prd/prd-v1.md
 depends_on: []
+started: 2026-09-05T18:45:40Z
+verified: 2026-09-05T18:47:32Z 5ce6679e6494
+finished: 2026-09-05T18:47:43Z
 ---
 
 ## Objective
@@ -16,8 +19,8 @@ PRD: `.prd/prd-v1.md`, requirement R-01. See the corresponding M0 work package i
 Implement the approved M0 behavior with regression coverage. Preserve canonical generation and existing supported interfaces. Reject invalid external input with useful diagnostics.
 
 ## Acceptance Criteria
-- [ ] Repeated updates preserve customized project files and existing conflict sidecars.
-- [ ] Legacy manifests cannot turn local edits into overwrite permission.
+- [x] Repeated updates preserve customized project files and existing conflict sidecars.
+- [x] Legacy manifests cannot turn local edits into overwrite permission.
 
 ## Verification
 ```bash

@@ -19,6 +19,7 @@ import { createRequire } from 'node:module';
 const TEMPLATE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'template');
 const VERSION = createRequire(import.meta.url)('../package.json').version;
 const MANIFEST = '.pincer.json';
+const MANIFEST_SCHEMA = 2;
 
 // The playbooks, subagent rubrics and PRD/ticket templates under .claude/ are
 // the canonical kit and are read by every platform's adapter (the Codex skills
@@ -53,15 +54,38 @@ function readManifest(dir) {
   const p = path.join(dir, MANIFEST);
   if (!fs.existsSync(p)) return null;
   try {
-    return JSON.parse(fs.readFileSync(p, 'utf8'));
+    const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+    if (!data || !Array.isArray(data.platforms) || !data.platforms.length ||
+        !data.platforms.every(p => ['claude', 'codex', 'copilot'].includes(p)) ||
+        !data.files || typeof data.files !== 'object' || Array.isArray(data.files) ||
+        Object.keys(data.files).some(p => path.isAbsolute(p) || p.split(/[\\/]/).includes('..')) ||
+        (data.schema !== undefined && data.schema !== MANIFEST_SCHEMA)) {
+      fail(`${MANIFEST} has an unsupported or invalid schema — restore a valid manifest before updating.`);
+    }
+    return data;
   } catch {
     fail(`${MANIFEST} exists but is not valid JSON — fix or remove it first.`);
   }
 }
 
 function writeManifest(dir, platforms, hashes) {
-  const data = { version: VERSION, platforms, files: hashes };
+  const data = { schema: MANIFEST_SCHEMA, version: VERSION, platforms, files: hashes };
   fs.writeFileSync(path.join(dir, MANIFEST), JSON.stringify(data, null, 2) + '\n');
+}
+
+// Preserve in-progress merges too. Reuse an identical proposal, never replace
+// a different existing sidecar (including one left by an earlier release).
+function writeProposal(dest, content) {
+  const base = dest + '.new';
+  let proposal = base;
+  let suffix = 0;
+  while (fs.existsSync(proposal)) {
+    if (fs.readFileSync(proposal).equals(content)) return proposal;
+    proposal = `${base}.${sha(content).slice(0, 12)}${suffix ? `.${suffix}` : ''}`;
+    suffix++;
+  }
+  fs.writeFileSync(proposal, content, { flag: 'wx' });
+  return proposal;
 }
 
 // Copies template files into dir. `baseline` (manifest hashes) tells an update
@@ -90,9 +114,11 @@ function install(dir, platforms, baseline) {
       fs.writeFileSync(dest, src);
       results.written.push(rel);
     } else {
-      fs.writeFileSync(dest + '.new', src);
-      hashes[rel] = sha(current); // keep tracking the user's version as the baseline
-      results.conflicted.push(rel);
+      const proposal = writeProposal(dest, src);
+      // Only a version actually installed by us grants overwrite permission.
+      // null means we have never established a trusted upstream baseline.
+      hashes[rel] = baseline?.[rel] ?? null;
+      results.conflicted.push({ rel, proposal: path.relative(dir, proposal) });
     }
   }
 
@@ -119,11 +145,11 @@ function ensureGitignore(dir) {
 function report({ written, skipped, conflicted }) {
   if (written.length) console.log(`  wrote    ${written.length} file(s)`);
   if (skipped.length) console.log(`  skipped  ${skipped.length} file(s) already up to date`);
-  for (const rel of conflicted) {
-    console.log(`  CONFLICT ${rel} — you edited this file; the new version is at ${rel}.new`);
+  for (const { rel, proposal } of conflicted) {
+    console.log(`  CONFLICT ${rel} — local content preserved; the new version is at ${proposal}`);
   }
   if (conflicted.length) {
-    console.log('\n  Merge each *.new file by hand (diff <file> <file>.new), then delete it.');
+    console.log('\n  Review and merge each reported proposal, then remove the resolved sidecars.');
   }
 }
 
@@ -184,7 +210,11 @@ async function cmdUpdate() {
   const manifest = readManifest(dir);
   if (!manifest) fail(`no ${MANIFEST} here — run \`pincer init\` first.`);
   console.log(`\nUpdating PINCER ${manifest.version} -> ${VERSION} for: ${manifest.platforms.join(', ')}\n`);
-  report(install(dir, manifest.platforms, manifest.files));
+  // v1 manifests could adopt a local edit as their baseline. There is no safe
+  // way to distinguish those from upstream files after the fact.
+  const baseline = manifest.schema === MANIFEST_SCHEMA ? manifest.files : null;
+  if (!baseline) console.log('  Legacy baselines are untrusted; differing files will be preserved for review.');
+  report(install(dir, manifest.platforms, baseline));
 }
 
 function cmdDoctor() {
@@ -221,7 +251,13 @@ function cmdDoctor() {
     console.log(`  note  locally edited (kept as-is on update): ${edited.join(', ')}`);
   }
 
-  const leftovers = walk(TEMPLATE).map((r) => path.join(dir, r + '.new')).filter((p) => fs.existsSync(p));
+  const leftovers = [...new Set([...walk(TEMPLATE), ...Object.keys(manifest.files)])].flatMap(rel => {
+    const parent = path.dirname(path.join(dir, rel));
+    const base = path.basename(rel) + '.new';
+    return fs.existsSync(parent) ? fs.readdirSync(parent)
+      .filter(name => name === base || name.startsWith(base + '.'))
+      .map(name => path.join(parent, name)) : [];
+  });
   check(leftovers.length === 0, 'no unmerged *.new files', leftovers.map((p) => path.relative(dir, p)).join(', '));
 
   console.log(problems ? `\n${problems} problem(s) found.` : '\nAll good.');
