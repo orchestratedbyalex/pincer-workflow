@@ -24,13 +24,16 @@ try {
   // init installs the full kit and writes the manifest
   const out = run('init', '--platform', 'all');
   assert.match(out, /wrote\s+\d+ file/);
-  for (const f of ['AGENTS.md', 'CLAUDE.md', '.pincer.json', '.claude/settings.json', '.codex/README.md', '.github/copilot-instructions.md', 'scripts/sync-prompts.sh']) {
+  for (const f of ['AGENTS.md', 'CLAUDE.md', '.pincer.json', '.claude/settings.json', '.codex/README.md', '.github/copilot-instructions.md', 'scripts/sync-prompts.sh', 'scripts/pincer-ticket-lib.sh']) {
     assert.ok(fs.existsSync(path.join(dir, f)), `missing ${f}`);
   }
   for (const f of ['.claude/hooks/block-dangerous.sh', '.claude/hooks/ticket-guard.sh', 'scripts/pincer-ticket.sh', 'scripts/pincer-status.sh']) {
     assert.ok(fs.statSync(path.join(dir, f)).mode & 0o100, `${f} not executable`);
   }
   assert.match(fs.readFileSync(path.join(dir, '.claude/settings.json'), 'utf8'), /ticket-guard\.sh/);
+  assert.match(execFileSync('bash', [path.join(dir, 'scripts/pincer-status.sh')], {
+    cwd: dir, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
+  }), /Next.*pincer-plan/, 'installed status can load its shared validator');
   // Codex dropped custom prompts (openai/codex#16115); it loads skills from .agents/skills/ in the repo
   for (const n of ['plan', 'narrow', 'code', 'evaluate', 'release', 'status']) {
     const skill = fs.readFileSync(path.join(dir, `.agents/skills/pincer-${n}/SKILL.md`), 'utf8');

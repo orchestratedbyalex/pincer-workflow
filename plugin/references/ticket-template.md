@@ -35,6 +35,16 @@ One sentence: what to build and why.
 ```
 
 Rules:
+- Supported syntax is deliberately limited: closed `---` frontmatter with unique,
+  unindented `key: value` fields; required `ticket`, `status`, `size`, and
+  `depends_on`. IDs use `T-01` through `T-999999` and match the filename; dependencies
+  use an inline list such as `[T-01, T-02]`, without duplicates or self references.
+- Use exactly one `## Acceptance Criteria` section with nonempty checkboxes.
+  Indentation and `-`, `+`, `*`, or numbered list markers are supported, with
+  `[ ]`, `[x]`, or `[X]`. Every unchecked criterion blocks completion.
+- Use exactly one `## Verification` section containing one closed fenced `bash`
+  block with runnable commands. Missing sections, malformed metadata, duplicate
+  ticket IDs, unsupported checkbox syntax, and invalid Bash fail before a transition.
 - `status` and the stamps `started`, `verified`, `finished` are written only by
   `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-ticket.sh` (`start` / `verify` / `done`). `verify` runs the
   Verification block verbatim and writes a receipt only on exit 0; `done`

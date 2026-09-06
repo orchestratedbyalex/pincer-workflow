@@ -38,7 +38,7 @@ for f in template/.claude/references/*.md; do xform "$f" > "plugin/references/$(
 xform template/docs/dry-run-checklist.md > plugin/docs/dry-run-checklist.md
 
 cp template/.claude/hooks/block-dangerous.sh template/.claude/hooks/ticket-guard.sh plugin/hooks/
-cp template/scripts/pincer-ticket.sh template/scripts/pincer-status.sh plugin/scripts/
+cp template/scripts/pincer-ticket.sh template/scripts/pincer-ticket-lib.sh template/scripts/pincer-status.sh plugin/scripts/
 chmod +x plugin/hooks/*.sh plugin/scripts/*.sh
 
 cat > plugin/hooks/hooks.json <<EOF

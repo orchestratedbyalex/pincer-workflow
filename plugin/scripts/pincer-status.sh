@@ -9,20 +9,12 @@
 # Build budget: PINCER_BUILD_BUDGET_MIN (default 75).
 set -uo pipefail
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/pincer-ticket-lib.sh"
 ROOT=${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}
 cd "$ROOT"
 BUDGET=${PINCER_BUILD_BUDGET_MIN:-75}
 NOW=$(date -u +%s)
 
-fm_get() { # file key -> value with any inline comment stripped; empty if absent
-  awk -v k="$2" '
-    NR == 1 && $0 != "---" { exit }
-    NR > 1 && $0 == "---" { exit }
-    NR > 1 && index($0, k ":") == 1 {
-      v = substr($0, length(k) + 2); sub(/#.*/, "", v)
-      gsub(/^[ \t]+|[ \t]+$/, "", v); print v; exit
-    }' "$1"
-}
 to_epoch() { # ISO-8601 UTC -> seconds (GNU date, then BSD date)
   date -u -d "$1" +%s 2>/dev/null || date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$1" +%s 2>/dev/null || echo 0
 }
@@ -39,6 +31,13 @@ if [ -z "$prd" ]; then
 else
   prd_status=$(fm_get "$prd" status)
   echo "PRD      $prd · status: ${prd_status:-?} · date: $(fm_get "$prd" date)"
+fi
+
+# Reject malformed/ambiguous tickets instead of treating unknown states as open.
+if ! errors=$(validate_ticket_set 2>&1); then
+  printf 'WARN     invalid tickets: %s\n' "$errors"
+  echo "Next     repair ticket input before continuing"
+  exit 1
 fi
 
 # ── Tickets ──
