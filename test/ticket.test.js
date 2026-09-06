@@ -74,7 +74,7 @@ try {
   assert.match(run(ticketSh, 'done', 'T-01'), /T-01 done/);
   assert.strictEqual(front('T-01-skeleton.md', 'status'), 'done');
   assert.match(front('T-01-skeleton.md', 'finished'), /Z$/);
-  assert.match(run(ticketSh, 'verify', 'T-01'), /receipt left unchanged/);
+  assert.match(run(ticketSh, 'verify', 'T-01'), /updating the latest outcome/);
 
   // verify auto-starts an open ticket; changing the check invalidates the receipt
   assert.match(run(ticketSh, 'verify', '2'), /T-02 started[\s\S]*receipt/);

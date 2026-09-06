@@ -11,6 +11,7 @@
 #
 # The receipt is `verified: <UTC time> <12-hex hash of the Verification block>`.
 # Change the check after it passed and `done` refuses until it passes again.
+# Every attempt revokes its predecessor; done runs a fresh final check.
 set -euo pipefail
 
 ROOT=${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}
@@ -56,6 +57,12 @@ fm_set() { # file key value — replace inside the frontmatter (keeping an inlin
     { print }' "$1" > "$tmp" && mv "$tmp" "$1"
 }
 
+fm_unset() {
+  local tmp; tmp=$(mktemp)
+  awk -v k="$2" 'NR > 1 && $0 == "---" { closed = 1 }
+    !closed && index($0, k ":") == 1 { next } { print }' "$1" > "$tmp" && mv "$tmp" "$1"
+}
+
 verification_cmds() { # the fenced block under "## Verification"
   awk '
     /^## Verification/ { inv = 1; next }
@@ -90,36 +97,49 @@ cmd_start() {
 }
 
 cmd_verify() {
-  local f id st cmds rc
+  local f id st cmds rc hash child
   f=$(ticket_file "$1"); id=$(normalize "$1"); st=$(fm_get "$f" status)
   case "$st" in
     open) cmd_start "$id" ;;
-    done) echo "$id is done — re-running its check (receipt left unchanged)" ;;
+    done) echo "$id is done — re-running its check and updating the latest outcome" ;;
   esac
   cmds=$(verification_cmds "$f")
+  fm_unset "$f" verified
+  hash=$(verify_hash "$f")
+  fm_set "$f" last_check "$(now) running $hash"
   printf '%s\n' "$cmds" | grep -vE '^[[:space:]]*(#|$)' >/dev/null || die "no runnable command in the Verification block of $f"
   echo "── $id verification ──"
   printf '%s\n' "$cmds" | sed 's/^/  $ /'
-  set +e; bash -eo pipefail -c "$cmds"; rc=$?; set -e
+  bash -eo pipefail -c "$cmds" & child=$!
+  trap 'kill "$child" 2>/dev/null || true; fm_set "$f" last_check "$(now) interrupted $hash"; exit 130' INT TERM
+  set +e; wait "$child"; rc=$?; set -e
+  trap - INT TERM
   if [ "$rc" -ne 0 ]; then
+    fm_set "$f" last_check "$(now) failed $hash"
     echo "✗ $id verification FAILED (exit $rc) — no receipt written. Fix, then re-run." >&2
     exit "$rc"
   fi
-  [ "$st" = done ] || fm_set "$f" verified "$(now) $(verify_hash "$f")"
+  if [ "$hash" != "$(verify_hash "$f")" ]; then
+    fm_set "$f" last_check "$(now) failed $hash"
+    die "Verification block changed during execution — re-run verify"
+  fi
+  fm_set "$f" last_check "$(now) passed $hash"
+  fm_set "$f" verified "$(now) $hash"
   echo "✓ $id verified — receipt: $(fm_get "$f" verified)"
 }
 
 cmd_done() {
   local f id st rec cur u slug
   f=$(ticket_file "$1"); id=$(normalize "$1"); st=$(fm_get "$f" status)
-  [ "$st" = done ] && { echo "$id already done"; return 0; }
-  [ "$st" = in_progress ] || die "$id is '$st' — run '$0 verify $id' first"
+  [ "$st" = in_progress ] || [ "$st" = done ] || die "$id is '$st' — run '$0 verify $id' first"
   rec=$(fm_get "$f" verified)
   [ -n "$rec" ] || die "no verification receipt on $id — run '$0 verify $id' and get a green check first"
   cur=$(verify_hash "$f")
   [ "${rec##* }" = "$cur" ] || die "receipt hash ${rec##* } does not match the current Verification block ($cur): the check changed after it passed — run '$0 verify $id' again"
   u=$(unticked "$f")
   [ -z "$u" ] || die "unticked acceptance criteria on $id:\n$u\nTick each verified criterion; a criterion that was cut is a scope change to record in the PRD, not a box to skip."
+  cmd_verify "$id"
+  [ "$st" = done ] && { echo "$id already done — current check passed"; return 0; }
   fm_set "$f" status done
   fm_set "$f" finished "$(now)"
   slug=$(basename "$f" .md); slug=${slug#T-[0-9][0-9]-}

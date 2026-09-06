@@ -52,6 +52,10 @@ else
     id=$(fm_get "$f" ticket); [ -n "$id" ] || id=$(basename "$f" | cut -c1-4)
     st=$(fm_get "$f" status); size=$(fm_get "$f" size)
     started=$(fm_get "$f" started); verified=$(fm_get "$f" verified); finished=$(fm_get "$f" finished)
+    attempt=$(fm_get "$f" last_check)
+    if [ -n "$attempt" ] && ! printf '%s' "$attempt" | grep -q ' passed '; then
+      warn="$warn  WARN $id latest verification: $attempt — re-run verify\n"
+    fi
     deps=$(fm_get "$f" depends_on | grep -oE 'T-[0-9]+' | tr '\n' ' ' || true)
     if [ -n "$started" ]; then
       se=$(to_epoch "$started")
