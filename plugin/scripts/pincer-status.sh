@@ -100,8 +100,11 @@ else
         blocked=""
         for d in $deps; do
           df=$(ticket_file "$d" 2>/dev/null || true)
+          dep_prd=""
+          [ -z "$df" ] || dep_prd=$(ticket_prd "$df" 2>/dev/null || true)
           if [ -z "$df" ] || [ "$(fm_get "$df" status)" != done ] ||
-             ! usable_ticket_prd "$df" >/dev/null 2>&1 || ! ticket_readiness "$df" >/dev/null; then
+             [ "$dep_prd" != "$prd" ] || ! usable_ticket_prd "$df" >/dev/null 2>&1 ||
+             ! ticket_readiness "$df" >/dev/null; then
             blocked="$blocked $d"
           fi
         done

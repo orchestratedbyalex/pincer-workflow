@@ -176,8 +176,10 @@ function existingContent(file) {
   catch { return null; }
 }
 
-function applyEdit(content, oldText, newText) {
+function applyEdit(content, oldText, newText, replaceAll = false) {
   if (typeof oldText !== 'string' || typeof newText !== 'string') block('edit payload must contain string old_string and new_string values.');
+  if (!oldText) block('edit old_string must not be empty.');
+  if (replaceAll) return content.split(oldText).join(newText);
   const index = content.indexOf(oldText);
   return index === -1 ? content : content.slice(0, index) + newText + content.slice(index + oldText.length);
 }
@@ -204,7 +206,7 @@ function guardEdits(tool, toolInput) {
   let after = before ?? '';
   for (const edit of edits) {
     if (!edit || typeof edit !== 'object') block('each edit must be an object.');
-    after = applyEdit(after, edit.old_string, edit.new_string);
+    after = applyEdit(after, edit.old_string, edit.new_string, edit.replace_all === true);
   }
   if (!sameState(before ?? '', after)) block('ticket lifecycle fields may only be changed by pincer-ticket.sh.');
 }

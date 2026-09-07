@@ -59,6 +59,8 @@ assert.notEqual(run(ambiguous, 'bash', [ticketScript, 'bind', 'T-01', '.prd/prd-
 const crossPrd = tempDir(); createPrd(crossPrd); createPrd(crossPrd, 2);
 createTicket(crossPrd); complete(crossPrd);
 createTicket(crossPrd, { id: 'T-02', deps: 'T-01', prd: '.prd/prd-v2.md' });
+assert.match(status(crossPrd).stdout, /T-02 +open +S +blocked by T-01/, 'cross-PRD dependency is not advertised as ready');
+assert.doesNotMatch(next(crossPrd), /next ready ticket: T-02/);
 assert.match(step(crossPrd, 'start', 'T-02').stderr, /dependency T-01 references/, 'dependencies cannot silently cross PRDs');
 
 const revision = tempDir(); createPrd(revision); createTicket(revision); complete(revision);

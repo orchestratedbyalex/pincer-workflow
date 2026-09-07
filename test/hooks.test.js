@@ -110,6 +110,11 @@ check('ticket', 'Write blocks whole state reset to an open ticket', replace(init
 check('ticket', 'Write blocks empty replacement', replace(''), 2);
 check('ticket', 'Edit allows acceptance change', edit('- [x] expected behavior', '- [ ] expected behavior'), 0);
 check('ticket', 'Edit allows body prose', edit('Example', 'Updated example'), 0);
+check('ticket', 'Edit replace_all cannot hide a status reset behind prose', {
+  tool_name: 'Edit', tool_input: {
+    file_path: absolute, old_string: 'done', new_string: 'open', replace_all: true,
+  },
+}, 2);
 check('ticket', 'Write preserves identical protected fields while changing body', replace(completed.replace('Example', 'Updated example')), 0);
 check('ticket', 'MultiEdit allows body changes', {
   tool_name: 'MultiEdit', tool_input: { file_path: absolute, edits: [
@@ -117,6 +122,11 @@ check('ticket', 'MultiEdit allows body changes', {
     { old_string: '- [x] expected behavior', new_string: '- [ ] expected behavior' },
   ] },
 }, 0);
+check('ticket', 'MultiEdit honors replace_all while checking lifecycle state', {
+  tool_name: 'MultiEdit', tool_input: { file_path: absolute, edits: [
+    { old_string: 'done', new_string: 'open', replace_all: true },
+  ] },
+}, 2);
 check('ticket', 'README state examples are not ticket edits', edit('status: done', 'status: open', path.join(dir, 'README.md')), 0);
 check('ticket', 'new open ticket is allowed', replace(initial.replace('T-01', 'T-02'), path.join(dir, 'tickets/T-02-new.md')), 0);
 for (const status of ['in_progress', 'done']) {
