@@ -1,7 +1,7 @@
 ---
 prd: .prd/prd-v1.md
 base: d3aae87270004a1b88524a990d7578c0c2c71d33
-candidate: 94a78f83f2b2969ad1780c48f4c36385390570f3
+candidate: 0e270a9137f78ade4781b2079981797b4e03038d
 ---
 
 # M0 trust repairs
@@ -26,18 +26,26 @@ GitHub Actions runs the same gate on Linux and macOS with Node 18 and 22.
 
 ## Evaluation
 
-The final candidate is `94a78f83f2b2969ad1780c48f4c36385390570f3`,
+The final candidate is `0e270a9137f78ade4781b2079981797b4e03038d`,
 reviewed from base `d3aae87270004a1b88524a990d7578c0c2c71d33`.
 An independent review found two lower-severity readiness inconsistencies: an Edit
 with `replace_all` could evade lifecycle simulation through an earlier prose match,
 and status could advertise a cross-PRD dependency that start would refuse. T-07
-fixed both and added regression coverage. No high-confidence findings remain.
+fixed both in `plugin/hooks/hook-policy.cjs:209` and
+`template/scripts/pincer-status.sh:103`, with regressions at
+`test/hooks.test.js:113` and `test/recovery.test.js:62`.
 The release consistency check then found that the nominally read-only audit still
 invoked the state-writing ticket verifier; T-08 now runs the candidate-wide gate
-directly and preserves the evaluation snapshot. T-09 then separated the reusable
-release contract from the repository-specific manual dry run and kit-maintenance
-checks, and removed stale guidance that could expose secret values or bypass the
-ticket lifecycle for post-evaluation fixes.
+directly at `plugin/commands/release.md:28` and preserves the evaluation snapshot.
+T-09 then separated the reusable contract at
+`template/docs/release-checklist.md:1` from the repository-specific checks at
+`docs/kit-maintenance-checklist.md:1`, and removed stale guidance that could expose
+secret values or bypass the ticket lifecycle for post-evaluation fixes. The final
+audit found one legacy done ticket without a latest-attempt record; T-10 now blocks
+that state at `template/scripts/pincer-ticket-lib.sh:237`, covers it at
+`test/recovery.test.js:98`, and refreshed T-01 through the ticket state machine.
+An independent review of T-10 found no high-confidence issue. No review finding
+remains open.
 
 `npm test` passes the installer, lifecycle, validation, verification, recovery,
 116 hook-payload, workflow-contract, generation-parity, and packed-install checks.
@@ -62,7 +70,7 @@ action. Continue with M1 only through a new PRD.
 
 ## Handover
 
-Start with `.prd/prd-v1.md`, then `docs/pincer-improvement-plan.md` and the nine
+Start with `.prd/prd-v1.md`, then `docs/pincer-improvement-plan.md` and the ten
 ticket files. `template/` is canonical. After changing it, run
 `template/scripts/sync-prompts.sh`, `scripts/build-plugin.sh`, and `npm test`.
 
