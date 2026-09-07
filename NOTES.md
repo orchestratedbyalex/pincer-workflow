@@ -1,7 +1,7 @@
 ---
 prd: .prd/prd-v1.md
 base: d3aae87270004a1b88524a990d7578c0c2c71d33
-candidate: eec93c7f327e73d566987dc4abd57371da18b5bf
+candidate: 94a78f83f2b2969ad1780c48f4c36385390570f3
 ---
 
 # M0 trust repairs
@@ -26,7 +26,7 @@ GitHub Actions runs the same gate on Linux and macOS with Node 18 and 22.
 
 ## Evaluation
 
-The final candidate is `eec93c7f327e73d566987dc4abd57371da18b5bf`,
+The final candidate is `94a78f83f2b2969ad1780c48f4c36385390570f3`,
 reviewed from base `d3aae87270004a1b88524a990d7578c0c2c71d33`.
 An independent review found two lower-severity readiness inconsistencies: an Edit
 with `replace_all` could evade lifecycle simulation through an earlier prose match,
@@ -34,7 +34,10 @@ and status could advertise a cross-PRD dependency that start would refuse. T-07
 fixed both and added regression coverage. No high-confidence findings remain.
 The release consistency check then found that the nominally read-only audit still
 invoked the state-writing ticket verifier; T-08 now runs the candidate-wide gate
-directly and preserves the evaluation snapshot.
+directly and preserves the evaluation snapshot. T-09 then separated the reusable
+release contract from the repository-specific manual dry run and kit-maintenance
+checks, and removed stale guidance that could expose secret values or bypass the
+ticket lifecycle for post-evaluation fixes.
 
 `npm test` passes the installer, lifecycle, validation, verification, recovery,
 116 hook-payload, workflow-contract, generation-parity, and packed-install checks.
@@ -59,7 +62,7 @@ action. Continue with M1 only through a new PRD.
 
 ## Handover
 
-Start with `.prd/prd-v1.md`, then `docs/pincer-improvement-plan.md` and the seven
+Start with `.prd/prd-v1.md`, then `docs/pincer-improvement-plan.md` and the nine
 ticket files. `template/` is canonical. After changing it, run
 `template/scripts/sync-prompts.sh`, `scripts/build-plugin.sh`, and `npm test`.
 
