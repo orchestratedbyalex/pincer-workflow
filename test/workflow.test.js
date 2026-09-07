@@ -32,8 +32,12 @@ for (const source of [code, evaluate, ticket]) {
 }
 assert.match(release, /Any failure\s+blocks PASS/i);
 assert.match(release, /candidate-wide release gate/i);
+assert.match(release, /docs\/release-checklist\.md/);
+assert.doesNotMatch(release.split('## Steps')[0], /docs\/dry-run-checklist\.md/);
 assert.match(release, /Do not call `pincer-ticket\.sh` from Release/i);
 assert.doesNotMatch(release, /pincer-ticket\.sh verify/);
+assert.match(evaluate, /through a new ticket associated with/i);
+assert.doesNotMatch(evaluate, /commit as `review: fixes`/i);
 
 for (const source of [rootReadme, codex]) {
   assert.doesNotMatch(source, /Codex has no PreToolUse hooks/i);
@@ -48,5 +52,10 @@ for (const name of ['narrow', 'code', 'release']) {
 }
 assert.ok(fs.existsSync(path.join(repo, 'plugin/hooks/hook-policy.cjs')), 'plugin ships structured hook parser');
 assert.equal(read('plugin/hooks/hook-policy.cjs'), read('template/.claude/hooks/hook-policy.cjs'), 'plugin hook parser matches canonical source');
+assert.equal(
+  read('plugin/docs/release-checklist.md').replaceAll('${CLAUDE_PLUGIN_ROOT}/', ''),
+  read('template/docs/release-checklist.md'),
+  'plugin ships the transformed general release checklist',
+);
 
 console.log('workflow contract tests passed');

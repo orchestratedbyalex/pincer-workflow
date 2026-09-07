@@ -5,14 +5,16 @@ argument-hint: "Stage to check (optional: plan | narrow | code | evaluate — de
 
 # /pincer:release — Workflow Audit
 
-You are auditing the current repo state against `${CLAUDE_PLUGIN_ROOT}/docs/dry-run-checklist.md`. Read-only:
+You are auditing the current repo state against `${CLAUDE_PLUGIN_ROOT}/docs/release-checklist.md`. Read-only:
 report pass/fail, never fix anything — fixes belong to the stage commands.
 
 **Requested stage:** $ARGUMENTS
 
 ## Steps
 
-1. Read `${CLAUDE_PLUGIN_ROOT}/docs/dry-run-checklist.md` — it is the source of truth for what to check.
+1. Read `${CLAUDE_PLUGIN_ROOT}/docs/release-checklist.md` — it is the source of truth for product-candidate
+   readiness. `${CLAUDE_PLUGIN_ROOT}/docs/dry-run-checklist.md` is a separate manual platform trial and must
+   not impose toy-project or Pincer-kit assumptions on this audit.
 2. Run `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-status.sh` to determine the selected PRD and which stages have run
    (it reads `.prd/`, associated `tickets/`, `NOTES.md`; add `git log`). If `$ARGUMENTS`
    names a stage, check only up

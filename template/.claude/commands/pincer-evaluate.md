@@ -43,8 +43,10 @@ run the pipeline, then present results.
 7. Present findings as a short list with `file:line` references, ordered by severity.
    Security findings always rank above style-adjacent ones. For each, say whether you
    recommend fixing now (within the timebox) or noting as known-issue.
-8. Fix findings clearly within the authorized PRD, verify, and commit as `review: fixes`.
-   Ask only when a fix changes scope, architecture, or another material decision.
+8. Fix findings clearly within the authorized PRD through a new ticket associated with
+   that PRD. Use `pincer-ticket.sh` to start, verify, and close it, then make a scoped
+   `T-{NN}: {title}` commit. Ask only when a fix changes scope, architecture, or another
+   material decision; never make an ad-hoc `review: fixes` commit.
 9. Close out: write a brief `NOTES.md` at the repo root with frontmatter:
    ```yaml
    ---

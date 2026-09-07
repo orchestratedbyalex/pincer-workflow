@@ -7,7 +7,7 @@
 #   .claude/agents/…      ->  ${CLAUDE_PLUGIN_ROOT}/agents/…
 #   .claude/references/…  ->  ${CLAUDE_PLUGIN_ROOT}/references/…
 #   .claude/commands/…    ->  ${CLAUDE_PLUGIN_ROOT}/commands/…
-#   docs/dry-run-checklist.md -> ${CLAUDE_PLUGIN_ROOT}/docs/dry-run-checklist.md
+#   docs/*.md             ->  ${CLAUDE_PLUGIN_ROOT}/docs/*.md
 #   scripts/pincer-*.sh   ->  ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-*.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -24,7 +24,7 @@ xform() {
       s{\.claude/agents/}{\${CLAUDE_PLUGIN_ROOT}/agents/}g;
       s{\.claude/references/}{\${CLAUDE_PLUGIN_ROOT}/references/}g;
       s{\.claude/commands/}{\${CLAUDE_PLUGIN_ROOT}/commands/}g;
-      s{docs/dry-run-checklist\.md}{\${CLAUDE_PLUGIN_ROOT}/docs/dry-run-checklist.md}g;
+      s{docs/((?:release|dry-run)-checklist\.md)}{\${CLAUDE_PLUGIN_ROOT}/docs/$1}g;
       s{(?<![\w/])scripts/(pincer-(?:ticket|status)\.sh)}{\${CLAUDE_PLUGIN_ROOT}/scripts/$1}g;
     '
 }
@@ -35,7 +35,7 @@ for f in template/.claude/commands/pincer-*.md; do
 done
 for f in template/.claude/agents/*.md; do xform "$f" > "plugin/agents/$(basename "$f")"; done
 for f in template/.claude/references/*.md; do xform "$f" > "plugin/references/$(basename "$f")"; done
-xform template/docs/dry-run-checklist.md > plugin/docs/dry-run-checklist.md
+for f in template/docs/*.md; do xform "$f" > "plugin/docs/$(basename "$f")"; done
 
 cp template/.claude/hooks/block-dangerous.sh template/.claude/hooks/ticket-guard.sh template/.claude/hooks/hook-policy.cjs plugin/hooks/
 cp template/scripts/pincer-ticket.sh template/scripts/pincer-ticket-lib.sh template/scripts/pincer-status.sh plugin/scripts/

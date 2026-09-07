@@ -7,14 +7,16 @@ description: "Audit the repo against the workflow checklist — pass/fail per it
 
 # $pincer-release — Workflow Audit
 
-You are auditing the current repo state against `docs/dry-run-checklist.md`. Read-only:
+You are auditing the current repo state against `docs/release-checklist.md`. Read-only:
 report pass/fail, never fix anything — fixes belong to the stage commands.
 
 **Requested stage:** the text that follows the `$pincer-release` mention, if any (when omitted, use the playbook's documented default)
 
 ## Steps
 
-1. Read `docs/dry-run-checklist.md` — it is the source of truth for what to check.
+1. Read `docs/release-checklist.md` — it is the source of truth for product-candidate
+   readiness. `docs/dry-run-checklist.md` is a separate manual platform trial and must
+   not impose toy-project or Pincer-kit assumptions on this audit.
 2. Run `scripts/pincer-status.sh` to determine the selected PRD and which stages have run
    (it reads `.prd/`, associated `tickets/`, `NOTES.md`; add `git log`). If `the text that follows the `$pincer-release` mention, if any (when omitted, use the playbook's documented default)`
    names a stage, check only up

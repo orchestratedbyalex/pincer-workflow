@@ -57,6 +57,7 @@ for (const relative of [
   'bin/pincer.js', 'template/AGENTS.md', 'template/.claude/commands/pincer-plan.md',
   'template/.claude/hooks/hook-policy.cjs', 'template/.agents/skills/pincer-plan/SKILL.md',
   'template/.github/prompts/pincer-plan.prompt.md', 'template/scripts/pincer-ticket-lib.sh',
+  'template/docs/release-checklist.md',
 ]) assert.ok(packedNames.has(relative), `tarball missing ${relative}`);
 
 const installed = tempDir();
@@ -91,7 +92,7 @@ function pincer(project, ...args) {
 for (const [platform, layout] of Object.entries(layouts)) {
   const greenfield = tempDir();
   passes(pincer(greenfield, 'init', '--platform', platform), `${platform} greenfield init`);
-  for (const relative of ['AGENTS.md', 'scripts/pincer-ticket.sh', 'scripts/pincer-ticket-lib.sh', '.claude/commands/pincer-plan.md', ...layout.present])
+  for (const relative of ['AGENTS.md', 'docs/release-checklist.md', 'scripts/pincer-ticket.sh', 'scripts/pincer-ticket-lib.sh', '.claude/commands/pincer-plan.md', ...layout.present])
     assert.ok(fs.existsSync(path.join(greenfield, relative)), `${platform} greenfield missing ${relative}`);
   for (const relative of layout.absent)
     assert.ok(!fs.existsSync(path.join(greenfield, relative)), `${platform} greenfield unexpectedly contains ${relative}`);

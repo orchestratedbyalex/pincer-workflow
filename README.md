@@ -104,7 +104,8 @@ alone — the new version lands next to them as `<file>.new` for a manual merge.
 | `.agents/skills/` · `.codex/` · `.github/` | Generated Codex skills and Copilot prompt files + platform wiring (`.codex/README.md` covers the Codex posture) |
 | `scripts/sync-prompts.sh` | Regenerates the adapters after you edit a playbook |
 | `scripts/build-plugin.sh` | Regenerates the Claude Code plugin (`plugin/`) from the template |
-| `docs/dry-run-checklist.md` | The workflow's own test — audited by `/pincer-release` |
+| `docs/release-checklist.md` | General, read-only candidate audit used by `/pincer-release` |
+| `docs/dry-run-checklist.md` | Separate manual platform trial for the Pincer kit |
 
 ## Design principles
 

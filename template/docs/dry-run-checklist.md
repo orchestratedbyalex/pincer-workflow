@@ -1,6 +1,9 @@
 # PINCER Dry-Run Checklist
 
-How to test that the `.claude/` workflow works: run the full chain on a small toy
+This is the manual platform trial for the Pincer kit, not the product release audit.
+For release readiness, use `docs/release-checklist.md`.
+
+To test that the `.claude/` workflow works, run the full chain on a small toy
 feature (e.g. "a CLI todo app in TypeScript — add, list, complete, delete, stored in a
 local JSON file"), then tick every box below. All boxes ticked = the workflow passes.
 A failed box points at the command file to fix.
@@ -9,7 +12,7 @@ Use a throwaway copy of this repo and a cheap model (`claude --model sonnet`).
 
 ## After `/pincer-plan`
 
-- [ ] `.prd/prd-v1.md` exists
+- [ ] The selected `.prd/prd-vN.md` exists
 - [ ] Its frontmatter has `version`, `status: draft`, and `date`
 - [ ] All 6 core sections are present (Problem, Solution, Scope, Architecture,
       Success Criteria, Out of Scope)
@@ -52,12 +55,12 @@ Use a throwaway copy of this repo and a cheap model (`claude --model sonnet`).
 ## After `/pincer-evaluate`
 
 - [ ] Findings (if any) were presented with `file:line` references
-- [ ] The mechanical security audit ran: history grep for secret-like strings,
+- [ ] The mechanical security audit used redacted, location-only secret findings;
       `git ls-files` shows no `.env` beyond `.env.example`, dependency audit,
       and (if there's an API) one invalid-input request returned a clean 4xx
 - [ ] If the project has a UI, it was actually opened and checked visually, not
       only read as code
-- [ ] Approved fixes were committed as `review: fixes` and re-verified
+- [ ] Evaluation fixes were completed through new tickets and re-verified
 - [ ] `NOTES.md` exists at the repo root and covers: what was built, what was cut
       and why, known issues, next steps
 
@@ -65,8 +68,8 @@ Use a throwaway copy of this repo and a cheap model (`claude --model sonnet`).
 
 - [ ] `git log --oneline` reads as a coherent story: setup → tickets → T-01…T-NN → review
 - [ ] No `.env` file contents ever appeared in the conversation
-- [ ] `git log -p` contains no secret values anywhere in history (a committed-then-
-      deleted key is still leaked)
+- [ ] Relevant history was checked for committed-then-deleted secrets without printing
+      candidate values into the conversation or audit report
 - [ ] Every dependency in the lockfile is named in the PRD's architecture or was
       explicitly approved during build
 - [ ] `NOTES.md` has a Handover section (orientation, dependency justification,
