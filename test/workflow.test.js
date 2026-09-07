@@ -30,7 +30,10 @@ assert.match(code, /without printing values/i);
 for (const source of [code, evaluate, ticket]) {
   assert.doesNotMatch(source, /git add -A|git log -p \| grep|git diff \| grep/i);
 }
-assert.match(release, /failure revokes readiness/i);
+assert.match(release, /Any failure\s+blocks PASS/i);
+assert.match(release, /candidate-wide release gate/i);
+assert.match(release, /Do not call `pincer-ticket\.sh` from Release/i);
+assert.doesNotMatch(release, /pincer-ticket\.sh verify/);
 
 for (const source of [rootReadme, codex]) {
   assert.doesNotMatch(source, /Codex has no PreToolUse hooks/i);

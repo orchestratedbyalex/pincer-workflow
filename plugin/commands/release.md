@@ -20,11 +20,12 @@ report pass/fail, never fix anything — fixes belong to the stage commands.
 3. Check every applicable item mechanically where possible:
    - File existence and frontmatter: read the files.
    - Commit format and story: `git log --oneline`.
-   - Receipts: every done ticket carries `verified:` (a status warning means one was
-     marked done by hand). Re-run at least two checks with
-     `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-ticket.sh verify T-{NN}` — on a done ticket it records the latest
-     attempt and replaces the receipt only on success; failure revokes readiness. Report
-     actual output and stop the release verdict on any failure.
+   - Receipts: every done ticket carries current `last_check` and `verified` evidence;
+     any status warning fails the audit. Do not call `pincer-ticket.sh` from Release:
+     it writes receipts and would invalidate the evaluated candidate.
+   - Run the repository's candidate-wide release gate directly (`npm test`, or the
+     equivalent declared by the project) and report its actual output. Any failure
+     blocks PASS. Confirm `git status --short` remains clean afterward.
 4. For judgment items (tickets genuinely S/M, history reads as a story), give your
    verdict AND one sentence of evidence — never a bare pass.
 5. Present a table: checklist item | pass/fail/skipped | evidence. Order by stage.
