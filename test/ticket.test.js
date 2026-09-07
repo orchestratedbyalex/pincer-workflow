@@ -90,7 +90,8 @@ try {
   assert.match(status, /3 total · 2 done · 0 in progress · 1 open/);
   assert.match(status, /T-01 +done +S +started \d\d:\d\d · finished \d\d:\d\d \(\d+m\)/);
   assert.match(status, /T-03 +open +S +ready/);
-  assert.match(status, /Build +elapsed \d+m since the first ticket started · budget 75m/);
+  assert.match(status, /Build +elapsed \d+m since the first ticket started/);
+  assert.doesNotMatch(status, /budget \d+m/, 'no default budget is imposed');
   assert.match(status, /Next +\/pincer-code — next ready ticket: T-03/);
   run(ticketSh, 'start', 'T-03');
   assert.match(run(statusSh), /Next +resume T-03/);

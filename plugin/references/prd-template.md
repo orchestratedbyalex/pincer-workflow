@@ -1,7 +1,7 @@
 # PRD Template
 
-Used by `/pincer:plan` Phase 4. Core sections always included; optional sections only when they
-earn their space in the timebox. Keep the whole PRD under ~2 pages.
+Used by `/pincer:plan` Phase 4. Core sections are always included. Add optional detail
+when uncertainty, product context, or risk warrants it; a small fix may remain compact.
 
 ---
 
@@ -56,7 +56,7 @@ and where they live (server-side only, named in `.env.example`), and what the cl
 sees on failure (generic message — details stay in server logs).
 
 ### Dependencies & Risks
-Only if something outside our control could sink the timebox.
+Include when something outside our control or a migration/rollback concern could sink delivery.
 
 ---
 

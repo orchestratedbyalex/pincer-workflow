@@ -6,13 +6,13 @@
 #
 # Elapsed times come from the `started` / `finished` stamps that
 # scripts/pincer-ticket.sh writes, i.e. from the clock — never estimated.
-# Build budget: PINCER_BUILD_BUDGET_MIN (default 75).
+# Optional build budget: PINCER_BUILD_BUDGET_MIN.
 set -uo pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/pincer-ticket-lib.sh"
 ROOT=${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}
 cd "$ROOT"
-BUDGET=${PINCER_BUILD_BUDGET_MIN:-75}
+BUDGET=${PINCER_BUILD_BUDGET_MIN:-}
 NOW=$(date -u +%s)
 
 to_epoch() { # ISO-8601 UTC -> seconds (GNU date, then BSD date)
@@ -114,7 +114,9 @@ else
   printf '%b' "$rows"
   printf '%b' "$warn"
   if [ -n "$first_start" ]; then
-    echo "Build    elapsed $(mins "$first_start" "$NOW") since the first ticket started · budget ${BUDGET}m"
+    build="Build    elapsed $(mins "$first_start" "$NOW") since the first ticket started"
+    [ -z "$BUDGET" ] || build="$build · budget ${BUDGET}m"
+    echo "$build"
   fi
 fi
 

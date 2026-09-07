@@ -129,7 +129,7 @@ cmd_done() {
   fm_set "$f" status done
   fm_set "$f" finished "$(now)"
   slug=$(basename "$f" .md); slug=${slug#T-[0-9][0-9]-}
-  echo "✓ $id done. Commit it with the code: git add -A && git commit -m \"$id: ${slug//-/ }\""
+  echo "✓ $id done. Inspect staged work, stage only this ticket's paths, review git diff --cached, then commit: $id: ${slug//-/ }"
 }
 
 case "${1:-}" in

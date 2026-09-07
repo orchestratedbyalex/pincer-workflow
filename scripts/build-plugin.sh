@@ -37,7 +37,7 @@ for f in template/.claude/agents/*.md; do xform "$f" > "plugin/agents/$(basename
 for f in template/.claude/references/*.md; do xform "$f" > "plugin/references/$(basename "$f")"; done
 xform template/docs/dry-run-checklist.md > plugin/docs/dry-run-checklist.md
 
-cp template/.claude/hooks/block-dangerous.sh template/.claude/hooks/ticket-guard.sh plugin/hooks/
+cp template/.claude/hooks/block-dangerous.sh template/.claude/hooks/ticket-guard.sh template/.claude/hooks/hook-policy.cjs plugin/hooks/
 cp template/scripts/pincer-ticket.sh template/scripts/pincer-ticket-lib.sh template/scripts/pincer-status.sh plugin/scripts/
 chmod +x plugin/hooks/*.sh plugin/scripts/*.sh
 

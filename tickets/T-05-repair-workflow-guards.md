@@ -1,9 +1,13 @@
 ---
 ticket: T-05
-status: open
+status: done
 size: M
 prd: .prd/prd-v1.md
 depends_on: [T-04]
+started: 2026-09-07T14:55:58Z
+last_check: 2026-09-07T15:14:41Z passed 14dabf0e8335
+verified: 2026-09-07T15:14:41Z 14dabf0e8335
+finished: 2026-09-07T15:14:41Z
 ---
 
 ## Objective
@@ -16,8 +20,8 @@ PRD: `.prd/prd-v1.md`, requirement R-05. See the corresponding M0 work package i
 Implement the approved M0 behavior with regression coverage. Preserve canonical generation and existing supported interfaces. Reject invalid external input with useful diagnostics.
 
 ## Acceptance Criteria
-- [ ] Hooks parse JSON and protect documented command/state changes.
-- [ ] Playbooks support greenfield and brownfield, scoped staging and existing authorization.
+- [x] Hooks parse JSON and protect documented command/state changes.
+- [x] Playbooks support greenfield and brownfield, scoped staging and existing authorization.
 
 ## Verification
 ```bash

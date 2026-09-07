@@ -5,17 +5,19 @@ argument-hint: "Brief description of the task/feature (paste the full brief if y
 
 # /pincer:plan — PRD Creation
 
-You are turning a task brief into a compact PRD. This runs inside a short delivery
-timebox (~2 hours total), so discovery is brief and the PRD is lean. The PRD feeds
+You are turning a task brief into a reviewable PRD. Scale discovery and detail to
+the change's uncertainty, risk, and any time budget the user supplied. The PRD feeds
 `/pincer:narrow` next.
 
 **Initial request:** $ARGUMENTS
 
-First run `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-status.sh`. If a PRD already exists, say so and ask whether
-this is a new version of it (`.prd/prd-v{N+1}.md` — old versions are never overwritten)
-or a fresh start; if tickets are in progress, stop and point at `/pincer:code` instead.
+First run `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-status.sh`. If a PRD already exists, preserve it and select
+the next unused numeric version for this change. Use the brief and repository state to
+distinguish a revision from a new change; ask only if that distinction changes scope or
+architecture. If tickets for the current PRD are in progress, resume `/pincer:code`
+unless the user explicitly authorized a separate change.
 
-## Phase 1: Discovery (~5 min)
+## Phase 1: Discovery
 
 1. If `$ARGUMENTS` contains the brief, extract what you can before asking anything.
    Never ask a question the brief already answers.
@@ -27,9 +29,10 @@ or a fresh start; if tickets are in progress, stop and point at `/pincer:code` i
 3. If the project has a frontend, ask one design question: "What should this feel like,
    and what should it NOT look like?" Capture the answer for the Visual Direction section.
 
-Summarize your understanding in 3–5 sentences and confirm before moving on.
+Summarize your understanding in 3–5 sentences. Existing authorization in the request or
+session carries forward; ask only about an unresolved choice that materially changes the result.
 
-## Phase 2: Codebase scan (conditional, ~5 min)
+## Phase 2: Codebase scan (conditional)
 
 If the repo already contains source code, launch 1–2 `codebase-explorer` agents in parallel
 (one for architecture/structure, one for patterns relevant to the feature). Read the 2–3 most
@@ -44,7 +47,7 @@ touches are load-bearing, what test coverage protects them (run the suite, don't
 and the blast radius + rollback story for the change. Record these in the PRD's
 Architecture section. Greenfield speed assumptions do not transfer to brownfield work.
 
-## Phase 3: Architecture (~5 min)
+## Phase 3: Architecture
 
 Propose the architecture: components, data flow, integration points, and key decisions.
 - Recommend one approach; mention an alternative only when the trade-off is real.
@@ -57,23 +60,28 @@ Propose the architecture: components, data flow, integration points, and key dec
 - Verify the contract of any external API the plan builds on (one live request or the
   current official docs) before designing around it — endpoint shapes remembered from
   training data are guesses.
-- Bias every decision toward "finishable in the remaining time". Cut before you gold-plate.
+- Respect any explicit delivery budget. Record deliberate cuts in Out of Scope.
 
-**Gate (heavy):** Ask for explicit approval of the architecture before writing the PRD.
+Prepare the full draft before seeking any approval still required. The user should review a
+concrete scope and architecture; do not repeat an approval already given for the same decision.
 
-## Phase 4: Write the PRD (~5 min)
+## Phase 4: Write the PRD
 
 1. Load `${CLAUDE_PLUGIN_ROOT}/references/prd-template.md` and write all core sections.
-2. Include optional sections only when they earn their space in the timebox.
-3. Save to `.prd/prd-v1.md` (create `.prd/` if needed) with frontmatter:
+2. Include optional sections when risk or the product context warrants them.
+3. Save to the next unused `.prd/prd-v{N}.md` (create `.prd/` if needed), with `N`
+   matching the filename and frontmatter:
    ```yaml
    ---
-   version: 1
+   version: {N}
    status: draft
    date: {today}
    ---
    ```
-4. If `.git/` doesn't exist, run `git init` and make an initial commit containing the
-   PRD and this `.claude/` setup — planning should be visible in the history.
+4. If `.git/` doesn't exist, run `git init`. Commit the PRD and only the intended setup
+   paths after inspecting existing staged work; planning should be visible in history
+   without absorbing unrelated brownfield changes.
 
-Finish with: "PRD saved to `.prd/prd-v1.md`. Run `/pincer:narrow` to break it into work items."
+Present the saved draft and obtain approval only when the same scope/architecture was not
+already authorized. Finish with: "PRD saved to `.prd/prd-v{N}.md`. Run `/pincer:narrow`
+to break it into work items."

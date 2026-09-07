@@ -16,13 +16,15 @@ Use a throwaway copy of this repo and a cheap model (`claude --model sonnet`).
 - [ ] The Scope table has both columns filled (in AND out)
 - [ ] No implementation code inside the PRD
 - [ ] Discovery asked ≤4 questions and none were already answered by the brief
-- [ ] `.git/` exists and the first commit contains the PRD
+- [ ] `.git/` exists and the selected PRD is committed without unrelated brownfield work
 
 ## After `/pincer-narrow`
 
-- [ ] 4–7 files exist in `tickets/`, named `T-{NN}-{slug}.md`
-- [ ] Every ticket is sized S or M — none L
-- [ ] T-01 is a walking skeleton (scaffold + thin end-to-end slice that runs)
+- [ ] Ticket files are named `T-{NN}-{slug}.md`; count follows dependencies and risk
+- [ ] Every ticket has a coherent S, M, or L scope; larger work is split when that
+      improves ownership, dependency order, or verification
+- [ ] Greenfield uses a walking skeleton when helpful; brownfield protects the
+      smallest useful vertical change
 - [ ] Every ticket has a runnable, non-interactive command in its fenced
       Verification block (it is what `scripts/pincer-ticket.sh verify` runs)
 - [ ] Dependencies are declared where they exist (`depends_on`)
@@ -30,8 +32,8 @@ Use a throwaway copy of this repo and a cheap model (`claude --model sonnet`).
       verification command is the test runner
 - [ ] Every ticket whose surface accepts external input has a reject-path
       acceptance criterion (what invalid input produces), not only the happy path
-- [ ] T-01 includes `.gitignore` covering `.env*` (except `.env.example`) and an
-      `.env.example` naming required secrets
+- [ ] Greenfield setup covers `.env*` (except `.env.example`) and names required
+      secrets in `.env.example`; brownfield preserves and verifies existing conventions
 - [ ] PRD frontmatter now says `status: ticketed`
 - [ ] Tickets are committed
 
@@ -73,6 +75,5 @@ Use a throwaway copy of this repo and a cheap model (`claude --model sonnet`).
       before being modified
 - [ ] Platform adapters in sync: `scripts/sync-prompts.sh` then `git status`
       shows no changes in `.agents/skills/` or `.github/prompts/`
-- [ ] `scripts/pincer-status.sh` says `Next /pincer-release` and its build elapsed
-      figure fit the ~75-minute build budget (note where time went if not)
-- [ ] Total wall-clock time fit the ~2-hour budget
+- [ ] `scripts/pincer-status.sh` says `Next /pincer-release`; if the user supplied a
+      budget, its elapsed figure and any deliberate cuts are reported against that budget

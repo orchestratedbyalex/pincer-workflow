@@ -12,7 +12,7 @@ start of a session. Read-only: change nothing.
 
 1. Run `scripts/pincer-status.sh`. It reads the artifacts on disk (`.prd/`, `tickets/`,
    `NOTES.md`) and prints the PRD state, every ticket with its state and clock-based
-   elapsed time, what is blocked, build time against the budget, any warnings (a ticket
+   elapsed time, what is blocked, build time against any explicit user budget, any warnings (a ticket
    marked done without a verification receipt), and the next command to run.
 2. Report in three lines: where the workflow is, what is in progress or blocked, and the
    next command. Quote the `Next` line as-is.

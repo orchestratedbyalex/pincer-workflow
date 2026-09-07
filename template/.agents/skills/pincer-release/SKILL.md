@@ -10,21 +10,23 @@ description: "Audit the repo against the workflow checklist — pass/fail per it
 You are auditing the current repo state against `docs/dry-run-checklist.md`. Read-only:
 report pass/fail, never fix anything — fixes belong to the stage commands.
 
-**Requested stage:** the text that follows the `$pincer-release` mention in the user's message (ask for it if there is none)
+**Requested stage:** the text that follows the `$pincer-release` mention, if any (when omitted, use the playbook's documented default)
 
 ## Steps
 
 1. Read `docs/dry-run-checklist.md` — it is the source of truth for what to check.
-2. Run `scripts/pincer-status.sh` to determine which stages have run (it reads `.prd/`,
-   `tickets/`, `NOTES.md`; add `git log`). If `the text that follows the `$pincer-release` mention in the user's message (ask for it if there is none)` names a stage, check only up
+2. Run `scripts/pincer-status.sh` to determine the selected PRD and which stages have run
+   (it reads `.prd/`, associated `tickets/`, `NOTES.md`; add `git log`). If `the text that follows the `$pincer-release` mention, if any (when omitted, use the playbook's documented default)`
+   names a stage, check only up
    to that stage.
 3. Check every applicable item mechanically where possible:
    - File existence and frontmatter: read the files.
    - Commit format and story: `git log --oneline`.
    - Receipts: every done ticket carries `verified:` (a status warning means one was
      marked done by hand). Re-run at least two checks with
-     `scripts/pincer-ticket.sh verify T-{NN}` — on a done ticket it re-checks without
-     touching the receipt — and report actual output.
+     `scripts/pincer-ticket.sh verify T-{NN}` — on a done ticket it records the latest
+     attempt and replaces the receipt only on success; failure revokes readiness. Report
+     actual output and stop the release verdict on any failure.
 4. For judgment items (tickets genuinely S/M, history reads as a story), give your
    verdict AND one sentence of evidence — never a bare pass.
 5. Present a table: checklist item | pass/fail/skipped | evidence. Order by stage.

@@ -28,8 +28,8 @@ commit the result.
 
 ## Recommended posture (`~/.codex/config.toml`)
 
-Codex has no PreToolUse hooks, so PINCER's guardrail posture is expressed
-through the sandbox and approval policy instead:
+This kit does not currently install a Codex hook adapter. Use Codex's sandbox,
+approval policy, and project instructions as the guardrail posture:
 
 ```toml
 approval_policy = "on-request"     # agent asks before escalating
@@ -38,8 +38,8 @@ sandbox_mode   = "workspace-write" # writes confined to the repo; no network by 
 
 The ticket scripts are plain bash and work here unchanged:
 `scripts/pincer-ticket.sh start|verify|done T-NN` and `scripts/pincer-status.sh`.
-What Codex lacks is the hook that stops an agent hand-editing ticket state, so the
-rule in `AGENTS.md` carries that weight; `$pincer-status` warns about any ticket
+Without a Pincer Codex hook adapter, the rule in `AGENTS.md` carries the weight
+of stopping hand-edited ticket state; `$pincer-status` warns about any ticket
 marked done without a receipt.
 
 Never run with approvals disabled. The destructive-command rule in `AGENTS.md`

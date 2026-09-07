@@ -47,13 +47,13 @@ install as skills under `.agents/skills/`, which Codex discovers from the repo
 loaded. Inside the Codex skills every cross-reference already reads
 `$pincer-narrow`, `$pincer-status` and so on.
 
-Codex has no PreToolUse hooks, so the guardrail posture lives in
-`~/.codex/config.toml` instead — `approval_policy = "on-request"` and
+Pincer does not currently install a Codex hook adapter, so its Codex guardrail
+posture uses `~/.codex/config.toml` — `approval_policy = "on-request"` and
 `sandbox_mode = "workspace-write"`; never run with approvals disabled. The
 ticket scripts (`scripts/pincer-ticket.sh`, `scripts/pincer-status.sh`) are
 plain bash and work unchanged; the rule in `AGENTS.md` against hand-editing
 ticket state carries the weight the hook carries on Claude Code, and
-`$pincer-status` flags any ticket marked done without a receipt.
+`$pincer-status` flags missing, failed, or stale ticket readiness.
 Full notes in `.codex/README.md`.
 
 ### GitHub Copilot (VS Code)
@@ -65,7 +65,7 @@ in chat. `.github/copilot-instructions.md` is wired to `AGENTS.md`.
 
 Claude users can install PINCER as a plugin instead — commands arrive
 namespaced (`/pincer:plan` … `/pincer:release`) and update automatically
-through the marketplace:
+through the marketplace. The plugin's structured hook parser requires Node.js 18+:
 
 ```
 /plugin marketplace add orchestratedbyalex/pincer-workflow
@@ -99,8 +99,8 @@ alone — the new version lands next to them as `<file>.new` for a manual merge.
 | `.claude/commands/` | The five playbooks plus `/pincer-status` (canonical — adapters are generated from them; ships on every platform together with `agents/` and `references/`) |
 | `.claude/agents/` | `codebase-explorer` and `code-quality-reviewer` subagents, with inline fallbacks for platforms without subagents |
 | `scripts/pincer-ticket.sh` | The ticket state machine: `start` (enforces dependency order) → `verify` (runs the ticket's check, stamps a receipt only on green) → `done` (refuses without a matching receipt or with unticked criteria) |
-| `scripts/pincer-status.sh` | Read-only state report: PRD, every ticket with clock-based elapsed time, blocked tickets, build time vs budget, next command |
-| `.claude/hooks/` + `settings.json` | Mechanical guardrails: `.env` files unreadable, destructive commands blocked, ticket state fields writable only through the script |
+| `scripts/pincer-status.sh` | Read-only state report: current PRD, associated tickets, clock-based elapsed time, optional user budget, warnings, and next command |
+| `.claude/hooks/` + `settings.json` | Claude guardrails for documented destructive command forms and ticket state writes; Node.js 18+ parses hook payloads structurally |
 | `.agents/skills/` · `.codex/` · `.github/` | Generated Codex skills and Copilot prompt files + platform wiring (`.codex/README.md` covers the Codex posture) |
 | `scripts/sync-prompts.sh` | Regenerates the adapters after you edit a playbook |
 | `scripts/build-plugin.sh` | Regenerates the Claude Code plugin (`plugin/`) from the template |
@@ -108,9 +108,9 @@ alone — the new version lands next to them as `<file>.new` for a manual merge.
 
 ## Design principles
 
-- **Approval gates scale with decision cost** — a human owns every architecture,
-  every scope, and every merge; autonomy runs only between gates, bounded by a
-  timebox and one revision loop.
+- **Approval gates scale with decision cost** — a human owns architecture, scope,
+  and merge decisions; unchanged authorization persists across resume and routine
+  verification, while explicit budgets shape the depth of work.
 - **Nothing is done while its verification fails** — every ticket carries a
   runnable check, and "done" is a state only a passing run of that check can
   unlock: the receipt is stamped by the script, never typed by the agent.
@@ -121,9 +121,9 @@ alone — the new version lands next to them as `<file>.new` for a manual merge.
 - **Security is threaded through every stage** — designed in at Plan, specified
   as reject-path criteria at Narrow, enforced by a pre-commit sweep at Code,
   audited mechanically at Evaluate and Release.
-- **Enforced beats aspirational** — where the platform allows (Claude Code),
-  guardrails are hooks and deny rules, not instructions; everywhere else,
-  `/pincer-release` audits the git artifacts after the fact.
+- **Layered guardrails** — Claude hooks cover documented high-risk command and
+  ticket-state forms, while sandbox and approval controls remain the security
+  boundary. Other platforms use their native controls plus `/pincer-release`.
 
 ## License
 

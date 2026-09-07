@@ -7,23 +7,25 @@ description: "Implement tickets sequentially with verification and one commit pe
 
 # $pincer-code — Ticket Implementation
 
-You are implementing the tickets in `tickets/` sequentially. Mostly autonomous: after the
-user confirms the starting point, run continuously and report progress between tickets.
+You are implementing the tickets in `tickets/` sequentially. The approved PRD, ticket
+breakdown, and existing session authorization define the work; run continuously and report
+progress between tickets unless a material scope or design decision appears.
 
-**Initial request:** the text that follows the `$pincer-code` mention in the user's message (ask for it if there is none)
+**Initial request:** the text that follows the `$pincer-code` mention, if any (when omitted, use the playbook's documented default)
 
 Ticket state lives in the ticket file's frontmatter and is written **only** by
 `scripts/pincer-ticket.sh` (`start` → `verify` → `done`). `verify` runs the ticket's
 Verification block and stamps a receipt only on a green exit; `done` refuses without a
 receipt that matches the current check, or with unticked acceptance criteria. Never edit
-`status`, `started`, `verified`, or `finished` by hand — on Claude Code a hook blocks it.
+`status`, `started`, `last_check`, `verified`, or `finished` by hand — on Claude Code a hook blocks it.
 
 ## Before the loop
 
 Run `scripts/pincer-status.sh`. It lists every ticket's state, what is blocked, elapsed
 build time from the clock, and the next action. If a ticket is `in_progress`, you are
 resuming: read it, check `git status` / `git diff` for uncommitted work, and continue
-from wherever the receipt says you are. Confirm the starting point with the user, then go.
+from wherever the receipt says you are. Do not ask the user to reconfirm unchanged,
+previously authorized work.
 
 ## Loop (per ticket, in dependency order)
 
@@ -43,10 +45,9 @@ from wherever the receipt says you are. Confirm the starting point with the user
 4. **Self-review the diff** before committing: silent failures (empty catches,
    un-awaited promises), leftover debug code, drift from the ticket's acceptance criteria.
    Then a security sweep of the same diff:
-   - No secret values: run
-     `git diff | grep -iE '(api[_-]?key|secret|token|password)[[:space:]]*[:=]'`
-     and treat any hit that isn't a `process.env` reference or a name in
-     `.env.example` as a blocker.
+   - Check for secret-like assignments without printing values. If a scanner reports a
+     possible secret, report only its file and line until the value is safely redacted;
+     environment references and names in `.env.example` are allowed.
    - External input touched by this diff is validated server-side, and untrusted
      content (user input, LLM output) is escaped where rendered — per the
      Security defaults in `AGENTS.md`.
@@ -55,14 +56,16 @@ from wherever the receipt says you are. Confirm the starting point with the user
 5. **Close the ticket:** tick every verified acceptance-criteria checkbox (`- [ ]` → `- [x]`;
    editing the checkboxes is allowed), then `scripts/pincer-ticket.sh done T-{NN}`. A
    criterion that was cut is a scope change to record in the PRD, not a box to skip.
-   Commit code and ticket file together: `git add -A && git commit -m "T-{NN}: {title}"`.
+   Inspect `git status --short`, preserve pre-existing staged work, and stage only the
+   explicit paths changed for this ticket plus its ticket file. Review `git diff --cached`
+   before committing as `T-{NN}: {title}`.
 6. Give a one-line progress update using the elapsed figure from
-   `scripts/pincer-status.sh` ("T-02 done, 3 remaining, 38m elapsed of 75m") and continue.
+   `scripts/pincer-status.sh` ("T-02 done, 3 remaining, 38m elapsed") and continue.
 
-## Timebox rules
+## Budget rules
 
-- The budget is ~75 minutes of build time, measured by `scripts/pincer-status.sh` from
-  the first ticket's start stamp — never estimated. If the remaining tickets won't fit,
+- If the user set `PINCER_BUILD_BUDGET_MIN` or stated another budget, use the elapsed
+  figure from `scripts/pincer-status.sh` rather than estimating. If the remaining tickets won't fit,
   stop and propose a scope cut: which remaining tickets to drop or shrink. Cutting scope
   deliberately beats an unfinished mess — record the cut in the PRD's Out of Scope.
 - If a ticket reveals the plan was wrong, stop and say so rather than silently diverging.

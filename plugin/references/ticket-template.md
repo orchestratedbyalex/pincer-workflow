@@ -6,7 +6,7 @@ Used by `/pincer:narrow` for every file in `tickets/`. Filename: `T-{NN}-{slug}.
 ---
 ticket: T-{NN}
 status: open        # open | in_progress | done
-size: S             # S (≤15 min) | M (≤30 min)
+size: S             # S | M | L, relative scope; split when it improves verification
 prd: .prd/prd-v{N}.md # the selected PRD, never inferred from ticket numbering
 depends_on: []      # e.g. [T-01]
 ---
@@ -51,7 +51,7 @@ Rules:
 - Use exactly one `## Verification` section containing one closed fenced `bash`
   block with runnable commands. Missing sections, malformed metadata, duplicate
   ticket IDs, unsupported checkbox syntax, and invalid Bash fail before a transition.
-- `status` and the stamps `started`, `verified`, `finished` are written only by
+- `status` and the attempt/stamp fields `started`, `last_check`, `verified`, `finished` are written only by
   `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-ticket.sh` (`start` / `verify` / `done`). `verify` runs the
   Verification block verbatim and writes a receipt only on exit 0; `done`
   requires that receipt to match the current block. Never write these by hand.
@@ -61,5 +61,7 @@ Rules:
 - If the ticket's surface accepts external input (HTTP, form, file, LLM output),
   Requirements must state the validation and the rejection behavior, and
   Acceptance Criteria must include the reject path as an observable behavior.
-- Ticket T-01 is the walking skeleton: scaffold + thin end-to-end slice that runs.
-- If a ticket needs more than ~30 minutes, split it before writing it.
+- Use a walking skeleton for greenfield work when it reduces integration risk. In
+  brownfield work, protect the smallest useful vertical change and characterize
+  uncovered load-bearing behavior before modifying it.
+- Split a ticket when it contains separate dependencies, owners, or verification paths.

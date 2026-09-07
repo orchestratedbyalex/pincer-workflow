@@ -18,6 +18,11 @@ count=0
 for src in .claude/commands/pincer-*.md; do
   name=$(basename "$src" .md)
   desc=$(sed -n 's/^description: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$src" | head -1)
+  if grep -q '^argument-hint:.*optional' "$src"; then
+    argument_text="the text that follows the \`\$$name\` mention, if any (when omitted, use the playbook's documented default)"
+  else
+    argument_text="the text that follows the \`\$$name\` mention in the user's message (ask only if the required input is missing)"
+  fi
   body=$(awk 'flag; /^---$/ { if (++c == 2) flag = 1 }' "$src")
 
   # Codex: one skill directory per playbook. Skills have no $ARGUMENTS
@@ -29,7 +34,7 @@ for src in .claude/commands/pincer-*.md; do
     printf -- '---\nname: %s\ndescription: "%s"\n---\n' "$name" "$desc"
     printf '<!-- Generated from %s by scripts/sync-prompts.sh — edit the source, not this file -->\n\n' "$src"
     printf '%s\n' "$body" \
-      | sed "s/\$ARGUMENTS/the text that follows the \`\$$name\` mention in the user's message (ask for it if there is none)/g" \
+      | sed "s/\$ARGUMENTS/$argument_text/g" \
       | sed -e 's#^/pincer-\([a-z]*\)#$pincer-\1#' -e 's#\([^A-Za-z0-9_./]\)/pincer-\([a-z]*\)#\1$pincer-\2#g'
   } > ".agents/skills/$name/SKILL.md"
 

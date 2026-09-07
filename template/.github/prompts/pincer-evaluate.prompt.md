@@ -30,10 +30,11 @@ run the pipeline, then present results.
 4. If the project has a UI, look at it — don't only read the code. Start it, open it in
    the browser (screenshot via Chrome DevTools MCP if available), and check it against
    the PRD's Visual Direction and Success Criteria. Note anything visibly broken or off.
-5. Run a mechanical security audit (cheap, ~2 min — do all of these):
-   - Whole history, not just the tree:
-     `git log -p | grep -iE '(api[_-]?key|secret|token|password)[[:space:]]*[:=]'` —
-     a secret committed then deleted is still leaked.
+5. Run a mechanical security audit:
+   - Inspect the relevant history with a secret scanner that redacts values, when one is
+     available. Otherwise review likely locations without copying candidate values into
+     output. Report file, line, and remediation only; a secret committed then deleted is
+     still leaked.
    - `.gitignore` covers `.env*` (except `.env.example`), and `git ls-files | grep -i env`
      shows only `.env.example`.
    - `npm audit --omit=dev` (or the ecosystem's equivalent) — report high/critical only.
@@ -44,8 +45,8 @@ run the pipeline, then present results.
 7. Present findings as a short list with `file:line` references, ordered by severity.
    Security findings always rank above style-adjacent ones. For each, say whether you
    recommend fixing now (within the timebox) or noting as known-issue.
-8. Fix what the user approves (or everything clearly broken, if time allows), verify,
-   and commit as `review: fixes`.
+8. Fix findings clearly within the authorized PRD, verify, and commit as `review: fixes`.
+   Ask only when a fix changes scope, architecture, or another material decision.
 9. Close out: write a brief `NOTES.md` at the repo root with frontmatter:
    ```yaml
    ---

@@ -1,20 +1,9 @@
 #!/bin/bash
-# PreToolUse guardrail for Bash commands. Blocks destructive or pipe-to-shell
-# patterns regardless of permission mode — these are never auto-approved; a
-# human runs them in their own terminal if truly intended.
-# Exit 2 blocks the tool call; stderr goes back to the agent.
-
-input=$(cat)
-
-if printf '%s' "$input" | grep -qE \
-  -e 'rm -rf?( -[a-z]+)* +(/|~|\$HOME)' \
-  -e 'git push[^|;&]*(--force|-f)( |$)' \
-  -e '(curl|wget)[^|;&]*\|[[:space:]]*(sudo )?(ba|z)?sh' \
-  -e 'chmod( -R)? +777' \
-  -e '--dangerously-skip-permissions' \
-  -e 'git reset --hard[^|;&]*origin/'; then
-  echo "Blocked by PINCER guardrail: destructive or pipe-to-shell command. If this is genuinely intended, the user runs it manually in their own terminal." >&2
+# PreToolUse guardrail for Bash commands. The Node helper parses the hook JSON
+# before inspecting the actual command and recognizes the documented command
+# forms without matching harmless strings elsewhere in the payload.
+command -v node >/dev/null 2>&1 || {
+  echo 'Blocked by PINCER guardrail: Node.js is required to parse hook input safely.' >&2
   exit 2
-fi
-
-exit 0
+}
+exec node "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/hook-policy.cjs" dangerous
