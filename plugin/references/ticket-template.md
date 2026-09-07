@@ -7,6 +7,7 @@ Used by `/pincer:narrow` for every file in `tickets/`. Filename: `T-{NN}-{slug}.
 ticket: T-{NN}
 status: open        # open | in_progress | done
 size: S             # S (≤15 min) | M (≤30 min)
+prd: .prd/prd-v{N}.md # the selected PRD, never inferred from ticket numbering
 depends_on: []      # e.g. [T-01]
 ---
 
@@ -35,6 +36,11 @@ One sentence: what to build and why.
 ```
 
 Rules:
+- New tickets always name their PRD with `prd: .prd/prd-vN.md`. The file must
+  have matching version metadata and status `ticketed` or `built` before work
+  starts. This status is a workflow precondition, not proof of user approval.
+  Legacy tickets with one PRD are associated on start; with multiple PRDs, use
+  `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-ticket.sh bind T-NN .prd/prd-vN.md` to resolve explicitly.
 - Supported syntax is deliberately limited: closed `---` frontmatter with unique,
   unindented `key: value` fields; required `ticket`, `status`, `size`, and
   `depends_on`. IDs use `T-01` through `T-999999` and match the filename; dependencies

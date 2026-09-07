@@ -39,7 +39,9 @@ build window.
      is preceded by a characterization ticket — a test that pins the current
      behavior before any ticket is allowed to change it.
 3. Write each ticket to `tickets/T-{NN}-{slug}.md` using
-   `.claude/references/ticket-template.md`, with `status: open`. The other state fields
+   `.claude/references/ticket-template.md`, with `status: open` and an explicit
+   `prd: .prd/prd-vN.md` naming the selected PRD. Never infer this association from
+   numbering or old notes. The other state fields
    (`started`, `verified`, `finished`) are added later by `scripts/pincer-ticket.sh` —
    never write them yourself.
 4. Present the ticket list (number, title, size, dependencies) as a table.

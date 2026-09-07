@@ -1,9 +1,13 @@
 ---
 ticket: T-04
-status: open
+status: done
 size: M
 prd: .prd/prd-v1.md
 depends_on: [T-03]
+started: 2026-09-06T06:44:08Z
+last_check: 2026-09-07T14:55:12Z passed 347345439496
+verified: 2026-09-07T14:55:12Z 347345439496
+finished: 2026-09-07T14:55:12Z
 ---
 
 ## Objective
@@ -16,8 +20,8 @@ PRD: `.prd/prd-v1.md`, requirement R-04. See the corresponding M0 work package i
 Implement the approved M0 behavior with regression coverage. Preserve canonical generation and existing supported interfaces. Reject invalid external input with useful diagnostics.
 
 ## Acceptance Criteria
-- [ ] Starting requires a usable explicitly associated PRD, with safe legacy binding.
-- [ ] New drafts and stale evaluation notes never inherit release readiness.
+- [x] Starting requires a usable explicitly associated PRD, with safe legacy binding.
+- [x] New drafts and stale evaluation notes never inherit release readiness.
 
 ## Verification
 ```bash

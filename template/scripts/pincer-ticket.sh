@@ -21,7 +21,6 @@ cd "$ROOT"
 
 die() { printf 'pincer-ticket: %b\n' "$*" >&2; exit 1; }
 now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
-sha256() { if command -v sha256sum >/dev/null; then sha256sum; else shasum -a 256; fi; }
 
 
 fm_set() { # file key value — replace inside the frontmatter (keeping an inline comment) or add before the closing ---
@@ -42,19 +41,34 @@ fm_unset() {
     !closed && index($0, k ":") == 1 { next } { print }' "$1" > "$tmp" && mv "$tmp" "$1"
 }
 
-verify_hash() { verification_cmds "$1" | sha256 | cut -c1-12; }
+cmd_bind() {
+  local f ref existing
+  f=$(ticket_file "$1"); ref=$2
+  validate_prd "$ref" || exit 1
+  existing=$(fm_get "$f" prd)
+  [ -z "$existing" ] || [ "$existing" = "$ref" ] || die "$1 already references $existing; refusing to rebind it to $ref"
+  [ "$existing" = "$ref" ] || fm_set "$f" prd "$ref"
+  echo "$1 bound to PRD $ref"
+}
 
 cmd_start() {
-  local f id st dep df
+  local f id st dep df ref dep_ref readiness
   f=$(ticket_file "$1"); id=$(normalize "$1"); st=$(fm_get "$f" status)
+  ref=$(usable_ticket_prd "$f") || exit 1
   case "$st" in
-    in_progress) echo "$id already in progress (started $(fm_get "$f" started))"; return 0 ;;
+    in_progress)
+      [ -n "$(fm_get "$f" prd)" ] || fm_set "$f" prd "$ref"
+      echo "$id already in progress (started $(fm_get "$f" started))"; return 0 ;;
     done) die "$id is already done" ;;
   esac
   for dep in $(fm_get "$f" depends_on | grep -oE 'T-[0-9]+' || true); do
     df=$(ticket_file "$dep")
     [ "$(fm_get "$df" status)" = done ] || die "$id depends on $dep, which is '$(fm_get "$df" status)' — finish $dep first (or fix depends_on in $f)"
+    dep_ref=$(usable_ticket_prd "$df") || exit 1
+    [ "$dep_ref" = "$ref" ] || die "$id references $ref but dependency $dep references $dep_ref"
+    if ! readiness=$(ticket_readiness "$df"); then die "$id depends on $dep: $readiness"; fi
   done
+  [ -n "$(fm_get "$f" prd)" ] || fm_set "$f" prd "$ref"
   fm_set "$f" status in_progress
   [ -n "$(fm_get "$f" started)" ] || fm_set "$f" started "$(now)"
   echo "▶ $id started $(fm_get "$f" started) — $f"
@@ -63,6 +77,7 @@ cmd_start() {
 cmd_verify() {
   local f id st cmds rc hash child
   f=$(ticket_file "$1"); id=$(normalize "$1"); st=$(fm_get "$f" status)
+  usable_ticket_prd "$f" >/dev/null || exit 1
   case "$st" in
     open) cmd_start "$id" ;;
     done) echo "$id is done — re-running its check and updating the latest outcome" ;;
@@ -87,7 +102,7 @@ cmd_verify() {
     fm_set "$f" last_check "$(now) failed $hash"
     die "Verification block changed during execution — re-run verify"
   fi
-  if ! validate_ticket "$f"; then
+  if ! validate_ticket "$f" || ! usable_ticket_prd "$f" >/dev/null; then
     fm_set "$f" last_check "$(now) failed $hash"
     die "ticket became invalid during verification — fix it and re-run verify"
   fi
@@ -99,6 +114,7 @@ cmd_verify() {
 cmd_done() {
   local f id st rec cur u slug
   f=$(ticket_file "$1"); id=$(normalize "$1"); st=$(fm_get "$f" status)
+  usable_ticket_prd "$f" >/dev/null || exit 1
   [ "$st" = in_progress ] || [ "$st" = done ] || die "$id is '$st' — run '$0 verify $id' first"
   rec=$(fm_get "$f" verified)
   [ -n "$rec" ] || die "no verification receipt on $id — run '$0 verify $id' and get a green check first"
@@ -117,12 +133,13 @@ cmd_done() {
 }
 
 case "${1:-}" in
-  start|verify|done) validate_ticket_set || exit 1 ;;
+  start|verify|done|bind) validate_ticket_set || exit 1 ;;
 esac
 
 case "${1:-}" in
   start)  [ $# -eq 2 ] || die "usage: $0 start T-NN";  cmd_start "$2" ;;
   verify) [ $# -eq 2 ] || die "usage: $0 verify T-NN"; cmd_verify "$2" ;;
   done)   [ $# -eq 2 ] || die "usage: $0 done T-NN";   cmd_done "$2" ;;
+  bind)   [ $# -eq 3 ] || die "usage: $0 bind T-NN .prd/prd-vN.md"; cmd_bind "$2" "$3" ;;
   *) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

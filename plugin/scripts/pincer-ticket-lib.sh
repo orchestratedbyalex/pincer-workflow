@@ -158,3 +158,110 @@ ticket_file() {
   if [ -z "$found" ]; then printf 'pincer-ticket: no ticket file tickets/%s-*.md\n' "$id" >&2; return 1; fi
   printf '%s' "$found"
 }
+
+# PRDs and evaluation notes use the same deliberately small metadata format.
+validate_metadata() {
+  awk -v file="$1" '
+    function fail(msg) { print "pincer: " file ": " msg > "/dev/stderr"; bad = 1; exit 1 }
+    NR == 1 { if ($0 != "---") fail("frontmatter must begin with ---"); next }
+    !closed {
+      if ($0 == "---") { closed = 1; next }
+      if ($0 ~ /^[ \t]*(#.*)?$/) next
+      if ($0 !~ /^[a-z_][a-z0-9_]*:[ \t]*/) fail("expected unindented key: value metadata")
+      key = $0; sub(/:.*/, "", key)
+      if (seen[key]++) fail("duplicate metadata key: " key)
+    }
+    END { if (bad) exit 1; if (!closed) fail("frontmatter must close with ---") }
+  ' "$1"
+}
+
+validate_prd() {
+  local ref=$1 version
+  if ! [[ $ref =~ ^\.prd/prd-v([1-9][0-9]{0,8})\.md$ ]]; then
+    printf 'pincer: invalid PRD reference %s; use .prd/prd-vN.md\n' "$ref" >&2; return 1
+  fi
+  version=${BASH_REMATCH[1]}
+  [ -f "$ref" ] || { printf 'pincer: PRD does not exist: %s\n' "$ref" >&2; return 1; }
+  validate_metadata "$ref" || return 1
+  [ "$(fm_get "$ref" version)" = "$version" ] || { printf 'pincer: %s: version must match filename (%s)\n' "$ref" "$version" >&2; return 1; }
+  case "$(fm_get "$ref" status)" in draft|ticketed|built) ;; *) printf 'pincer: %s: PRD status must be draft, ticketed, or built\n' "$ref" >&2; return 1 ;; esac
+}
+
+latest_prd() {
+  local ref latest='' highest=0 n
+  for ref in .prd/prd-v*.md; do
+    [ -e "$ref" ] || continue
+    if ! [[ $ref =~ ^\.prd/prd-v([1-9][0-9]{0,8})\.md$ ]]; then
+      printf 'pincer: invalid PRD filename: %s\n' "$ref" >&2; return 1
+    fi
+    n=${BASH_REMATCH[1]}
+    if [ "$n" -gt "$highest" ]; then highest=$n; latest=$ref; fi
+  done
+  [ -z "$latest" ] || validate_prd "$latest" || return 1
+  printf '%s' "$latest"
+}
+
+ticket_prd() { # resolve without writing; ambiguous legacy tickets require bind.
+  local file=$1 ref candidate count=0
+  ref=$(fm_get "$file" prd)
+  if [ -z "$ref" ]; then
+    for candidate in .prd/prd-v*.md; do
+      [ -e "$candidate" ] || continue
+      ref=$candidate; count=$((count + 1))
+    done
+    if [ "$count" -ne 1 ]; then
+      printf 'pincer: %s: missing or ambiguous PRD association; use pincer-ticket.sh bind %s .prd/prd-vN.md\n' "$file" "$(fm_get "$file" ticket)" >&2
+      return 1
+    fi
+  fi
+  validate_prd "$ref" || return 1
+  printf '%s' "$ref"
+}
+
+usable_ticket_prd() {
+  local ref
+  ref=$(ticket_prd "$1") || return 1
+  case "$(fm_get "$ref" status)" in
+    ticketed|built) printf '%s' "$ref" ;;
+    *) printf 'pincer: %s: PRD is draft; complete the authorized breakdown before starting (expected ticketed or built)\n' "$ref" >&2; return 1 ;;
+  esac
+}
+
+sha256() { if command -v sha256sum >/dev/null; then sha256sum; else shasum -a 256; fi; }
+verify_hash() { verification_cmds "$1" | sha256 | cut -c1-12; }
+
+ticket_readiness() { # explain why a done ticket needs attention, without mutation.
+  local file=$1 receipt attempt hash
+  receipt=$(fm_get "$file" verified); attempt=$(fm_get "$file" last_check)
+  hash=$(verify_hash "$file")
+  if [ -n "$attempt" ] && { ! [[ $attempt =~ ^[0-9T:Z-]+\ passed\ [a-f0-9]{12}$ ]] || [ "${attempt##* }" != "$hash" ]; }; then
+    printf 'latest verification: %s — re-run verify' "$attempt"; return 1
+  fi
+  if [ -z "$receipt" ]; then printf 'done without a verification receipt — re-run verify'; return 1; fi
+  if ! [[ $receipt =~ ^[0-9T:Z-]+\ [a-f0-9]{12}$ ]] || [ "${receipt##* }" != "$hash" ]; then
+    printf 'stale or malformed verification receipt — re-run verify'; return 1
+  fi
+  if [ -n "$(unticked "$file")" ]; then printf 'unticked acceptance criteria — complete and re-run verify'; return 1; fi
+}
+
+notes_current() {
+  local prd=$1 candidate base changes
+  [ -f NOTES.md ] || { printf 'missing'; return 1; }
+  validate_metadata NOTES.md >/dev/null 2>&1 || { printf 'stale: invalid or missing evaluation metadata'; return 1; }
+  [ "$(fm_get NOTES.md prd)" = "$prd" ] || { printf 'stale: evaluation PRD does not match'; return 1; }
+  candidate=$(fm_get NOTES.md candidate); base=$(fm_get NOTES.md base)
+  if ! [[ $candidate =~ ^([a-f0-9]{40}|[a-f0-9]{64})$ ]] || ! [[ $base =~ ^([a-f0-9]{40}|[a-f0-9]{64})$ ]]; then
+    printf 'stale: candidate and base must be full commit IDs'; return 1
+  fi
+  if ! git rev-parse --verify "$candidate^{commit}" >/dev/null 2>&1 ||
+     ! git rev-parse --verify "$base^{commit}" >/dev/null 2>&1 ||
+     ! git merge-base --is-ancestor "$base" "$candidate" 2>/dev/null ||
+     ! git merge-base --is-ancestor "$candidate" HEAD 2>/dev/null; then
+    printf 'stale: evaluation commits or ancestry unavailable'; return 1
+  fi
+  changes=$(git diff --name-only "$candidate" HEAD -- . ':(exclude)NOTES.md') || return 1
+  if [ -n "$changes" ]; then printf 'stale: candidate changed after evaluation'; return 1; fi
+  changes=$(git status --porcelain --untracked-files=all -- . ':(exclude)NOTES.md') || return 1
+  if [ -n "$changes" ]; then printf 'stale: working tree has changes outside NOTES.md'; return 1; fi
+  printf 'current (%s)' "$candidate"
+}
