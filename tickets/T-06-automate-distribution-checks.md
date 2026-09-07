@@ -1,9 +1,13 @@
 ---
 ticket: T-06
-status: open
+status: done
 size: M
 prd: .prd/prd-v1.md
 depends_on: [T-05]
+started: 2026-09-07T15:15:15Z
+last_check: 2026-09-07T15:20:54Z passed f135f9fa4f38
+verified: 2026-09-07T15:20:54Z f135f9fa4f38
+finished: 2026-09-07T15:20:54Z
 ---
 
 ## Objective
@@ -16,8 +20,8 @@ PRD: `.prd/prd-v1.md`, requirement R-06. See the corresponding M0 work package i
 Implement the approved M0 behavior with regression coverage. Preserve canonical generation and existing supported interfaces. Reject invalid external input with useful diagnostics.
 
 ## Acceptance Criteria
-- [ ] The full regression suite and generated parity pass.
-- [ ] Packed installs cover all platforms in greenfield and brownfield projects; CI is defined.
+- [x] The full regression suite and generated parity pass.
+- [x] Packed installs cover all platforms in greenfield and brownfield projects; CI is defined.
 
 ## Verification
 ```bash
