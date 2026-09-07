@@ -95,6 +95,8 @@ assert.match(next(evaluated), /pincer-release/, 'committing only NOTES must not 
 const beforeStatus = read(evaluated, evaluatedFile);
 status(evaluated);
 assert.equal(read(evaluated, evaluatedFile), beforeStatus);
+write(evaluated, evaluatedFile, beforeStatus.replace(/^last_check:.*\n/m, ''));
+assert.match(next(evaluated), /verify|recheck/i, 'done ticket without a latest check cannot be release-ready');
 write(evaluated, evaluatedFile, beforeStatus.replace('- [x]', '- [ ]'));
 assert.match(next(evaluated), /verify|recheck|acceptance/i, 'unchecked done ticket cannot be release-ready');
 write(evaluated, evaluatedFile, beforeStatus.replace('test "$(cat source.txt)" = good', 'true'));

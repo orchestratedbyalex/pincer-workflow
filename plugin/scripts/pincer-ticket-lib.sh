@@ -234,7 +234,10 @@ ticket_readiness() { # explain why a done ticket needs attention, without mutati
   local file=$1 receipt attempt hash
   receipt=$(fm_get "$file" verified); attempt=$(fm_get "$file" last_check)
   hash=$(verify_hash "$file")
-  if [ -n "$attempt" ] && { ! [[ $attempt =~ ^[0-9T:Z-]+\ passed\ [a-f0-9]{12}$ ]] || [ "${attempt##* }" != "$hash" ]; }; then
+  if [ -z "$attempt" ]; then
+    printf 'missing latest verification outcome — re-run verify'; return 1
+  fi
+  if ! [[ $attempt =~ ^[0-9T:Z-]+\ passed\ [a-f0-9]{12}$ ]] || [ "${attempt##* }" != "$hash" ]; then
     printf 'latest verification: %s — re-run verify' "$attempt"; return 1
   fi
   if [ -z "$receipt" ]; then printf 'done without a verification receipt — re-run verify'; return 1; fi
