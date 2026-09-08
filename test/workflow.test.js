@@ -39,6 +39,35 @@ assert.doesNotMatch(release, /pincer-ticket\.sh verify/);
 assert.match(evaluate, /through a new ticket associated with/i);
 assert.doesNotMatch(evaluate, /commit as `review: fixes`/i);
 
+// R-01: requirement IDs and scenarios travel from plan through narrow to evaluate.
+const prdTemplate = read('template/.claude/references/prd-template.md');
+const ticketTemplate = read('template/.claude/references/ticket-template.md');
+assert.match(prdTemplate, /### \d\. Requirements/);
+assert.match(prdTemplate, /#### R-01 — /);
+assert.match(prdTemplate, /never renumbered/i);
+assert.match(prdTemplate, /Scenario:.*\n.*Failure path:.*\n.*Preserve:/s);
+assert.match(prdTemplate, /Requirement mapping/);
+assert.match(prdTemplate, /Preserve or link the\s+original brief/i);
+assert.match(plan, /stable `R-NN` IDs/);
+assert.match(plan, /never renumbers/i);
+assert.match(plan, /supplied a PRD.*keep its meaning and existing requirement\s+IDs/is);
+assert.match(plan, /mapping table/i);
+assert.match(narrow, /requirement map/i);
+assert.match(narrow, /Implements: R-NN/);
+assert.match(narrow, /explicit review method/i);
+assert.match(narrow, /states its purpose/i);
+assert.match(narrow, /before implementation/i);
+assert.match(ticketTemplate, /Implements: R-0?1/);
+assert.match(evaluate, /`delivered`.*`blocked`.*`deferred`/s);
+assert.match(evaluate, /blocks PASS/);
+assert.match(evaluate, /do not relabel/i);
+assert.match(evaluate, /explicit user authorization/i);
+assert.match(evaluate, /evaluate the revised\s+candidate/i);
+assert.match(evaluate, /not a mechanical traceability engine/i);
+for (const source of [plan, narrow, code, evaluate, release, prdTemplate, ticketTemplate]) {
+  assert.doesNotMatch(source, /guarantees? (full|complete) traceability/i);
+}
+
 for (const source of [rootReadme, codex]) {
   assert.doesNotMatch(source, /Codex has no PreToolUse hooks/i);
   assert.match(source, /does not currently install a Codex hook adapter/i);

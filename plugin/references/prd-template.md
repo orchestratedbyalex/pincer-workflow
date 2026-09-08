@@ -8,10 +8,13 @@ when uncertainty, product context, or risk warrants it; a small fix may remain c
 ## Core Sections (always include)
 
 ### 1. Problem
-What problem does this solve? Who has it? (2–4 sentences.)
+What problem does this solve? Who has it? (2–4 sentences.) Preserve or link the
+original brief (quote it in an appendix or name where it lives) so the source of
+every requirement stays reviewable.
 
 ### 2. Solution
-One-paragraph summary of what we're building.
+One-paragraph summary of what we're building: the desired outcome, the assumptions
+it rests on, and what it deliberately excludes.
 
 ### 3. Scope
 
@@ -19,7 +22,22 @@ One-paragraph summary of what we're building.
 | --- | --- |
 | ... | ... |
 
-### 4. Architecture
+### 4. Requirements
+One entry per requirement with a stable ID. IDs are assigned once within this PRD
+and never renumbered: a revision keeps existing IDs and adds new ones. Tickets
+name the IDs they implement and evaluation dispositions every ID.
+
+#### R-01 — short title
+- Scenario: an observable acceptance scenario (given / when / then, or a command
+  and its expected output). Add one line per scenario.
+- Failure path: what invalid input or the relevant failure produces.
+- Preserve: existing behavior this must not change (brownfield).
+
+When the user supplied a PRD, keep its meaning and its existing requirement IDs.
+If its structure needs adapting to this template, add a `Requirement mapping`
+table under this section (`their section or ID → R-NN`) instead of rewriting it.
+
+### 5. Architecture
 
 #### Structure
 ```
@@ -32,13 +50,13 @@ What each component does, owns, and depends on.
 #### Data flow
 Input → processing → output.
 
-### 5. Success Criteria
+### 6. Success Criteria
 
 | Criterion | How to verify |
 | --- | --- |
 | ... | a command to run or a thing to observe |
 
-### 6. Out of Scope
+### 7. Out of Scope
 Explicit list. Anything cut for time during `/pincer:code` gets appended here with a reason.
 
 ---

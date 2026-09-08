@@ -1,9 +1,13 @@
 ---
 ticket: T-11
-status: open
+status: done
 size: M
 prd: .prd/prd-v2.md
 depends_on: []
+started: 2026-09-08T14:28:41Z
+last_check: 2026-09-08T14:29:44Z passed d73c7d94a7f5
+verified: 2026-09-08T14:29:44Z d73c7d94a7f5
+finished: 2026-09-08T14:29:44Z
 ---
 
 ## Objective
@@ -28,11 +32,11 @@ Make plan, narrow and evaluate carry stable requirement IDs with observable scen
 - `test/workflow.test.js` asserts the new contract wording in plan, narrow, evaluate and both templates, and asserts that no playbook claims mechanical traceability.
 
 ## Acceptance Criteria
-- [ ] `template/.claude/references/prd-template.md` has a core Requirements section with `R-NN` IDs, scenarios, failure paths and preserved behavior, and the plan playbook assigns IDs without renumbering.
-- [ ] The plan playbook reviews a supplied PRD without replacing its meaning or IDs and records a mapping when adapting its structure.
-- [ ] The narrow playbook requires a requirement-to-ticket-to-check map, an owner and a check or review method per scenario, and a stated purpose for enabling work.
-- [ ] The evaluate playbook requires a delivered/blocked/deferred disposition per requirement, blocks PASS on failed or unverified required behavior, and requires user authorization plus re-evaluation for deferrals.
-- [ ] `node test/workflow.test.js` covers each wording contract above and passes; generated adapters and plugin match the template.
+- [x] `template/.claude/references/prd-template.md` has a core Requirements section with `R-NN` IDs, scenarios, failure paths and preserved behavior, and the plan playbook assigns IDs without renumbering.
+- [x] The plan playbook reviews a supplied PRD without replacing its meaning or IDs and records a mapping when adapting its structure.
+- [x] The narrow playbook requires a requirement-to-ticket-to-check map, an owner and a check or review method per scenario, and a stated purpose for enabling work.
+- [x] The evaluate playbook requires a delivered/blocked/deferred disposition per requirement, blocks PASS on failed or unverified required behavior, and requires user authorization plus re-evaluation for deferrals.
+- [x] `node test/workflow.test.js` covers each wording contract above and passes; generated adapters and plugin match the template.
 
 ## Verification
 ```bash

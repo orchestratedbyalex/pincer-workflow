@@ -23,8 +23,16 @@ run the pipeline, then present results.
    Scope sections, and the list of tickets. If the diff is large, split by area and
    dispatch two in parallel. (No subagents on this platform? Review the diff yourself
    in a separate pass, applying `.claude/agents/code-quality-reviewer.md` as the rubric.)
-3. Yourself, in parallel, check spec compliance: does what was built match every ticket's
-   acceptance criteria and the PRD scope? List any gaps.
+3. Yourself, in parallel, check spec compliance. For every requirement `R-NN` in the
+   PRD record one disposition: `delivered` (evidence on this candidate), `blocked`
+   (required behavior failed or was left unverified — this blocks PASS; do not relabel
+   it a known limitation to pass), or `deferred` (only with explicit user authorization;
+   record the scope decision in the PRD's Out of Scope and evaluate the revised
+   candidate). Compare what was built against every ticket's acceptance criteria and
+   the PRD scope, and list any gaps. Whether the requirement map is complete and each
+   check is semantically adequate is your judgment as reviewer — record that judgment
+   in the evaluation; the kit is not a mechanical traceability engine and does not
+   validate requirement-revision impact.
 4. If the project has a UI, look at it — don't only read the code. Start it, open it in
    the browser (screenshot via Chrome DevTools MCP if available), and check it against
    the PRD's Visual Direction and Success Criteria. Note anything visibly broken or off.

@@ -26,6 +26,13 @@ change's dependencies and risk, plus any budget the user supplied.
      brownfield work, begin with the smallest protected vertical change; add a
      characterization ticket before changing load-bearing code that lacks coverage.
    - Order by dependency; note blockers explicitly ("depends on T-01").
+   - Build the requirement map: for every `R-NN` in the PRD and each of its
+     scenarios, name the ticket that owns the implementation and the executable
+     check that exercises it, or an explicit review method when no executable check
+     exists. Record the IDs in each ticket's Context as `Implements: R-NN, R-MM`.
+     Enabling work that implements no requirement states its purpose in the ticket
+     Objective. Resolve missing coverage and conflicting criteria with the user
+     before implementation; do not start with an unmapped required scenario.
    - Every ticket gets a runnable command in its Verification block — a fenced `bash`
      block that exits 0 only when the ticket is done. `scripts/pincer-ticket.sh verify`
      runs it verbatim and stamps the receipt that `done` requires, so it must be
@@ -46,7 +53,10 @@ change's dependencies and risk, plus any budget the user supplied.
    numbering or old notes. The other state fields
    (`started`, `last_check`, `verified`, `finished`) are added later by `scripts/pincer-ticket.sh` —
    never write them yourself.
-4. Present the ticket list (number, title, size, dependencies) as a table.
+4. Present the ticket list (number, title, size, dependencies) as a table, followed
+   by the requirement map as a second table (requirement · scenario · ticket · check
+   or review method). Whether the map is complete and each check is adequate is your
+   judgment as the author; say so rather than presenting the table as mechanical proof.
 
 Present the concrete breakdown and build order. Reuse existing authorization for the same
 scope and order; ask only when the breakdown introduces a material decision or scope change.

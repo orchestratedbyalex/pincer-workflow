@@ -20,7 +20,11 @@ unless the user explicitly authorized a separate change.
 ## Phase 1: Discovery
 
 1. If `$ARGUMENTS` contains the brief, extract what you can before asking anything.
-   Never ask a question the brief already answers.
+   Never ask a question the brief already answers. Preserve or link the original
+   brief in the PRD, and record the desired outcome, assumptions and exclusions.
+   If the user supplied a PRD, review it: keep its meaning and existing requirement
+   IDs; do not silently replace either. Where its structure needs adapting to the
+   template, record a mapping table (`their section or ID → R-NN`) inside the PRD.
 2. Ask only the questions whose answers would change the architecture or scope.
    Batch them (max 3–4 at once). Typical ones:
    - What does "done" look like — what will be run, demoed, or reviewed at the end?
@@ -68,6 +72,11 @@ concrete scope and architecture; do not repeat an approval already given for the
 ## Phase 4: Write the PRD
 
 1. Load `${CLAUDE_PLUGIN_ROOT}/references/prd-template.md` and write all core sections.
+   In Requirements, assign stable `R-NN` IDs within the selected PRD: a revision
+   keeps existing IDs and adds new ones, never renumbers. Every requirement has
+   observable acceptance scenarios, the relevant failure paths, and the existing
+   behavior it must preserve — `/pincer:narrow` maps each scenario to a ticket and
+   a check, and `/pincer:evaluate` dispositions every ID.
 2. Include optional sections when risk or the product context warrants them.
 3. Save to the next unused `.prd/prd-v{N}.md` (create `.prd/` if needed), with `N`
    matching the filename and frontmatter:

@@ -17,6 +17,8 @@ One sentence: what to build and why.
 ## Context
 - Relevant files: `src/path/to/file.ts` (what's there / what to follow)
 - PRD section: which part of the PRD this implements
+- Implements: R-01, R-03 (requirement IDs from the PRD; enabling work that
+  implements no requirement states its purpose in the Objective instead)
 
 ## Requirements
 - Concrete, checkable requirements. No vague "handle errors properly" —

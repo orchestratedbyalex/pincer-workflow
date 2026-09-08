@@ -14,8 +14,10 @@ Use a throwaway copy of this repo and a cheap model (`claude --model sonnet`).
 
 - [ ] The selected `.prd/prd-vN.md` exists
 - [ ] Its frontmatter has `version`, `status: draft`, and `date`
-- [ ] All 6 core sections are present (Problem, Solution, Scope, Architecture,
-      Success Criteria, Out of Scope)
+- [ ] All 7 core sections are present (Problem, Solution, Scope, Requirements,
+      Architecture, Success Criteria, Out of Scope)
+- [ ] Requirements carry stable `R-NN` IDs, each with a scenario, failure path and
+      preserved behavior; a supplied PRD keeps its own IDs (mapping table if adapted)
 - [ ] The Scope table has both columns filled (in AND out)
 - [ ] No implementation code inside the PRD
 - [ ] Discovery asked ≤4 questions and none were already answered by the brief
