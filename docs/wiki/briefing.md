@@ -8,65 +8,59 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 
 ## Current state
 
-**v0.3.0 is tagged and pushed on `main` (2026-09-08); npm publish pending
-(user runs `! npm publish --otp=<code>`).** `fix/m0-trust` is merged
-(fast-forward). M0 is the
-"repair trust" milestone from `docs/pincer-assessment-2026-09-05.md` and
-`docs/pincer-improvement-plan.md`: revocable verification receipts and PRD
-binding ([[revocable-receipts]]), manifest schema 2 with untrusted legacy
-baselines ([[never-clobber-updates]]), a Node shell lexer behind both hooks,
-a read-only release audit with a general checklist
-([[release-audit-read-only]]), playbooks that reuse existing authorization
-and stage only explicit paths, CI on ubuntu/macos × Node 18/22, and
-generated-parity plus packed-tarball tests ([[ticket-state-machine]]).
-`npm test` green. Site live at https://orchestratedbyalex.github.io/pincer-workflow/
-([[github-pages-site]]).
-
-**Dry run 2026-09-08 (Sonnet, brownfield CRA repo) passed end to end**,
-including every cheat that reached the kit: receipt revocation, hand-edited
-status caught by validation, second PRD demoting the old candidate, update
-preserving a local AGENTS.md edit. Findings and verdict in
-`docs/dry-run-2026-09-08-sonnet.md`. `.prd/prd-v2.md` (draft, 2026-09-08)
-turns those findings into R-01..R-06; earlier tickets T-01..T-10 belong to
-PRD v1 and show as history in `pincer-status.sh`.
+**v0.3.0 is on npm and tagged on `main`. PRD v2 is implemented on branch
+`feat/prd-v2` (2026-09-08), tickets T-11..T-20 all done, `npm test` green.**
+PRD v2 ("Make requirements and release evidence reviewable", `.prd/prd-v2.md`)
+is the bounded bridge toward M1/M2 of `docs/pincer-improvement-plan.md`:
+stable requirement IDs from plan to evaluation, `Proves:` behavioral checks,
+`profile: small|standard`, one shared authorization rule
+([[requirements-through-delivery]]); evidence schema 1 under
+`.prd/evidence/prd-vN/<candidate>/` validated by the new
+`template/scripts/pincer-evidence.cjs` ([[evidence-validator]]) and enforced by
+`notes_current`, with the PRD built commit preceding the candidate
+([[candidate-evidence]]); recovery and status fixes (T-17). Two live Sonnet
+trials in print mode passed end to end (`docs/trial-2026-09-08-greenfield.md`,
+`docs/trial-2026-09-08-brownfield.md`); their three findings were fixed in T-20.
 
 ## Active / next task
 
-1. Publish 0.3.0 to npm (`npm whoami` → `npm publish --otp=…`, user-run),
-   confirm the registry shows 0.3.0, confirm the CI matrix is green for the
-   v0.3.0 commit (`gh run list --workflow=ci.yml`).
-2. `/pincer-narrow` on `.prd/prd-v2.md`: behavioral verification blocks,
-   `.prd/evidence/prd-vN/` for evaluate/release, one approval rule for
-   plan/narrow, `profile: small|standard`, five small script/guard fixes,
-   dry-run checklist rewrite.
+1. On `feat/prd-v2`: `PRD v2: built` commit → `/pincer-evaluate` on this repo
+   (evidence under `.prd/evidence/prd-v2/<candidate>/`, NOTES.md with
+   `evidence:`) → `/pincer-release` → merge to `main` → `npm version minor`
+   (0.4.0; schema 1 evidence and the `profile` field are additive) → publish
+   (user-run `! npm publish --otp=…`) → `git push --follow-tags`.
+2. Update `docs/index.html` sheet text if the README install/usage story changed
+   ([[github-pages-site]]); README already documents the evidence helper.
 3. Still untested: Copilot prompt chain in VS Code, Codex full chain, public
-   plugin install.
+   plugin install, an interactive (question-answering) trial.
 
 ## Recent decisions
 
+- [[candidate-evidence]] — schema 1 manifest + artifacts per candidate; only NOTES.md and listed files may change after the candidate; legacy notes never release-ready
+- [[requirements-through-delivery]] — `R-NN` IDs plan→narrow→evaluate; `Proves:` checks that fail on wrong behavior; `profile`; identical authorization block in four playbooks
 - [[revocable-receipts]] — every verify attempt recorded; `done` re-runs the check; tickets and NOTES bound to a PRD revision
-- [[release-audit-read-only]] — release reads the general checklist, runs the gate directly, never calls the ticket script
-- [[never-clobber-updates]] — manifest schema 2; legacy baselines untrusted → `.new` proposals
 
 ## Landmines
 
 - After editing `template/`, run BOTH generators (`scripts/sync-prompts.sh`,
-  `scripts/build-plugin.sh`); `test/distribution.test.js` now fails on stale
-  output, so `npm test` catches it before CI does.
-- Hooks need Node ≥18; `block-dangerous.sh`/`ticket-guard.sh` are thin
-  wrappers around `.claude/hooks/hook-policy.cjs`.
+  `scripts/build-plugin.sh`); `test/distribution.test.js` fails on stale output.
+  `build-plugin.sh` must copy any new script explicitly (it did for
+  `pincer-evidence.cjs`), and `bin/pincer.js` `common` must list it.
+- Any commit after the evaluated candidate other than NOTES.md + listed evidence
+  makes status say `stale: candidate changed after evaluation: <path>` — wiki
+  edits included. Do wiki `end` before the built commit, not after evaluate.
+- `test/workflow.test.js` asserts the `## Authorization rule` block is
+  byte-identical across plan/narrow/code/evaluate — edit it in all four.
 - Never hand-edit `status`/`started`/`last_check`/`verified`/`finished` in
-  tickets; the guard also blocks `git checkout` of ticket files from the
-  assistant's shell — the user runs repairs in their own terminal.
-- Installing an unpublished build: `npx --yes --package <tgz> pincer init`;
-  `npx <tgz> init` fails with "Permission denied" (bin is `pincer`).
-- npm: 2FA required; an expired token shows as `E404 … PUT` — run
-  `npm whoami`, then `npm login`; publish needs `--otp=<code>` from inside
-  Claude Code and the registry lags ~20 s. The user runs publish (`! npm …`).
+  tickets; the guard blocks `git checkout`/`restore` of ticket files from the
+  assistant's shell on purpose (R-06) — the user repairs in their own terminal.
+- Live trials: `claude -p --model sonnet --permission-mode bypassPermissions`
+  with `env -u CLAUDECODE`, one session per stage, throwaway repo from the
+  packed tarball (`npx --yes --package <tgz> pincer init --platform claude`).
+  Brownfield init leaves `AGENTS.md.new`; merge it before the trial.
+- npm: 2FA; expired token shows as `E404 … PUT`; `npm whoami` then `npm login`;
+  publish needs `--otp=<code>`; registry lags ~20 s. The user runs publish.
 - `template/.gitignore` would be stripped by npm — never ship one.
-- Codex channel = `.agents/skills/*/SKILL.md` invoked as `$pincer-*`; custom
-  prompts are dead. Verify Codex features against openai/codex, not memory.
+- Codex channel = `.agents/skills/*/SKILL.md` invoked as `$pincer-*`.
 - Multi-line text pasted into Claude Code is sent at the first line break;
   write dry-run cheat instructions as single lines.
-- `docs/index.html` is the website source; keep sheet 12 in step with README
-  install instructions ([[github-pages-site]]).

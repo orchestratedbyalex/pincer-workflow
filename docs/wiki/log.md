@@ -1,5 +1,16 @@
 # Log
 
+## [2026-09-08] PRD v2 reviewed and rewritten
+
+User requested assessment and revision, not implementation. Replaced the original
+dry-run cleanup draft with requirement coverage, behavioral acceptance fixtures,
+a shared candidate-evidence validator and explicit evaluation commit semantics.
+Kept ticket restores guarded because they can revive an earlier passing receipt;
+replaced arbitrary size caps and approval triggers with risk and authorization
+rules. Added compatibility expectations and separated mechanical validation from
+agent judgment. M1 runtime migration remains subsequent work. PRD remains draft;
+briefing and open threads updated to match.
+
 ## [2026-09-02] init | Wiki initialized
 
 Scaffolded at extraction+publish time. Repo state: v0.1.0 live on npm
@@ -74,3 +85,9 @@ What: committed the dry-run doc + wiki on fix/m0-trust, fast-forwarded main, `np
 Why: dry run confirmed M0; the maintenance checklist items 1–5 are covered by `npm test`, item 6 by the CI matrix now running on the pushed commits.
 Files: README.md, docs/index.html, package.json, plugin/.claude-plugin/plugin.json, .prd/prd-v2.md, docs/wiki/{briefing,open-threads,log}.md.
 Outcome: npm publish still pending (needs the user's OTP); next is `/pincer-narrow` on PRD v2.
+
+## [2026-09-08] end | PRD v2 implemented on feat/prd-v2 (T-11..T-20), two live trials passed
+- What: narrowed `.prd/prd-v2.md` into T-11..T-19, built all of them plus T-20 (trial findings). New `template/scripts/pincer-evidence.cjs`, evidence schema 1, `notes_current` rewrite, `profile` field, shared authorization block, `Proves:` policy, status/recovery fixes, dry-run checklist rewrite, README/AGENTS updates.
+- Why: PRD v2 = bounded bridge to M1/M2 after the 2026-09-08 Sonnet dry run; requirements and release evidence must be reviewable, not narrated.
+- Files: template/.claude/commands/*, template/.claude/references/*, template/scripts/*, template/docs/*, bin/pincer.js, scripts/build-plugin.sh, test/{behavioral-verification,evidence,candidate}.test.js + helpers, docs/trial-2026-09-08-{greenfield,brownfield}.md, wiki decisions/candidate-evidence, decisions/requirements-through-delivery, systems/evidence-validator, systems/ticket-state-machine.
+- Outcome: `npm test` green (13 suites); greenfield and brownfield print-mode trials PASS at release with validated manifests; narrow-approval, supplied-ID and reviewer-artifact findings fixed in T-20. Next: built commit, evaluate this repo with evidence, release, merge, 0.4.0.
