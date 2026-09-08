@@ -1,0 +1,15 @@
+$ npm test  (candidate 2952e62f75e518ae8bf3142ec30e7abc052d7a21, 2026-09-08T15:08:47Z)
+pincer: this repo already has PINCER installed (.pincer.json exists) — use `pincer update`.
+smoke test passed
+installer preservation tests passed
+ticket lifecycle test passed
+ticket validation tests passed
+verification freshness tests passed
+behavioral verification acceptance set passed (3 controlled faults)
+evidence validator tests passed
+candidate identity and evidence integration tests passed
+PRD recovery tests passed
+hook regression tests passed (116 payloads)
+workflow contract tests passed
+distribution parity and packed-install tests passed
+exit: 0

@@ -1,0 +1,4 @@
+Live acceptance trials (R-01..R-06 acceptance rows), see docs/trial-2026-09-08-greenfield.md and docs/trial-2026-09-08-brownfield.md
+greenfield: release PASS candidate b03df72de454f066d4d60c83b10334a516822122 (after one authorization intervention at narrow)
+brownfield: release PASS candidate 0c6123fcc206712e9e275baa3020573a5660fcf9
+surface: Claude Code 2.1.263 print mode, model sonnet, macOS 26.6.2, Node v22.23.1; other surfaces untested

@@ -1,0 +1,17 @@
+$ git log --oneline 7a93f07..2952e62f75e518ae8bf3142ec30e7abc052d7a21
+2952e62 PRD v2: built
+f7ccb33 wiki: PRD v2 built on feat/prd-v2; evidence, profile, authorization decisions
+e09b0f4 T-20: apply trial findings
+9038599 T-19: record acceptance trials
+8649e83 T-18: dry-run checklist and regression gate
+5a622cb T-17: recovery and status fixes
+a1662b7 T-16: planning profile and approval rule
+1b750d7 T-15: status and release validate evidence
+a6b2ef5 T-14: evaluate writes candidate evidence
+ca8621d T-13: evidence manifest validator
+89eafd4 T-12: verify behavior not identifiers
+f759b14 T-11: carry requirements through delivery
+b87073c Narrow PRD v2 into T-11..T-19
+
+$ git status --short (expect empty apart from untracked evidence)
+?? .prd/evidence/
