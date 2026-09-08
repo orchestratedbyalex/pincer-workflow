@@ -1,0 +1,6 @@
+Live acceptance trials (R-01..R-06 acceptance rows): docs/trial-2026-09-08-greenfield.md, docs/trial-2026-09-08-brownfield.md
+greenfield: release PASS candidate b03df72de454f066d4d60c83b10334a516822122 (one authorization intervention at narrow, pre-T-20 kit)
+greenfield deferral addendum: release PASS candidate f70ebe72ba15613940297c294297c5e6329fb44f on the T-21 kit; narrow finalized without asking; R-03 deferred with authorized_by
+brownfield: release PASS candidate 0c6123fcc206712e9e275baa3020573a5660fcf9; supplied REQ-1..4 kept in PRD
+brownfield no-browser addendum: visual render recorded unverified, not fabricated; schema relaxed in T-21 so an unverified required visual check is representable
+surface: Claude Code 2.1.263 print mode, model sonnet, macOS 26.6.2, Node v22.23.1; other surfaces untested

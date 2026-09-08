@@ -1,82 +1,112 @@
 ---
-prd: .prd/prd-v1.md
-base: d3aae87270004a1b88524a990d7578c0c2c71d33
-candidate: 0e270a9137f78ade4781b2079981797b4e03038d
+prd: .prd/prd-v2.md
+base: 7a93f0768a72ebc11fd139784dfa0d7839e780a7
+candidate: 72d2d8b73ab1de368d6646d32c1ba26c6124b467
+evidence: .prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/manifest.json
 ---
 
-# M0 trust repairs
+# Evaluation — PRD v2: Make requirements and release evidence reviewable
+
+Reviewed candidate `72d2d8b` against base `7a93f07` (main at v0.3.0), tickets
+T-11..T-23. Evidence manifest: see frontmatter; validated with
+`node template/scripts/pincer-evidence.cjs validate <manifest> --candidate 72d2d8b… --base 7a93f07… --prd .prd/prd-v2.md`.
+
+## Requirement dispositions
+
+| Requirement | Disposition | Where it lives | Checks |
+| --- | --- | --- | --- |
+| R-01 Carry observable requirements through delivery | delivered | PRD template Requirements section, plan/narrow/evaluate playbooks, ticket template `Implements:` (T-11); supplied-ID acceptance in the validator (T-20) | C-01 (workflow wording), C-05 (both trials mapped IDs to tickets and dispositions), C-06 (review) |
+| R-02 Verify behavior and disclose what checks establish | delivered | `Proves:` policy in ticket template, narrow and code (T-12); `test/behavioral-verification.test.js` three controlled faults | C-01, C-05 (trial `Proves:` lines), C-06 |
+| R-03 Persist and validate candidate evidence | delivered | `template/scripts/pincer-evidence.cjs`, schema 1, `test/evidence.test.js` (T-13); evaluate writes evidence (T-14); status/release read it (T-15); reviewer artifact (T-20) | C-01, C-05 (both trials validated `ok`), this evaluation itself, C-06 |
+| R-04 Preserve candidate identity and read-only release audit | delivered | `notes_current` allowed set, `test/candidate.test.js`, release playbook and checklist (T-14, T-15) | C-01, C-04 (built commit precedes candidate here), C-05 (release PASS with clean tree in both trials) |
+| R-05 Scale planning by risk and reuse authorization | delivered | `profile` validation, PRD template, shared authorization block (T-16); narrow finalization fix (T-20) | C-01, C-05 (both trials `profile: small` with rationale; greenfield narrow re-asked once before the T-20 fix) |
+| R-06 Improve recovery and status without restoring stale success | delivered | verify message, one warning per problem, wall-clock elapsed rule, code playbook recovery section (T-17); `test/recovery.test.js` guard scenario | C-01; live observation of a failed recheck stays outstanding (trials had none) |
+
+Coverage review: every requirement maps to at least one ticket and one executable
+check; the R-05 "new consequential decision during narrow" and the R-06 live failed
+recheck scenarios were not observed in the trials and are recorded as outstanding in
+the trial documents, not as gaps in the kit. This mapping is my judgment as reviewer.
+
+## Evaluation history
+
+- Candidate `2952e62` (T-11..T-20) was reviewed and **rejected**: six defects
+  (subdirectory and non-ASCII paths made `notes_current` false-stale, validator usage
+  errors leaked as evidence verdicts, 64-hex mismatch, unchecked manifest `base`,
+  whole-tree restores past the ticket guard) and two trial scenarios T-19 required
+  but had not observed. Record: `.prd/evidence/prd-v2/2952e62…/` (no manifest).
+- T-21 fixed the six and relaxed the visual-image rule; two focused trials covered
+  the missing scenarios (no-browser evaluate, authorized deferral).
+- The T-21 review found the whole-tree guard was still a literal-spelling list
+  (force flags, globs, pathspec magic, `-C`, `checkout-index`, wrappers) and an NFD
+  edge; T-22 normalizes pathspecs, handles wrappers, and compares evidence paths in
+  git's canonical bytes. The T-22 re-probe found cheap residuals (`-C` with absolute or
+  variable prefixes, bundled `-lc` flags, brace globs, case-folded `Git`, `xargs` stdin
+  pathspecs, `-c alias.`) and one over-block (`git checkout "$BRANCH"`); T-23 fixed those
+  and is covered by 233 hook payloads, without a third independent re-probe. Unlisted
+  wrappers, `git archive | tar`, `find -exec` and `checkout-index --stdin` remain the
+  guard's documented limit. Both reviews are saved under `review/` in this evidence
+  directory and form the `review` check in the manifest.
 
 ## What was built
 
-Pincer now preserves local installer changes through repeated updates and legacy
-manifests, revokes stale verification after failed or interrupted checks, validates
-the supported ticket format before transitions, and binds tickets and evaluation
-notes to explicit PRD revisions and Git candidates.
+- Requirement IDs and scenarios travel from the PRD template through the narrow
+  requirement map and each ticket's `Implements:` line to an evaluate disposition.
+- Every ticket's Verification opens with `Proves:`; the policy forbids identifier
+  greps as proof and word-matching as an adequacy test; three controlled faults in
+  `test/behavioral-verification.test.js` show the difference.
+- Evidence schema 1 and the read-only validator `template/scripts/pincer-evidence.cjs`
+  (packaged in the tarball, every installer layout and the plugin), with 30+ rejected
+  failure classes under test.
+- `notes_current` requires an `evidence:` manifest that validates for the candidate,
+  tracked files, and no changes after the candidate beyond NOTES.md and listed files;
+  status prints an `Evidence` line; release reads through status and stays read-only.
+- `profile: small|standard` in the PRD, validated at runtime; one authorization rule,
+  byte-identical in four playbooks; no ticket cap, no default timebox.
+- Fixed verify-failure text, duplicated warnings and the noisy elapsed line; recovery
+  guidance that never restores a ticket from git.
+- Dry-run checklist rewritten with five recorded scenarios and a trial-record
+  template; README and template AGENTS.md describe the evidence contract.
+- Two live Sonnet trials (greenfield, brownfield) in print mode, both PASS at release;
+  their findings fixed in T-20. Two focused follow-up trials (no browser tool;
+  user-authorized deferral) recorded as addenda.
+- Evaluation fixes T-21 and T-22: `--relative`/canonical path comparison in
+  `notes_current`, `--base`, malformed-flag omission, honest `unverified` visual
+  checks, and a normalized whole-tree restore guard with wrapper recursion
+  (210 hook payloads under test).
 
-The Claude hook adapter parses JSON structurally with Node.js 18+, covers documented
-destructive command forms, and protects lifecycle fields across Edit, Write,
-MultiEdit, and common shell mutations. The playbooks preserve existing authorization,
-use scoped staging, select PRD versions dynamically, and scale planning and ticket
-shape to greenfield or brownfield work.
+## What was cut and why
 
-The release gate now runs all regression suites, regenerates adapters and the plugin
-in a temporary copy to prove parity, packs the npm artifact, and exercises Claude,
-Codex, Copilot, and all-platform installs in both clean and existing repositories.
-GitHub Actions runs the same gate on Linux and macOS with Node 18 and 22.
+Nothing from the PRD was cut. Deferred by the PRD itself to M1/M2: runtime migration,
+source-bound receipts, atomic transitions, authenticated approvals, requirement-impact
+validation, automated repair, durable release records.
 
-## Evaluation
+## Known issues
 
-The final candidate is `0e270a9137f78ade4781b2079981797b4e03038d`,
-reviewed from base `d3aae87270004a1b88524a990d7578c0c2c71d33`.
-An independent review found two lower-severity readiness inconsistencies: an Edit
-with `replace_all` could evade lifecycle simulation through an earlier prose match,
-and status could advertise a cross-PRD dependency that start would refuse. T-07
-fixed both in `plugin/hooks/hook-policy.cjs:209` and
-`template/scripts/pincer-status.sh:103`, with regressions at
-`test/hooks.test.js:113` and `test/recovery.test.js:62`.
-The release consistency check then found that the nominally read-only audit still
-invoked the state-writing ticket verifier; T-08 now runs the candidate-wide gate
-directly at `plugin/commands/release.md:28` and preserves the evaluation snapshot.
-T-09 then separated the reusable contract at
-`template/docs/release-checklist.md:1` from the repository-specific checks at
-`docs/kit-maintenance-checklist.md:1`, and removed stale guidance that could expose
-secret values or bypass the ticket lifecycle for post-evaluation fixes. The final
-audit found one legacy done ticket without a latest-attempt record; T-10 now blocks
-that state at `template/scripts/pincer-ticket-lib.sh:237`, covers it at
-`test/recovery.test.js:98`, and refreshed T-01 through the ticket state machine.
-An independent review of T-10 found no high-confidence issue. No review finding
-remains open.
+- `npm audit` cannot run in this repo (no dependencies, no lockfile); recorded as an
+  unverified, non-required check (C-03).
+- The R-05 "new consequential decision" and R-06 "failed recheck" behaviors were not
+  observed live; they are covered by wording tests and `test/recovery.test.js` only.
+- The trials ran in print mode with `bypassPermissions`; an interactive session with a
+  human answering plan questions is untested. Other agent surfaces are untested.
+- Evidence validation establishes record consistency, not that commands ran.
+- The ticket guard is a pattern-based safety net for documented restore forms; it
+  does not resolve shell state, aliases, or branch contents. The receipt and status
+  checks remain the source of trust.
 
-`npm test` passes the installer, lifecycle, validation, verification, recovery,
-116 hook-payload, workflow-contract, generation-parity, and packed-install checks.
-The package has no runtime dependencies, and no tracked environment files were
-found. The updated documentation served successfully over local HTTP. A browser
-surface was unavailable in this environment, so the text-only website changes did
-not receive a visual browser pass.
+## What I'd do next
 
-## Scope and known limitations
-
-Nothing from the approved M0 scope was cut. Full source-bound attestation, atomic
-runtime state, authenticated approval identities, multi-change coordination, native
-Windows support, and Codex/Copilot hook adapters remain in later milestones. The
-Claude hooks cover documented mistake patterns and are not a complete shell security
-boundary. Live end-to-end agent sessions remain separate platform validation work.
-
-## Next steps
-
-Run `/pincer-release` for the pass/fail artifact audit. If that passes, prepare a
-maintenance version and release notes; publishing remains a separate authorized
-action. Continue with M1 only through a new PRD.
+Merge to main, publish 0.4.0, then run the dry-run checklist interactively on one
+surface and on Codex. Consider letting evaluate save the reviewer transcript
+automatically (M1 runtime) rather than by playbook instruction.
 
 ## Handover
 
-Start with `.prd/prd-v1.md`, then `docs/pincer-improvement-plan.md` and the ten
-ticket files. `template/` is canonical. After changing it, run
-`template/scripts/sync-prompts.sh`, `scripts/build-plugin.sh`, and `npm test`.
-
-There are no third-party runtime or development dependencies. Node.js provides the
-installer, tests, and structured Claude hook parser; Bash remains the compatibility
-interface for ticket and status commands. The riskiest aging assumption is that agent
-hook payloads and supported Markdown/frontmatter stay within the deliberately small
-formats tested here. Generator parity and payload fixtures should fail first when a
-platform contract changes; live Copilot/Codex/Claude sessions are the least-tested path.
+Read `docs/wiki/briefing.md` first, then `.prd/prd-v2.md` and this file. The kit
+lives in `template/`; adapters and `plugin/` are generated (`template/scripts/sync-prompts.sh`,
+`scripts/build-plugin.sh`) and `test/distribution.test.js` fails when they are stale.
+Dependencies: none at runtime; tests use Node's built-ins only. The riskiest aging
+assumption is the Bash/awk parsing in `template/scripts/pincer-ticket-lib.sh`
+(frontmatter and Markdown are parsed by regex, deliberately limited); the least-tested
+path is the interactive approval flow across real sessions, which only live trials
+exercise. The evidence validator is the first Node runtime piece of the kit; if the
+M1 runtime lands, it should absorb `notes_current`.

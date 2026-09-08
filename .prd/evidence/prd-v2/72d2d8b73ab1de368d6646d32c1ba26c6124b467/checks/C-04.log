@@ -1,0 +1,24 @@
+$ git log --oneline 7a93f0768a72ebc11fd139784dfa0d7839e780a7..72d2d8b73ab1de368d6646d32c1ba26c6124b467
+72d2d8b T-23: guard residuals — -C prefixes, bundled -c, braces, case-fold, xargs, aliases; allow $BRANCH switches
+7614b3a T-22: normalize guard pathspecs, force flags, wrappers; canonical evidence paths
+9dac632 docs: greenfield trial addendum for the authorized deferral scenario
+f1f78a2 docs: wiki and brownfield trial addendum after candidate 2952e62 review
+907b6da evidence: superseded evaluation record for candidate 2952e62
+cd7021d T-21: evaluation fixes for candidate paths, base check, and whole-tree restores
+2952e62 PRD v2: built
+f7ccb33 wiki: PRD v2 built on feat/prd-v2; evidence, profile, authorization decisions
+e09b0f4 T-20: apply trial findings
+9038599 T-19: record acceptance trials
+8649e83 T-18: dry-run checklist and regression gate
+5a622cb T-17: recovery and status fixes
+a1662b7 T-16: planning profile and approval rule
+1b750d7 T-15: status and release validate evidence
+a6b2ef5 T-14: evaluate writes candidate evidence
+ca8621d T-13: evidence manifest validator
+89eafd4 T-12: verify behavior not identifiers
+f759b14 T-11: carry requirements through delivery
+b87073c Narrow PRD v2 into T-11..T-19
+
+$ git status --short (expect only NOTES.md and this evidence directory)
+ M NOTES.md
+?? .prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/

@@ -1,0 +1,223 @@
+{
+  "schema": 1,
+  "prd": ".prd/prd-v2.md",
+  "base": "7a93f0768a72ebc11fd139784dfa0d7839e780a7",
+  "candidate": "72d2d8b73ab1de368d6646d32c1ba26c6124b467",
+  "created": "2026-09-08T15:48:05Z",
+  "environment": {
+    "os": "macOS 26.6.2 (darwin 25.6.0)",
+    "node": "v22.23.1",
+    "tools": [
+      "npm 10",
+      "git",
+      "Claude Code 2.1.263 print mode (trials)",
+      "code-quality-reviewer subagent"
+    ],
+    "limitations": [
+      "npm audit cannot run: no dependencies and no lockfile (C-03 unverified, non-required)",
+      "no UI in this repository; visual review not applicable",
+      "live trials on one agent surface only (Claude Code, Sonnet, macOS); other surfaces untested",
+      "T-23 guard residual fixes verified by hook payload tests, not by a third independent re-probe"
+    ]
+  },
+  "coverage_review": "Every R-01..R-06 requirement maps to at least one ticket (T-11..T-23) and to executable checks: the full npm test gate (C-01) with the targeted suites named in NOTES.md, the trial summary (C-05) for live acceptance rows, and the saved code-quality reviews (C-06). R-05 \"new consequential decision during narrow\" and R-06 \"live failed recheck\" were not observed in trials; both are covered by wording and recovery tests and recorded as outstanding for live observation. Mapping completeness is the reviewer's judgment.",
+  "requirements": [
+    {
+      "id": "R-01",
+      "disposition": "delivered",
+      "tickets": [
+        "T-11",
+        "T-20"
+      ],
+      "checks": [
+        "C-01",
+        "C-05",
+        "C-06"
+      ]
+    },
+    {
+      "id": "R-02",
+      "disposition": "delivered",
+      "tickets": [
+        "T-12",
+        "T-21"
+      ],
+      "checks": [
+        "C-01",
+        "C-05",
+        "C-06"
+      ]
+    },
+    {
+      "id": "R-03",
+      "disposition": "delivered",
+      "tickets": [
+        "T-13",
+        "T-14",
+        "T-15",
+        "T-20",
+        "T-21"
+      ],
+      "checks": [
+        "C-01",
+        "C-05",
+        "C-06"
+      ]
+    },
+    {
+      "id": "R-04",
+      "disposition": "delivered",
+      "tickets": [
+        "T-14",
+        "T-15",
+        "T-21",
+        "T-22"
+      ],
+      "checks": [
+        "C-01",
+        "C-04",
+        "C-05",
+        "C-06"
+      ]
+    },
+    {
+      "id": "R-05",
+      "disposition": "delivered",
+      "tickets": [
+        "T-16",
+        "T-18",
+        "T-20"
+      ],
+      "checks": [
+        "C-01",
+        "C-05"
+      ],
+      "note": "The \"new consequential decision during narrow\" scenario is recorded in the dry-run checklist but was not observed live."
+    },
+    {
+      "id": "R-06",
+      "disposition": "delivered",
+      "tickets": [
+        "T-17",
+        "T-21",
+        "T-22",
+        "T-23"
+      ],
+      "checks": [
+        "C-01",
+        "C-06"
+      ],
+      "note": "A live failed recheck was not observed in trials; covered by test/recovery.test.js and 233 hook payloads."
+    }
+  ],
+  "checks": [
+    {
+      "id": "C-01",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "npm test",
+      "timestamp": "2026-09-08T15:48:05Z",
+      "artifacts": [
+        ".prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/checks/C-01.log"
+      ]
+    },
+    {
+      "id": "C-02",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "git ls-files | grep -i env; grep -n env .gitignore",
+      "timestamp": "2026-09-08T15:48:05Z",
+      "artifacts": [
+        ".prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/checks/C-02.log"
+      ]
+    },
+    {
+      "id": "C-03",
+      "kind": "command",
+      "required": false,
+      "result": "unverified",
+      "command": "npm audit --omit=dev",
+      "timestamp": "2026-09-08T15:48:05Z",
+      "artifacts": [
+        ".prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/checks/C-03.log"
+      ],
+      "note": "ENOLOCK: no dependencies, no lockfile."
+    },
+    {
+      "id": "C-04",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "git log --oneline <base>..<candidate>; git status --short",
+      "timestamp": "2026-09-08T15:48:05Z",
+      "artifacts": [
+        ".prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/checks/C-04.log"
+      ],
+      "note": "One commit per ticket; PRD v2: built precedes the first candidate; superseded record and trial addenda committed before this candidate."
+    },
+    {
+      "id": "C-05",
+      "kind": "review",
+      "required": true,
+      "result": "passed",
+      "timestamp": "2026-09-08T15:48:05Z",
+      "artifacts": [
+        ".prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/checks/C-05.log"
+      ],
+      "note": "Summary of the four live Sonnet trials; full records in docs/trial-2026-09-08-*.md."
+    },
+    {
+      "id": "C-06",
+      "kind": "review",
+      "required": true,
+      "result": "passed",
+      "timestamp": "2026-09-08T15:48:05Z",
+      "artifacts": [
+        ".prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/review/code-quality.md",
+        ".prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/review/t21-review.md",
+        ".prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/review/t22-reprobe.md"
+      ],
+      "note": "Review of rejected candidate 2952e62 (six findings, fixed in T-21); review of T-21 (eight items, fixed in T-22/T-23); T-22 re-probe (residuals fixed in T-23 or documented)."
+    }
+  ],
+  "visual_review": {
+    "applicable": false,
+    "reason": "The kit is Bash, Node and Markdown; nothing renders. The website in docs/index.html was not changed by this PRD."
+  },
+  "artifacts": [
+    {
+      "path": ".prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/checks/C-01.log",
+      "sha256": "acc7f3e37f00dade8ea238830fe5689cfb3f65a9e16f4fd0852ee9a2afcbc863"
+    },
+    {
+      "path": ".prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/checks/C-02.log",
+      "sha256": "292c4a5862671a9aa377273709fd1179610fb164c340d7aa54cdddd97aeb0b25"
+    },
+    {
+      "path": ".prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/checks/C-03.log",
+      "sha256": "07944977a30188c4a2e83202ae6328c31314e3e48354ca52f734f9a0a8c3fd04"
+    },
+    {
+      "path": ".prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/checks/C-04.log",
+      "sha256": "6b6b16ddad361d56e67e4fce3171c4f96cb0342f8064fc3a6874bad27fa297f8"
+    },
+    {
+      "path": ".prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/checks/C-05.log",
+      "sha256": "feb100db9745bf09aff006acaa55ff33473bc033b88bb94722552b53077114c1"
+    },
+    {
+      "path": ".prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/review/code-quality.md",
+      "sha256": "73147b731049971fa4aa7bfa48279582787d8cb75d5eef8c9af204b310a47d89"
+    },
+    {
+      "path": ".prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/review/t21-review.md",
+      "sha256": "2b73d684119f70db34f8ba52e1a1595957e7ef3c2dd8df9e38aa4ed575316e99"
+    },
+    {
+      "path": ".prd/evidence/prd-v2/72d2d8b73ab1de368d6646d32c1ba26c6124b467/review/t22-reprobe.md",
+      "sha256": "c723a6767fe773ea02ef593307d0d0a41e3a43dd1de15e07028c414515d86c5f"
+    }
+  ]
+}

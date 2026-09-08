@@ -1,0 +1,7 @@
+$ npm audit --omit=dev
+npm error code ENOLOCK
+npm error audit This command requires an existing lockfile.
+npm error audit Try creating one first with: npm i --package-lock-only
+npm error audit Original error: loadVirtual requires existing shrinkwrap file
+exit: 1
+note: package.json declares no dependencies and no lockfile exists, so npm audit cannot run (ENOLOCK); recorded as unverified, non-required.
