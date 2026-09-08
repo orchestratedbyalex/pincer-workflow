@@ -49,6 +49,7 @@ Packaging: add the helper to `bin/pincer.js` `common`, `scripts/build-plugin.sh`
 - [ ] `test/evidence.test.js` is in the `npm test` chain and passes.
 
 ## Verification
+Proves: the validator accepts a complete manifest and rejects each failure class in a fresh temporary repository, and the helper is packaged on every channel; regression: a rejected class silently accepted or the helper missing from an install.
 ```bash
 node test/evidence.test.js && grep -q 'evidence.test.js' package.json && node test/distribution.test.js
 ```

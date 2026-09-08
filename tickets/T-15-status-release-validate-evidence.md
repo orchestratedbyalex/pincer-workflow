@@ -31,6 +31,7 @@ Make status and release use the shared evidence validator, extend `notes_current
 - [ ] Release playbook and checklist read evidence through status, run the gate directly, and state the non-mutation guarantees; `node test/candidate.test.js`, `node test/recovery.test.js` and `node test/workflow.test.js` pass.
 
 ## Verification
+Proves: notes_current reports current only for a candidate plus its listed evidence and stale for every other change class, in temporary repositories; regression: a change class accepted or the audit mutating state.
 ```bash
 node test/candidate.test.js && node test/recovery.test.js && node test/workflow.test.js && grep -q 'candidate.test.js' package.json && node test/distribution.test.js
 ```

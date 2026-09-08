@@ -29,6 +29,7 @@ One sentence: what to build and why.
 - [ ] Observable behavior 2
 
 ## Verification
+Proves: one line — what this check establishes and which regression it detects.
 ```bash
 # command(s) the builder runs to prove the criteria — tests, build, curl, etc.
 ```
@@ -59,6 +60,18 @@ Rules:
   requires that receipt to match the current block. Never write these by hand.
 - The Verification block is a fenced `bash` block that exits 0 only when the
   ticket is done — non-interactive, no "check by hand".
+- The Verification section opens with a one-line `Proves:` statement: what the
+  check establishes and which regression it detects. Executable changes need
+  checks that exercise observable behavior — including relevant rejection paths
+  and, in brownfield work, preservation of existing behavior. Reuse adequate
+  focused tests rather than inventing ad-hoc commands. A build, a syntax check, or
+  an identifier grep alone does not prove a feature works: the check must fail
+  when the behavior is wrong, not only when a name is renamed. Static assertions
+  may be primary evidence for static contracts (generated files, adapter wording)
+  when `Proves:` explains that fit.
+- Manual visual judgment is recorded separately during evaluation, never as the
+  Verification command. When a tool the check needs is unavailable, the result is
+  an explicit `unverified`, never fabricated output or a silent waiver.
 - Every ticket must be verifiable without human judgment where possible.
 - If the ticket's surface accepts external input (HTTP, form, file, LLM output),
   Requirements must state the validation and the rejection behavior, and

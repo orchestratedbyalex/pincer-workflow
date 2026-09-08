@@ -37,6 +37,18 @@ change's dependencies and risk, plus any budget the user supplied.
      block that exits 0 only when the ticket is done. `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-ticket.sh verify`
      runs it verbatim and stamps the receipt that `done` requires, so it must be
      non-interactive and self-contained (no "check by hand").
+   - Each Verification section opens with `Proves:` — what the check establishes and
+     which regression it detects. A check for an executable change must exercise
+     observable behavior (including relevant rejection paths and, in brownfield work,
+     preservation of existing behavior) and fail when the behavior is wrong, not only
+     when an identifier is renamed. Reuse adequate focused tests. A build, a syntax
+     check, or an identifier grep alone is not proof; static assertions are primary
+     evidence only for static contracts such as generated files, and `Proves:` says so.
+   - Adequacy is a judgment about what the command observes, never a word match: do
+     not call a command sufficient because it contains `grep`, `test`, or a runner
+     name, nor insufficient for lacking them. Manual visual judgment is recorded
+     separately in evaluation; a tool the check needs but cannot run yields an
+     explicit `unverified` result, never fabricated evidence or a silent waiver.
    - If the brief or stack implies automated tests, at least one ticket's verification
      command must be the test runner (e.g. `npm test`) — manual checks alone don't count.
    - Any ticket whose surface accepts external input (HTTP endpoint, form, file,

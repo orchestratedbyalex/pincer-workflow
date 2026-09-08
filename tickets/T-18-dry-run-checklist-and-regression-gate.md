@@ -27,6 +27,7 @@ Rewrite the dry-run checklist around the new contracts and recorded scenarios, a
 - [ ] `npm test` passes on the assembled kit.
 
 ## Verification
+Proves: the checklist and docs name the new contracts (static presence) and the full gate passes on the assembled kit; regression: any M0 or new targeted test failing.
 ```bash
 grep -q 'profile: small' template/docs/dry-run-checklist.md && grep -q 'pincer-evidence.cjs' README.md && grep -q 'pincer-evidence.cjs' template/AGENTS.md && npm test
 ```

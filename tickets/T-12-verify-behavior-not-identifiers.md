@@ -1,9 +1,13 @@
 ---
 ticket: T-12
-status: open
+status: done
 size: M
 prd: .prd/prd-v2.md
 depends_on: [T-11]
+started: 2026-09-08T14:30:12Z
+last_check: 2026-09-08T14:31:13Z passed 21131e8cd116
+verified: 2026-09-08T14:31:13Z 21131e8cd116
+finished: 2026-09-08T14:31:14Z
 ---
 
 ## Objective
@@ -25,12 +29,13 @@ Require ticket verification that exercises observable behavior and disclose what
 - `test/workflow.test.js` asserts the new wording in the ticket template, narrow and code playbooks, and that the narrow playbook forbids word-matching adequacy.
 
 ## Acceptance Criteria
-- [ ] Ticket template and narrow playbook require behavior-exercising checks with a `Proves:` disclosure, allow justified static checks for static contracts, and forbid word-matching adequacy.
-- [ ] Unavailable tools produce an explicit unverified result in the narrow and code playbooks; visual judgment is recorded separately from executable checks.
-- [ ] `test/behavioral-verification.test.js` shows the behavioral check failing on all three controlled faults and passing on the correct implementation, while the grep check passes on every fault, with fixtures reset between faults.
-- [ ] `npm test` includes the new test file, and generated adapters and plugin match the template.
+- [x] Ticket template and narrow playbook require behavior-exercising checks with a `Proves:` disclosure, allow justified static checks for static contracts, and forbid word-matching adequacy.
+- [x] Unavailable tools produce an explicit unverified result in the narrow and code playbooks; visual judgment is recorded separately from executable checks.
+- [x] `test/behavioral-verification.test.js` shows the behavioral check failing on all three controlled faults and passing on the correct implementation, while the grep check passes on every fault, with fixtures reset between faults.
+- [x] `npm test` includes the new test file, and generated adapters and plugin match the template.
 
 ## Verification
+Proves: the behavioral check discriminates the three controlled faults an identifier grep misses, and the playbooks and template carry the policy wording; regression: a policy line dropped or a fixture that no longer discriminates.
 ```bash
 node test/behavioral-verification.test.js && node test/workflow.test.js && grep -q 'behavioral-verification.test.js' package.json && node test/distribution.test.js
 ```

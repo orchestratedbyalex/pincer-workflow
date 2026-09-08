@@ -29,6 +29,7 @@ Fix the misleading verify-failure text, duplicated readiness warnings and noisy 
 - [ ] Ticket checkout/restore remains blocked after a failed recheck, and the code playbook documents user-performed repair followed by fresh verification.
 
 ## Verification
+Proves: the runtime scripts emit the corrected failure text, one warning per problem and elapsed only when active, and the hook keeps blocking ticket restores; regression: a duplicated warning, a revived receipt, or the misleading message returning.
 ```bash
 node test/recovery.test.js && node test/ticket.test.js && node test/hooks.test.js && node test/workflow.test.js && node test/distribution.test.js
 ```

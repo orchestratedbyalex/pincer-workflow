@@ -68,6 +68,19 @@ for (const source of [plan, narrow, code, evaluate, release, prdTemplate, ticket
   assert.doesNotMatch(source, /guarantees? (full|complete) traceability/i);
 }
 
+// R-02: verification exercises behavior and discloses what it establishes.
+assert.match(ticketTemplate, /^Proves: /m);
+assert.match(ticketTemplate, /fail\s+when the behavior is wrong, not only when a name is renamed/i);
+assert.match(ticketTemplate, /identifier grep alone does not prove/i);
+assert.match(ticketTemplate, /static contracts/i);
+assert.match(ticketTemplate, /explicit `unverified`, never fabricated/i);
+assert.match(narrow, /`Proves:`/);
+assert.match(narrow, /never a word match/i);
+assert.match(narrow, /nor insufficient for lacking them/i);
+assert.match(narrow, /explicit `unverified` result, never fabricated/i);
+assert.match(code, /not behavioral proof/i);
+assert.match(code, /explicit `unverified` result/i);
+
 for (const source of [rootReadme, codex]) {
   assert.doesNotMatch(source, /Codex has no PreToolUse hooks/i);
   assert.match(source, /does not currently install a Codex hook adapter/i);

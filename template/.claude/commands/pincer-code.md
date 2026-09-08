@@ -39,7 +39,11 @@ previously authorized work.
    conventions, and nothing else.
 3. **Verify:** `scripts/pincer-ticket.sh verify T-{NN}` — runs the Verification block and
    writes the receipt only if it exits 0. Red → fix and re-run; report the actual output,
-   not assumptions. Green output is the definition of done, not your confidence.
+   not assumptions. Green output is the definition of done, not your confidence. If the
+   check only validated syntax or a build, say so — that is not behavioral proof. A
+   visual judgment is recorded separately in evaluation, not as the receipt, and a tool
+   the check needs but cannot run yields an explicit `unverified` result, never
+   fabricated output.
 4. **Self-review the diff** before committing: silent failures (empty catches,
    un-awaited promises), leftover debug code, drift from the ticket's acceptance criteria.
    Then a security sweep of the same diff:

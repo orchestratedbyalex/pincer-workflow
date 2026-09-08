@@ -27,6 +27,7 @@ Run and record one greenfield and one brownfield live trial of the assembled kit
 - [ ] No record claims cross-platform behavior or superiority from a single trial.
 
 ## Verification
+Proves: trial records exist with the required sections (static presence check); the human-authored records themselves are the acceptance evidence.
 ```bash
 for kind in greenfield brownfield; do f=$(ls docs/trial-*-$kind.md 2>/dev/null | tail -1); [ -n "$f" ] || { echo "missing $kind trial record"; exit 1; }; for s in 'Brief' 'Base' 'Versions' 'Artifacts' 'Results' 'Interventions' 'Untested' 'R-06'; do grep -q "$s" "$f" || { echo "$f lacks $s"; exit 1; }; done; done
 ```

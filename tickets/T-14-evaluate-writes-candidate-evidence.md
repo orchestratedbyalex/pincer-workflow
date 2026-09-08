@@ -31,6 +31,7 @@ Make evaluate select a clean committed candidate after the PRD built transition,
 - [ ] Review fixes require a new ticket, candidate and evaluation; `node test/workflow.test.js` covers these contracts and generated outputs match.
 
 ## Verification
+Proves: the playbooks carry the evidence and candidate-ordering contract (static contract, wording assertions) and generated outputs match; agent behavior itself is validated by the T-19 trials.
 ```bash
 node test/workflow.test.js && node test/distribution.test.js
 ```

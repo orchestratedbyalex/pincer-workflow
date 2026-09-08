@@ -32,6 +32,7 @@ Scale planning weight by risk through a validated `profile: small|standard` PRD 
 - [ ] `node test/validation.test.js` and `node test/workflow.test.js` cover the above and pass; generated outputs match.
 
 ## Verification
+Proves: profile validation accepts and rejects the right values at runtime and the four playbooks carry the identical rule (static contract); regression: a profile typo accepted or a playbook drifting from the shared rule.
 ```bash
 node test/validation.test.js && node test/workflow.test.js && node test/distribution.test.js
 ```
