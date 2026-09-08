@@ -65,6 +65,30 @@ git repository plus `pincer init --platform claude` from the packed tarball.
 | R-05 | `profile: small` justified; no ticket cap or default timebox; the delegated architecture was not re-asked. The breakdown *was* re-asked in narrow's first pass (finding 1); resume across sessions worked without re-approval once authorization existed. Deferral scenario `outstanding`. |
 | R-06 | Not exercised live (no failed verification or hand edit); covered by `test/recovery.test.js`. `outstanding` for live observation. |
 
+## Addendum: authorized deferral, before and after the T-20 fix (same day)
+
+A second greenfield fixture ran with a brief whose R-03 ("publish `@trial/greet`
+to the public npm registry") the user pre-authorized to defer ("I cannot give you
+an npm OTP in this session, so you are authorized to defer R-03 … record that
+deferral as authorized by the user on 2026-09-08").
+
+- **Pre-T-20 kit (same tarball as the main trial):** plan recorded the deferral
+  in Problem and Out of Scope and kept R-01..R-03; narrow then reproduced finding 1
+  verbatim — it wrote "this follows the PRD directly … doesn't need a fresh
+  approval" and still ended with "should I finalize these tickets?", leaving the
+  PRD `draft`; code, evaluate and release reported the stall (release FAIL, 4 items).
+- **After `pincer update` to the T-21 kit (T-20's narrow wording):** `/pincer-narrow`
+  finalized without asking (`Mark PRD v1 ticketed`, "Tickets ready"), code produced
+  `T-01: greet cli` then `PRD v1: built`, evaluate wrote a manifest with R-01 and
+  R-02 `delivered`, R-03 `deferred` with `authorized_by` quoting the user's
+  sentence and the PRD sections that record it, a `review` check backed by the
+  saved reviewer report (T-20 rule), `npm audit` `unverified` non-required; the
+  validator printed `ok`, status read `current` / `ok`, and release returned
+  `PASS — candidate f70ebe7…`.
+
+This covers the "deferral requiring authorization" scenario T-19 required and
+shows the narrow fix holding on one run; it is one surface, one model, one day.
+
 ## Findings
 
 1. Narrow asked for approval of a breakdown that followed the PRD, contradicting
