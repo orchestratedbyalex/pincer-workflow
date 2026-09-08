@@ -139,10 +139,11 @@ const expectStale = (dir, pattern, label) => {
   expectStale(project, /candidate changed after evaluation: source\.txt/, 'subdirectory project names project-relative paths');
 }
 
-// Non-ASCII artifact names are compared unquoted.
-{
-  const { dir, candidate } = evaluated({ artifact: 'checks/résumé-écran.log' });
-  assert.match(line(dir, 'Notes'), new RegExp(`current \\(${candidate}\\)`), `non-ASCII artifact is current\n${status(dir)}`);
+// Non-ASCII artifact names are compared unquoted, in git's own normalisation
+// (macOS core.precomposeunicode stores NFC even when the manifest says NFD).
+for (const artifact of ['checks/résumé-écran.log', 'checks/résumé.log']) {
+  const { dir, candidate } = evaluated({ artifact });
+  assert.match(line(dir, 'Notes'), new RegExp(`current \\(${candidate}\\)`), `non-ASCII artifact ${JSON.stringify(artifact)} is current\n${status(dir)}`);
 }
 
 // NOTES.md base and manifest base must agree; malformed NOTES fields never become manifest verdicts.

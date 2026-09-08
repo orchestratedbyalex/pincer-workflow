@@ -70,10 +70,18 @@ previously authorized work.
 
 Ticket lifecycle fields are written only by `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-ticket.sh`, and the guard
 also blocks shell restores that would touch ticket files from the assistant's shell:
-`git checkout`/`git restore` naming a ticket path or the whole tree (`.`, `:/`,
-`tickets/`), `git reset --hard`, `git stash`, and `git clean -f` without a pathspec.
-Restoring HEAD would erase a newer failed attempt and revive an old passing receipt.
-Branch switches and file-specific restores outside `tickets/` stay allowed. When a ticket file is malformed or its state was hand
+`git checkout`/`git restore`/`git switch` naming a ticket path or a normalized
+pathspec that cannot be shown to stay outside `tickets/` (the whole tree, `.`, `:/`,
+`:(top)`, globs, absolute or unexpanded paths, `tickets/…` in any spelling, a
+`-C tickets` prefix), force flags (`-f`, `--force`, `--discard-changes`,
+`--pathspec-from-file`), `git reset --hard|--merge|--keep`, `git stash` (except
+`list`, `show`, `create`, `store`), `git clean -f` without a narrow pathspec,
+`git checkout-index -a` and `git read-tree -u|--reset`, including when wrapped in
+`bash -c`, `eval`, `nice`, `time`, `nohup`, `timeout` or `xargs`. Restoring HEAD
+would erase a newer failed attempt and revive an old passing receipt. Branch
+switches and file-specific restores outside `tickets/` stay allowed. The guard is a
+pattern-based safety net for documented mistake forms, not a complete shell
+boundary; the receipt and status checks remain the source of trust. When a ticket file is malformed or its state was hand
 edited, preserve the malformed contents as they are, report the validation error that
 the script or `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-status.sh` printed, and hand the repair to the user, who
 performs it in their own terminal. Then return through the lifecycle — `start`,

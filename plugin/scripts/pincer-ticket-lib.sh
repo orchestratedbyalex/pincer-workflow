@@ -279,7 +279,7 @@ ticket_readiness() { # explain why a done ticket needs attention, without mutati
 # manifest lists may have changed, all of them tracked, and the working tree is
 # clean apart from NOTES.md. Legacy notes without a manifest never grant readiness.
 notes_current() {
-  local prd=$1 candidate base changes manifest output listed file offending
+  local prd=$1 candidate base changes manifest output listed file stored canonical offending
   [ -f NOTES.md ] || { printf 'missing'; return 1; }
   validate_metadata NOTES.md >/dev/null 2>&1 || { printf 'stale: invalid or missing evaluation metadata'; return 1; }
   [ "$(fm_get NOTES.md prd)" = "$prd" ] || { printf 'stale: evaluation PRD does not match'; return 1; }
@@ -301,14 +301,19 @@ notes_current() {
     printf 'stale: evidence invalid: %s' "$(evidence_reason "$output")"; return 1
   fi
   listed=$(printf '%s\n' "$output" | tail -n +2)
+  # Every listed file must be tracked; keep git's own spelling of each path
+  # (unquoted, relative to this directory, NFC where git normalises) so the set
+  # compares byte-for-byte with the diff below.
+  canonical=""
   while IFS= read -r file; do
     [ -n "$file" ] || continue
-    git ls-files --error-unmatch -- "$file" >/dev/null 2>&1 || { printf 'stale: evidence not tracked: %s' "$file"; return 1; }
+    stored=$(git -c core.quotePath=false ls-files --error-unmatch -- "$file" 2>/dev/null) || { printf 'stale: evidence not tracked: %s' "$file"; return 1; }
+    canonical="$canonical$stored
+"
   done <<< "$listed"
-  # Paths relative to the project root (which may be below the git toplevel) and
-  # unquoted, so they compare byte-for-byte with the validator's list.
+  # Paths relative to the project root (which may be below the git toplevel).
   changes=$(git -c core.quotePath=false diff --name-only --relative "$candidate" HEAD -- . ':(exclude)NOTES.md') || return 1
-  offending=$(printf '%s\n' "$changes" | grep -vxF -f <(printf '%s\n' "$listed") | grep -v '^$' | head -1)
+  offending=$(printf '%s\n' "$changes" | grep -vxF -f <(printf '%s' "$canonical") | grep -v '^$' | head -1)
   if [ -n "$offending" ]; then printf 'stale: candidate changed after evaluation: %s' "$offending"; return 1; fi
   changes=$(git status --porcelain --untracked-files=all -- . ':(exclude)NOTES.md') || return 1
   if [ -n "$changes" ]; then printf 'stale: working tree has changes outside NOTES.md'; return 1; fi

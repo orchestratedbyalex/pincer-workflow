@@ -161,10 +161,23 @@ for (const command of [
   'git checkout -- .', 'git checkout .', 'git restore .', 'git restore --source=HEAD :/', 'git restore', 'git checkout main -- tickets/',
   'git restore --staged --worktree tickets', 'git checkout -- ./tickets/', 'git reset --hard', 'git reset --keep HEAD~1', 'git stash', 'git stash push -u',
   'git stash pop', 'git stash drop', 'git clean -fd', 'git clean --force', 'git -C . checkout -- .', 'env GIT_DIR=.git git restore :/',
+  // T-22: force flags, normalised pathspecs, extra restore commands, wrappers.
+  'git checkout -f', 'git checkout -f HEAD', 'git checkout --force main', 'git checkout -fq', 'git switch -f main', 'git switch --discard-changes main',
+  'git checkout -- tickets/T-*', 'git checkout -- tickets/*.md', 'git restore tickets/T-*', 'git checkout HEAD -- tickets/T-*', 'git checkout -- tickets//',
+  'git checkout -- tickets/./', 'git checkout -- tickets/../tickets', "git checkout -- ':/tickets'", "git checkout -- ':(top)tickets'", "git checkout -- ':(icase)TICKETS'",
+  'git -C tickets checkout -- T-01-example.md', 'git -C tickets restore T-01-example.md', 'git checkout -- ./*', 'git checkout -- **', 'git checkout -- ./.',
+  'git checkout -- ././.', 'git restore ./.', "git checkout -- ':(top)'", "git restore ':(top)'", "git checkout -- ':(glob)**'", 'git checkout -- "$PWD"',
+  'git checkout -- /abs/path/to/repo', 'git checkout --pathspec-from-file=list.txt', 'git restore --pathspec-from-file=list.txt', 'git checkout-index -af',
+  'git checkout-index --all --force', 'git read-tree -u --reset HEAD', 'git read-tree --reset HEAD', 'git clean -f .', 'git clean -fd .', "git clean -f -- ':/'",
+  'git clean -f -- tickets/', 'git clean -e foo -f', 'git checkout -p', 'bash -c "git checkout -- ."', "sh -c 'git restore .'", 'eval "git reset --hard"',
+  'nice git restore .', 'nice -n 10 git checkout -- .', 'time git stash', 'nohup git checkout -f main', 'timeout 30 git checkout -- tickets/', 'xargs git checkout -- tickets/T-01-example.md',
 ]) check('ticket', `block whole-tree restore ${command}`, bash(command), 2);
 for (const command of [
   'git checkout main', 'git checkout -b feature/x', 'git restore src/app.js', 'git checkout -- src/app.js', 'git reset --soft HEAD~1', 'git reset HEAD -- src/app.js',
   'git stash list', 'git stash show -p stash@{0}', 'git clean -n', 'git clean -f build/', 'git status', 'git log --oneline',
+  'git switch main', 'git switch -c feature/y', 'git stash create', 'git stash --help', 'git stash -h', 'git checkout HEAD -- src/app.js', 'git restore --source=HEAD src/app.js',
+  'git -C src checkout -- app.js', "git checkout -- ':(exclude)tickets' src/", 'git clean -fd build/', 'git checkout-index -f -- src/app.js', 'git read-tree HEAD',
+  'nice git status', 'bash -c "git status"', 'eval "npm test"',
 ]) check('ticket', `allow non-ticket git ${command}`, bash(command), 0);
 
 assert.equal(read(dir, file), completed, 'hooks are read-only and never execute tested command strings');

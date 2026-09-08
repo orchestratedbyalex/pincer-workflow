@@ -86,18 +86,28 @@ function commandParts(command) {
     while (i < words.length && words[i].startsWith('-')) i++;
   }
   while (['command', 'builtin', 'exec'].includes(words[i])) i++;
+  // Transparent wrappers: the command they run is the one that matters.
+  while (['nice', 'nohup', 'time', 'timeout', 'xargs'].includes(words[i])) {
+    const wrapper = words[i++];
+    while (i < words.length && words[i].startsWith('-')) {
+      if (['-n', '-s', '-k', '--signal', '--kill-after', '-I', '-L', '-P', '-d', '-a'].includes(words[i])) i++;
+      i++;
+    }
+    if (wrapper === 'timeout' && /^[0-9]/.test(words[i] || '')) i++;
+  }
   const executable = words[i] ? path.basename(words[i]) : '';
   return { executable, args: words.slice(i + 1), words };
 }
 
 function gitSubcommand(args) {
-  let i = 0;
+  let i = 0, cdir = '';
   while (i < args.length) {
-    if (['-C', '-c', '--git-dir', '--work-tree'].includes(args[i])) i += 2;
+    if (args[i] === '-C') { cdir = args[i + 1] || ''; i += 2; }
+    else if (['-c', '--git-dir', '--work-tree'].includes(args[i])) i += 2;
     else if (args[i].startsWith('-')) i++;
-    else return { name: args[i], args: args.slice(i + 1) };
+    else return { name: args[i], args: args.slice(i + 1), cdir };
   }
-  return { name: '', args: [] };
+  return { name: '', args: [], cdir };
 }
 
 function dangerousReason(source, depth = 0) {
@@ -223,27 +233,77 @@ function isExactPincerCall(source) {
   return action === 'bind' ? words.length === 4 : words.length === 3;
 }
 
+// A pathspec is "wide" when, after normalisation, it cannot be shown to stay
+// outside tickets/: the whole tree, an absolute or unexpanded path, a glob at
+// the top level, or anything whose first segment is tickets. Exclude entries
+// never widen. `cdir` is a `git -C <dir>` prefix.
+function widePathspec(arg, cdir = '') {
+  if (/[$`]/.test(arg)) return true;
+  let p = arg;
+  if (p.startsWith(':(')) {
+    const end = p.indexOf(')');
+    if (end < 0) return true;
+    const magic = p.slice(2, end).split(',').map(s => s.trim());
+    if (magic.includes('exclude')) return false;
+    p = p.slice(end + 1);
+    if (magic.includes('top')) cdir = '';
+  } else if (p.startsWith(':/')) { p = p.slice(2); cdir = ''; }
+  else if (p.startsWith(':!') || p.startsWith(':^')) return false;
+  else if (p.startsWith(':')) p = p.slice(1);
+  if (p.startsWith('/') || p.startsWith('~') || /^[A-Za-z]:[\\/]/.test(p)) return true;
+  if (cdir) p = `${cdir}/${p}`;
+  const segments = [];
+  for (const segment of p.split(/[\\/]+/)) {
+    if (segment === '' || segment === '.') continue;
+    if (segment === '..') { if (!segments.length) return true; segments.pop(); continue; }
+    segments.push(segment);
+  }
+  if (!segments.length) return true;
+  if (/[*?[]/.test(segments[0])) return true;
+  return segments[0].toLowerCase() === 'tickets';
+}
+
 // Git forms that restore the working tree wholesale — and with it any ticket file
 // whose failed attempt would be erased and whose revoked receipt would come back.
 function wholeTreeRestore(sub) {
-  const { name, args } = sub;
-  const positional = args.filter(arg => !arg.startsWith('-'));
-  const wide = arg => ['.', './', ':/', '*', 'tickets', 'tickets/', './tickets', './tickets/'].includes(arg) || /(^|[\\/])tickets[\\/]\*?$/.test(arg);
-  if (name === 'checkout' || name === 'restore') {
-    if (positional.some(wide)) return true;
-    return name === 'restore' && positional.length === 0;
+  const { name, args, cdir } = sub;
+  const positional = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--') { positional.push(...args.slice(i + 1)); break; }
+    if (['-e', '--exclude', '--source', '-b', '-B', '--orphan', '-c', '-C', '--conflict'].includes(arg)) { i++; continue; }
+    if (arg.startsWith('-')) continue;
+    positional.push(arg);
   }
-  if (name === 'reset') return args.some(arg => ['--hard', '--merge', '--keep'].includes(arg));
-  if (name === 'stash') return !['list', 'show'].includes(positional[0] || '');
-  if (name === 'clean') return positional.length === 0 && args.some(arg => /^-[A-Za-z]*f/.test(arg) || arg === '--force');
-  return false;
+  const force = args.some(arg => arg === '--force' || arg === '--discard-changes' || /^-[A-Za-z]*f[A-Za-z]*$/.test(arg));
+  const fromFile = args.some(arg => arg === '--pathspec-from-file' || arg.startsWith('--pathspec-from-file='));
+  const patch = args.some(arg => arg === '-p' || arg === '--patch');
+  const wide = positional.some(p => widePathspec(p, cdir));
+  switch (name) {
+    case 'checkout': case 'switch': return force || fromFile || wide || (patch && positional.length === 0);
+    case 'restore': return fromFile || wide || positional.length === 0;
+    case 'reset': return args.some(arg => ['--hard', '--merge', '--keep'].includes(arg));
+    case 'stash':
+      if (args.some(arg => arg === '-h' || arg === '--help')) return false;
+      return !['list', 'show', 'create', 'store'].includes(positional[0] || '');
+    case 'clean': return force && (positional.length === 0 || wide);
+    case 'checkout-index': return args.some(arg => arg === '--all' || /^-[A-Za-z]*a/.test(arg));
+    case 'read-tree': return args.some(arg => arg === '--reset' || /^-[A-Za-z]*u/.test(arg));
+    default: return false;
+  }
 }
 
-function ticketShellMutation(source) {
+function ticketShellMutation(source, depth = 0) {
+  if (depth > 2) return false;
   if (isExactPincerCall(source)) return false;
   const commands = shellCommands(source);
   for (const command of commands) {
     const { executable, args, words } = commandParts(command);
+    if (['sh', 'bash', 'zsh'].includes(executable)) {
+      const c = args.indexOf('-c');
+      if (c !== -1 && typeof args[c + 1] === 'string' && ticketShellMutation(args[c + 1], depth + 1)) return true;
+    }
+    if (executable === 'eval' && ticketShellMutation(args.join(' '), depth + 1)) return true;
     if (executable === 'git' && wholeTreeRestore(gitSubcommand(args))) return true;
     const hasTicket = words.some(ticketPath) || /(^|[\s'"`])tickets[\\/]T-[0-9]+[^\s'"`]*/.test(source);
     if (!hasTicket) continue;
