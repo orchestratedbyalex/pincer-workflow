@@ -95,14 +95,20 @@ function commandParts(command) {
     }
     if (wrapper === 'timeout' && /^[0-9]/.test(words[i] || '')) i++;
   }
-  const executable = words[i] ? path.basename(words[i]) : '';
+  const executable = words[i] ? path.basename(words[i]).toLowerCase() : '';
   return { executable, args: words.slice(i + 1), words };
+}
+
+// Index of a shell's -c flag, including bundled forms such as -lc or -ec.
+function shellCommandFlag(args) {
+  return args.findIndex(arg => /^-[A-Za-z]*c[A-Za-z]*$/.test(arg));
 }
 
 function gitSubcommand(args) {
   let i = 0, cdir = '';
   while (i < args.length) {
     if (args[i] === '-C') { cdir = args[i + 1] || ''; i += 2; }
+    else if (args[i] === '-c' && /^alias\./.test(args[i + 1] || '')) return { name: 'alias', args: [], cdir };
     else if (['-c', '--git-dir', '--work-tree'].includes(args[i])) i += 2;
     else if (args[i].startsWith('-')) i++;
     else return { name: args[i], args: args.slice(i + 1), cdir };
@@ -139,7 +145,7 @@ function dangerousReason(source, depth = 0) {
     if (executable === 'chmod' && args.some(arg => /^(0?777|a\+rwx)$/.test(arg)))
       return 'mass permission changes are not allowed.';
     if (['sh', 'bash', 'zsh'].includes(executable)) {
-      const c = args.indexOf('-c');
+      const c = shellCommandFlag(args);
       if (c !== -1 && typeof args[c + 1] === 'string') {
         const nested = dangerousReason(args[c + 1], depth + 1);
         if (nested) return nested;
@@ -238,7 +244,7 @@ function isExactPincerCall(source) {
 // the top level, or anything whose first segment is tickets. Exclude entries
 // never widen. `cdir` is a `git -C <dir>` prefix.
 function widePathspec(arg, cdir = '') {
-  if (/[$`]/.test(arg)) return true;
+  if (/[$`]/.test(arg) || /[$`]/.test(cdir) || cdir.startsWith('/') || cdir.startsWith('~') || /^[A-Za-z]:[\\/]/.test(cdir)) return true;
   let p = arg;
   if (p.startsWith(':(')) {
     const end = p.indexOf(')');
@@ -259,7 +265,7 @@ function widePathspec(arg, cdir = '') {
     segments.push(segment);
   }
   if (!segments.length) return true;
-  if (/[*?[]/.test(segments[0])) return true;
+  if (/[*?[{]/.test(segments[0])) return true;
   return segments[0].toLowerCase() === 'tickets';
 }
 
@@ -278,8 +284,12 @@ function wholeTreeRestore(sub) {
   const force = args.some(arg => arg === '--force' || arg === '--discard-changes' || /^-[A-Za-z]*f[A-Za-z]*$/.test(arg));
   const fromFile = args.some(arg => arg === '--pathspec-from-file' || arg.startsWith('--pathspec-from-file='));
   const patch = args.some(arg => arg === '-p' || arg === '--patch');
-  const wide = positional.some(p => widePathspec(p, cdir));
+  // `git checkout <ref>` / `git switch <ref>`: one positional, no `--`, no force flag is a branch switch,
+  // allowed even through a variable; every pathspec form keeps the wide test.
+  const branchSwitch = (name === 'checkout' || name === 'switch') && positional.length === 1 && !args.includes('--');
+  const wide = branchSwitch ? widePathspec(positional[0].replace(/[$`]/g, 'x'), cdir) : positional.some(p => widePathspec(p, cdir));
   switch (name) {
+    case 'alias': return true;
     case 'checkout': case 'switch': return force || fromFile || wide || (patch && positional.length === 0);
     case 'restore': return fromFile || wide || positional.length === 0;
     case 'reset': return args.some(arg => ['--hard', '--merge', '--keep'].includes(arg));
@@ -300,11 +310,17 @@ function ticketShellMutation(source, depth = 0) {
   for (const command of commands) {
     const { executable, args, words } = commandParts(command);
     if (['sh', 'bash', 'zsh'].includes(executable)) {
-      const c = args.indexOf('-c');
+      const c = shellCommandFlag(args);
       if (c !== -1 && typeof args[c + 1] === 'string' && ticketShellMutation(args[c + 1], depth + 1)) return true;
     }
     if (executable === 'eval' && ticketShellMutation(args.join(' '), depth + 1)) return true;
-    if (executable === 'git' && wholeTreeRestore(gitSubcommand(args))) return true;
+    if (executable === 'git') {
+      const sub = gitSubcommand(args);
+      if (wholeTreeRestore(sub)) return true;
+      const viaXargs = command.words.some(word => path.basename(word).toLowerCase() === 'xargs');
+      const stdinPathspec = !sub.args.some(arg => !arg.startsWith('-')) || sub.args[sub.args.length - 1] === '--';
+      if (viaXargs && ['checkout', 'restore', 'clean'].includes(sub.name) && stdinPathspec) return true;
+    }
     const hasTicket = words.some(ticketPath) || /(^|[\s'"`])tickets[\\/]T-[0-9]+[^\s'"`]*/.test(source);
     if (!hasTicket) continue;
     if (command.operators.some(op => op === '>' || op === '>>')) return true;

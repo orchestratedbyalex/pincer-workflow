@@ -171,13 +171,20 @@ for (const command of [
   'git checkout-index --all --force', 'git read-tree -u --reset HEAD', 'git read-tree --reset HEAD', 'git clean -f .', 'git clean -fd .', "git clean -f -- ':/'",
   'git clean -f -- tickets/', 'git clean -e foo -f', 'git checkout -p', 'bash -c "git checkout -- ."', "sh -c 'git restore .'", 'eval "git reset --hard"',
   'nice git restore .', 'nice -n 10 git checkout -- .', 'time git stash', 'nohup git checkout -f main', 'timeout 30 git checkout -- tickets/', 'xargs git checkout -- tickets/T-01-example.md',
+  // T-23: -C with unsafe prefixes, bundled -c, brace globs, case-folded executable, xargs stdin pathspecs, aliases.
+  'git -C "$PWD" checkout -- .', 'git -C /abs/repo checkout -- .', 'git -C ~/repo checkout -- .', 'bash -lc "git checkout -- ."', "sh -ec 'git restore .'", 'zsh -xc "git reset --hard"',
+  'git checkout -- {tickets,src}/', 'git checkout -- {.,src}', 'git restore {tickets,src}', 'Git checkout -- .', 'GIT restore .', 'echo . | xargs git checkout --',
+  'echo . | xargs git checkout HEAD --', 'printf tickets | xargs -I{} git checkout -- {}', 'git -c alias.co=checkout co -- .', 'git -c alias.x="checkout -- ." x',
 ]) check('ticket', `block whole-tree restore ${command}`, bash(command), 2);
+check('dangerous', 'bundled -c recursion in the dangerous guard', bash('bash -lc "git push --force"'), 2);
+check('dangerous', 'case-folded executable in the dangerous guard', bash('Git push -f origin main'), 2);
 for (const command of [
   'git checkout main', 'git checkout -b feature/x', 'git restore src/app.js', 'git checkout -- src/app.js', 'git reset --soft HEAD~1', 'git reset HEAD -- src/app.js',
   'git stash list', 'git stash show -p stash@{0}', 'git clean -n', 'git clean -f build/', 'git status', 'git log --oneline',
   'git switch main', 'git switch -c feature/y', 'git stash create', 'git stash --help', 'git stash -h', 'git checkout HEAD -- src/app.js', 'git restore --source=HEAD src/app.js',
   'git -C src checkout -- app.js', "git checkout -- ':(exclude)tickets' src/", 'git clean -fd build/', 'git checkout-index -f -- src/app.js', 'git read-tree HEAD',
   'nice git status', 'bash -c "git status"', 'eval "npm test"',
+  'git checkout "$BRANCH"', 'git checkout $branch', 'git switch "$b"', 'git -C packages/app checkout -- src/app.js', 'echo src/app.js | xargs git checkout -- src/app.js',
 ]) check('ticket', `allow non-ticket git ${command}`, bash(command), 0);
 
 assert.equal(read(dir, file), completed, 'hooks are read-only and never execute tested command strings');
