@@ -24,4 +24,16 @@ both: silent refresh where safe, explicit merge where not.
 - **Overwrite with backup (`<file>.bak`)** — inverts the failure mode: a user
   who doesn't notice loses their edits from the live path.
 
-See [[cli-installer]].
+## Manifest schema 2 (M0, 2026-09-05)
+
+The baseline itself must be trustworthy. `.pincer.json` now carries
+`schema: 2`; `readManifest` validates schema, platforms and paths. A manifest
+without schema 2 (0.2.x installs) is treated as **untrusted**: every differing
+file gets a `.new` proposal instead of an in-place refresh, and the manifest
+records `null` for a conflicted file rather than the template hash.
+`writeProposal` makes unique sidecar names so repeated updates never overwrite
+an earlier proposal. Dry run 2026-09-08: an appended AGENTS.md line survived
+`pincer update`, `AGENTS.md.new` appeared, 21 unchanged files were skipped.
+
+See [[cli-installer]]; the same trust principle for tickets is
+[[revocable-receipts]].

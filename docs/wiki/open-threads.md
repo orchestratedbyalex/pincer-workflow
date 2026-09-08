@@ -1,13 +1,13 @@
 # Open threads
 
-- [2026-09-02] No CI: a GitHub Actions workflow for npm trusted publishing
-  (OIDC, publish on tag) was discussed, not built ([[distribution-channels]])
-- [2026-09-02] The private lead-engineer-role-alexander repo has its own kit
-  copy with no back-sync mechanism — decide which is upstream ([[template-kit]])
-- [2026-09-02] Plugin install untested in a real Claude Code session (local
-  marketplace add path documented in README) ([[distribution-channels]])
-- [2026-09-02] No end-to-end dry run of the new code loop (start/verify/done + hook) in a real Claude Code session yet — only unit-level tests ([[ticket-state-machine]])
-- [2026-09-02] Improvement list items 3–5 not built: change-size tracks, test-first for test-runner tickets, learning loop into AGENTS.md Conventions + cross-model review ([[mechanical-done]])
-- [2026-09-02] `.codex/README.md` claims Codex has no hooks; the codex-cli 0.149 binary carries hook-trust flags (`--dangerously-bypass-hook-trust`), so Codex may now support hooks — check the docs and consider porting ticket-guard/block-dangerous ([[distribution-channels]])
-- [2026-09-02] Codex: skills confirmed loading in a real session (user, 0.2.2); the `$pincer-plan` → `$pincer-release` chain itself is still untested on Codex ([[cli-installer]])
-- [2026-09-04] Copilot channel: user installed 0.2.2 into a brownfield repo (saw `.github/` but no `.claude/`), must run `npx pincer-workflow@latest update` to get the 0.2.3 kit; the `/pincer-*` prompt-file chain in VS Code is untested end to end ([[distribution-channels]])
+- [2026-09-08] `fix/m0-trust` is unmerged and unpublished (version still 0.2.3); commit `docs/dry-run-2026-09-08-sonnet.md` + wiki, merge, release 0.3.0 ([[release-audit-read-only]])
+- [2026-09-08] Next kit PRD from the dry run: behavioral verification blocks, a home for visual evidence, one approval rule for plan/narrow, PRD size scaled to change size; bundle the four small fixes (guard blocks ticket restore, "no receipt written" wording, duplicate WARN, elapsed noise) ([[ticket-state-machine]])
+- [2026-09-08] `docs/dry-run-checklist.md`: write cheat instructions as single lines; test hooks with direct payloads, not by asking the model; restore the ticket before breaking code ([[template-kit]])
+- [2026-09-08] Budget: `PINCER_BUILD_BUDGET_MIN` is now optional with no default, but playbook prose still mentions a fixed timebox in places — reconcile ([[ticket-state-machine]])
+- [2026-09-02] No trusted-publishing workflow (OIDC, publish on tag); CI now runs tests only ([[distribution-channels]])
+- [2026-09-02] The private lead-engineer-role-alexander repo has its own kit copy with no back-sync mechanism — decide which is upstream ([[template-kit]])
+- [2026-09-02] Plugin install untested in a real Claude Code session (local marketplace add path documented in README) ([[distribution-channels]])
+- [2026-09-02] Improvement-plan items beyond M0 (M1–M4: evidence design, profiles, measurement, learning loop into AGENTS.md) not started ([[revocable-receipts]])
+- [2026-09-02] Codex supports hooks now; port `hook-policy.cjs` as a Codex hook adapter (README wording already corrected) ([[distribution-channels]])
+- [2026-09-02] Codex: the `$pincer-plan` → `$pincer-release` chain is untested on Codex ([[cli-installer]])
+- [2026-09-04] Copilot: `/pincer-*` prompt-file chain in VS Code untested end to end ([[distribution-channels]])

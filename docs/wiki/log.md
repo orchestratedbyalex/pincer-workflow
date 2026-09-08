@@ -62,3 +62,9 @@ docs/wiki/* created; CLAUDE.md note appended.
 - User's brownfield Copilot install (0.2.2) showed `.github/` but no `.claude/` — exactly
   the 0.2.3 gap; next step there is `npx pincer-workflow@latest update`.
 - Recorded the npm auth/404 and 202-delay gotchas in [[distribution-channels]].
+
+## [2026-09-08] end | M0 trust branch distilled; Sonnet brownfield dry run passed
+What: wiki caught up with `fix/m0-trust` (16 commits, unpublished): new decisions [[revocable-receipts]] and [[release-audit-read-only]], schema-2 section in [[never-clobber-updates]], [[ticket-state-machine]] rewritten for the lib/last_check/hook-policy design, CI and tarball-install notes in [[cli-installer]] and [[distribution-channels]].
+Why: the wiki had no record of M0; the 2026-09-08 dry run on Sonnet in a brownfield CRA repo confirmed every M0 guarantee live (receipt revocation, validation catching a hand edit, PRD v2 demoting the v1 candidate, update preserving a local AGENTS.md edit).
+Files: docs/dry-run-2026-09-08-sonnet.md (new, 9 findings + verdict), docs/wiki/{briefing,index,open-threads,log}.md, 2 new decision pages, 3 system pages.
+Outcome: nothing blocks tagging M0 as 0.3.0; findings 1–4 form the next kit PRD, 5–9 are small fixes. Dry-run doc and wiki still uncommitted on the branch.

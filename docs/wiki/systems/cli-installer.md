@@ -11,9 +11,16 @@
   before that a Codex- or Copilot-only install had skills pointing at files
   that were never installed); `claude` = CLAUDE.md, `.claude/settings.json`,
   `.claude/hooks`; `codex` = `.codex`, `.agents`; `copilot` = `.github`.
-- **Manifest** `.pincer.json`: `{ version, platforms, files: {rel: sha256} }`.
-  Written on every install/update. It is the baseline that lets `update`
-  distinguish "user edited this" from "template changed."
+- **Manifest** `.pincer.json`: `{ schema: 2, version, platforms, files: {rel: sha256|null} }`
+  (schema 2 since M0, 2026-09-05). Written on every install/update. It is the
+  baseline that lets `update` distinguish "user edited this" from "template
+  changed." A manifest without `schema: 2` is untrusted: every differing file
+  becomes a `.new` proposal ([[never-clobber-updates]]). `common` also ships
+  `docs/release-checklist.md` and `scripts/pincer-ticket-lib.sh`.
+- **Local tarball install** (dry runs of an unpublished branch):
+  `npm pack`, then `npx --yes --package <tgz> pincer init --platform claude`.
+  Running `npx <tgz> init` directly fails with "Permission denied" because
+  the bin name is `pincer`, not the package name.
 - **Copy logic** (`install()`, shared by init and update): missing → write;
   identical → skip; differs + hash matches manifest (untouched since install)
   → refresh; differs + hash doesn't match (user edit) → write `<file>.new`
@@ -27,8 +34,11 @@
 ## Key files
 
 - `bin/pincer.js` — everything
-- `test/smoke.test.js` — full lifecycle in a temp dir (init → refuse re-init →
-  edit → update conflict → doctor fail → merge → doctor pass)
+- `test/installer.test.js` — full lifecycle in a temp dir (init → refuse
+  re-init → edit → update conflict → doctor fail → merge → doctor pass);
+  `test/distribution.test.js` regenerates adapters and plugin in isolation
+  and compares byte-for-byte, then `npm pack`s and installs the tarball for
+  every platform set, greenfield and brownfield; `test/helpers.js` is shared.
 
 ## Gotchas
 

@@ -5,6 +5,8 @@
 - [[single-source-template]] — template/ is canonical; adapters and plugin are generated, committed, never hand-edited
 - [[never-clobber-updates]] — sha256 manifest baseline; user-edited files get `.new` sidecars on update
 - [[mechanical-done]] — ticket `done` is reachable only via a script-stamped verification receipt; hook makes the script the only door
+- [[revocable-receipts]] — every verify attempt recorded in `last_check`; `done` re-runs the check; tickets and NOTES.md bound to a PRD revision (M0)
+- [[release-audit-read-only]] — release reads `docs/release-checklist.md`, runs the gate directly, never calls the ticket script; fixes go through new tickets (M0)
 
 ## Systems
 

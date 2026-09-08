@@ -47,6 +47,17 @@ adapters). Both at once → duplicate commands.
 ## Enforcement parity
 
 Mechanical guardrails (deny rules + hook) exist on Claude Code only. Codex:
-sandbox + approval policy (documented in `template/.codex/README.md`).
+sandbox + approval policy (documented in `template/.codex/README.md`). Since
+M0 the README and `.codex/README.md` no longer claim "Codex has no hooks";
+they say the kit "does not currently install a Codex hook adapter" (Codex
+gained hook support in 2026; porting `hook-policy.cjs` is an open thread).
 Copilot: tool-approval settings. Everywhere: /pincer-release audits git
-artifacts after the fact — platform-independent by design.
+artifacts after the fact — platform-independent by design
+([[release-audit-read-only]]). Hooks require Node ≥18 (`hook-policy.cjs`).
+
+## CI (M0, 2026-09-06)
+
+`.github/workflows/ci.yml` runs `npm test` on ubuntu and macos × Node 18 and
+22. `test/distribution.test.js` is the generated-parity gate: it catches a
+`template/` edit whose adapters or plugin were not regenerated, which the old
+smoke test never did.
