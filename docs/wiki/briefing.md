@@ -9,7 +9,13 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 ## Current state
 
 **v0.3.0 is on npm and tagged on `main`. PRD v2 is implemented on branch
-`feat/prd-v2` (2026-09-08), tickets T-11..T-20 all done, `npm test` green.**
+`feat/prd-v2` (2026-09-08), tickets T-11..T-21 all done, `npm test` green.**
+The first evaluation candidate (2952e62) was rejected by its code-quality review
+(six findings: subdirectory and non-ASCII paths made `notes_current` false-stale,
+usage errors leaked as evidence verdicts, 64-hex mismatch, unchecked `base`,
+whole-tree restores unguarded) and two trial scenarios were unobserved; T-21 fixed
+the six and two focused trials covered the scenarios. The superseded record lives in
+`.prd/evidence/prd-v2/2952e62…/` without a manifest.
 PRD v2 ("Make requirements and release evidence reviewable", `.prd/prd-v2.md`)
 is the bounded bridge toward M1/M2 of `docs/pincer-improvement-plan.md`:
 stable requirement IDs from plan to evaluation, `Proves:` behavioral checks,

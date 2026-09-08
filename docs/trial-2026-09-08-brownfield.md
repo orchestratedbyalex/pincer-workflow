@@ -70,6 +70,27 @@ the operator merged by hand before the trial (one intervention, expected).
 | R-05 | `profile: small` justified; no ticket cap or default timebox appeared; delegated decisions were not re-asked; no consequential new decision surfaced in this brief, so that branch is `outstanding`. |
 | R-06 | Not exercised (no failed verification or hand edit occurred); covered by `test/recovery.test.js`. `outstanding` for live observation. |
 
+## Addendum: evaluate with no browser tool (same day)
+
+Re-ran `/pincer-evaluate` alone on a fresh clone at the built candidate `0c6123f`
+with `--strict-mcp-config --mcp-config <empty>` so no browser or screenshot tool
+was available (still Sonnet, print mode, same kit build). Observed:
+
+- The agent recorded the dynamic render check as `unverified` with the reason
+  "no browser or screenshot automation tool available", listed the limitation in
+  `environment.limitations`, and did not fabricate an image or claim a pass. The
+  review-kind check was recorded `unverified` too (no artifact saved; pre-T-20 kit).
+- It set `visual_review.applicable: false` with that reason rather than recording
+  a required `visual` check as `unverified`, because the pre-T-21 schema demanded an
+  image on every visual check; that made the manifest validate `ok` and NOTES.md
+  `current`, i.e. a UI change reached release-ready without a visual result. T-21
+  changed the rule: an image is required only for a `passed` visual check, so an
+  `unverified` required visual check is representable and blocks readiness.
+- It again renamed REQ-n to R-0n in the manifest (pre-T-20 validator).
+
+This covers the "unavailable visual tool → unverified" scenario T-19 required, on
+the surface named above only.
+
 ## Findings
 
 1. Release (correctly) could not verify the claim that the code-quality-reviewer

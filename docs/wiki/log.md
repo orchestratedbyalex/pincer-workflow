@@ -91,3 +91,9 @@ Outcome: npm publish still pending (needs the user's OTP); next is `/pincer-narr
 - Why: PRD v2 = bounded bridge to M1/M2 after the 2026-09-08 Sonnet dry run; requirements and release evidence must be reviewable, not narrated.
 - Files: template/.claude/commands/*, template/.claude/references/*, template/scripts/*, template/docs/*, bin/pincer.js, scripts/build-plugin.sh, test/{behavioral-verification,evidence,candidate}.test.js + helpers, docs/trial-2026-09-08-{greenfield,brownfield}.md, wiki decisions/candidate-evidence, decisions/requirements-through-delivery, systems/evidence-validator, systems/ticket-state-machine.
 - Outcome: `npm test` green (13 suites); greenfield and brownfield print-mode trials PASS at release with validated manifests; narrow-approval, supplied-ID and reviewer-artifact findings fixed in T-20. Next: built commit, evaluate this repo with evidence, release, merge, 0.4.0.
+
+## [2026-09-08] end | Candidate 2952e62 rejected on review; T-21 fixes; focused trials for unverified-visual and deferral
+- What: code-quality review of the first PRD v2 candidate found six defects (paths relative to toplevel vs project, quotePath, whole-tree restores past the guard, usage errors as evidence verdicts, 64-hex, unchecked base); T-21 fixed them with tests (146 hook payloads). Two extra Sonnet print-mode trials: evaluate with no browser tool, and a greenfield brief with a user-authorized deferral (run on the T-21 kit after the pre-T-20 kit reproduced the narrow stall).
+- Why: evaluate playbook step 8 — fixes go through a ticket and a new candidate; T-19's requirements named the two scenarios.
+- Files: template/scripts/pincer-ticket-lib.sh, pincer-status.sh, pincer-evidence.cjs, template/.claude/hooks/hook-policy.cjs, template/.claude/commands/pincer-code.md, test/*, docs/trial-2026-09-08-*.md, .prd/evidence/prd-v2/2952e62…/ (superseded record).
+- Outcome: new candidate to be evaluated with a fresh manifest; NOTES.md will point at it.

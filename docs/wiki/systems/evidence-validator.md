@@ -9,9 +9,19 @@ Decision context in [[candidate-evidence]].
 ## CLI
 
 ```
-node scripts/pincer-evidence.cjs validate <manifest> [--candidate <sha>] [--prd .prd/prd-vN.md] [--files]
+node scripts/pincer-evidence.cjs validate <manifest> [--candidate <sha>] [--base <sha>] [--prd .prd/prd-vN.md] [--files]
 node scripts/pincer-evidence.cjs digest <file>...
 ```
+
+Rules added by T-21 (evaluation findings): `--base` must match the manifest's
+`base`; a visual check needs an image only when `result: passed`, so an
+`unverified` visual check (no browser) is representable and, when `required`,
+blocks readiness; `evidence_validate` in the Bash lib omits any flag whose value
+is malformed and `evidence_reason` labels exit-2 output `validator usage:`, so a
+bad NOTES.md field never shows up as a manifest verdict; `notes_current` diffs
+with `git -c core.quotePath=false diff --name-only --relative` so subdirectory
+projects and non-ASCII artifact names compare correctly; candidates are 40-hex
+only.
 
 `validate` exits 0 and prints `ok <candidate>` (plus manifest and artifact paths with
 `--files`); failures print `evidence: <manifest>: <reason>` per problem to stderr and
