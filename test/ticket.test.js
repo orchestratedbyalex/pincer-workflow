@@ -62,8 +62,12 @@ try {
   assert.match(runFail(ticketSh, 'done', 'T-01'), /no verification receipt/);
 
   // a red check writes no receipt; a green one does
-  assert.match(runFail(ticketSh, 'verify', 'T-01'), /FAILED/);
+  const red = runFail(ticketSh, 'verify', 'T-01');
+  assert.match(red, /FAILED/);
+  assert.match(red, /failure recorded in last_check of tickets\/T-01-skeleton\.md/);
+  assert.match(red, /prior successful receipt was revoked/);
   assert.strictEqual(front('T-01-skeleton.md', 'verified'), '');
+  assert.match(front('T-01-skeleton.md', 'last_check'), / failed /);
   fs.writeFileSync(path.join(dir, 'hello.txt'), 'hi');
   assert.match(run(ticketSh, 'verify', 'T-01'), /receipt/);
   assert.match(front('T-01-skeleton.md', 'verified'), /^\d{4}-[^ ]+Z [0-9a-f]{12}$/);
@@ -90,11 +94,13 @@ try {
   assert.match(status, /3 total · 2 done · 0 in progress · 1 open/);
   assert.match(status, /T-01 +done +S +started \d\d:\d\d · finished \d\d:\d\d \(\d+m\)/);
   assert.match(status, /T-03 +open +S +ready/);
-  assert.match(status, /Build +elapsed \d+m since the first ticket started/);
+  assert.doesNotMatch(status, /Build +/, 'no elapsed line while nothing is in progress and no budget is set');
   assert.doesNotMatch(status, /budget \d+m/, 'no default budget is imposed');
   assert.match(status, /Next +\/pincer-code — next ready ticket: T-03/);
   run(ticketSh, 'start', 'T-03');
-  assert.match(run(statusSh), /Next +resume T-03/);
+  const active = run(statusSh);
+  assert.match(active, /Next +resume T-03/);
+  assert.match(active, /Build +wall-clock elapsed \d+m since the first ticket started \(not active execution time\)/);
 
   // the hook: hand-written state is blocked, everything else passes
   const tp = ticketPath('T-03-more.md');

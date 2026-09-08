@@ -95,7 +95,7 @@ cmd_verify() {
   trap - INT TERM
   if [ "$rc" -ne 0 ]; then
     fm_set "$f" last_check "$(now) failed $hash"
-    echo "✗ $id verification FAILED (exit $rc) — no receipt written. Fix, then re-run." >&2
+    echo "✗ $id verification FAILED (exit $rc) — failure recorded in last_check of $f; any prior successful receipt was revoked. Fix, then re-run verify." >&2
     exit "$rc"
   fi
   if [ "$hash" != "$(verify_hash "$f")" ]; then

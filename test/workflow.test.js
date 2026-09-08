@@ -120,6 +120,17 @@ for (const source of [narrow, code, evaluate]) assert.equal(authorizationBlock(s
 assert.match(sharedRule, /not authenticated human approval/);
 assert.match(sharedRule, /do not invent it/);
 for (const source of [plan, narrow, code, evaluate, release]) assert.doesNotMatch(source, /within the timebox/i);
+
+// R-06: recovery never revives stale success; status wording.
+assert.match(code, /## Recovering a ticket file/);
+assert.match(code, /preserve the malformed contents/i);
+assert.match(code, /hand the repair to the user, who\s+performs it in their own terminal/i);
+assert.match(code, /fresh verification; a restored receipt is\s+never evidence/i);
+assert.match(code, /Do not recommend restoring source files or unrelated edits/i);
+assert.match(code, /not a measure\s+of active execution time/i);
+const statusPlaybook = read('template/.claude/commands/pincer-status.md');
+assert.match(statusPlaybook, /Never restore a ticket file from git/i);
+assert.match(read('template/scripts/pincer-status.sh'), /wall-clock elapsed/);
 const releaseChecklist = read('template/docs/release-checklist.md');
 assert.match(releaseChecklist, /`evidence:` manifest/);
 assert.match(releaseChecklist, /visual_review\.applicable: false/);

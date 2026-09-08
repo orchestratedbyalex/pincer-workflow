@@ -1,9 +1,13 @@
 ---
 ticket: T-17
-status: open
+status: done
 size: S
 prd: .prd/prd-v2.md
 depends_on: [T-15]
+started: 2026-09-08T14:43:20Z
+last_check: 2026-09-08T14:46:04Z passed a79ed746a38f
+verified: 2026-09-08T14:46:04Z a79ed746a38f
+finished: 2026-09-08T14:46:04Z
 ---
 
 ## Objective
@@ -23,10 +27,10 @@ Fix the misleading verify-failure text, duplicated readiness warnings and noisy 
 - Tests: failed verify output text; two done tickets with distinct problems produce two distinct warnings and a single failed-attempt ticket produces exactly one warning; elapsed line present with an in-progress ticket or budget, absent on a finished PRD; the hook still blocks `git checkout -- tickets/T-01-*.md` and `git restore` after a failed recheck (existing hook payload plus a lifecycle scenario in `test/recovery.test.js`).
 
 ## Acceptance Criteria
-- [ ] Failed verification output states the failure was recorded and the prior receipt revoked.
-- [ ] Status prints one warning per distinct readiness problem and none twice.
-- [ ] Elapsed time appears only for active work or an explicit budget and is labelled wall-clock elapsed.
-- [ ] Ticket checkout/restore remains blocked after a failed recheck, and the code playbook documents user-performed repair followed by fresh verification.
+- [x] Failed verification output states the failure was recorded and the prior receipt revoked.
+- [x] Status prints one warning per distinct readiness problem and none twice.
+- [x] Elapsed time appears only for active work or an explicit budget and is labelled wall-clock elapsed.
+- [x] Ticket checkout/restore remains blocked after a failed recheck, and the code playbook documents user-performed repair followed by fresh verification.
 
 ## Verification
 Proves: the runtime scripts emit the corrected failure text, one warning per problem and elapsed only when active, and the hook keeps blocking ticket restores; regression: a duplicated warning, a revived receipt, or the misleading message returning.

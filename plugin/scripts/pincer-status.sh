@@ -5,7 +5,9 @@
 #   scripts/pincer-status.sh
 #
 # Elapsed times come from the `started` / `finished` stamps that
-# scripts/pincer-ticket.sh writes, i.e. from the clock — never estimated.
+# scripts/pincer-ticket.sh writes, i.e. from the wall clock — never estimated
+# and never a measure of active execution time. The build-wide elapsed line is
+# printed only while a ticket is in progress or an explicit budget is set.
 # Optional build budget: PINCER_BUILD_BUDGET_MIN.
 set -uo pipefail
 
@@ -71,7 +73,8 @@ else
     st=$(fm_get "$f" status); size=$(fm_get "$f" size)
     started=$(fm_get "$f" started); verified=$(fm_get "$f" verified); finished=$(fm_get "$f" finished)
     attempt=$(fm_get "$f" last_check)
-    if [ -n "$attempt" ] && ! printf '%s' "$attempt" | grep -q ' passed '; then
+    # Done tickets report through ticket_readiness below, so each problem is printed once.
+    if [ "$st" != done ] && [ -n "$attempt" ] && ! printf '%s' "$attempt" | grep -q ' passed '; then
       warn="$warn  WARN $id latest verification: $attempt — re-run verify\n"
     fi
     deps=$(fm_get "$f" depends_on | grep -oE 'T-[0-9]+' | tr '\n' ' ' || true)
@@ -116,8 +119,10 @@ else
   echo "Tickets  $((n_open + n_prog + n_done)) total · $n_done done · $n_prog in progress · $n_open open"
   printf '%b' "$rows"
   printf '%b' "$warn"
-  if [ -n "$first_start" ]; then
-    build="Build    elapsed $(mins "$first_start" "$NOW") since the first ticket started"
+  # Wall-clock elapsed is shown only while work is active or against an explicit
+  # budget; on a finished build it is noise and it never measures execution time.
+  if [ -n "$first_start" ] && { [ "$n_prog" -gt 0 ] || [ -n "$BUDGET" ]; }; then
+    build="Build    wall-clock elapsed $(mins "$first_start" "$NOW") since the first ticket started (not active execution time)"
     [ -z "$BUDGET" ] || build="$build · budget ${BUDGET}m"
     echo "$build"
   fi

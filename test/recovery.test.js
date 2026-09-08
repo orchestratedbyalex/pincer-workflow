@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { tempDir, createTicket, createPrd, write, read, step, run, statusScript, ticketScript, writeEvidence } from './helpers.js';
+import { repo, tempDir, createTicket, createPrd, write, read, step, run, statusScript, ticketScript, writeEvidence } from './helpers.js';
 
 const status = dir => run(dir, 'bash', [statusScript]);
 const next = dir => status(dir).stdout.split('\n').find(line => line.startsWith('Next')) || '';
@@ -122,4 +122,47 @@ assert.match(next(evaluated), /pincer-evaluate/, 'new source/ticket commit inval
 const noGit = tempDir(); createPrd(noGit, 1, 'built'); createTicket(noGit); complete(noGit);
 write(noGit, 'NOTES.md', notes);
 assert.doesNotMatch(next(noGit), /pincer-release/, 'unresolvable candidate cannot be release-ready');
+
+// R-06: each readiness problem is reported once, distinct problems are all kept,
+// and the wall-clock elapsed line appears only for active work or an explicit budget.
+{
+  const dir = tempDir(); createPrd(dir);
+  createTicket(dir); complete(dir);
+  createTicket(dir, { id: 'T-02' }); complete(dir, 'T-02');
+  write(dir, 'tickets/T-01-example.md', read(dir, 'tickets/T-01-example.md').replace(/^last_check: (\S+) passed/m, 'last_check: $1 failed'));
+  write(dir, 'tickets/T-02-example.md', read(dir, 'tickets/T-02-example.md').replace(/^verified:.*\n/m, ''));
+  const out = status(dir).stdout;
+  const warnings = out.split('\n').filter(l => /WARN/.test(l));
+  assert.equal(warnings.length, 2, `one warning per distinct problem\n${out}`);
+  assert.match(warnings[0], /T-01 latest verification: .* failed .* re-run verify/);
+  assert.match(warnings[1], /T-02 done without a verification receipt/);
+  assert.doesNotMatch(out, /^Build /m, 'finished work shows no elapsed line');
+  const budgeted = run(dir, 'bash', [statusScript], { env: { ...process.env, CLAUDE_PROJECT_DIR: dir, PINCER_BUILD_BUDGET_MIN: '90' } }).stdout;
+  assert.match(budgeted, /^Build +wall-clock elapsed \d+m .*budget 90m/m, 'explicit budget shows elapsed against it');
+  createTicket(dir, { id: 'T-03' }); passes(step(dir, 'start', 'T-03'));
+  assert.match(status(dir).stdout, /^Build +wall-clock elapsed \d+m since the first ticket started \(not active execution time\)/m);
+}
+
+// Raw ticket restores stay blocked after a failed recheck: restoring HEAD would
+// erase the recorded failure and revive the old passing receipt.
+{
+  const dir = tempDir(); git(dir, 'init', '-q'); createPrd(dir);
+  const file = createTicket(dir, { command: 'test "$(cat source.txt)" = good' });
+  write(dir, 'source.txt', 'good'); complete(dir); commit(dir, 'T-01 done');
+  write(dir, 'source.txt', 'bad');
+  const failed = step(dir, 'verify');
+  assert.notEqual(failed.status, 0);
+  assert.match(failed.stderr, /failure recorded in last_check/);
+  assert.match(failed.stderr, /prior successful receipt was revoked/);
+  assert.match(read(dir, file), /^last_check: .* failed /m);
+  const guard = path.join(repo, 'template/.claude/hooks/ticket-guard.sh');
+  for (const command of [`git checkout -- ${file}`, `git checkout HEAD ${file}`, `git restore ${file}`, `git restore --source=HEAD ${file}`, `git checkout -- tickets/T-01-example.md source.txt`]) {
+    const result = run(dir, 'bash', [guard], { input: JSON.stringify({ tool_name: 'Bash', tool_input: { command } }) });
+    assert.equal(result.status, 2, `guard blocks ticket restore: ${command}`);
+    assert.match(result.stderr, /pincer-ticket\.sh/, 'block names the lifecycle script');
+  }
+  assert.match(read(dir, file), /^last_check: .* failed /m, 'failed attempt preserved');
+  assert.match(status(dir).stdout, /WARN T-01 latest verification: .* failed .* re-run verify/);
+  assert.doesNotMatch(next(dir), /pincer-release/);
+}
 console.log('PRD recovery tests passed');

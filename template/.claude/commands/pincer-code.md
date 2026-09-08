@@ -61,8 +61,23 @@ previously authorized work.
    Inspect `git status --short`, preserve pre-existing staged work, and stage only the
    explicit paths changed for this ticket plus its ticket file. Review `git diff --cached`
    before committing as `T-{NN}: {title}`.
-6. Give a one-line progress update using the elapsed figure from
-   `scripts/pincer-status.sh` ("T-02 done, 3 remaining, 38m elapsed") and continue.
+6. Give a one-line progress update ("T-02 done, 3 remaining") and continue. Quote the
+   wall-clock elapsed figure from `scripts/pincer-status.sh` when it shows one — it
+   appears while a ticket is in progress or a budget is set, and it is not a measure
+   of active execution time.
+
+## Recovering a ticket file
+
+Ticket lifecycle fields are written only by `scripts/pincer-ticket.sh`, and the guard
+also blocks `git checkout`, `git restore`, `git reset` and `git clean` on ticket paths
+from the assistant's shell: restoring HEAD would erase a newer failed attempt and
+revive an old passing receipt. When a ticket file is malformed or its state was hand
+edited, preserve the malformed contents as they are, report the validation error that
+the script or `scripts/pincer-status.sh` printed, and hand the repair to the user, who
+performs it in their own terminal. Then return through the lifecycle — `start`,
+`verify`, `done` — so the ticket carries fresh verification; a restored receipt is
+never evidence. Do not recommend restoring source files or unrelated edits as routine
+ticket repair. Automated recovery that preserves attempt history is later work (M1).
 
 ## Budget rules
 
