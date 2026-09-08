@@ -1,9 +1,13 @@
 ---
 ticket: T-19
-status: open
+status: done
 size: M
 prd: .prd/prd-v2.md
 depends_on: [T-18]
+started: 2026-09-08T14:50:39Z
+last_check: 2026-09-08T15:03:43Z passed b3cafd3c1c81
+verified: 2026-09-08T15:03:43Z b3cafd3c1c81
+finished: 2026-09-08T15:03:43Z
 ---
 
 ## Objective
@@ -22,9 +26,9 @@ Run and record one greenfield and one brownfield live trial of the assembled kit
 - Trials are run by the user (or by the assistant where a non-interactive agent surface is available) using a throwaway copy; the ticket's check confirms the records exist with the required sections.
 
 ## Acceptance Criteria
-- [ ] Both trial records exist with brief, base, versions, artifacts, results, interventions and an untested-surfaces line.
-- [ ] Each record maps R-01 to R-06 to observed evidence or `outstanding`.
-- [ ] No record claims cross-platform behavior or superiority from a single trial.
+- [x] Both trial records exist with brief, base, versions, artifacts, results, interventions and an untested-surfaces line.
+- [x] Each record maps R-01 to R-06 to observed evidence or `outstanding`.
+- [x] No record claims cross-platform behavior or superiority from a single trial.
 
 ## Verification
 Proves: trial records exist with the required sections (static presence check); the human-authored records themselves are the acceptance evidence.
