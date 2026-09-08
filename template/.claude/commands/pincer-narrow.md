@@ -7,7 +7,10 @@ argument-hint: "Path to PRD (optional — defaults to the latest in .prd/)"
 
 You are decomposing the PRD into coherent, independently verifiable tickets stored as
 local markdown files (no external tracker needed). Ticket count and size follow the
-change's dependencies and risk, plus any budget the user supplied.
+change's dependencies and risk, plus any budget the user supplied. There is no hard
+one-to-two-ticket cap for small PRDs and no default timebox: cohesion and dependencies
+decide the count. A breakdown that follows the PRD needs no second approval; a newly
+discovered consequential choice is surfaced before implementation.
 
 **Initial request:** $ARGUMENTS
 
@@ -77,3 +80,14 @@ scope and order; ask only when the breakdown introduces a material decision or s
    existing staged changes, stage that PRD and the explicit new ticket paths, review
    `git diff --cached`, and commit only those paths. Finish with:
    "Tickets ready in `tickets/`. Run `/pincer-code` to start implementing."
+
+## Authorization rule (shared by plan, narrow, code and evaluate)
+
+Reuse explicit authorization for the same scope and decisions; ask only about a
+material choice not already authorized, and prepare the concrete proposal before
+asking. A decision the user delegated (for example "pick the architecture") does not
+need another approval when you exercise it, but a newly discovered consequential
+choice is surfaced before implementation. Record the authorization basis and the
+scope it covers in the PRD or the handover. An agent-written record or a status
+field is not authenticated human approval. When resuming without the context that
+granted authorization, do not invent it — ask.

@@ -9,6 +9,14 @@ You are turning a task brief into a reviewable PRD. Scale discovery and detail t
 the change's uncertainty, risk, and any time budget the user supplied. The PRD feeds
 `/pincer-narrow` next.
 
+Choose the planning profile and record why it fits: `profile: small` for bounded
+scope, low risk, known behavior and straightforward verification; otherwise
+`standard` (the default). Few changed lines alone do not qualify — migrations,
+authorization boundaries, uncertain requirements and broad effects need proper
+investigation even for a tiny patch. Honor an explicit budget the user supplied;
+there is no default timebox, and a budget never silently cuts requirements —
+record any cut in Out of Scope.
+
 **Initial request:** $ARGUMENTS
 
 First run `scripts/pincer-status.sh`. If a PRD already exists, preserve it and select
@@ -85,6 +93,7 @@ concrete scope and architecture; do not repeat an approval already given for the
    version: {N}
    status: draft
    date: {today}
+   profile: small   # only when small; omit for standard
    ---
    ```
 4. If `.git/` doesn't exist, run `git init`. Commit the PRD and only the intended setup
@@ -94,3 +103,14 @@ concrete scope and architecture; do not repeat an approval already given for the
 Present the saved draft and obtain approval only when the same scope/architecture was not
 already authorized. Finish with: "PRD saved to `.prd/prd-v{N}.md`. Run `/pincer-narrow`
 to break it into work items."
+
+## Authorization rule (shared by plan, narrow, code and evaluate)
+
+Reuse explicit authorization for the same scope and decisions; ask only about a
+material choice not already authorized, and prepare the concrete proposal before
+asking. A decision the user delegated (for example "pick the architecture") does not
+need another approval when you exercise it, but a newly discovered consequential
+choice is surfaced before implementation. Record the authorization basis and the
+scope it covers in the PRD or the handover. An agent-written record or a status
+field is not authenticated human approval. When resuming without the context that
+granted authorization, do not invent it — ask.

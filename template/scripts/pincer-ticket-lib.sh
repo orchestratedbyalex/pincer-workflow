@@ -196,6 +196,12 @@ validate_prd() {
   validate_metadata "$ref" || return 1
   [ "$(fm_get "$ref" version)" = "$version" ] || { printf 'pincer: %s: version must match filename (%s)\n' "$ref" "$version" >&2; return 1; }
   case "$(fm_get "$ref" status)" in draft|ticketed|built) ;; *) printf 'pincer: %s: PRD status must be draft, ticketed, or built\n' "$ref" >&2; return 1 ;; esac
+  case "$(fm_get "$ref" profile)" in ''|small|standard) ;; *) printf 'pincer: %s: profile must be small or standard (omit for standard)\n' "$ref" >&2; return 1 ;; esac
+}
+
+prd_profile() { # effective planning profile; older PRDs without the field are standard
+  local profile; profile=$(fm_get "$1" profile)
+  printf '%s' "${profile:-standard}"
 }
 
 latest_prd() {

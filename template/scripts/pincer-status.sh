@@ -34,7 +34,7 @@ if [ -z "$prd" ]; then
   echo "PRD      none"
 else
   prd_status=$(fm_get "$prd" status)
-  echo "PRD      $prd · status: ${prd_status:-?} · date: $(fm_get "$prd" date)"
+  echo "PRD      $prd · status: ${prd_status:-?} · profile: $(prd_profile "$prd") · date: $(fm_get "$prd" date)"
 fi
 
 # Reject malformed/ambiguous tickets instead of treating unknown states as open.

@@ -55,7 +55,7 @@ run the pipeline, then present results.
    concrete bugs, silent failures, misleading code. Drop nitpicks and style opinions.
 7. Present findings as a short list with `file:line` references, ordered by severity.
    Security findings always rank above style-adjacent ones. For each, say whether you
-   recommend fixing now (within the timebox) or noting as known-issue.
+   recommend fixing now through a ticket or recording it as a known issue.
 8. Fix findings clearly within the authorized PRD through a new ticket associated with
    that PRD. Use `pincer-ticket.sh` to start, verify, and close it, then make a scoped
    `T-{NN}: {title}` commit. Ask only when a fix changes scope, architecture, or another
@@ -104,3 +104,14 @@ run the pipeline, then present results.
    summarize the requirement dispositions from the manifest in it.
 11. Suggest `/pincer-release` as the final step: "Run `/pincer-release` for a pass/fail audit of the
    whole workflow's artifacts."
+
+## Authorization rule (shared by plan, narrow, code and evaluate)
+
+Reuse explicit authorization for the same scope and decisions; ask only about a
+material choice not already authorized, and prepare the concrete proposal before
+asking. A decision the user delegated (for example "pick the architecture") does not
+need another approval when you exercise it, but a newly discovered consequential
+choice is surfaced before implementation. Record the authorization basis and the
+scope it covers in the PRD or the handover. An agent-written record or a status
+field is not authenticated human approval. When resuming without the context that
+granted authorization, do not invent it — ask.

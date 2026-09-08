@@ -71,6 +71,24 @@ write(example, exampleFile, read(example, exampleFile).replace('## Objective\nEx
 assert.equal(step(example, 'verify').status, 0, 'headings in fenced examples are ignored');
 assert.equal(run(example, 'test', ['-f', 'actual-check']).status, 0, 'the actual check executes');
 
+// PRD profile: small or standard; missing means standard; anything else is rejected.
+for (const [profile, expected] of [['small', 'small'], ['standard', 'standard'], [null, 'standard']]) {
+  const dir = tempDir(); createPrd(dir); createTicket(dir);
+  if (profile) write(dir, '.prd/prd-v1.md', read(dir, '.prd/prd-v1.md').replace('status: ticketed', `status: ticketed\nprofile: ${profile}`));
+  assert.match(run(dir, 'bash', [statusScript]).stdout, new RegExp(`^PRD .*profile: ${expected} `, 'm'), `profile ${profile} reports ${expected}`);
+  assert.equal(step(dir, 'start').status, 0, `profile ${profile} is accepted`);
+}
+{
+  const dir = tempDir(); createPrd(dir); const file = createTicket(dir);
+  write(dir, '.prd/prd-v1.md', read(dir, '.prd/prd-v1.md').replace('status: ticketed', 'status: ticketed\nprofile: tiny'));
+  const before = read(dir, file);
+  const result = step(dir, 'start');
+  assert.notEqual(result.status, 0, 'invalid profile is rejected');
+  assert.match(result.stderr, /profile must be small or standard/);
+  assert.equal(read(dir, file), before, 'rejection leaves the ticket untouched');
+  assert.match(run(dir, 'bash', [statusScript]).stdout, /profile must be small or standard/);
+}
+
 const invalidId = tempDir(); createPrd(invalidId); createTicket(invalidId);
 for (const id of ['0', '000000', '999999999999999999999', '-1', '1;true']) {
   assert.notEqual(step(invalidId, 'start', id).status, 0, `reject invalid numeric ID ${id}`);

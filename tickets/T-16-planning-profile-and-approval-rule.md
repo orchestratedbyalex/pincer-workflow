@@ -1,9 +1,13 @@
 ---
 ticket: T-16
-status: open
+status: done
 size: M
 prd: .prd/prd-v2.md
 depends_on: [T-11]
+started: 2026-09-08T14:41:40Z
+last_check: 2026-09-08T14:43:19Z passed 4a2553272ac6
+verified: 2026-09-08T14:43:19Z 4a2553272ac6
+finished: 2026-09-08T14:43:19Z
 ---
 
 ## Objective
@@ -26,10 +30,10 @@ Scale planning weight by risk through a validated `profile: small|standard` PRD 
 - Tests: `test/validation.test.js` covers `profile` accepted values, rejection message and default; `test/workflow.test.js` asserts the shared rule text appears in all four playbooks, the no-cap and no-default-timebox wording, and the profile definition in the template.
 
 ## Acceptance Criteria
-- [ ] `profile: small` and `profile: standard` validate, an invalid value is rejected with the allowed values named, and a missing profile reports as standard in status.
-- [ ] The PRD template and plan playbook define when small applies, require a recorded justification, and forbid implementation code as a substitute for requirements.
-- [ ] Plan, narrow, code and evaluate contain the same authorization-reuse rule, no hard ticket cap and no default timebox.
-- [ ] `node test/validation.test.js` and `node test/workflow.test.js` cover the above and pass; generated outputs match.
+- [x] `profile: small` and `profile: standard` validate, an invalid value is rejected with the allowed values named, and a missing profile reports as standard in status.
+- [x] The PRD template and plan playbook define when small applies, require a recorded justification, and forbid implementation code as a substitute for requirements.
+- [x] Plan, narrow, code and evaluate contain the same authorization-reuse rule, no hard ticket cap and no default timebox.
+- [x] `node test/validation.test.js` and `node test/workflow.test.js` cover the above and pass; generated outputs match.
 
 ## Verification
 Proves: profile validation accepts and rejects the right values at runtime and the four playbooks carry the identical rule (static contract); regression: a profile typo accepted or a playbook drifting from the shared rule.

@@ -79,3 +79,14 @@ Update the PRD to `status: built` and commit that change on its own (`PRD vN: bu
 The built transition is part of the candidate that `/pincer:evaluate` reviews; it is
 never moved into a later evidence-only commit. Then finish with:
 "All tickets built. Run `/pincer:evaluate` for a final quality pass."
+
+## Authorization rule (shared by plan, narrow, code and evaluate)
+
+Reuse explicit authorization for the same scope and decisions; ask only about a
+material choice not already authorized, and prepare the concrete proposal before
+asking. A decision the user delegated (for example "pick the architecture") does not
+need another approval when you exercise it, but a newly discovered consequential
+choice is surfaced before implementation. Record the authorization basis and the
+scope it covers in the PRD or the handover. An agent-written record or a status
+field is not authenticated human approval. When resuming without the context that
+granted authorization, do not invent it — ask.

@@ -101,6 +101,25 @@ assert.match(release, /`Evidence` line `ok`/);
 assert.match(release, /Do not re-implement evidence checks/i);
 assert.match(release, /durable runtime-owned release record is later work/i);
 assert.match(release, /verdict naming the candidate/i);
+// R-05: planning profile and one authorization rule shared verbatim by four playbooks.
+assert.match(prdTemplate, /`profile: small \| standard`/);
+assert.match(prdTemplate, /Few changed lines alone do not qualify/);
+assert.match(prdTemplate, /implementation code must\s+not substitute for requirements/i);
+assert.match(plan, /record why it fits/i);
+assert.match(plan, /there is no default timebox/i);
+assert.match(plan, /never silently cuts requirements/i);
+assert.match(narrow, /no hard\s+one-to-two-ticket cap/i);
+assert.match(narrow, /needs no second approval/i);
+const authorizationBlock = source => {
+  const match = source.match(/## Authorization rule \(shared by plan, narrow, code and evaluate\)\n[\s\S]*?(?=\n## |\s*$)/);
+  assert.ok(match, 'playbook carries the shared authorization rule');
+  return match[0].trim();
+};
+const sharedRule = authorizationBlock(plan);
+for (const source of [narrow, code, evaluate]) assert.equal(authorizationBlock(source), sharedRule, 'authorization rule is identical across playbooks');
+assert.match(sharedRule, /not authenticated human approval/);
+assert.match(sharedRule, /do not invent it/);
+for (const source of [plan, narrow, code, evaluate, release]) assert.doesNotMatch(source, /within the timebox/i);
 const releaseChecklist = read('template/docs/release-checklist.md');
 assert.match(releaseChecklist, /`evidence:` manifest/);
 assert.match(releaseChecklist, /visual_review\.applicable: false/);

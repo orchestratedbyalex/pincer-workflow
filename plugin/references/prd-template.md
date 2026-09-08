@@ -3,6 +3,19 @@
 Used by `/pincer:plan` Phase 4. Core sections are always included. Add optional detail
 when uncertainty, product context, or risk warrants it; a small fix may remain compact.
 
+## Profile
+
+The frontmatter field `profile: small | standard` sets the planning weight; a PRD
+without it is `standard`. `small` means bounded scope, low risk, known behavior and
+straightforward verification. Few changed lines alone do not qualify: migrations,
+authorization boundaries, uncertain requirements and broad effects stay `standard`
+even for a tiny patch. The PRD records in one or two sentences why the profile fits.
+
+A small PRD keeps Problem (with the outcome), Scope, Requirements with scenarios,
+Success Criteria (its verification), risks and exclusions, and omits empty sections
+and repetition. Interface examples may clarify a contract; implementation code must
+not substitute for requirements in any profile.
+
 ---
 
 ## Core Sections (always include)
@@ -80,7 +93,8 @@ Include when something outside our control or a migration/rollback concern could
 
 ## Formatting Rules
 
-- Save as `.prd/prd-v{N}.md` with YAML frontmatter (`version`, `status`, `date`).
+- Save as `.prd/prd-v{N}.md` with YAML frontmatter (`version`, `status`, `date`,
+  and `profile` when small).
 - Status lifecycle: `draft → ticketed → built`.
 - Diagrams as ASCII or markdown tables only.
 - No implementation code and no exact line numbers — those belong in tickets.
