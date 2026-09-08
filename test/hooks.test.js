@@ -157,6 +157,15 @@ for (const command of [
   "sed -i '/last_check:/d' tickets/T-01-example.md",
   'echo "" > tickets/T-01-example.md',
 ]) check('ticket', `block unrelated or destructive state writer ${command}`, bash(command), 2);
+for (const command of [
+  'git checkout -- .', 'git checkout .', 'git restore .', 'git restore --source=HEAD :/', 'git restore', 'git checkout main -- tickets/',
+  'git restore --staged --worktree tickets', 'git checkout -- ./tickets/', 'git reset --hard', 'git reset --keep HEAD~1', 'git stash', 'git stash push -u',
+  'git stash pop', 'git stash drop', 'git clean -fd', 'git clean --force', 'git -C . checkout -- .', 'env GIT_DIR=.git git restore :/',
+]) check('ticket', `block whole-tree restore ${command}`, bash(command), 2);
+for (const command of [
+  'git checkout main', 'git checkout -b feature/x', 'git restore src/app.js', 'git checkout -- src/app.js', 'git reset --soft HEAD~1', 'git reset HEAD -- src/app.js',
+  'git stash list', 'git stash show -p stash@{0}', 'git clean -n', 'git clean -f build/', 'git status', 'git log --oneline',
+]) check('ticket', `allow non-ticket git ${command}`, bash(command), 0);
 
 assert.equal(read(dir, file), completed, 'hooks are read-only and never execute tested command strings');
 assert.equal(failures.length, 0, `${failures.length}/${checked} hook regressions failed:\n${failures.join('\n')}`);

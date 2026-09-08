@@ -69,9 +69,11 @@ previously authorized work.
 ## Recovering a ticket file
 
 Ticket lifecycle fields are written only by `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-ticket.sh`, and the guard
-also blocks `git checkout`, `git restore`, `git reset` and `git clean` on ticket paths
-from the assistant's shell: restoring HEAD would erase a newer failed attempt and
-revive an old passing receipt. When a ticket file is malformed or its state was hand
+also blocks shell restores that would touch ticket files from the assistant's shell:
+`git checkout`/`git restore` naming a ticket path or the whole tree (`.`, `:/`,
+`tickets/`), `git reset --hard`, `git stash`, and `git clean -f` without a pathspec.
+Restoring HEAD would erase a newer failed attempt and revive an old passing receipt.
+Branch switches and file-specific restores outside `tickets/` stay allowed. When a ticket file is malformed or its state was hand
 edited, preserve the malformed contents as they are, report the validation error that
 the script or `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-status.sh` printed, and hand the repair to the user, who
 performs it in their own terminal. Then return through the lifecycle — `start`,

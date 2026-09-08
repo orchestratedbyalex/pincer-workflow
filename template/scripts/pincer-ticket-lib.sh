@@ -6,12 +6,21 @@ PINCER_LIB_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 PINCER_EVIDENCE="$PINCER_LIB_DIR/pincer-evidence.cjs"
 
 # Run the shared evidence validator; prints its combined output, returns its status.
-# Usage: evidence_validate <manifest> <candidate> <prd> [--files]
+# Usage: evidence_validate <manifest> <candidate> <base> <prd> [--files]
+# Absent or malformed candidate/base/prd values are simply not checked, so a bad
+# NOTES.md field is reported by notes_current, never as a manifest verdict.
 evidence_validate() {
-  command -v node >/dev/null 2>&1 || { printf 'evidence: %s: Node.js 18+ is required to validate evidence\n' "$1"; return 1; }
-  node "$PINCER_EVIDENCE" validate "$1" --candidate "$2" --prd "$3" "${@:4}" 2>&1
+  local manifest=$1 candidate=$2 base=$3 prd=$4; shift 4
+  command -v node >/dev/null 2>&1 || { printf 'evidence: %s: Node.js 18+ is required to validate evidence\n' "$manifest"; return 1; }
+  local -a args=(validate "$manifest")
+  if [[ $candidate =~ ^[a-f0-9]{40}$ ]]; then args+=(--candidate "$candidate"); fi
+  if [[ $base =~ ^[a-f0-9]{40}$ ]]; then args+=(--base "$base"); fi
+  if [[ $prd =~ ^\.prd/prd-v[1-9][0-9]{0,8}\.md$ ]]; then args+=(--prd "$prd"); fi
+  node "$PINCER_EVIDENCE" "${args[@]}" "$@" 2>&1
 }
-evidence_reason() { printf '%s\n' "$1" | head -1 | sed 's/^evidence: [^:]*: //'; }
+evidence_reason() { # first diagnostic line without the manifest prefix; usage errors are labelled
+  printf '%s\n' "$1" | head -1 | sed -e 's/^evidence: [^:]*: //' -e 's/^pincer-evidence: /validator usage: /'
+}
 
 normalize() { # CLI shorthand -> canonical ID; bound arithmetic before conversion.
   local n=${1#T-}; n=${n#t-}
@@ -275,8 +284,8 @@ notes_current() {
   validate_metadata NOTES.md >/dev/null 2>&1 || { printf 'stale: invalid or missing evaluation metadata'; return 1; }
   [ "$(fm_get NOTES.md prd)" = "$prd" ] || { printf 'stale: evaluation PRD does not match'; return 1; }
   candidate=$(fm_get NOTES.md candidate); base=$(fm_get NOTES.md base)
-  if ! [[ $candidate =~ ^([a-f0-9]{40}|[a-f0-9]{64})$ ]] || ! [[ $base =~ ^([a-f0-9]{40}|[a-f0-9]{64})$ ]]; then
-    printf 'stale: candidate and base must be full commit IDs'; return 1
+  if ! [[ $candidate =~ ^[a-f0-9]{40}$ ]] || ! [[ $base =~ ^[a-f0-9]{40}$ ]]; then
+    printf 'stale: candidate and base must be full 40-hex commit IDs'; return 1
   fi
   if ! git rev-parse --verify "$candidate^{commit}" >/dev/null 2>&1 ||
      ! git rev-parse --verify "$base^{commit}" >/dev/null 2>&1 ||
@@ -288,7 +297,7 @@ notes_current() {
   if [ -z "$manifest" ]; then
     printf 'stale: legacy evaluation without evidence manifest — re-run /pincer-evaluate for evidence schema 1'; return 1
   fi
-  if ! output=$(evidence_validate "$manifest" "$candidate" "$prd" --files); then
+  if ! output=$(evidence_validate "$manifest" "$candidate" "$base" "$prd" --files); then
     printf 'stale: evidence invalid: %s' "$(evidence_reason "$output")"; return 1
   fi
   listed=$(printf '%s\n' "$output" | tail -n +2)
@@ -296,7 +305,9 @@ notes_current() {
     [ -n "$file" ] || continue
     git ls-files --error-unmatch -- "$file" >/dev/null 2>&1 || { printf 'stale: evidence not tracked: %s' "$file"; return 1; }
   done <<< "$listed"
-  changes=$(git diff --name-only "$candidate" HEAD -- . ':(exclude)NOTES.md') || return 1
+  # Paths relative to the project root (which may be below the git toplevel) and
+  # unquoted, so they compare byte-for-byte with the validator's list.
+  changes=$(git -c core.quotePath=false diff --name-only --relative "$candidate" HEAD -- . ':(exclude)NOTES.md') || return 1
   offending=$(printf '%s\n' "$changes" | grep -vxF -f <(printf '%s\n' "$listed") | grep -v '^$' | head -1)
   if [ -n "$offending" ]; then printf 'stale: candidate changed after evaluation: %s' "$offending"; return 1; fi
   changes=$(git status --porcelain --untracked-files=all -- . ':(exclude)NOTES.md') || return 1

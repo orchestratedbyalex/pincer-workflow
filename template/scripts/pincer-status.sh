@@ -136,7 +136,7 @@ echo "Notes    NOTES.md: $notes"
 manifest=""
 [ -f NOTES.md ] && validate_metadata NOTES.md >/dev/null 2>&1 && manifest=$(fm_get NOTES.md evidence)
 if [ -n "$manifest" ]; then
-  if ev=$(evidence_validate "$manifest" "$(fm_get NOTES.md candidate)" "${prd:-.prd/prd-v0.md}"); then
+  if ev=$(evidence_validate "$manifest" "$(fm_get NOTES.md candidate)" "$(fm_get NOTES.md base)" "$prd"); then
     echo "Evidence $manifest · ok"
   else
     echo "Evidence $manifest · $(evidence_reason "$ev")"

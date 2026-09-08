@@ -156,10 +156,18 @@ assert.doesNotMatch(next(noGit), /pincer-release/, 'unresolvable candidate canno
   assert.match(failed.stderr, /prior successful receipt was revoked/);
   assert.match(read(dir, file), /^last_check: .* failed /m);
   const guard = path.join(repo, 'template/.claude/hooks/ticket-guard.sh');
-  for (const command of [`git checkout -- ${file}`, `git checkout HEAD ${file}`, `git restore ${file}`, `git restore --source=HEAD ${file}`, `git checkout -- tickets/T-01-example.md source.txt`]) {
-    const result = run(dir, 'bash', [guard], { input: JSON.stringify({ tool_name: 'Bash', tool_input: { command } }) });
+  const payload = command => run(dir, 'bash', [guard], { input: JSON.stringify({ tool_name: 'Bash', tool_input: { command } }) });
+  for (const command of [
+    `git checkout -- ${file}`, `git checkout HEAD ${file}`, `git restore ${file}`, `git restore --source=HEAD ${file}`, `git checkout -- tickets/T-01-example.md source.txt`,
+    'git checkout -- .', 'git checkout .', 'git restore .', 'git restore --source=HEAD :/', 'git checkout main -- tickets/', 'git restore --staged --worktree tickets',
+    'git reset --hard', 'git reset --hard HEAD~1', 'git reset --merge', 'git stash', 'git stash push', 'git stash pop', 'git clean -fd',
+  ]) {
+    const result = payload(command);
     assert.equal(result.status, 2, `guard blocks ticket restore: ${command}`);
     assert.match(result.stderr, /pincer-ticket\.sh/, 'block names the lifecycle script');
+  }
+  for (const command of ['git checkout main', 'git checkout -b fix/thing', 'git restore source.txt', 'git reset --soft HEAD~1', 'git stash list', 'git stash show -p', 'git clean -n', 'git clean -f build/']) {
+    assert.equal(payload(command).status, 0, `guard allows: ${command}`);
   }
   assert.match(read(dir, file), /^last_check: .* failed /m, 'failed attempt preserved');
   assert.match(status(dir).stdout, /WARN T-01 latest verification: .* failed .* re-run verify/);

@@ -223,11 +223,28 @@ function isExactPincerCall(source) {
   return action === 'bind' ? words.length === 4 : words.length === 3;
 }
 
+// Git forms that restore the working tree wholesale — and with it any ticket file
+// whose failed attempt would be erased and whose revoked receipt would come back.
+function wholeTreeRestore(sub) {
+  const { name, args } = sub;
+  const positional = args.filter(arg => !arg.startsWith('-'));
+  const wide = arg => ['.', './', ':/', '*', 'tickets', 'tickets/', './tickets', './tickets/'].includes(arg) || /(^|[\\/])tickets[\\/]\*?$/.test(arg);
+  if (name === 'checkout' || name === 'restore') {
+    if (positional.some(wide)) return true;
+    return name === 'restore' && positional.length === 0;
+  }
+  if (name === 'reset') return args.some(arg => ['--hard', '--merge', '--keep'].includes(arg));
+  if (name === 'stash') return !['list', 'show'].includes(positional[0] || '');
+  if (name === 'clean') return positional.length === 0 && args.some(arg => /^-[A-Za-z]*f/.test(arg) || arg === '--force');
+  return false;
+}
+
 function ticketShellMutation(source) {
   if (isExactPincerCall(source)) return false;
   const commands = shellCommands(source);
   for (const command of commands) {
     const { executable, args, words } = commandParts(command);
+    if (executable === 'git' && wholeTreeRestore(gitSubcommand(args))) return true;
     const hasTicket = words.some(ticketPath) || /(^|[\s'"`])tickets[\\/]T-[0-9]+[^\s'"`]*/.test(source);
     if (!hasTicket) continue;
     if (command.operators.some(op => op === '>' || op === '>>')) return true;
@@ -251,7 +268,7 @@ if (mode === 'dangerous') {
   if (['Edit', 'Write', 'MultiEdit'].includes(payload.tool_name)) guardEdits(payload.tool_name, payload.tool_input);
   else if (payload.tool_name === 'Bash') {
     if (typeof payload.tool_input.command !== 'string') block('Bash payload must contain a string command.');
-    if (ticketShellMutation(payload.tool_input.command)) block('shell commands may not write or reset ticket files; use pincer-ticket.sh for lifecycle state.');
+    if (ticketShellMutation(payload.tool_input.command)) block('shell commands may not write, reset, or restore ticket files (including whole-tree checkout/restore, reset --hard, stash, clean -f); use pincer-ticket.sh for lifecycle state.');
   }
 } else {
   block('hook policy mode is invalid.');

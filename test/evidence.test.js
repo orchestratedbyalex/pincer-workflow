@@ -108,6 +108,12 @@ rejects('unreferenced artifact', {
 rejects('wrong candidate directory', { doc: manifest({ candidate: OTHER }) }, /wrong candidate/);
 rejects('wrong --candidate', {}, /wrong candidate: manifest is for/, ['--candidate', OTHER]);
 rejects('wrong PRD directory', { doc: manifest({ prd: '.prd/prd-v3.md' }) }, /wrong PRD/);
+rejects('wrong --base', {}, /wrong base: manifest records/, ['--base', OTHER]);
+{
+  const dir = fixture();
+  assert.equal(validate(dir, '--base', BASE).status, 0, 'matching --base passes');
+  assert.equal(run(dir, process.execPath, [helper, 'validate', `${DIR}/manifest.json`, '--base', 'short']).status, 2, 'malformed --base is a usage error');
+}
 rejects('wrong --prd', {}, /wrong PRD: manifest is for/, ['--prd', '.prd/prd-v3.md']);
 rejects('absolute artifact path', { doc: manifest({ artifacts: [{ path: '/etc/hosts', sha256: sha('') }], checks: [{ ...manifest().checks[0], artifacts: ['/etc/hosts'] }] }) }, /absolute paths are not allowed/);
 rejects('traversal artifact path', { doc: manifest({ artifacts: [{ path: `${DIR}/../${CAND}/checks/C-01.log`, sha256: sha(LOG_TEXT) }], checks: [{ ...manifest().checks[0], artifacts: [`${DIR}/../${CAND}/checks/C-01.log`] }] }) }, /normalized/);
@@ -132,7 +138,14 @@ rejects('symlinked directory component', {
 }, /path component .*checks is a symlink/);
 rejects('failed required check', { doc: withCheck({ result: 'failed' }) }, /required check C-01 is failed/);
 rejects('unverified required check', { doc: withCheck({ result: 'unverified' }) }, /required check C-01 is unverified/);
-rejects('visual check without image', { doc: manifest({ checks: [{ id: 'C-01', kind: 'visual', required: true, result: 'passed', timestamp: T, scenario: 'home page', viewport: '1280x800', observed: 'renders', artifacts: [LOG] }] }) }, /requires a saved image artifact/);
+rejects('passed visual check without image', { doc: manifest({ checks: [{ id: 'C-01', kind: 'visual', required: true, result: 'passed', timestamp: T, scenario: 'home page', viewport: '1280x800', observed: 'renders', artifacts: [LOG] }] }) }, /passed visual check requires a saved image artifact/);
+rejects('required unverified visual check blocks readiness', { doc: manifest({ visual_review: { applicable: true }, checks: [{ id: 'C-01', kind: 'visual', required: true, result: 'unverified', timestamp: T, scenario: 'home page', viewport: '1280x800', observed: 'no browser tool available', artifacts: [LOG] }] }) }, /required check C-01 is unverified/);
+{
+  // An unverified, non-required visual check is representable without an image: the honest "tool unavailable" record.
+  const dir = fixture({ doc: manifest({ visual_review: { applicable: true }, checks: [manifest().checks[0], { id: 'C-02', kind: 'visual', required: false, result: 'unverified', timestamp: T, scenario: 'home page', viewport: '1280x800', observed: 'no browser tool available; not captured', artifacts: [] }] }) });
+  const result = validate(dir);
+  assert.equal(result.status, 0, `unverified visual check without image is accepted\n${result.stderr}`);
+}
 rejects('visual review applicable without a visual check', { doc: manifest({ visual_review: { applicable: true } }) }, /no visual check is recorded/);
 rejects('non-applicable visual review without reason', { doc: manifest({ visual_review: { applicable: false } }) }, /visual_review\.reason is required/);
 rejects('deferred requirement without authorization', { doc: withRequirement({ disposition: 'deferred', checks: [] }) }, /deferred requires authorized_by/);

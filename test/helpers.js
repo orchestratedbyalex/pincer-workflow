@@ -39,9 +39,9 @@ export function createPrd(dir, version = 1, status = 'ticketed') {
 export const evidenceScript = path.join(repo, 'template/scripts/pincer-evidence.cjs');
 // A minimal valid schema-1 evidence directory for a candidate: one passing
 // command check with a log artifact. Returns the repository-relative paths.
-export function writeEvidence(dir, { version = 1, base, candidate, log = '$ npm test\nok\n', patch = m => m } = {}) {
+export function writeEvidence(dir, { version = 1, base, candidate, log = '$ npm test\nok\n', artifact = 'checks/C-01.log', patch = m => m } = {}) {
   const evidenceDir = `.prd/evidence/prd-v${version}/${candidate}`;
-  const logPath = `${evidenceDir}/checks/C-01.log`;
+  const logPath = `${evidenceDir}/${artifact}`;
   write(dir, logPath, log);
   const stamp = '2026-09-08T12:00:00Z';
   const manifest = patch({

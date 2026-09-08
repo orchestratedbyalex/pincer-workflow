@@ -18,8 +18,9 @@ function commit(dir, message, paths = ['.']) {
 }
 
 // Build: base -> ticket work + PRD built (candidate) -> NOTES + evidence commit.
-function evaluated({ commitEvidence = true, notesEvidence = true, patch } = {}) {
-  const dir = tempDir(); git(dir, 'init', '-q');
+function evaluated({ commitEvidence = true, notesEvidence = true, patch, artifact, dir: given } = {}) {
+  const dir = given ?? tempDir();
+  if (!given) git(dir, 'init', '-q');
   write(dir, 'base.txt', 'original\n');
   const base = commit(dir, 'base');
   createPrd(dir);
@@ -28,7 +29,7 @@ function evaluated({ commitEvidence = true, notesEvidence = true, patch } = {}) 
   passes(step(dir, 'verify')); passes(step(dir, 'done'));
   write(dir, '.prd/prd-v1.md', read(dir, '.prd/prd-v1.md').replace('ticketed', 'built'));
   const candidate = commit(dir, 'candidate');
-  const evidence = writeEvidence(dir, { base, candidate, patch });
+  const evidence = writeEvidence(dir, { base, candidate, patch, artifact });
   writeNotes(dir, { base, candidate, evidence: notesEvidence ? evidence.manifest : undefined });
   if (commitEvidence) commit(dir, 'evaluate: PRD v1', ['NOTES.md', evidence.dir]);
   else commit(dir, 'notes only', ['NOTES.md']);
@@ -124,6 +125,37 @@ const expectStale = (dir, pattern, label) => {
   commit(dir, 'notes point at another candidate', ['NOTES.md', other.dir]);
   expectStale(dir, /evidence invalid: .*wrong candidate/, 'manifest for a different candidate');
   assert.ok(fs.existsSync(path.join(dir, evidence.manifest)), 'original manifest untouched');
+}
+
+// A project below the git toplevel (monorepo package) compares paths correctly.
+{
+  const top = tempDir(); git(top, 'init', '-q');
+  write(top, 'README.md', 'monorepo\n'); commit(top, 'root');
+  const project = path.join(top, 'packages', 'app'); fs.mkdirSync(project, { recursive: true });
+  const { candidate, evidence } = evaluated({ dir: project });
+  assert.match(line(project, 'Notes'), new RegExp(`current \\(${candidate}\\)`), `subdirectory project is current\n${status(project)}`);
+  assert.equal(line(project, 'Evidence'), `Evidence ${evidence.manifest} · ok`);
+  write(project, 'source.txt', 'changed'); commit(project, 'tweak');
+  expectStale(project, /candidate changed after evaluation: source\.txt/, 'subdirectory project names project-relative paths');
+}
+
+// Non-ASCII artifact names are compared unquoted.
+{
+  const { dir, candidate } = evaluated({ artifact: 'checks/résumé-écran.log' });
+  assert.match(line(dir, 'Notes'), new RegExp(`current \\(${candidate}\\)`), `non-ASCII artifact is current\n${status(dir)}`);
+}
+
+// NOTES.md base and manifest base must agree; malformed NOTES fields never become manifest verdicts.
+{
+  const { dir } = evaluated({ patch: m => ({ ...m, base: 'd'.repeat(40) }) });
+  expectStale(dir, /evidence invalid: wrong base/, 'manifest base differs from NOTES base');
+}
+{
+  const { dir } = evaluated();
+  write(dir, 'NOTES.md', read(dir, 'NOTES.md').replace(/^candidate: .*$/m, 'candidate: not-a-sha'));
+  expectStale(dir, /must be full 40-hex commit IDs/, 'malformed candidate in NOTES');
+  assert.match(line(dir, 'Evidence'), / · ok$/, `manifest itself still validates without the malformed flag\n${status(dir)}`);
+  assert.doesNotMatch(status(dir), /validator usage|pincer-evidence:/, 'no usage message leaks as a verdict');
 }
 
 // Working tree changes outside NOTES.md are still stale (M0 rule preserved).

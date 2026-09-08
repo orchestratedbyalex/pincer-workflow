@@ -4,7 +4,7 @@
 // (evidence schema 1). Dependency-free; runs under `node` on any platform.
 //
 //   node scripts/pincer-evidence.cjs validate .prd/evidence/prd-vN/<candidate>/manifest.json \
-//        [--candidate <sha>] [--prd .prd/prd-vN.md] [--files]
+//        [--candidate <sha>] [--base <sha>] [--prd .prd/prd-vN.md] [--files]
 //   node scripts/pincer-evidence.cjs digest <file>...
 //
 // `validate` exits 0 and prints `ok <candidate>` when the manifest is
@@ -113,6 +113,7 @@ function validate(manifestArg, opts) {
     problem(`wrong candidate: manifest names ${doc.candidate} but lives under ${dirCandidate}`);
   }
   if (opts.candidate && doc.candidate !== opts.candidate) problem(`wrong candidate: manifest is for ${doc.candidate}, expected ${opts.candidate}`);
+  if (opts.base && doc.base !== opts.base) problem(`wrong base: manifest records ${doc.base}, expected ${opts.base}`);
   if (typeof doc.created !== 'string' || !ISO_UTC.test(doc.created)) problem('created must be an ISO-8601 UTC timestamp (YYYY-MM-DDTHH:MM:SSZ)');
 
   const env = doc.environment;
@@ -191,7 +192,9 @@ function validate(manifestArg, opts) {
     if (check.kind === 'visual') {
       visualChecks++;
       for (const key of ['scenario', 'viewport', 'observed']) if (!nonempty(check[key])) problem(`check ${name}: visual check requires ${key}`);
-      if (images === 0) problem(`check ${name}: visual check requires a saved image artifact (.png, .jpg or .webp)`);
+      // A passed visual check must show its image; an unverified one (tool
+      // unavailable) is recorded honestly without one and, when required, blocks.
+      if (check.result === 'passed' && images === 0) problem(`check ${name}: a passed visual check requires a saved image artifact (.png, .jpg or .webp)`);
     }
     if (check.required === true && check.result !== 'passed') {
       problem(`required check ${name} is ${check.result} — readiness is blocked until it passes on a new candidate or the requirement is deferred with authorization`);
@@ -240,7 +243,7 @@ function validate(manifestArg, opts) {
 
 function usage(message) {
   if (message) process.stderr.write(`pincer-evidence: ${message}\n`);
-  process.stderr.write('usage: pincer-evidence.cjs validate <manifest> [--candidate <sha>] [--prd .prd/prd-vN.md] [--files]\n       pincer-evidence.cjs digest <file>...\n');
+  process.stderr.write('usage: pincer-evidence.cjs validate <manifest> [--candidate <sha>] [--base <sha>] [--prd .prd/prd-vN.md] [--files]\n       pincer-evidence.cjs digest <file>...\n');
   process.exit(2);
 }
 
@@ -252,7 +255,7 @@ function main(argv) {
     for (let i = 0; i < rest.length; i++) {
       const arg = rest[i];
       if (arg === '--files') opts.files = true;
-      else if (arg === '--candidate' || arg === '--prd') {
+      else if (arg === '--candidate' || arg === '--base' || arg === '--prd') {
         const value = rest[++i];
         if (value === undefined) usage(`${arg} requires a value`);
         opts[arg.slice(2)] = value;
@@ -262,6 +265,7 @@ function main(argv) {
     }
     if (manifest === null) usage('validate requires a manifest path');
     if (opts.candidate !== undefined && !HEX40.test(opts.candidate)) usage('--candidate must be a full 40-hex commit ID');
+    if (opts.base !== undefined && !HEX40.test(opts.base)) usage('--base must be a full 40-hex commit ID');
     if (opts.prd !== undefined && !PRD_REF.test(opts.prd)) usage('--prd must be of the form .prd/prd-vN.md');
     const problems = validate(manifest, opts);
     if (problems.length > 0) {
