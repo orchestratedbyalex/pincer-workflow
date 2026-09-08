@@ -99,7 +99,8 @@ alone — the new version lands next to them as `<file>.new` for a manual merge.
 | `.claude/commands/` | The five playbooks plus `/pincer-status` (canonical — adapters are generated from them; ships on every platform together with `agents/` and `references/`) |
 | `.claude/agents/` | `codebase-explorer` and `code-quality-reviewer` subagents, with inline fallbacks for platforms without subagents |
 | `scripts/pincer-ticket.sh` | The ticket state machine: `start` (enforces dependency order) → `verify` (runs the ticket's check, stamps a receipt only on green) → `done` (refuses without a matching receipt or with unticked criteria) |
-| `scripts/pincer-status.sh` | Read-only state report: current PRD, associated tickets, clock-based elapsed time, optional user budget, warnings, and next command |
+| `scripts/pincer-status.sh` | Read-only state report: current PRD and profile, associated tickets, wall-clock elapsed time while work is active or against an explicit budget, evidence verdict, warnings, and next command |
+| `scripts/pincer-evidence.cjs` | Read-only validator for candidate evidence (schema 1): `/pincer-evaluate` writes `.prd/evidence/prd-vN/<candidate>/manifest.json` plus logs and screenshots; status and release validate schema, references, candidate association, required results, file containment and SHA-256 digests. Legacy `NOTES.md` without a manifest is readable but never release-ready; an older runtime does not enforce this contract |
 | `.claude/hooks/` + `settings.json` | Claude guardrails for documented destructive command forms and ticket state writes; Node.js 18+ parses hook payloads structurally |
 | `.agents/skills/` · `.codex/` · `.github/` | Generated Codex skills and Copilot prompt files + platform wiring (`.codex/README.md` covers the Codex posture) |
 | `scripts/sync-prompts.sh` | Regenerates the adapters after you edit a playbook |
@@ -118,6 +119,9 @@ alone — the new version lands next to them as `<file>.new` for a manual merge.
 - **State lives in files, not in the conversation** — a new session runs
   `/pincer-status` and knows exactly where to resume; elapsed time comes from
   timestamps, not from the model's sense of time.
+- **Evidence is saved, not narrated** — requirements carry stable IDs from the
+  PRD through tickets to evaluation, and the evaluation writes a validated
+  manifest under `.prd/evidence/` that release reads instead of trusting chat.
 - **Scope is a first-class artifact** — cuts are recorded, never silent.
 - **Security is threaded through every stage** — designed in at Plan, specified
   as reject-path criteria at Narrow, enforced by a pre-commit sweep at Code,

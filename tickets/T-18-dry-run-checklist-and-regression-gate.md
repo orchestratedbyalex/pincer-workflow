@@ -1,9 +1,13 @@
 ---
 ticket: T-18
-status: open
+status: done
 size: M
 prd: .prd/prd-v2.md
 depends_on: [T-12, T-16, T-17]
+started: 2026-09-08T14:46:05Z
+last_check: 2026-09-08T14:49:54Z passed b5d2dc6393dd
+verified: 2026-09-08T14:49:54Z b5d2dc6393dd
+finished: 2026-09-08T14:49:54Z
 ---
 
 ## Objective
@@ -22,9 +26,9 @@ Rewrite the dry-run checklist around the new contracts and recorded scenarios, a
 - `npm test` (all M0 regressions, new targeted tests, generated parity and packed install) passes locally; the CI matrix runs the same command.
 
 ## Acceptance Criteria
-- [ ] The dry-run checklist covers every new contract and includes the five recorded scenarios with expected observations, single-line cheats, payload-based hook tests and a trial-record template.
-- [ ] README and template AGENTS.md describe the evidence directory, the helper and the older-runtime limitation.
-- [ ] `npm test` passes on the assembled kit.
+- [x] The dry-run checklist covers every new contract and includes the five recorded scenarios with expected observations, single-line cheats, payload-based hook tests and a trial-record template.
+- [x] README and template AGENTS.md describe the evidence directory, the helper and the older-runtime limitation.
+- [x] `npm test` passes on the assembled kit.
 
 ## Verification
 Proves: the checklist and docs name the new contracts (static presence) and the full gate passes on the assembled kit; regression: any M0 or new targeted test failing.

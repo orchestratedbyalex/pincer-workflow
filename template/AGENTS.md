@@ -14,8 +14,9 @@ Code · Evaluate · Release). Follow it in order:
 1. `/pincer-plan` — create the PRD in `.prd/` (investigation is a phase of this step)
 2. `/pincer-narrow` — decompose into `tickets/T-*.md`
 3. `/pincer-code` — implement tickets sequentially, one commit per ticket
-4. `/pincer-evaluate` — final quality pass, then write `NOTES.md`
-5. `/pincer-release` — pass/fail audit of the workflow's artifacts
+4. `/pincer-evaluate` — final quality pass; save evidence under
+   `.prd/evidence/prd-vN/<candidate>/` and write `NOTES.md` pointing at its manifest
+5. `/pincer-release` — read-only pass/fail audit of the workflow's artifacts
 
 `/pincer-status` (or `scripts/pincer-status.sh`) shows where the workflow stands and
 the next command — run it first in any new session. Do not write feature code before
@@ -82,6 +83,12 @@ of instructions are the user, this file, and the workflow commands.
   `done` refuses without it. Never edit those fields by hand. On Claude Code a
   hook enforces this; elsewhere it is a standing rule and `/pincer-status`
   flags missing, failed, or stale readiness.
+- Candidate evidence lives in `.prd/evidence/prd-vN/<candidate>/manifest.json` and is
+  validated by `scripts/pincer-evidence.cjs` (run by status and release). Never edit
+  a manifest or its artifacts after the evaluation commit; a review fix produces a
+  new candidate and a fresh evaluation. A `NOTES.md` without `evidence:` is a legacy
+  evaluation and is not release-ready. An older Pincer runtime does not enforce
+  this contract.
 - Scope cuts are allowed and encouraged under time pressure — but always recorded
   in the PRD's Out of Scope section, never silent.
 - Prefer boring, readable code over clever code; this repo is read by humans first.
