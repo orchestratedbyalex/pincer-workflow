@@ -26,6 +26,8 @@ run the pipeline, then present results.
    Scope sections, and the list of tickets. If the diff is large, split by area and
    dispatch two in parallel. (No subagents on this platform? Review the diff yourself
    in a separate pass, applying `${CLAUDE_PLUGIN_ROOT}/agents/code-quality-reviewer.md` as the rubric.)
+   Keep the reviewer's report — or its explicit no-findings statement — for step 9,
+   where it is saved as an artifact; a review that left no record cannot be audited.
 3. Yourself, in parallel, check spec compliance. For every requirement `R-NN` in the
    PRD record one disposition: `delivered` (evidence on this candidate), `blocked`
    (required behavior failed or was left unverified — this blocks PASS; do not relabel
@@ -66,6 +68,9 @@ run the pipeline, then present results.
    - `visual/<scenario>.png` — each visual capture from step 4, with its scenario,
      viewport and observed result recorded in the manifest. When nothing renders,
      record `visual_review: {applicable: false, reason}` and say why.
+   - `review/code-quality.md` — the reviewer's findings from step 2 with their
+     dispositions, or its explicit no-findings statement, recorded as a check of
+     kind `review` and referenced by the requirements it covers.
    - `manifest.json` — evidence schema 1 (field list in the header of
      `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-evidence.cjs`): selected PRD, full `base` and `candidate` IDs,
      `created`, `environment` with tool limitations, `coverage_review` (your judgment

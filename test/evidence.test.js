@@ -141,6 +141,12 @@ rejects('delivered requirement without checks', { doc: withRequirement({ checks:
 rejects('environment dump', { doc: manifest({ environment: { ...manifest().environment, os: 'x'.repeat(2001) } }) }, /environment\.os must be a short/);
 rejects('environment extra key', { doc: manifest({ environment: { ...manifest().environment, PATH: '/usr/bin' } }) }, /environment\.PATH is not allowed/);
 rejects('empty requirements', { doc: manifest({ requirements: [] }) }, /requirements must be a nonempty array/);
+rejects('malformed requirement ID', { doc: withRequirement({ id: 'req1' }) }, /requirements\[0\]\.id must be a requirement ID/);
+{
+  const dir = fixture({ doc: withRequirement({ id: 'REQ-1' }) });
+  const result = validate(dir);
+  assert.equal(result.status, 0, `a supplied PRD's own IDs are accepted verbatim\n${result.stderr}`);
+}
 rejects('command check without command', { doc: withCheck({ command: undefined }) }, /command kind requires the command/);
 
 // A non-required failed check is recorded, not blocking; a passing visual check with an image is accepted.

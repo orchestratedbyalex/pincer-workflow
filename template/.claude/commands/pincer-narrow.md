@@ -73,12 +73,15 @@ discovered consequential choice is surfaced before implementation.
    or review method). Whether the map is complete and each check is adequate is your
    judgment as the author; say so rather than presenting the table as mechanical proof.
 
-Present the concrete breakdown and build order. Reuse existing authorization for the same
-scope and order; ask only when the breakdown introduces a material decision or scope change.
+Present the concrete breakdown and build order as a report, not a question. Reuse
+existing authorization for the same scope and order.
 
-5. Once authorized, update the selected PRD frontmatter to `status: ticketed`. Inspect
-   existing staged changes, stage that PRD and the explicit new ticket paths, review
-   `git diff --cached`, and commit only those paths. Finish with:
+5. Finalize. A breakdown that follows the PRD is already authorized by the PRD: do not
+   ask whether to proceed. Update the selected PRD frontmatter to `status: ticketed`,
+   inspect existing staged changes, stage that PRD and the explicit new ticket paths,
+   review `git diff --cached`, and commit only those paths. Ask first — and finalize
+   once it is resolved — only when step 4 surfaced a newly discovered consequential
+   choice or a scope change the PRD does not cover. Finish with:
    "Tickets ready in `tickets/`. Run `/pincer-code` to start implementing."
 
 ## Authorization rule (shared by plan, narrow, code and evaluate)

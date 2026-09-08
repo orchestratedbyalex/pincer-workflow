@@ -110,6 +110,11 @@ assert.match(plan, /there is no default timebox/i);
 assert.match(plan, /never silently cuts requirements/i);
 assert.match(narrow, /no hard\s+one-to-two-ticket cap/i);
 assert.match(narrow, /needs no second approval/i);
+assert.doesNotMatch(narrow, /Once authorized/);
+assert.match(narrow, /already authorized by the PRD: do not\s+ask whether to proceed/i);
+assert.match(narrow, /as a report, not a question/i);
+assert.match(evaluate, /review\/code-quality\.md/);
+assert.match(evaluate, /a review that left no record cannot be audited/i);
 const authorizationBlock = source => {
   const match = source.match(/## Authorization rule \(shared by plan, narrow, code and evaluate\)\n[\s\S]*?(?=\n## |\s*$)/);
   assert.ok(match, 'playbook carries the shared authorization rule');

@@ -29,7 +29,9 @@ const SHA256 = /^[0-9a-f]{64}$/;
 const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 const PRD_REF = /^\.prd\/prd-v([1-9][0-9]{0,8})\.md$/;
 const MANIFEST_AT = /^\.prd\/evidence\/prd-v([1-9][0-9]{0,8})\/([0-9a-f]{40})\/manifest\.json$/;
-const REQ_ID = /^R-[0-9]{2,6}$/;
+// Requirement IDs are the PRD's own: R-01 from the template, or a supplied PRD's
+// REQ-1 / AC-12 style, kept verbatim rather than renamed.
+const REQ_ID = /^[A-Z][A-Z0-9]{0,7}-[0-9]{1,6}$/;
 const TICKET_ID = /^T-[0-9]{2,6}$/;
 const CHECK_ID = /^C-[0-9]{2,6}$/;
 const IMAGE = /\.(png|jpe?g|webp)$/i;
@@ -204,7 +206,7 @@ function validate(manifestArg, opts) {
     const label = `requirements[${index}]`;
     if (!isObject(req)) { problem(`${label} must be an object`); return; }
     const id = typeof req.id === 'string' && REQ_ID.test(req.id) ? req.id : null;
-    if (!id) problem(`${label}.id must be a requirement ID such as R-01`);
+    if (!id) problem(`${label}.id must be a requirement ID such as R-01 or the PRD's own REQ-1 (uppercase prefix, dash, digits)`);
     else if (requirements.has(id)) problem(`duplicate requirement ID ${id}`);
     else requirements.add(id);
     const name = id || label;
