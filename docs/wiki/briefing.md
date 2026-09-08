@@ -8,8 +8,9 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 
 ## Current state
 
-**Published: v0.2.3 on npm and `main` (2026-09-04).** **Unpublished: branch
-`fix/m0-trust`, 16 commits ahead of main, version still 0.2.3.** M0 is the
+**v0.3.0 is tagged and pushed on `main` (2026-09-08); npm publish pending
+(user runs `! npm publish --otp=<code>`).** `fix/m0-trust` is merged
+(fast-forward). M0 is the
 "repair trust" milestone from `docs/pincer-assessment-2026-09-05.md` and
 `docs/pincer-improvement-plan.md`: revocable verification receipts and PRD
 binding ([[revocable-receipts]]), manifest schema 2 with untrusted legacy
@@ -25,19 +26,19 @@ generated-parity plus packed-tarball tests ([[ticket-state-machine]]).
 including every cheat that reached the kit: receipt revocation, hand-edited
 status caught by validation, second PRD demoting the old candidate, update
 preserving a local AGENTS.md edit. Findings and verdict in
-`docs/dry-run-2026-09-08-sonnet.md` (uncommitted as of this briefing).
+`docs/dry-run-2026-09-08-sonnet.md`. `.prd/prd-v2.md` (draft, 2026-09-08)
+turns those findings into R-01..R-06; earlier tickets T-01..T-10 belong to
+PRD v1 and show as history in `pincer-status.sh`.
 
 ## Active / next task
 
-1. Commit the dry-run doc and this wiki update on `fix/m0-trust`; merge to
-   main; release as **0.3.0** via `docs/kit-maintenance-checklist.md`
-   (regenerate adapters + plugin, `npm test`, `npm version minor`,
-   `npm publish --otp=…` run by the user, `git push --follow-tags`).
-2. Next PRD for the kit, from the dry-run findings: verification blocks must
-   test behavior not identifiers; a home for visual evidence; one approval
-   rule for plan/narrow; PRD weight scaled to change size (M3 small-fix
-   profile). Small fixes to bundle: ticket-file restore blocked by the guard,
-   "no receipt written" wording, duplicate WARN, elapsed noise on built PRDs.
+1. Publish 0.3.0 to npm (`npm whoami` → `npm publish --otp=…`, user-run),
+   confirm the registry shows 0.3.0, confirm the CI matrix is green for the
+   v0.3.0 commit (`gh run list --workflow=ci.yml`).
+2. `/pincer-narrow` on `.prd/prd-v2.md`: behavioral verification blocks,
+   `.prd/evidence/prd-vN/` for evaluate/release, one approval rule for
+   plan/narrow, `profile: small|standard`, five small script/guard fixes,
+   dry-run checklist rewrite.
 3. Still untested: Copilot prompt chain in VS Code, Codex full chain, public
    plugin install.
 

@@ -68,3 +68,9 @@ What: wiki caught up with `fix/m0-trust` (16 commits, unpublished): new decision
 Why: the wiki had no record of M0; the 2026-09-08 dry run on Sonnet in a brownfield CRA repo confirmed every M0 guarantee live (receipt revocation, validation catching a hand edit, PRD v2 demoting the v1 candidate, update preserving a local AGENTS.md edit).
 Files: docs/dry-run-2026-09-08-sonnet.md (new, 9 findings + verdict), docs/wiki/{briefing,index,open-threads,log}.md, 2 new decision pages, 3 system pages.
 Outcome: nothing blocks tagging M0 as 0.3.0; findings 1–4 form the next kit PRD, 5–9 are small fixes. Dry-run doc and wiki still uncommitted on the branch.
+
+## [2026-09-08] end | v0.3.0 tagged and pushed; PRD v2 drafted from dry-run findings
+What: committed the dry-run doc + wiki on fix/m0-trust, fast-forwarded main, `npm version minor` → 0.3.0, regenerated adapters/plugin, README update paragraph + site stamp mention 0.3.0, `npm test` green (116 hook payloads), tag v0.3.0 pushed with main; `.prd/prd-v2.md` (draft) turns findings 1–9 into R-01..R-06.
+Why: dry run confirmed M0; the maintenance checklist items 1–5 are covered by `npm test`, item 6 by the CI matrix now running on the pushed commits.
+Files: README.md, docs/index.html, package.json, plugin/.claude-plugin/plugin.json, .prd/prd-v2.md, docs/wiki/{briefing,open-threads,log}.md.
+Outcome: npm publish still pending (needs the user's OTP); next is `/pincer-narrow` on PRD v2.
