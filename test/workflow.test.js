@@ -81,6 +81,21 @@ assert.match(narrow, /explicit `unverified` result, never fabricated/i);
 assert.match(code, /not behavioral proof/i);
 assert.match(code, /explicit `unverified` result/i);
 
+// R-03/R-04: the built transition precedes the candidate; evaluate persists validated evidence.
+assert.match(code, /commit that change on its own \(`PRD vN: built`\)/);
+assert.match(code, /never moved into a later evidence-only commit/i);
+assert.match(evaluate, /`git status --short` must be\s+empty before review/i);
+assert.match(evaluate, /do not review a dirty tree/i);
+assert.match(evaluate, /\.prd\/evidence\/prd-vN\/<candidate>\//);
+assert.match(evaluate, /pincer-evidence\.cjs validate .*--candidate <candidate> --prd/);
+assert.match(evaluate, /pincer-evidence\.cjs digest/);
+assert.match(evaluate, /^\s*evidence: \.prd\/evidence\/prd-vN\/<candidate>\/manifest\.json$/m);
+assert.match(evaluate, /`result: unverified`.*never a\s+fabricated artifact/is);
+assert.match(evaluate, /visual_review: \{applicable: false, reason\}/);
+assert.match(evaluate, /NOTES\.md, the manifest and its listed artifacts — and nothing else/);
+assert.match(evaluate, /never reuse a manifest from a previous candidate/i);
+assert.match(evaluate, /not that the commands ran/i);
+
 for (const source of [rootReadme, codex]) {
   assert.doesNotMatch(source, /Codex has no PreToolUse hooks/i);
   assert.match(source, /does not currently install a Codex hook adapter/i);

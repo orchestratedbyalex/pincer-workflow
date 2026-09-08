@@ -77,5 +77,7 @@ previously authorized work.
 
 ## When all tickets are done
 
-Update the PRD to `status: built`, then finish with:
+Update the PRD to `status: built` and commit that change on its own (`PRD vN: built`).
+The built transition is part of the candidate that `/pincer-evaluate` reviews; it is
+never moved into a later evidence-only commit. Then finish with:
 "All tickets built. Run `/pincer-evaluate` for a final quality pass."

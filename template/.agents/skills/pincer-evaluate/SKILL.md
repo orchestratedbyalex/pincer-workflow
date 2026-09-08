@@ -20,7 +20,10 @@ run the pipeline, then present results.
    its ticket commits and recorded context. If it cannot be established, resolve
    that uncertainty before claiming a complete review. Record full commit IDs for
    `base` and `candidate` (`git rev-parse HEAD`), then review `git diff <base>..<candidate>`.
-   Require a clean candidate before review, excluding only the notes being written.
+   The candidate is the clean, committed tree that already includes the implementation,
+   the ticket closures and the PRD `status: built` commit: `git status --short` must be
+   empty before review. If anything is uncommitted or the PRD is not yet built, return
+   to `$pincer-code`; do not review a dirty tree.
 2. Dispatch a `code-quality-reviewer` agent with: the diff, the PRD's Success Criteria and
    Scope sections, and the list of tickets. If the diff is large, split by area and
    dispatch two in parallel. (No subagents on this platform? Review the diff yourself
@@ -56,24 +59,48 @@ run the pipeline, then present results.
 8. Fix findings clearly within the authorized PRD through a new ticket associated with
    that PRD. Use `pincer-ticket.sh` to start, verify, and close it, then make a scoped
    `T-{NN}: {title}` commit. Ask only when a fix changes scope, architecture, or another
-   material decision; never make an ad-hoc `review: fixes` commit.
-9. Close out: write a brief `NOTES.md` at the repo root with frontmatter:
+   material decision; never make an ad-hoc `review: fixes` commit. Every fix commit
+   produces a new candidate: re-record `candidate`, re-run the checks against it, and
+   write fresh evidence in step 9 — never reuse a manifest from a previous candidate.
+9. Persist evidence for the candidate under `.prd/evidence/prd-vN/<candidate>/`:
+   - `checks/C-NN.log` — the command and a redacted summary or safe log of each
+     executable check. Never secrets, never an environment dump.
+   - `visual/<scenario>.png` — each visual capture from step 4, with its scenario,
+     viewport and observed result recorded in the manifest. When nothing renders,
+     record `visual_review: {applicable: false, reason}` and say why.
+   - `manifest.json` — evidence schema 1 (field list in the header of
+     `scripts/pincer-evidence.cjs`): selected PRD, full `base` and `candidate` IDs,
+     `created`, `environment` with tool limitations, `coverage_review` (your judgment
+     from step 3), one `requirements` entry per `R-NN` with its disposition, tickets
+     and check IDs, one `checks` entry per check with `kind`, `required`, `result`,
+     `command`, timestamp and artifact paths, and `artifacts` with digests from
+     `node scripts/pincer-evidence.cjs digest <file>...`.
+   A tool you cannot run yields a check with `result: unverified` and a note — never a
+   fabricated artifact. A deferred requirement carries `authorized_by` naming the
+   user's explicit authorization. Then run
+   `node scripts/pincer-evidence.cjs validate .prd/evidence/prd-vN/<candidate>/manifest.json --candidate <candidate> --prd .prd/prd-vN.md`
+   and correct the manifest until it prints `ok`; the same validator runs in status
+   and release. It checks the record's consistency, not that the commands ran.
+10. Close out: write a brief `NOTES.md` at the repo root with frontmatter:
    ```yaml
    ---
    prd: .prd/prd-vN.md
    base: <full reviewed base commit ID>
    candidate: <full reviewed candidate commit ID>
+   evidence: .prd/evidence/prd-vN/<candidate>/manifest.json
    ---
    ```
-   Record the candidate before the separate NOTES commit. Status accepts a later
-   commit only when its diff from the candidate changes solely `NOTES.md`; changes
-   to source, tickets, or PRD require reevaluation. Legacy notes without these
-   references do not establish readiness. Then describe what was built, what was cut
+   Then commit NOTES.md, the manifest and its listed artifacts — and nothing else —
+   as `evaluate: PRD vN candidate <short sha>`. Status accepts this later commit only
+   when its diff from the candidate is limited to `NOTES.md` and the evidence files
+   the manifest lists; changes to source, tests, configuration, tickets, the PRD or
+   other evaluations require reevaluation. Legacy notes without these references
+   do not establish readiness. Then describe what was built, what was cut
    and why, known issues, and what you'd do next with more time. Then a **Handover**
    section, written for the stranger who inherits this repo in six months: how to get
    oriented (which file to read first), what each dependency is for and why it earned
    its place, and what breaks first as the code ages (the riskiest assumption, the
-   least-tested path). Commit it. This is the first document a reviewer of this repo
-   should read.
-10. Suggest `$pincer-release` as the final step: "Run `$pincer-release` for a pass/fail audit of the
+   least-tested path). This is the first document a reviewer of this repo should read;
+   summarize the requirement dispositions from the manifest in it.
+11. Suggest `$pincer-release` as the final step: "Run `$pincer-release` for a pass/fail audit of the
    whole workflow's artifacts."

@@ -1,9 +1,13 @@
 ---
 ticket: T-14
-status: open
+status: done
 size: M
 prd: .prd/prd-v2.md
 depends_on: [T-11, T-13]
+started: 2026-09-08T14:35:58Z
+last_check: 2026-09-08T14:36:39Z passed d73c7d94a7f5
+verified: 2026-09-08T14:36:39Z d73c7d94a7f5
+finished: 2026-09-08T14:36:39Z
 ---
 
 ## Objective
@@ -25,10 +29,10 @@ Make evaluate select a clean committed candidate after the PRD built transition,
 - `test/workflow.test.js` asserts: code playbook commits the built transition; evaluate requires a clean committed candidate before review, writes the manifest under the evidence path, validates it with the helper, adds `evidence:` to NOTES.md, and limits the follow-up commit to NOTES.md plus listed evidence files.
 
 ## Acceptance Criteria
-- [ ] The code playbook commits the PRD built transition before evaluate selects the candidate, and the evaluate playbook refuses to review an uncommitted or dirty candidate.
-- [ ] The evaluate playbook writes `.prd/evidence/prd-vN/<candidate>/manifest.json` and artifacts per schema 1, validates them with the helper, and records why visual review is not applicable for non-UI work.
-- [ ] NOTES.md carries `evidence:` pointing at the manifest, and the follow-up commit is limited to NOTES.md plus the listed evidence files.
-- [ ] Review fixes require a new ticket, candidate and evaluation; `node test/workflow.test.js` covers these contracts and generated outputs match.
+- [x] The code playbook commits the PRD built transition before evaluate selects the candidate, and the evaluate playbook refuses to review an uncommitted or dirty candidate.
+- [x] The evaluate playbook writes `.prd/evidence/prd-vN/<candidate>/manifest.json` and artifacts per schema 1, validates them with the helper, and records why visual review is not applicable for non-UI work.
+- [x] NOTES.md carries `evidence:` pointing at the manifest, and the follow-up commit is limited to NOTES.md plus the listed evidence files.
+- [x] Review fixes require a new ticket, candidate and evaluation; `node test/workflow.test.js` covers these contracts and generated outputs match.
 
 ## Verification
 Proves: the playbooks carry the evidence and candidate-ordering contract (static contract, wording assertions) and generated outputs match; agent behavior itself is validated by the T-19 trials.
