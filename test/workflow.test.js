@@ -95,6 +95,16 @@ assert.match(evaluate, /visual_review: \{applicable: false, reason\}/);
 assert.match(evaluate, /NOTES\.md, the manifest and its listed artifacts — and nothing else/);
 assert.match(evaluate, /never reuse a manifest from a previous candidate/i);
 assert.match(evaluate, /not that the commands ran/i);
+assert.match(release, /does\s+not repair tickets, rewrite evidence, change PRD state, or publish/i);
+assert.match(release, /mutates\s+the candidate invalidates the audit/i);
+assert.match(release, /`Evidence` line `ok`/);
+assert.match(release, /Do not re-implement evidence checks/i);
+assert.match(release, /durable runtime-owned release record is later work/i);
+assert.match(release, /verdict naming the candidate/i);
+const releaseChecklist = read('template/docs/release-checklist.md');
+assert.match(releaseChecklist, /`evidence:` manifest/);
+assert.match(releaseChecklist, /visual_review\.applicable: false/);
+assert.match(releaseChecklist, /repaired no ticket, rewrote no evidence, changed no PRD state, and published nothing/);
 
 for (const source of [rootReadme, codex]) {
   assert.doesNotMatch(source, /Codex has no PreToolUse hooks/i);

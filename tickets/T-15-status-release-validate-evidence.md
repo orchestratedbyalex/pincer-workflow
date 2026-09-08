@@ -1,9 +1,13 @@
 ---
 ticket: T-15
-status: open
+status: done
 size: M
 prd: .prd/prd-v2.md
 depends_on: [T-13, T-14]
+started: 2026-09-08T14:36:40Z
+last_check: 2026-09-08T14:41:39Z passed cc263b6da56d
+verified: 2026-09-08T14:41:39Z cc263b6da56d
+finished: 2026-09-08T14:41:39Z
 ---
 
 ## Objective
@@ -25,10 +29,10 @@ Make status and release use the shared evidence validator, extend `notes_current
 - `test/workflow.test.js`: release playbook wording (no repair, no evidence rewrite, no PRD state change, no publish, mutation invalidates the audit).
 
 ## Acceptance Criteria
-- [ ] A candidate followed by a valid evidence-only commit reports `current`; source, PRD, ticket, unlisted-file and unrelated-evidence changes report `stale` with the path or reason named.
-- [ ] Legacy NOTES.md without `evidence:` reports stale with an explicit re-evaluation message; tampered or untracked evidence reports stale via the shared validator.
-- [ ] Status prints the evidence diagnostic and the audit leaves tracked and untracked state unchanged.
-- [ ] Release playbook and checklist read evidence through status, run the gate directly, and state the non-mutation guarantees; `node test/candidate.test.js`, `node test/recovery.test.js` and `node test/workflow.test.js` pass.
+- [x] A candidate followed by a valid evidence-only commit reports `current`; source, PRD, ticket, unlisted-file and unrelated-evidence changes report `stale` with the path or reason named.
+- [x] Legacy NOTES.md without `evidence:` reports stale with an explicit re-evaluation message; tampered or untracked evidence reports stale via the shared validator.
+- [x] Status prints the evidence diagnostic and the audit leaves tracked and untracked state unchanged.
+- [x] Release playbook and checklist read evidence through status, run the gate directly, and state the non-mutation guarantees; `node test/candidate.test.js`, `node test/recovery.test.js` and `node test/workflow.test.js` pass.
 
 ## Verification
 Proves: notes_current reports current only for a candidate plus its listed evidence and stale for every other change class, in temporary repositories; regression: a change class accepted or the audit mutating state.

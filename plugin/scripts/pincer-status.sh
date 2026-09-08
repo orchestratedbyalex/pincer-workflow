@@ -126,6 +126,17 @@ fi
 notes_valid=no
 if notes=$(notes_current "$prd"); then notes_valid=yes; fi
 echo "Notes    NOTES.md: $notes"
+# The evidence line reports the shared validator's verdict for the manifest the
+# notes name, independent of whether the candidate is still current.
+manifest=""
+[ -f NOTES.md ] && validate_metadata NOTES.md >/dev/null 2>&1 && manifest=$(fm_get NOTES.md evidence)
+if [ -n "$manifest" ]; then
+  if ev=$(evidence_validate "$manifest" "$(fm_get NOTES.md candidate)" "${prd:-.prd/prd-v0.md}"); then
+    echo "Evidence $manifest · ok"
+  else
+    echo "Evidence $manifest · $(evidence_reason "$ev")"
+  fi
+fi
 
 # ── Next action ──
 if [ -z "$prd" ]; then

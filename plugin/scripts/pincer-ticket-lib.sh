@@ -2,6 +2,17 @@
 # Shared, read-only parsing for the supported Pincer ticket format.
 # Validators return nonzero with a diagnostic; callers decide how to report it.
 
+PINCER_LIB_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+PINCER_EVIDENCE="$PINCER_LIB_DIR/pincer-evidence.cjs"
+
+# Run the shared evidence validator; prints its combined output, returns its status.
+# Usage: evidence_validate <manifest> <candidate> <prd> [--files]
+evidence_validate() {
+  command -v node >/dev/null 2>&1 || { printf 'evidence: %s: Node.js 18+ is required to validate evidence\n' "$1"; return 1; }
+  node "$PINCER_EVIDENCE" validate "$1" --candidate "$2" --prd "$3" "${@:4}" 2>&1
+}
+evidence_reason() { printf '%s\n' "$1" | head -1 | sed 's/^evidence: [^:]*: //'; }
+
 normalize() { # CLI shorthand -> canonical ID; bound arithmetic before conversion.
   local n=${1#T-}; n=${n#t-}
   if ! [[ $n =~ ^[0-9]{1,6}$ ]] || [ "$((10#$n))" -eq 0 ]; then
@@ -247,8 +258,13 @@ ticket_readiness() { # explain why a done ticket needs attention, without mutati
   if [ -n "$(unticked "$file")" ]; then printf 'unticked acceptance criteria — complete and re-run verify'; return 1; fi
 }
 
+# An evaluation is current when NOTES.md names this PRD, a reviewed base and
+# candidate that are ancestors of HEAD, and an evidence manifest that validates
+# for that candidate; after the candidate, only NOTES.md and the files the
+# manifest lists may have changed, all of them tracked, and the working tree is
+# clean apart from NOTES.md. Legacy notes without a manifest never grant readiness.
 notes_current() {
-  local prd=$1 candidate base changes
+  local prd=$1 candidate base changes manifest output listed file offending
   [ -f NOTES.md ] || { printf 'missing'; return 1; }
   validate_metadata NOTES.md >/dev/null 2>&1 || { printf 'stale: invalid or missing evaluation metadata'; return 1; }
   [ "$(fm_get NOTES.md prd)" = "$prd" ] || { printf 'stale: evaluation PRD does not match'; return 1; }
@@ -262,8 +278,21 @@ notes_current() {
      ! git merge-base --is-ancestor "$candidate" HEAD 2>/dev/null; then
     printf 'stale: evaluation commits or ancestry unavailable'; return 1
   fi
+  manifest=$(fm_get NOTES.md evidence)
+  if [ -z "$manifest" ]; then
+    printf 'stale: legacy evaluation without evidence manifest — re-run /pincer-evaluate for evidence schema 1'; return 1
+  fi
+  if ! output=$(evidence_validate "$manifest" "$candidate" "$prd" --files); then
+    printf 'stale: evidence invalid: %s' "$(evidence_reason "$output")"; return 1
+  fi
+  listed=$(printf '%s\n' "$output" | tail -n +2)
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    git ls-files --error-unmatch -- "$file" >/dev/null 2>&1 || { printf 'stale: evidence not tracked: %s' "$file"; return 1; }
+  done <<< "$listed"
   changes=$(git diff --name-only "$candidate" HEAD -- . ':(exclude)NOTES.md') || return 1
-  if [ -n "$changes" ]; then printf 'stale: candidate changed after evaluation'; return 1; fi
+  offending=$(printf '%s\n' "$changes" | grep -vxF -f <(printf '%s\n' "$listed") | grep -v '^$' | head -1)
+  if [ -n "$offending" ]; then printf 'stale: candidate changed after evaluation: %s' "$offending"; return 1; fi
   changes=$(git status --porcelain --untracked-files=all -- . ':(exclude)NOTES.md') || return 1
   if [ -n "$changes" ]; then printf 'stale: working tree has changes outside NOTES.md'; return 1; fi
   printf 'current (%s)' "$candidate"

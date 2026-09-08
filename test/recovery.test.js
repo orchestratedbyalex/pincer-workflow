@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { tempDir, createTicket, createPrd, write, read, step, run, statusScript, ticketScript } from './helpers.js';
+import { tempDir, createTicket, createPrd, write, read, step, run, statusScript, ticketScript, writeEvidence } from './helpers.js';
 
 const status = dir => run(dir, 'bash', [statusScript]);
 const next = dir => status(dir).stdout.split('\n').find(line => line.startsWith('Next')) || '';
@@ -82,16 +82,18 @@ createPrd(evaluated); const evaluatedFile = createTicket(evaluated, { command: '
 write(evaluated, 'source.txt', 'good'); complete(evaluated);
 write(evaluated, '.prd/prd-v1.md', read(evaluated, '.prd/prd-v1.md').replace('ticketed', 'built'));
 const candidate = commit(evaluated, 'candidate');
-const notes = `---\nprd: .prd/prd-v1.md\nbase: ${base}\ncandidate: ${candidate}\n---\n# Evaluation\nReviewed candidate.\n`;
+const evidence = writeEvidence(evaluated, { base, candidate });
+const notes = `---\nprd: .prd/prd-v1.md\nbase: ${base}\ncandidate: ${candidate}\nevidence: ${evidence.manifest}\n---\n# Evaluation\nReviewed candidate.\n`;
 assert.match(next(evaluated), /pincer-evaluate/);
-for (const invalidNotes of ['# legacy notes\n', notes.replace('prd-v1', 'prd-v2'), notes.replace(candidate, '0'.repeat(40)), notes.replace(candidate, base)]) {
+const legacyNotes = notes.replace(/^evidence:.*\n/m, '');
+for (const invalidNotes of ['# legacy notes\n', legacyNotes, notes.replace('prd-v1', 'prd-v2'), notes.replace(candidate, '0'.repeat(40)), notes.replace(candidate, base)]) {
   write(evaluated, 'NOTES.md', invalidNotes);
-  assert.match(next(evaluated), /pincer-evaluate/, 'unbound/wrong/stale notes must be reevaluated');
+  assert.match(next(evaluated), /pincer-evaluate/, 'unbound/legacy/wrong/stale notes must be reevaluated');
 }
 write(evaluated, 'NOTES.md', notes);
-assert.match(next(evaluated), /pincer-release/, 'matching notes with no changed inputs permit audit');
-commit(evaluated, 'evaluation notes');
-assert.match(next(evaluated), /pincer-release/, 'committing only NOTES must not invalidate itself');
+assert.match(next(evaluated), /pincer-evaluate/, 'evidence must be tracked before the candidate is release-ready');
+commit(evaluated, 'evaluation notes and evidence');
+assert.match(next(evaluated), /pincer-release/, 'committing NOTES with its listed evidence must not invalidate itself');
 const beforeStatus = read(evaluated, evaluatedFile);
 status(evaluated);
 assert.equal(read(evaluated, evaluatedFile), beforeStatus);
