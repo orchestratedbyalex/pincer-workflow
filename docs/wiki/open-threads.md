@@ -1,9 +1,9 @@
 # Open threads
 
-- [2026-09-08] PRD v2 built on `feat/prd-v2` (T-11..T-19); still to do on this repo itself: `PRD v2: built` commit, `/pincer-evaluate` writing `.prd/evidence/prd-v2/<candidate>/`, `/pincer-release`, merge to main, `npm version minor` (0.4.0) and publish ([[candidate-evidence]])
-- [2026-09-08] Confirm the CI matrix is green for the v0.3.0 tag and for `feat/prd-v2` (`gh run list --workflow=ci.yml`) ([[distribution-channels]])
+- [2026-09-09] v0.4.0 is tagged locally on `main` but not published or pushed; after `npm publish --otp` and `git push --follow-tags`, confirm CI is green for the v0.4.0 tag — it never ran on the PRD v2 commits (`gh run list --workflow=ci.yml`) ([[distribution-channels]])
 - [2026-09-08] Live trials were run non-interactively (`claude -p --model sonnet --permission-mode bypassPermissions`, one session per stage); an interactive trial with questions answered by a human is still untested ([[requirements-through-delivery]])
-- [2026-09-08] The NOTES.md at the repo root is the PRD v1 evaluation; after PRD v2 evaluation it is replaced — keep the v1 evidence gap noted in the handover ([[candidate-evidence]])
+- [2026-09-08] R-05 "new consequential decision during narrow" and R-06 "failed recheck" were never observed live; covered by wording tests and `test/recovery.test.js` only ([[candidate-evidence]])
+- [2026-09-08] The PRD v1 evaluation (legacy NOTES.md, no evidence manifest) survives only in git history before `6518cfb`; the v1 evidence gap is by design ([[candidate-evidence]])
 - [2026-09-02] No trusted-publishing workflow (OIDC, publish on tag); CI now runs tests only ([[distribution-channels]])
 - [2026-09-02] The private lead-engineer-role-alexander repo has its own kit copy with no back-sync mechanism — decide which is upstream ([[template-kit]])
 - [2026-09-02] Plugin install untested in a real Claude Code session (local marketplace add path documented in README) ([[distribution-channels]])

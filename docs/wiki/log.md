@@ -97,3 +97,9 @@ Outcome: npm publish still pending (needs the user's OTP); next is `/pincer-narr
 - Why: evaluate playbook step 8 — fixes go through a ticket and a new candidate; T-19's requirements named the two scenarios.
 - Files: template/scripts/pincer-ticket-lib.sh, pincer-status.sh, pincer-evidence.cjs, template/.claude/hooks/hook-policy.cjs, template/.claude/commands/pincer-code.md, test/*, docs/trial-2026-09-08-*.md, .prd/evidence/prd-v2/2952e62…/ (superseded record).
 - Outcome: new candidate to be evaluated with a fresh manifest; NOTES.md will point at it.
+
+## [2026-09-09] end | feat/prd-v2 merged to main; v0.4.0 bumped and tagged, publish pending
+- Reviewed the branch (npm test green, generators clean, tarball carries `pincer-evidence.cjs`, status `current` / evidence `ok`) and fast-forwarded `main` to `6518cfb`.
+- Bumped to 0.4.0 with `npm version minor --no-git-tag-version`, rebuilt `plugin/` (its manifest embeds the version), committed by hand as `v0.4.0: …` with an annotated tag, mirroring v0.3.0.
+- Files: package.json, plugin/.claude-plugin/plugin.json, README.md (v0.4.0 update note), docs/index.html (stamp, timebox copy removed, evidence row), wiki briefing/open-threads/log.
+- Outcome: status now reports the candidate changed (package.json) by design; user-run `npm publish --otp` and `git push --follow-tags` remain.
