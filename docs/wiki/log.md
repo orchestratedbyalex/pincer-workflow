@@ -103,3 +103,9 @@ Outcome: npm publish still pending (needs the user's OTP); next is `/pincer-narr
 - Bumped to 0.4.0 with `npm version minor --no-git-tag-version`, rebuilt `plugin/` (its manifest embeds the version), committed by hand as `v0.4.0: …` with an annotated tag, mirroring v0.3.0.
 - Files: package.json, plugin/.claude-plugin/plugin.json, README.md (v0.4.0 update note), docs/index.html (stamp, timebox copy removed, evidence row), wiki briefing/open-threads/log.
 - Outcome: status now reports the candidate changed (package.json) by design; user-run `npm publish --otp` and `git push --follow-tags` remain.
+
+## [2026-09-09] end | v0.4.0 published and pushed; CI green
+- User published 0.4.0 (registry showed it after ~2 min); `git push --follow-tags` sent 21 commits and the tag.
+- CI runs 34323868697 (main) and 34323868930 (v0.4.0 tag) both succeeded — first CI coverage of the PRD v2 work.
+- Files: wiki briefing, open-threads, log only.
+- Outcome: release complete; nothing in flight.

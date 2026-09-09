@@ -8,8 +8,8 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 
 ## Current state
 
-**PRD v2 is merged to `main` and v0.4.0 is bumped and tagged locally
-(2026-09-09); `npm publish` and `git push --follow-tags` are pending.**
+**v0.4.0 is published on npm, tagged and pushed on `main` (2026-09-09);
+CI is green for both the `main` and `v0.4.0` runs.**
 PRD v2 ("Make requirements and release evidence reviewable", `.prd/prd-v2.md`,
 `profile: standard`) shipped as T-11..T-23: stable `R-NN` requirement IDs from
 plan to evaluation, `Proves:` behavioral checks, `profile: small|standard`, one
@@ -29,13 +29,10 @@ two-hour timebox and lists the evidence validator.
 
 ## Active / next task
 
-1. Publish: user runs `! npm publish --otp=<code>` on `main` at the v0.4.0
-   commit, then `git push --follow-tags` (pushes 21 commits and the tag; CI has
-   never run on the PRD v2 work, so check `gh run list --workflow=ci.yml`).
-2. Next PRD candidates (`docs/pincer-improvement-plan.md`): M1 runtime that
+1. Nothing in flight. Next PRD candidates (`docs/pincer-improvement-plan.md`): M1 runtime that
    absorbs `notes_current` and writes the reviewer transcript itself; an
    interactive (question-answering) trial; a Codex run of the full chain.
-3. Still untested: Copilot prompt chain in VS Code, public plugin install.
+2. Still untested: Copilot prompt chain in VS Code, public plugin install.
 
 ## Recent decisions
 
