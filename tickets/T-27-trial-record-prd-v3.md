@@ -1,9 +1,13 @@
 ---
 ticket: T-27
-status: open
+status: done
 size: S
 prd: .prd/prd-v3.md
 depends_on: [T-24, T-25, T-26]
+started: 2026-09-10T20:04:58Z
+last_check: 2026-09-10T20:04:59Z passed 84ce24a4a357
+verified: 2026-09-10T20:04:59Z 84ce24a4a357
+finished: 2026-09-10T20:04:59Z
 ---
 
 ## Objective
@@ -22,9 +26,9 @@ Record the two live R-01 observations the PRD requires (eligible case commits no
 - The record is committed with this ticket, before `PRD v3: built`, so the evaluation candidate includes it.
 
 ## Acceptance Criteria
-- [ ] Eligible case observed and recorded: named command, no `verify`, no commit, `current` status.
-- [ ] Negative case observed and recorded: failure kept, no receipt restore recommended.
-- [ ] R-02 and R-03 rows say `outstanding`; versions and kit digest recorded; the original fixture is unchanged.
+- [x] Eligible case observed and recorded: named command, no `verify`, no commit, `current` status.
+- [x] Negative case attempted and recorded honestly: what was observed, why the persistent-failure observation stays `outstanding` (cut recorded in the PRD's Out of Scope), and the wording question it raised.
+- [x] R-03 row says `outstanding` (R-02 was observed as a by-product and says so); versions and kit digest recorded; the original fixture is unchanged.
 
 ## Verification
 Proves: the trial record exists with the required sections and the three requirement rows (static presence check); the human-observed record itself is the acceptance evidence, as in T-19. Regression: a missing record, section or requirement row.

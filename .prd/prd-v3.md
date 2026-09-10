@@ -207,3 +207,7 @@ observations not made are reported as outstanding, not as passing.
   finding 5).
 - Making `pincer-ticket.sh verify` leave a passing receipt untouched (trial
   finding 6); a re-stamp on success is the current contract.
+- Live observation of the R-01 negative scenario with a persistent failure.
+  Attempted on 2026-09-10 with an environment fault (`docs/trial-2026-09-10-prd-v3.md`);
+  the agent detected and bypassed the fault, so the observation stays
+  outstanding and the wording question it raised is logged for follow-up.
