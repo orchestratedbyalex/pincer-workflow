@@ -1,9 +1,13 @@
 ---
 ticket: T-26
-status: open
+status: done
 size: S
 prd: .prd/prd-v3.md
 depends_on: []
+started: 2026-09-10T19:50:08Z
+last_check: 2026-09-10T19:53:27Z passed c2c752b9e340
+verified: 2026-09-10T19:53:27Z c2c752b9e340
+finished: 2026-09-10T19:53:27Z
 ---
 
 ## Objective
@@ -24,8 +28,8 @@ Tell the plan playbook to ask a partly answered discovery question only for its 
 - The dry-run checklist box "Discovery asked ≤4 questions and none were already answered by the brief" is unchanged.
 
 ## Acceptance Criteria
-- [ ] Step 2 and step 3 carry the rule; the budget, batching and design question are unchanged.
-- [ ] Wording assertions pass; generated outputs current.
+- [x] Step 2 and step 3 carry the rule; the budget, batching and design question are unchanged.
+- [x] Wording assertions pass; generated outputs current.
 
 ## Verification
 Proves: the rule is present in the source playbook and the generated plugin, the existing plan assertions and the budget wording survive, and the suite passes; regression: a phrase missing, the budget or "Never ask a question the brief already answers" removed, or stale generated output. Static assertions are primary evidence for this playbook-text contract.

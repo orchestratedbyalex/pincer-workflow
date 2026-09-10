@@ -34,12 +34,20 @@ unless the user explicitly authorized a separate change.
    IDs; do not silently replace either. Where its structure needs adapting to the
    template, record a mapping table (`their section or ID → R-NN`) inside the PRD.
 2. Ask only the questions whose answers would change the architecture or scope.
-   Batch them (max 3–4 at once). Typical ones:
+   Batch them (max 3–4 at once). A question the brief partly answers is
+   asked only for its open part, naming the settled part; when the brief settles
+   every material decision, including acceptance behavior, ask no discovery
+   question and record the brief's answers. Do not add a question to fill the budget.
+   Typical ones:
    - What does "done" look like — what will be run, demoed, or reviewed at the end?
+     A named test runner settles the verification choice, not every acceptance
+     behavior; ask about the demo or manual check only if that is still open.
    - Any required stack, or is it my choice?
    - What is explicitly out of scope?
 3. If the project has a frontend, ask one design question: "What should this feel like,
    and what should it NOT look like?" Capture the answer for the Visual Direction section.
+   The same rule applies: when the brief already supplies design direction, record it
+   and ask only about what it leaves open.
 
 Summarize your understanding in 3–5 sentences. Existing authorization in the request or
 session carries forward; ask only about an unresolved choice that materially changes the result.

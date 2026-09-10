@@ -17,6 +17,13 @@ assert.match(plan, /next unused .*prd-v\{N\}/i);
 assert.match(plan, /concrete scope and architecture/i);
 assert.doesNotMatch(plan, /Save to `\.prd\/prd-v1\.md`/);
 assert.match(plan, /do not repeat an approval already given/i);
+// PRD v3 R-03: ask only the open part of a partly answered question; budget and design question stay.
+assert.match(plan, /Never ask a question the brief already answers/);
+assert.match(plan, /asked only for its open part, naming the settled part/);
+assert.match(plan, /Do not add a question to fill the budget/);
+assert.match(plan, /max 3–4 at once/);
+assert.match(plan, /ask one design question/);
+assert.match(plan, /already supplies design direction, record it\s+and ask only about what it leaves open/);
 
 assert.match(narrow, /Ticket count and size follow/i);
 assert.match(narrow, /greenfield.*walking skeleton/is);
