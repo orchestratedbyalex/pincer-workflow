@@ -110,6 +110,9 @@ observes agent behavior, and one trial on one surface says nothing about the oth
 - [ ] `.prd/evidence/prd-vN/<candidate>/manifest.json` exists and
       `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-evidence.cjs validate <manifest> --candidate <sha> --prd .prd/prd-vN.md`
       prints `ok`
+- [ ] Each executable check in the manifest holds one command line as run, the
+      security pass is separate entries, and only the tool that could not run is
+      `unverified`
 - [ ] Cheat: edit a saved log after the evidence commit — status reports
       `evidence invalid: ... digest mismatch`
 - [ ] Evaluation fixes were completed through new tickets, produced a new candidate,

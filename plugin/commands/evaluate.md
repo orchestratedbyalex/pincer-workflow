@@ -64,7 +64,16 @@ run the pipeline, then present results.
    write fresh evidence in step 9 — never reuse a manifest from a previous candidate.
 9. Persist evidence for the candidate under `.prd/evidence/prd-vN/<candidate>/`:
    - `checks/C-NN.log` — the command and a redacted summary or safe log of each
-     executable check. Never secrets, never an environment dump.
+     executable check. Never secrets, never an environment dump. Record
+     one check per command: `command` holds the command line as run, never prose
+     describing a session, and a manual smoke run is recorded as the command lines
+     that were run (separate entries when they establish independent outcomes).
+     Independently assessed commands — the tracked `.env` check, the secret scan,
+     the dependency audit — are separate `checks` entries with their own `result`
+     and log, so only the tool that could not run is `unverified`. A test runner
+     such as `npm test` stays one aggregate check; do not split every subprocess or
+     assertion. Visual and review checks keep their kinds and get no artificial
+     shell command. Note a redaction rather than inventing a substitute command.
    - `visual/<scenario>.png` — each visual capture from step 4, with its scenario,
      viewport and observed result recorded in the manifest. When nothing renders,
      record `visual_review: {applicable: false, reason}` and say why.

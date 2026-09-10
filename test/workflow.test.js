@@ -95,6 +95,11 @@ assert.match(evaluate, /visual_review: \{applicable: false, reason\}/);
 assert.match(evaluate, /NOTES\.md, the manifest and its listed artifacts — and nothing else/);
 assert.match(evaluate, /never reuse a manifest from a previous candidate/i);
 assert.match(evaluate, /not that the commands ran/i);
+// PRD v3 R-02: one check per command, command line as run; npm test stays aggregate.
+assert.match(evaluate, /one check per command: `command` holds the command line as run/);
+assert.match(evaluate, /only the tool that could not run is `unverified`/);
+assert.match(evaluate, /such as `npm test` stays one aggregate check/);
+assert.match(read('template/docs/dry-run-checklist.md'), /holds one command line as run/);
 assert.match(release, /does\s+not repair tickets, rewrite evidence, change PRD state, or publish/i);
 assert.match(release, /mutates\s+the candidate invalidates the audit/i);
 assert.match(release, /`Evidence` line `ok`/);

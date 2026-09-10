@@ -1,9 +1,13 @@
 ---
 ticket: T-25
-status: open
+status: done
 size: S
 prd: .prd/prd-v3.md
 depends_on: []
+started: 2026-09-10T19:46:45Z
+last_check: 2026-09-10T19:50:06Z passed 4d31eb5ee1ca
+verified: 2026-09-10T19:50:06Z 4d31eb5ee1ca
+finished: 2026-09-10T19:50:06Z
 ---
 
 ## Objective
@@ -24,9 +28,9 @@ Make evaluate's evidence step record one executable check per command, with the 
 - `template/scripts/pincer-evidence.cjs` and evidence schema 1 are unchanged; `test/evidence.test.js` passes as it is.
 
 ## Acceptance Criteria
-- [ ] Step 9 carries the rule, the security-pass example and the `npm test` aggregate boundary.
-- [ ] The checklist box exists and the wording assertions pass.
-- [ ] Validator and evidence tests unchanged and passing; generated outputs current.
+- [x] Step 9 carries the rule, the security-pass example and the `npm test` aggregate boundary.
+- [x] The checklist box exists and the wording assertions pass.
+- [x] Validator and evidence tests unchanged and passing; generated outputs current.
 
 ## Verification
 Proves: the rule is present in the source playbook, checklist and generated plugin and the suite passes with the validator untouched; regression: a phrase missing, stale generated output, or an evidence test failing. Static assertions are primary evidence for this playbook-text contract.
