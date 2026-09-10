@@ -109,3 +109,9 @@ Outcome: npm publish still pending (needs the user's OTP); next is `/pincer-narr
 - CI runs 34323868697 (main) and 34323868930 (v0.4.0 tag) both succeeded — first CI coverage of the PRD v2 work.
 - Files: wiki briefing, open-threads, log only.
 - Outcome: release complete; nothing in flight.
+
+## [2026-09-10] end | First interactive Sonnet trial on published 0.4.0: release PASS, one recovery finding
+- Fixture `~/Documents/dev/personal/pincer-trial-interactive` from `npx pincer-workflow@0.4.0 init`; user drove one interactive session through all five stages, operator audited from a second terminal and injected faults.
+- Observed live for the first time: human-answered plan questions (3, none re-asked at narrow), the fix-ticket path in evaluate (reviewer bugs → T-03 → new candidate), the R-06 failed-recheck message and status, the evidence digest mismatch.
+- Finding 1: asked to git-checkout a ticket, the assistant declined by judgment, reverted the source itself, re-verified and committed a receipt refresh, which R-04 treated as a new candidate; a second evaluation was needed. Recorded as a playbook follow-up.
+- Files: `docs/trial-2026-09-10-interactive.md` (new), `docs/wiki/briefing.md`, `docs/wiki/open-threads.md`.

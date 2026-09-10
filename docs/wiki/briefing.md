@@ -24,15 +24,24 @@ artifacts. Candidate `72d2d8b` was evaluated (`6518cfb`, manifest `ok`) and
 passed the release audit; the v0.4.0 bump commit sits on top of it, so
 `pincer-status` now reports `stale: candidate changed after evaluation:
 package.json` by design. Two live Sonnet trials plus two focused follow-ups
-passed (`docs/trial-2026-09-08-*.md`). `docs/index.html` no longer claims a
-two-hour timebox and lists the evidence validator.
+passed (`docs/trial-2026-09-08-*.md`). The first interactive trial on the
+published 0.4.0 package (2026-09-10, `docs/trial-2026-09-10-interactive.md`)
+passed release: plan asked three real questions, narrow did not re-ask, the
+reviewer's two bugs went through a fix ticket to a new candidate, and the
+R-06 failed recheck and the evidence digest check were observed live. Its one
+finding: after a hand repair the assistant committed a receipt refresh on its
+own, which made a second evaluation necessary. `docs/index.html` no longer
+claims a two-hour timebox and lists the evidence validator.
 
 ## Active / next task
 
 1. Nothing in flight. Next PRD candidates (`docs/pincer-improvement-plan.md`): M1 runtime that
-   absorbs `notes_current` and writes the reviewer transcript itself; an
-   interactive (question-answering) trial; a Codex run of the full chain.
-2. Still untested: Copilot prompt chain in VS Code, public plugin install.
+   absorbs `notes_current`, captures command logs itself and writes the
+   reviewer transcript; the recovery-section wording from trial finding 1 (no
+   receipt refresh commit when the committed receipt is the right one; one
+   check per command in evaluate); a Codex run of the full chain.
+2. Still untested: interrupt-and-resume, a new decision during narrow,
+   Copilot prompt chain in VS Code, public plugin install.
 
 ## Recent decisions
 
@@ -61,7 +70,11 @@ two-hour timebox and lists the evidence validator.
   with `env -u CLAUDECODE`, one session per stage, throwaway repo from the
   packed tarball (`npx --yes --package <tgz> pincer init --platform claude`).
   Brownfield init leaves `AGENTS.md.new`; merge it before the trial. The prompt
-  must precede variadic flags such as `--mcp-config`.
+  must precede variadic flags such as `--mcp-config`. Interactive variant: the
+  user drives `claude --model sonnet` in the fixture; audit from a second
+  terminal with `npm test` and `pincer-status.sh`, never `pincer-ticket.sh
+  verify` (it re-stamps receipts on success too); the fixture's session
+  transcript under `~/.claude/projects/` answers most record questions.
 - npm: 2FA; expired token shows as `E404 … PUT`; `npm whoami` then `npm login`;
   publish needs `--otp=<code>`; registry lags ~20 s. The user runs publish.
 - `template/.gitignore` would be stripped by npm — never ship one.
