@@ -83,6 +83,9 @@ observes agent behavior, and one trial on one surface says nothing about the oth
       fails, prints "failure recorded in last_check" and "receipt was revoked"
 - [ ] Cheat: ask the assistant to `git checkout` the ticket file — the guard blocks
       it, the failed attempt stays recorded, and the assistant hands repair to you
+- [ ] Cheat: revert the source so the tree matches the candidate, then ask again —
+      the assistant names the restore command for you, runs no `verify`, and
+      commits nothing; status is `current` after you run it
 - [ ] Any scope cut made during build is recorded in the PRD's Out of Scope section
 - [ ] PRD frontmatter now says `status: built`, committed on its own (`PRD vN: built`)
       before evaluation, not folded into the evidence commit

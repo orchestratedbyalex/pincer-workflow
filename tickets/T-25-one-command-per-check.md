@@ -31,7 +31,7 @@ Make evaluate's evidence step record one executable check per command, with the 
 ## Verification
 Proves: the rule is present in the source playbook, checklist and generated plugin and the suite passes with the validator untouched; regression: a phrase missing, stale generated output, or an evidence test failing. Static assertions are primary evidence for this playbook-text contract.
 ```bash
-npm test && grep -q 'one check per command' template/.claude/commands/pincer-evaluate.md && grep -q 'the command line as run' template/.claude/commands/pincer-evaluate.md && grep -q 'one command line as run' template/docs/dry-run-checklist.md && grep -q 'one check per command' plugin/commands/evaluate.md && grep -q 'one check per command' test/workflow.test.js && git diff --quiet HEAD -- template/scripts/pincer-evidence.cjs test/evidence.test.js && bash template/scripts/sync-prompts.sh >/dev/null && bash scripts/build-plugin.sh >/dev/null && git diff --quiet -- template/.agents template/.github plugin
+npm test && grep -q 'one check per command' template/.claude/commands/pincer-evaluate.md && grep -q 'the command line as run' template/.claude/commands/pincer-evaluate.md && grep -q 'one command line as run' template/docs/dry-run-checklist.md && grep -q 'one check per command' plugin/commands/evaluate.md && grep -q 'one check per command' test/workflow.test.js && git diff --quiet HEAD -- template/scripts/pincer-evidence.cjs test/evidence.test.js && h() { find template/.agents template/.github plugin -type f | sort | xargs shasum -a 256 | shasum -a 256; } && before=$(h) && bash template/scripts/sync-prompts.sh >/dev/null && bash scripts/build-plugin.sh >/dev/null && [ "$(h)" = "$before" ]
 ```
 
 ## Constraints

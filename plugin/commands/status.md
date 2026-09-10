@@ -21,3 +21,5 @@ start of a session. Read-only: change nothing.
    `/pincer:code T-{NN}`. If the script printed a warning, surface it — a done ticket
    without a receipt was marked by hand and needs `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-ticket.sh verify T-{NN}`.
    Never restore a ticket file from git to clear a warning; a failed attempt is a record.
+   The one exception is the tree-back-at-candidate case in the recovery section of
+   `/pincer:code`: the user restores the ticket file, and nothing is verified or committed.

@@ -1,9 +1,13 @@
 ---
 ticket: T-24
-status: open
+status: done
 size: M
 prd: .prd/prd-v3.md
 depends_on: []
+started: 2026-09-10T19:39:09Z
+last_check: 2026-09-10T19:46:38Z passed cb51253e7ed1
+verified: 2026-09-10T19:46:38Z cb51253e7ed1
+finished: 2026-09-10T19:46:38Z
 ---
 
 ## Objective
@@ -26,14 +30,14 @@ Add the one recovery exception to the code and status playbooks: when the tree i
 - Both generators are run and their outputs committed with the edit; `test/distribution.test.js` passes.
 
 ## Acceptance Criteria
-- [ ] The code playbook carries the exception with its three conditions, the negative case and the remaining-source-changes case, and every pre-existing R-06 assertion still passes unchanged.
-- [ ] The status playbook and the dry-run checklist carry their one-sentence and one-box counterparts.
-- [ ] `test/workflow.test.js` pins the new phrases; running the generators again produces no diff.
+- [x] The code playbook carries the exception with its three conditions, the negative case and the remaining-source-changes case, and every pre-existing R-06 assertion still passes unchanged.
+- [x] The status playbook and the dry-run checklist carry their one-sentence and one-box counterparts.
+- [x] `test/workflow.test.js` pins the new phrases; running the generators again produces no diff.
 
 ## Verification
 Proves: the new wording is present in the source playbooks, the checklist and the generated plugin, and the full suite (including the unchanged R-06 assertions and distribution parity) passes; regression: any listed phrase missing from source or plugin, or stale generated output. Static assertions are primary evidence here because the change is playbook text, a static contract; agent compliance is observed in T-27.
 ```bash
-npm test && grep -q 'the committed evaluation still describes the tree' template/.claude/commands/pincer-code.md && grep -q 'does not authorize discarding source changes' template/.claude/commands/pincer-code.md && grep -q 'nothing is verified or committed' template/.claude/commands/pincer-status.md && grep -q 'commits nothing' template/docs/dry-run-checklist.md && grep -q 'the committed evaluation still describes the tree' plugin/commands/code.md && grep -q 'nothing is verified or committed' plugin/commands/status.md && grep -q 'the committed evaluation still describes the tree' test/workflow.test.js && bash template/scripts/sync-prompts.sh >/dev/null && bash scripts/build-plugin.sh >/dev/null && git diff --quiet -- template/.agents template/.github plugin
+npm test && grep -q 'the committed evaluation still describes the tree' template/.claude/commands/pincer-code.md && grep -q 'does not authorize discarding source changes' template/.claude/commands/pincer-code.md && grep -q 'nothing is verified or committed' template/.claude/commands/pincer-status.md && grep -q 'commits nothing' template/docs/dry-run-checklist.md && grep -q 'the committed evaluation still describes the tree' plugin/commands/code.md && grep -q 'nothing is verified or committed' plugin/commands/status.md && grep -q 'the committed evaluation still describes the tree' test/workflow.test.js && h() { find template/.agents template/.github plugin -type f | sort | xargs shasum -a 256 | shasum -a 256; } && before=$(h) && bash template/scripts/sync-prompts.sh >/dev/null && bash scripts/build-plugin.sh >/dev/null && [ "$(h)" = "$before" ]
 ```
 
 ## Constraints

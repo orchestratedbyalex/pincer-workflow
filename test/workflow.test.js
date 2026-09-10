@@ -137,8 +137,15 @@ assert.match(code, /`git reset --hard\|--merge\|--keep`, `git stash`/);
 assert.match(code, /Branch\s+switches and file-specific restores outside `tickets\/` stay allowed/);
 assert.match(code, /safety net for documented mistake forms, not a complete shell\s+boundary/i);
 assert.match(code, /not a measure\s+of active execution time/i);
+// PRD v3 R-01: the one exception — tree back at the evaluated candidate, check passes directly.
+assert.match(code, /the committed evaluation still describes the tree/);
+assert.match(code, /do not run `verify`, refresh the receipt or commit anything/);
+assert.match(code, /If the block fails on that clean tree,\s+the failure is real/);
+assert.match(code, /does not authorize discarding source changes/);
 const statusPlaybook = read('template/.claude/commands/pincer-status.md');
 assert.match(statusPlaybook, /Never restore a ticket file from git/i);
+assert.match(statusPlaybook, /the user restores the ticket file, and nothing is verified or committed/);
+assert.match(read('template/docs/dry-run-checklist.md'), /runs no `verify`, and\s+commits nothing/);
 assert.match(read('template/scripts/pincer-status.sh'), /wall-clock elapsed/);
 const releaseChecklist = read('template/docs/release-checklist.md');
 assert.match(releaseChecklist, /`evidence:` manifest/);
