@@ -1,9 +1,13 @@
 ---
 ticket: T-31
-status: open
+status: done
 size: M
 prd: .prd/prd-v4.md
 depends_on: [T-30]
+started: 2026-09-11T09:51:00Z
+last_check: 2026-09-11T09:55:27Z passed b5f98bf01619
+verified: 2026-09-11T09:55:27Z b5f98bf01619
+finished: 2026-09-11T09:55:27Z
 ---
 
 ## Objective
@@ -21,9 +25,9 @@ Implement the shared parser module in Node with the same supported grammar and d
 - `test/runtime-parse.test.js` runs the malformed table from `test/validation.test.js` against the Node validator with the same diagnostic patterns, every supported checkbox marker, the fenced-example case, PRD profile cases, and the normalization cases: ticking a box, changing `status`/`started`/`finished`/`verified`/`last_check` leaves `ticketDigest` unchanged; editing acceptance text, the Verification block, `depends_on`, `size` or `timeout` changes it; changing a PRD `status` leaves `prdDigest` unchanged while any other edit changes it. It is added to `npm test`.
 
 ## Acceptance Criteria
-- [ ] Every malformed case rejected by the Bash validator is rejected by the Node validator with a matching diagnostic; every valid case is accepted.
-- [ ] Normalization matches the contract: lifecycle fields and checkbox marks are the only exceptions; unsupported `timeout` values are rejected.
-- [ ] `npm test` passes with the new suite.
+- [x] Every malformed case rejected by the Bash validator is rejected by the Node validator with a matching diagnostic; every valid case is accepted.
+- [x] Normalization matches the contract: lifecycle fields and checkbox marks are the only exceptions; unsupported `timeout` values are rejected.
+- [x] `npm test` passes with the new suite.
 
 ## Verification
 Proves: the Node parser accepts the supported grammar, rejects each malformed form before any mutation, and normalizes exactly the contracted fields; regression: a malformed ticket accepted, a valid one rejected, or a checkbox tick changing the authored digest.
