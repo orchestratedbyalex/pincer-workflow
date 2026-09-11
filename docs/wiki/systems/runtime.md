@@ -98,3 +98,42 @@ Decision: [[runtime-owned-verification]]. Extends [[ticket-state-machine]],
   `test/fixtures/`: `local-service.cjs`, `hold-lock.cjs`, `grandchild.sh`.
 - The repo itself is NOT migrated (PRD v4 §9 dogfooding); its own tickets used the
   pinned v0.4.1 kit from `1cb5ab4` in the session scratchpad.
+
+## PRD v5 additions (feat/prd-v5, 2026-09-11, T-47..T-56)
+
+Changes mode (schema 2 records under `.prd/changes/`) sits next to legacy and migrated
+(v0.5.0 schema 1 binding) modes; `identity.loadBinding` returns `CHANGES_MODE` and
+callers branch. Contract: `template/docs/runtime-contracts.md` sections "Change
+records" … "Worktrees", pinned by `test/change-contracts.test.js`.
+
+- `transaction.cjs` — `run(root, {command, hooks}, fn)`: lock, `recoverPending`,
+  `ctx.read/text/write/expect/idle/refuse`, staging under `journal/txn-*/` with a
+  `manifest.json` commit point, idempotent redo; `pending()` for read-only
+  `STATE_INCOMPLETE`; `boundedText` (2000 chars). `state.recover` calls
+  `recoverPending` first.
+- `changes.cjs` — record validation (`validateRecord`, projection `replay`), `scan`
+  (mode), `loadRecords` (ownership, supersession chains, snapshot verification,
+  pending txn), `register` (schema 2), selection (`readSelection`, `select`,
+  `resolveSelected` with `--change`), `view` (HEAD/branch/base ancestry/dirty),
+  `ticketOwner`, list/show rendering.
+- `agreement.cjs` — projection version 1, `compute`, snapshots
+  `.prd/changes/<id>/agreements/G-NN.json` (`readSnapshot` recomputes digests),
+  structural `difference`, `revise`, `appendAgreement`.
+- `authorization.cjs` — `verdict` (current | DECISION_REQUIRED |
+  AUTHORIZATION_REQUIRED | AGREEMENT_CHANGED), `authorize` (user/delegated, idempotent,
+  records G-NN in the same event), `decide` (raise/resolve).
+- `transitions.cjs` — the seven lifecycle ops as single transactions; `complete`
+  runs `status.render` under the lock for ticket readiness.
+- `gates.cjs` — `guard` for start/done/verify/check/export (order: records →
+  selection → WRONG_CHANGE → LIFECYCLE_BLOCKED → BASE_MISMATCH → verdict); returns the
+  `binding` (with `agreement`, `mode: 'changes'`) that `lifecycle.cjs` and the runner use.
+- `locator.cjs` — `.prd/evidence/changes/<id>.json`, appended by `evidence export`;
+  `current()` replaces `notesCurrent` in changes mode (same-candidate evidence dirs
+  and locators may follow the candidate).
+- Attempts: schema 2 in changes mode (`context.agreement`); candidate keys
+  `candidate:<change>:<sha>:<C-NN>`; schema 1 records → `HISTORICAL_EVIDENCE`.
+- `status.cjs` was split into `gather` + `gatherBody(ctx)` + `gatherChanges`;
+  changes-mode JSON is schema 2 (`selection`, `changes`, `change.lifecycle/agreement/
+  view`, `candidate.locator/evaluation`).
+- Test fixtures: `test/fixtures/txn-writer.cjs`, `change-op.cjs` (crash/hold seams via
+  `hooks`), `test/fixtures/prd-v5/` (released v0.5.0 records).

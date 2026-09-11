@@ -48,14 +48,17 @@ schema 1 and the read-only release audit ([[requirements-through-delivery]],
 
 ## Active / next task
 
-1. PRD v5 is ticketed at `.prd/prd-v5.md`: preserve multiple changes, explicit
-   worktree selection, lifecycle transitions, agreement-bound authorization and
-   decision history, deterministic resume, and migration from v0.5.0. Ten
-   requirements, 32 scenarios, seven ordered implementation packages, and a review
-   packet. T-47..T-61 are open; `docs/prd-v5-ticket-map.md` gives dependencies and
-   full scenario coverage. Start with T-47, using a pinned released kit to manage
-   this repository. Implementation and runtime migration have not started.
-   Completed means ready for evaluation, not released.
+1. PRD v5 (`.prd/prd-v5.md`, T-47..T-61) is being implemented on `feat/prd-v5`
+   (started 2026-09-11 evening). T-47..T-56 are done and committed: contract freeze
+   with released v0.5.0 fixtures (`test/fixtures/prd-v5/`), transactions
+   (`transaction.cjs`), schema 2 change records (`changes.cjs`), selection, agreements
+   (`agreement.cjs`), authorization/decisions (`authorization.cjs`), lifecycle
+   transitions (`transitions.cjs`), command gates (`gates.cjs`), change-scoped attempts
+   (schema 2) and the evaluation locator (`locator.cjs`). Remaining: T-57 resume
+   report, T-58 migration (legacy/v0.5.0 → changes mode), T-59 adapters/playbooks/
+   guards/installer, T-60 live trials, T-61 review packet. Tickets are driven with the
+   pinned v0.5.0 kit (`git show v0.5.0:template/scripts/<file>` into the scratchpad);
+   the repo itself stays legacy. Completed means ready for evaluation, not released.
 2. Follow-ups: mechanical coverage/impact, complete platform parity, and repeated
    delivery benchmarks. V5 starts only a bounded baseline and handoff trial.
 
@@ -68,7 +71,7 @@ schema 1 and the read-only release audit ([[requirements-through-delivery]],
 
 ## Landmines
 
-- The repo's own tickets (T-29..T-46) were verified with a pinned v0.4.1 kit copied from `1cb5ab4` into the session scratchpad; recreate it with `git show 1cb5ab4:template/scripts/<file>`. Never export `CLAUDE_PROJECT_DIR` in the shell (`test/ticket.test.js` inherits it) and never pipe `verify`/`done` through `tail` before a `git commit` (the pipe masks the exit code).
+- The repo's own tickets are verified with a pinned released kit in the session scratchpad (v0.4.1 from `1cb5ab4` for PRD v4; v0.5.0 from tag `v0.5.0` for PRD v5: `pincer-ticket.sh`, `pincer-status.sh`, `pincer-runtime.cjs`, `pincer-evidence.cjs`, `pincer-runtime/*.cjs`). Never export `CLAUDE_PROJECT_DIR` in the shell (`test/ticket.test.js` inherits it) and never pipe `verify`/`done` through `tail` before a `git commit` (the pipe masks the exit code).
 - A check that writes untracked non-ignored files ends `error` (`SOURCE_CHANGED`); a kit update inside a migrated project makes every done ticket `SOURCE_CHANGED` until re-verified; a check that exits 0 leaving a background child on the pipes is `timed_out` (T-45).
 - Attempt records are validated field by field (`state.validateAttempt`, T-45/T-46): a new field the runner writes and readiness reads must be added there, every finalizing path (runner, `recover`) must set `finished` and the log digests, and the record must carry the pointed id. `test/runtime-runner.test.js` needs `perl` (setsid case).
 - After editing `template/`, run BOTH generators (`scripts/sync-prompts.sh`,
@@ -95,6 +98,9 @@ schema 1 and the read-only release audit ([[requirements-through-delivery]],
   terminal with `npm test` and `pincer-status.sh`, never `pincer-ticket.sh
   verify` (it re-stamps receipts on success too); the fixture's session
   transcript under `~/.claude/projects/` answers most record questions.
+- Never pipe a test run through `tail` inside an `&&` chain that ends in `git commit` (the pipe masks the failure; T-52 had to be amended). Run suites with output redirected to a file and check `$?`.
+- In this session's Bash sandbox, `node <script> <argument ≥ ~1 KB>` is SIGKILLed at exec (exit 137) while `node -e` is not; tests exercise 2000-character bounds through the module API, never through the CLI argv.
+- Changes mode (schema 2 records) is per project: the old migrated-mode suites create their fixtures with `test/helpers.js` `bindV050()` (a v0.5.0 schema 1 binding written by hand) because `register` now writes schema 2; a fake attempt for a changes-mode test must be schema 2 with `context.agreement`, and store its source manifest, or readiness reports `HISTORICAL_EVIDENCE`.
 - npm: 2FA; expired token shows as `E404 … PUT`; `npm whoami` then `npm login`;
   publish needs `--otp=<code>`; registry lags ~20 s. The user runs publish.
 - `template/.gitignore` would be stripped by npm — never ship one.

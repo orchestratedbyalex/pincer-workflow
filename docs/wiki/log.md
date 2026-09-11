@@ -173,3 +173,9 @@ Outcome: npm publish still pending (needs the user's OTP); next is `/pincer-narr
 - Why: the user explicitly requested tickets for the v5 work. This is decomposition for their implementation and later review, not a request to start coding or migrate the distribution repository.
 - Validation: the existing parser validated the repository ticket set and each new ticket; dependency references and acyclicity, initial open state, absence of receipt fields, complete scenario coverage, local links and whitespace checks passed. Planned implementation tests were not created or run.
 - Outcome: start T-47 using a pinned released kit. No prior tickets, runtime files, generated outputs, commits, registration, migration, or release actions changed in this task.
+
+## [2026-09-11] end | PRD v5 T-47..T-56 implemented on feat/prd-v5
+What: contract freeze + released fixtures (T-47), transactions (T-48), schema 2 change records (T-49), selection (T-50), agreements (T-51), authorization/decisions (T-52), lifecycle transitions (T-53), command gates (T-54), change-scoped attempts (T-55), evaluation locator (T-56); ten new `test/change-*.test.js` suites in `npm test`.
+Why: PRD v5 (preserve changes, authorization, resume context); each ticket verified with the pinned v0.5.0 kit and committed as `T-NN: …`.
+Files: template/scripts/pincer-runtime/{transaction,changes,agreement,authorization,transitions,gates,locator}.cjs, status/lifecycle/runner/state/readiness/evidence edits, template/docs/runtime-contracts.md, test/fixtures/prd-v5/, test/helpers.js (bindV050).
+Outcome: T-57..T-61 remain (resume report, migration, adapters, live trials, review packet). Mid-implementation checkpoint; the branch is not evaluated.

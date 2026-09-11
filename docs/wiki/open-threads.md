@@ -12,3 +12,6 @@
 - [2026-09-02] Codex supports hooks now; port `hook-policy.cjs` as a Codex hook adapter (README wording already corrected) ([[distribution-channels]])
 - [2026-09-02] Codex: the `$pincer-plan` → `$pincer-release` chain is untested on Codex ([[cli-installer]])
 - [2026-09-04] Copilot: `/pincer-*` prompt-file chain in VS Code untested end to end ([[distribution-channels]])
+- [2026-09-11] PRD v5 T-57..T-61 outstanding on `feat/prd-v5`: resume report, migration to changes mode (legacy and schema 1 binding; the ticket map's `migrate` still writes schema 1 until T-58), playbooks/guards/installer/adapters for the change commands, live handoff trials, review packet ([[runtime]])
+- [2026-09-11] Sandbox limit observed: `node <file> <long argv>` SIGKILLed in the Claude Code Bash tool; feedback drafted; CI is unaffected ([[runtime]])
+
