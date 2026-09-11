@@ -1,0 +1,3 @@
+$ f=$(ls docs/trial-*-prd-v4.md | tail -1) && for s in Brief Base Kit Versions Artifacts Results Interventions Baseline Untested R-01 R-10 S-31; do grep -q "$s" "$f" || { echo "missing $s"; exit 1; }; done && grep -q "$(basename "$f")" docs/prd-v4-review-packet.md && echo ok
+ok
+exit 0

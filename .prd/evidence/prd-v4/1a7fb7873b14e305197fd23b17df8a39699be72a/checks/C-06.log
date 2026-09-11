@@ -1,0 +1,3 @@
+$ node test/distribution.test.js
+distribution parity and packed-install tests passed
+exit 0
