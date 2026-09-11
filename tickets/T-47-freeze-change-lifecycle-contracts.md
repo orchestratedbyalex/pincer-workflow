@@ -1,9 +1,13 @@
 ---
 ticket: T-47
-status: open
+status: done
 size: M
 prd: .prd/prd-v5.md
 depends_on: []
+started: 2026-09-11T20:24:43Z
+last_check: 2026-09-11T20:35:05Z passed f2b737826866
+verified: 2026-09-11T20:35:05Z f2b737826866
+finished: 2026-09-11T20:35:05Z
 ---
 
 ## Objective
@@ -24,9 +28,9 @@ Freeze lifecycle, agreement, and migration contracts so PRD v5 can be implemente
 - Resolve how tracked lifecycle projections behave across worktrees: local selection and attempt storage are independent; divergent portable histories require explicit reconciliation. No distributed owner is implied.
 
 ## Acceptance Criteria
-- [ ] Contract has concrete examples of valid, invalid, unknown-schema and conflicting records, including the exact transition table and authorization preconditions.
-- [ ] Every persistent field has one owner; digest inputs and exclusions are enumerated, with no unsettled candidate or selection ownership decision.
-- [ ] Released v0.5.0 fixtures and their source revision are saved; tests pin the static contract and fixture format.
+- [x] Contract has concrete examples of valid, invalid, unknown-schema and conflicting records, including the exact transition table and authorization preconditions.
+- [x] Every persistent field has one owner; digest inputs and exclusions are enumerated, with no unsettled candidate or selection ownership decision.
+- [x] Released v0.5.0 fixtures and their source revision are saved; tests pin the static contract and fixture format.
 
 ## Verification
 Proves: Pins the agreed static contract and released fixture provenance; catches missing state/command/schema definitions. This does not prove lifecycle execution.

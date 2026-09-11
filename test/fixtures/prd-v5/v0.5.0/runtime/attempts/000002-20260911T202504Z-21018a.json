@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "runtime": 1,
+  "id": "000002-20260911T202504Z-21018a",
+  "sequence": 2,
+  "context": {
+    "kind": "ticket",
+    "change": "prd-v1",
+    "prd": ".prd/prd-v1.md",
+    "prd_revision": "68c1ed3d003057d9b3f10fd484129c0a080bf3875425f4861b4f2eb59132f355",
+    "base": "e59132bca5e6298192bc696c5f0d6a0dd8c2d711",
+    "ticket": "T-02",
+    "ticket_digest": "99d2d7445fa0fa45088683741e6adb78a90282281703cf7bbb24a51b45371181"
+  },
+  "check": {
+    "digest": "86f8330dba459fb00126f7decc8081b34ff5b93a3238790cf5b12cb8a8fbc669",
+    "display": "true\n",
+    "timeout_seconds": 600
+  },
+  "outcome": "passed",
+  "exit_code": 0,
+  "signal": null,
+  "runner": {
+    "shell": "/bin/bash",
+    "args": [
+      "-eo",
+      "pipefail",
+      "-c"
+    ],
+    "version": "GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)"
+  },
+  "cwd": ".",
+  "environment": {
+    "os": "darwin 25.6.0",
+    "node": "v22.23.1",
+    "declared": {}
+  },
+  "started": "2026-09-11T20:25:04Z",
+  "finished": "2026-09-11T20:25:04Z",
+  "source": {
+    "before": "4b9fc4647839a57a4af34ff7e975c1584b068c4cbb3a7d6b5c13b048576e1ed7",
+    "after": "4b9fc4647839a57a4af34ff7e975c1584b068c4cbb3a7d6b5c13b048576e1ed7",
+    "files": 22,
+    "limitations": [
+      "external services and installed toolchains are not part of the source identity"
+    ]
+  },
+  "artifacts": {
+    "stdout": {
+      "path": ".pincer/runtime/attempts/000002-20260911T202504Z-21018a/stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "truncated": false,
+      "redactions": 0
+    },
+    "stderr": {
+      "path": ".pincer/runtime/attempts/000002-20260911T202504Z-21018a/stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "truncated": false,
+      "redactions": 0
+    }
+  },
+  "owner": {
+    "pid": 98128,
+    "ppid": 97576,
+    "host": "fixture-host.example"
+  },
+  "child": {
+    "pid": 98222
+  },
+  "limitations": []
+}

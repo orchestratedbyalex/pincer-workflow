@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "digest": "4b9fc4647839a57a4af34ff7e975c1584b068c4cbb3a7d6b5c13b048576e1ed7",
+  "files": [
+    {
+      "path": ".gitignore",
+      "sha256": "b358370a4cfce1fcc27cb7862860399f4dac70e74cacb7220167fe03cb0ced5c",
+      "mode": "100644"
+    },
+    {
+      "path": ".prd/prd-v1.md",
+      "sha256": "68c1ed3d003057d9b3f10fd484129c0a080bf3875425f4861b4f2eb59132f355",
+      "mode": "100644"
+    },
+    {
+      "path": "base.txt",
+      "sha256": "25718360e05d3c2d0963d1381e9dd4dae5fca789244ee4b9f861adcc0cc96218",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/pincer-evidence.cjs",
+      "sha256": "c4865914514304d5660e028216824da1b5564017e89d4143b9bdb2160a2415ea",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/pincer-runtime.cjs",
+      "sha256": "f30dd1a9c70481dfcfc9ebf5d637c5871546067ec3593bf4361703f7c800ad1d",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/pincer-runtime/evidence.cjs",
+      "sha256": "804b05703010a5572fb848aac865a41a266eee2b3631db75356e93c129a60142",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/pincer-runtime/fsutil.cjs",
+      "sha256": "7b318b4461b51cf565320f10b0059cc6b13faa39f04244fcfd2ab9d4ddeb257f",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/pincer-runtime/identity.cjs",
+      "sha256": "d735a795d860bcf02fa2818a41d4a75a7e4048f9f769a532f02eb2ffb89f0d01",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/pincer-runtime/lifecycle.cjs",
+      "sha256": "3b91fb8689ba04669ecfa28fcd5b45c75e6331cf5fc53838a745c637b351448d",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/pincer-runtime/migrate.cjs",
+      "sha256": "8db755991b404c5acf1178ef3a72adb912d0b3b08c6fc1d2ac94710b9a9d3ab0",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/pincer-runtime/parse.cjs",
+      "sha256": "051f79aa26d468094cdb86743538359f2e115b3c1062a81bd7a4517c30274fac",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/pincer-runtime/readiness.cjs",
+      "sha256": "f9e6fcae013d1b531dcdd2b1baf83670074ba204e534b2a6ef5d68ec9d467c58",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/pincer-runtime/runner.cjs",
+      "sha256": "4ed15d4b69f46190468d747f85d52a19ae5d5b86550d42fe2336b193a79a6127",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/pincer-runtime/sanitize.cjs",
+      "sha256": "1a5370a2f515e73a864393833c9db439a0d9fbad7556d084afb28b04ad56414d",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/pincer-runtime/source.cjs",
+      "sha256": "da4bdafed4d5a1fb0a239bf2f6158bbf1ae9ae8f2fd405ca14d6ffc5d79ea450",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/pincer-runtime/state.cjs",
+      "sha256": "2e9b02db2bd7b79042256d0c7b015f6cc0cecacd34529ec8679dc12531957af0",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/pincer-runtime/status.cjs",
+      "sha256": "33a0b6f8c0df736dee30b2a5dc01951361bdc1be3ee43775243f9722ffe9cdc8",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/pincer-status.sh",
+      "sha256": "7567c35ac97de632f45a663a76c4003000eae1098f341539555fa3c3d744e496",
+      "mode": "100755"
+    },
+    {
+      "path": "scripts/pincer-ticket.sh",
+      "sha256": "548154ba02d2273eef0b4ce1174cec33e97ee6f05e2d2749634f317d809ee5db",
+      "mode": "100755"
+    },
+    {
+      "path": "tickets/T-01-example.md",
+      "sha256": "977ff09018b6d8f08b9eab571cb0e4abc8c9230414931779325a67449eec5a37",
+      "mode": "100644"
+    },
+    {
+      "path": "tickets/T-02-example.md",
+      "sha256": "99d2d7445fa0fa45088683741e6adb78a90282281703cf7bbb24a51b45371181",
+      "mode": "100644"
+    },
+    {
+      "path": "value.txt",
+      "sha256": "770e607624d689265ca6c44884d0807d9b054d23c473c106c72be9de08b7376c",
+      "mode": "100644"
+    }
+  ],
+  "excluded": [
+    ".prd/changes/prd-v1.json"
+  ],
+  "limitations": [
+    "external services and installed toolchains are not part of the source identity"
+  ],
+  "problems": []
+}
