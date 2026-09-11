@@ -116,7 +116,9 @@ tracked in git, schema 1:
 | `runtime` | `1` |
 | `legacy_receipts` | `{ "T-NN": { "verified": "...", "last_check": "..." } }` imported by migration, else `{}` |
 
-Exactly one binding may exist per worktree in this increment. A second file, a file
+Registration (and migration) adds `.pincer/` to `.gitignore` before writing the
+binding, and the installer adds it on `init` and `update`, so local runtime state is
+never an untracked change. Exactly one binding may exist per worktree in this increment. A second file, a file
 for another PRD (without `--replace`), malformed JSON, an unsupported `schema`, or a
 `prd_revision` that no longer matches the PRD content are diagnosed before any child
 process starts (`AMBIGUOUS`, `CHANGE_REQUIRED`, `MALFORMED`, `UNSUPPORTED_SCHEMA`,

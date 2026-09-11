@@ -70,7 +70,25 @@ function head(root) {
   return result.out.trim();
 }
 
+const IGNORE_LINE = '.pincer/';
+function gitignoreHas(root) {
+  const file = path.join(root, '.gitignore');
+  if (!fs.existsSync(file)) return false;
+  return fs.readFileSync(file, 'utf8').split('\n').map(l => l.trim()).some(l => l === IGNORE_LINE || l === '/.pincer/' || l === '.pincer');
+}
+// Local runtime state must never become an untracked change: registration and
+// migration both make sure .pincer/ is ignored before the binding is written.
+function ensureIgnored(root) {
+  if (gitignoreHas(root)) return false;
+  const file = path.join(root, '.gitignore');
+  const existing = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+  const lead = existing && !existing.endsWith('\n') ? '\n' : '';
+  fs.appendFileSync(file, `${lead}${existing ? '\n' : ''}# pincer runtime state (added by the runtime)\n${IGNORE_LINE}\n`);
+  return true;
+}
+
 function writeBinding(root, binding) {
+  ensureIgnored(root);
   const file = path.join(bindingsDir(root), `${binding.change}.json`);
   atomicWrite(file, `${JSON.stringify(binding, null, 2)}\n`);
   return `.prd/changes/${binding.change}.json`;
@@ -125,4 +143,4 @@ function register(root, { prd, change, authorization = null, replace = false, re
   return { binding, file: writeBinding(root, binding), action: 'registered', notes };
 }
 
-module.exports = { CHANGE_ID, RUNTIME, BINDING_KEYS, listBindings, validateBinding, loadBinding, register, writeBinding, head };
+module.exports = { CHANGE_ID, RUNTIME, BINDING_KEYS, IGNORE_LINE, listBindings, validateBinding, loadBinding, register, writeBinding, head, gitignoreHas, ensureIgnored };

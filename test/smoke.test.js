@@ -31,6 +31,7 @@ try {
     assert.ok(fs.statSync(path.join(dir, f)).mode & 0o100, `${f} not executable`);
   }
   assert.match(fs.readFileSync(path.join(dir, '.claude/settings.json'), 'utf8'), /ticket-guard\.sh/);
+  assert.match(fs.readFileSync(path.join(dir, '.gitignore'), 'utf8'), /^\.pincer\/$/m, 'init ignores the runtime state');
   const installedHook = execFileSync('bash', [path.join(dir, '.claude/hooks/block-dangerous.sh')], {
     cwd: dir, encoding: 'utf8', input: JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'git status --short' } }),
   });

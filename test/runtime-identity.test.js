@@ -55,6 +55,11 @@ const binding = (dir, id = 'prd-v1') => JSON.parse(read(dir, `.prd/changes/${id}
   assert.equal(binding(dir).authorization, 'user approved the breakdown on 2026-09-11');
   const loaded = identity.loadBinding(dir, { prd: '.prd/prd-v1.md' });
   assert.ok(loaded.binding, JSON.stringify(loaded));
+  // T-43: registration ignores the runtime state, once.
+  assert.match(read(dir, '.gitignore'), /^\.pincer\/$/m, 'register adds .pincer/ to .gitignore');
+  assert.equal(read(dir, '.gitignore').split('\n').filter(l => l.trim() === '.pincer/').length, 1, 'no duplicate after re-registration');
+  passes(rt(dir, 'snapshot', '--store'), 'store local state');
+  assert.equal(git(dir, 'status', '--porcelain', '--untracked-files=all').split('\n').filter(l => /\.pincer/.test(l)).join(''), '', 'runtime state is ignored after register');
 }
 
 // S-04: identical commands in two PRDs are two changes; the binding names each.

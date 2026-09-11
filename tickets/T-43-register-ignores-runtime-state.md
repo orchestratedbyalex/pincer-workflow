@@ -1,9 +1,13 @@
 ---
 ticket: T-43
-status: open
+status: done
 size: S
 prd: .prd/prd-v4.md
 depends_on: [T-40]
+started: 2026-09-11T11:52:13Z
+last_check: 2026-09-11T11:58:36Z passed d282309300cd
+verified: 2026-09-11T11:58:36Z d282309300cd
+finished: 2026-09-11T11:58:36Z
 ---
 
 ## Objective
@@ -21,9 +25,9 @@ Make a fresh registration ignore `.pincer/` the way migration does, so a registe
 - Tests: `test/runtime-identity.test.js` asserts the line after a fresh `register` and that a second `register` does not duplicate it; `test/smoke.test.js` asserts the installed `.gitignore` contains `.pincer/`.
 
 ## Acceptance Criteria
-- [ ] A fresh `register` leaves `git status` clean after the first `verify`.
-- [ ] `init` and `update` add `.pincer/`; existing `.env` handling is unchanged.
-- [ ] `npm test` passes.
+- [x] A fresh `register` leaves `git status` clean after the first `verify`.
+- [x] `init` and `update` add `.pincer/`; existing `.env` handling is unchanged.
+- [x] `npm test` passes.
 
 ## Verification
 Proves: registration and installation ignore the runtime state; regression: untracked `.pincer/` after a registered project's first verify.

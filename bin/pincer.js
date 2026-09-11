@@ -33,6 +33,8 @@ const PLATFORM_ROOTS = {
 };
 const EXECUTABLES = ['scripts/sync-prompts.sh', 'scripts/pincer-ticket.sh', 'scripts/pincer-status.sh', '.claude/hooks/block-dangerous.sh', '.claude/hooks/ticket-guard.sh'];
 const GITIGNORE_LINES = ['.env', '.env.*', '!.env.example'];
+// The runtime's local state (attempts, locks, backups) is never tracked.
+const RUNTIME_IGNORE = '.pincer/';
 
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 
@@ -134,12 +136,18 @@ function install(dir, platforms, baseline) {
 
 function ensureGitignore(dir) {
   const p = path.join(dir, '.gitignore');
-  const existing = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
+  let existing = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
   const have = new Set(existing.split('\n').map((l) => l.trim()));
   const missing = GITIGNORE_LINES.filter((l) => !have.has(l));
-  if (missing.length === 0) return;
-  const lead = existing && !existing.endsWith('\n') ? '\n' : '';
-  fs.appendFileSync(p, `${lead}${existing ? '\n' : ''}# secrets (added by pincer init)\n${missing.join('\n')}\n`);
+  if (missing.length) {
+    const lead = existing && !existing.endsWith('\n') ? '\n' : '';
+    fs.appendFileSync(p, `${lead}${existing ? '\n' : ''}# secrets (added by pincer init)\n${missing.join('\n')}\n`);
+    existing = fs.readFileSync(p, 'utf8');
+  }
+  if (![RUNTIME_IGNORE, '/.pincer/', '.pincer'].some((l) => have.has(l))) {
+    const lead = existing && !existing.endsWith('\n') ? '\n' : '';
+    fs.appendFileSync(p, `${lead}${existing ? '\n' : ''}# pincer runtime state (added by pincer init)\n${RUNTIME_IGNORE}\n`);
+  }
 }
 
 function report({ written, skipped, conflicted }) {
@@ -240,6 +248,9 @@ function cmdDoctor() {
   const gi = fs.existsSync(path.join(dir, '.gitignore')) ? fs.readFileSync(path.join(dir, '.gitignore'), 'utf8') : '';
   check(GITIGNORE_LINES.every((l) => gi.split('\n').map((s) => s.trim()).includes(l)),
     '.gitignore covers .env files', 'add: .env / .env.* / !.env.example');
+  if (![RUNTIME_IGNORE, '/.pincer/', '.pincer'].some((l) => gi.split('\n').map((s) => s.trim()).includes(l))) {
+    console.log(`  note  .gitignore does not list ${RUNTIME_IGNORE} (runtime state); \`pincer update\`, \`register\` or \`migrate --apply\` adds it`);
+  }
 
   const stale = fs.existsSync(TEMPLATE) && manifest.version !== VERSION;
   check(!stale, `install is current (v${manifest.version})`, 'run: pincer update');
