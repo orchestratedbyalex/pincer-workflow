@@ -64,7 +64,25 @@ run the pipeline, then present results.
    material decision; never make an ad-hoc `review: fixes` commit. Every fix commit
    produces a new candidate: re-record `candidate`, re-run the checks against it, and
    write fresh evidence in step 9 — never reuse a manifest from a previous candidate.
-9. Persist evidence for the candidate under `.prd/evidence/prd-vN/<candidate>/`:
+9. Persist evidence for the candidate under `.prd/evidence/prd-vN/<candidate>/`.
+   Migrated project (the `Runtime` status line names a change): run each executable
+   check through the runtime on the clean candidate view —
+   `node scripts/pincer-runtime.cjs check C-NN --candidate <sha> -- <command>` (one
+   command per check, the command line as run; `npm test` stays one aggregate check) —
+   then write the authored fields to a draft outside the evidence directory, for
+   example `.pincer/drafts/<sha>.json`: `environment.tools` and `environment.limitations`,
+   `coverage_review`, `requirements`, review and visual checks with their saved
+   artifacts, `visual_review`, and a stub `{"id": "C-NN", "kind": "command",
+   "required": true|false}` for each executable check. Then run
+   `node scripts/pincer-runtime.cjs evidence export --candidate <sha> --base <base> --prd .prd/prd-vN.md --draft <file>`.
+   The export writes `checks/C-NN.log` from the captured logs, fills `command`,
+   `result`, `provenance: runtime` and `attempt` from the attempts, labels review and
+   visual checks `provenance: authored`, computes the digests and writes an evidence
+   schema 2 manifest; it refuses a dirty tree, a HEAD that is not the candidate, a stub
+   without an attempt, and a `passed` or `failed` command result written by hand. A
+   tool that cannot run is recorded as an authored command check with
+   `result: unverified` and a note, as before. Legacy project (no change binding):
+   author the schema 1 manifest as follows.
    - `checks/C-NN.log` — the command and a redacted summary or safe log of each
      executable check. Never secrets, never an environment dump. Record
      one check per command: `command` holds the command line as run, never prose

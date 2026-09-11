@@ -149,9 +149,13 @@ function draftFor(dir, candidate, { required = true, extra = [] } = {}) {
   write(dir, 'NOTES.md', '# draft notes\n');
   write(dir, `${evidenceDir(candidate)}/review/notes.md`, 'allowed\n');
   passes(rt(dir, 'check', 'C-01', '--candidate', candidate, '--', 'true'), 'NOTES.md and the evidence directory may differ');
-  fs.unlinkSync(path.join(dir, 'NOTES.md')); fs.rmSync(path.join(dir, '.prd/evidence'), { recursive: true });
-  const later = commit(dir, 'later commit');
-  refuses(rt(dir, 'check', 'C-01', '--candidate', candidate, '--', 'true'), new RegExp(`HEAD is ${later.slice(0, 7)}, not the candidate ${candidate.slice(0, 7)}`), 'HEAD moved');
+  fs.unlinkSync(path.join(dir, 'NOTES.md'));
+  const evidenceOnly = commit(dir, 'evidence-only descendant');
+  passes(rt(dir, 'check', 'C-01', '--candidate', candidate, '--', 'true'), 'an evidence-only descendant is still a clean view of the candidate');
+  assert.notEqual(evidenceOnly, candidate);
+  write(dir, 'base.txt', 'changed\n');
+  const later = commit(dir, 'later source commit');
+  refuses(rt(dir, 'check', 'C-01', '--candidate', candidate, '--', 'true'), new RegExp(`HEAD is ${later.slice(0, 7)}, not the candidate ${candidate.slice(0, 7)} and differs from it in: base\\.txt`), 'HEAD moved past the candidate');
   assert.equal(git(dir, 'rev-parse', 'HEAD'), later, 'check never resets or checks out for you');
   assert.equal(git(dir, 'status', '--porcelain'), '', 'check never stashes or commits');
   assert.equal(rt(dir, 'check', 'C-1', '--candidate', candidate, '--', 'true').status, 2, 'usage: check ID');

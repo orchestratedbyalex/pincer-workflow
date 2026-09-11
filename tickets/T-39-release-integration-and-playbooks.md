@@ -1,9 +1,13 @@
 ---
 ticket: T-39
-status: open
+status: done
 size: M
 prd: .prd/prd-v4.md
 depends_on: [T-37, T-38]
+started: 2026-09-11T11:11:13Z
+last_check: 2026-09-11T11:24:03Z passed d8318947fa95
+verified: 2026-09-11T11:24:03Z d8318947fa95
+finished: 2026-09-11T11:24:03Z
 ---
 
 ## Objective
@@ -21,9 +25,9 @@ Make status and release consume runtime provenance and newer local attempts, kee
 - Tests (in `test/runtime-status.test.js`): S-24 a newer same-context failing `check` after export blocks `ready` and status names the check; a failing attempt with a different source digest does not block; a fresh clone reports the availability limit and still validates the saved manifest; S-25 every failure fixture from the runtime suites maps to a stable reason code and a concrete next action (table-driven); S-26 the human `Next`/`WARN` lines, the JSON reasons, `done`'s refusal codes and `ready` agree on the same fixtures; JSON contains no secret marker from a fixture log.
 
 ## Acceptance Criteria
-- [ ] A newer same-context failure blocks local release despite an older exported pass; fresh clones report the limitation; release creates nothing.
-- [ ] Playbooks, templates, checklists and AGENTS.md describe the runtime semantics and are pinned by wording assertions; generated outputs are current.
-- [ ] `npm test` passes.
+- [x] A newer same-context failure blocks local release despite an older exported pass; fresh clones report the limitation; release creates nothing.
+- [x] Playbooks, templates, checklists and AGENTS.md describe the runtime semantics and are pinned by wording assertions; generated outputs are current.
+- [x] `npm test` passes.
 
 ## Verification
 Proves: release readiness consumes the shared computation with local attempt history, and the authored guidance matches the runtime; regression: an old exported pass surviving a newer failure, a fresh clone claiming local readiness, or a playbook still describing receipt rewrites.

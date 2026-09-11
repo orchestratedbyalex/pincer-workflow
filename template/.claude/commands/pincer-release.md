@@ -26,9 +26,13 @@ durable runtime-owned release record is later work.
 3. Check every applicable item mechanically where possible:
    - File existence and frontmatter: read the files.
    - Commit format and story: `git log --oneline`.
-   - Receipts: every done ticket carries current `last_check` and `verified` evidence;
-     any status warning fails the audit. Do not call `pincer-ticket.sh` from Release:
-     it writes receipts and would invalidate the evaluated candidate.
+   - Receipts: every done ticket is ready — on a legacy project current `last_check`
+     and `verified` receipts, on a migrated project a current passing attempt
+     (`node scripts/pincer-runtime.cjs ready` exits 0); any status warning fails the
+     audit. Do not call `pincer-ticket.sh` from Release:
+     it writes receipts and would invalidate the evaluated candidate. Release never
+     runs `verify`, `check` or `done`; `status`, `ready` and the project gate are its
+     only commands.
    - Evidence: `scripts/pincer-status.sh` runs the shared validator
      (`scripts/pincer-evidence.cjs`) against the manifest `NOTES.md` names. The `Notes`
      line must read `current` and the `Evidence` line `ok`; any other text fails the
@@ -36,6 +40,13 @@ durable runtime-owned release record is later work.
      screenshots described in chat: read the manifest's `checks`, requirement
      dispositions and `visual_review`. Validation establishes that the record is
      consistent, not that the commands ran — say so if asked.
+   - Provenance: status prints a `Provenance` line for the evaluated candidate:
+     `runtime (schema 2)` with local attempts consistent, or `legacy (schema 1, authored
+     command results)`. A newer local attempt that failed, timed out, was interrupted or
+     is still running for the same check and source inputs fails the audit (`ready`
+     exits 1 and names the check). A fresh clone reports `local verification history
+     unavailable; saved candidate evidence validated only`: state that limit in the
+     verdict rather than claiming local verification.
    - Every file the manifest lists is tracked, and `git status --short` is empty before
      and after the audit.
    - Run the repository's candidate-wide release gate directly (`npm test`, or the

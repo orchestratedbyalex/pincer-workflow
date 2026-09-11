@@ -9,6 +9,7 @@ status: open        # open | in_progress | done
 size: S             # S | M | L, relative scope; split when it improves verification
 prd: .prd/prd-v{N}.md # the selected PRD, never inferred from ticket numbering
 depends_on: []      # e.g. [T-01]
+timeout: 600        # optional, seconds (default 600); part of the check identity
 ---
 
 ## Objective
@@ -58,6 +59,9 @@ Rules:
   `scripts/pincer-ticket.sh` (`start` / `verify` / `done`). `verify` runs the
   Verification block verbatim and writes a receipt only on exit 0; `done`
   requires that receipt to match the current block. Never write these by hand.
+  On a migrated project (`.prd/changes/` holds a change binding) `verify` records
+  attempts under `.pincer/runtime/` instead of `verified`/`last_check`, and `done`
+  consumes the current passing attempt against the current source.
 - The Verification block is a fenced `bash` block that exits 0 only when the
   ticket is done — non-interactive, no "check by hand".
 - The Verification section opens with a one-line `Proves:` statement: what the

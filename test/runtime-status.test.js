@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { repo, tempDir, createTicket, createPrd, write, read, step, run, statusScript, writeEvidence, writeNotes } from './helpers.js';
+import { repo, tempDir, createTicket, createPrd, write, read, step, run, statusScript, ticketScript as ticketScriptPath, writeEvidence, writeNotes } from './helpers.js';
 
 const runtime = path.join(repo, 'template/scripts/pincer-runtime.cjs');
 const rt = (dir, ...args) => run(dir, process.execPath, [runtime, ...args]);
@@ -177,5 +177,118 @@ const snapshot = dir => JSON.stringify(fs.readdirSync(dir, { recursive: true }).
   const broken = human(dir);
   assert.equal(broken.status, 4); assert.match(broken.stdout, /WARN +invalid change binding: .*malformed JSON/);
   assert.match(broken.stdout, /Next +repair \.prd\/changes\//);
+}
+
+// PRD v4 R-07/R-08 (T-39): candidate readiness with local attempt history.
+// S-24: a newer same-context failure blocks release despite the exported pass;
+// a failure on different source inputs is historical; a fresh clone reports the
+// availability limit and still validates the saved record; release creates nothing.
+{
+  const state = (await import('node:module')).createRequire(import.meta.url)(path.join(repo, 'template/scripts/pincer-runtime/state.cjs'));
+  const dir = tempDir(); git(dir, 'init', '-q');
+  write(dir, 'base.txt', 'original\n'); write(dir, '.gitignore', '.pincer/\n');
+  const base = commit(dir, 'base');
+  createPrd(dir); createTicket(dir, { command: 'test -f value.txt' }); write(dir, 'value.txt', 'good');
+  commit(dir, 'prd and ticket');
+  passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md')); commit(dir, 'register');
+  passes(run(dir, 'bash', [ticketScriptPath, 'start', 'T-01'])); passes(run(dir, 'bash', [ticketScriptPath, 'verify', 'T-01'])); passes(run(dir, 'bash', [ticketScriptPath, 'done', 'T-01']));
+  commit(dir, 'T-01 done');
+  write(dir, '.prd/prd-v1.md', read(dir, '.prd/prd-v1.md').replace('ticketed', 'built'));
+  const candidate = commit(dir, 'PRD v1: built');
+  passes(rt(dir, 'check', 'C-01', '--candidate', candidate, '--', 'test', '-f', 'value.txt'), 'check');
+  const evidenceDir = `.prd/evidence/prd-v1/${candidate}`;
+  write(dir, `${evidenceDir}/review/code-quality.md`, '# Review\nNo findings.\n');
+  write(dir, '.pincer/drafts/c.json', JSON.stringify({
+    environment: { tools: ['git'], limitations: [] }, coverage_review: 'R-01 → C-01, C-02.',
+    requirements: [{ id: 'R-01', disposition: 'delivered', tickets: ['T-01'], checks: ['C-01', 'C-02'] }],
+    checks: [{ id: 'C-01', kind: 'command', required: true }, { id: 'C-02', kind: 'review', required: true, result: 'passed', timestamp: '2026-09-11T12:00:00Z', artifacts: [`${evidenceDir}/review/code-quality.md`] }],
+    visual_review: { applicable: false, reason: 'no UI' },
+  }));
+  passes(rt(dir, 'evidence', 'export', '--candidate', candidate, '--base', base, '--prd', '.prd/prd-v1.md', '--draft', '.pincer/drafts/c.json'), 'export');
+  writeNotes(dir, { base, candidate, evidence: `${evidenceDir}/manifest.json` });
+  commit(dir, 'evaluate', ['NOTES.md', evidenceDir]);
+  const current = passes(human(dir));
+  assert.match(line(current, 'Provenance'), /^Provenance runtime \(schema 2\) · local attempts consistent with the exported checks$/);
+  assert.match(line(current, 'Next'), /pincer-release/);
+  assert.equal(rt(dir, 'ready').status, 0);
+  // Newer same-source failure.
+  const failed = rt(dir, 'check', 'C-01', '--candidate', candidate, '--', 'false');
+  assert.equal(failed.status, 1);
+  const blocked = passes(human(dir));
+  assert.match(line(blocked, 'Provenance'), /C-01 failed \(000\d+-\S+, same source: blocks until re-exported\)/);
+  assert.match(line(blocked, 'Next'), /^Next +\/pincer-code — a newer local attempt is not passing for C-01; repair, re-run the check and \/pincer-evaluate before release/);
+  const gate = rt(dir, 'ready');
+  assert.equal(gate.status, 1); assert.match(gate.stdout, /not ready: CHECK_FAILED C-01: newer local attempt .* failed on the same source inputs/);
+  const jb = json(dir);
+  assert.equal(jb.candidate.reasons[0].code, 'CHECK_FAILED'); assert.equal(jb.candidate.newer_attempts[0].same_source, true);
+  assert.equal(git(dir, 'status', '--porcelain'), '', 'status and ready create no tracked edits');
+  // A later pass restores readiness; a failure on different source inputs is historical.
+  passes(rt(dir, 'check', 'C-01', '--candidate', candidate, '--', 'true'));
+  assert.equal(rt(dir, 'ready').status, 1, 'a newer pass does not re-validate the exported record; the older failure still outranks the exported sequence until re-exported');
+  const latest = state.latestAttempt(dir, `candidate:${candidate}:C-01`);
+  const historical = { ...latest, id: '000099-20260911T120000Z-abcdef', sequence: latest.sequence + 1, outcome: 'failed', exit_code: 1, source: { ...latest.source, before: 'f'.repeat(64), after: 'f'.repeat(64) } };
+  state.withLock(dir, () => { const { index } = state.readIndex(dir); state.writeAttempt(dir, historical); index.sequence = historical.sequence; index.current[`candidate:${candidate}:C-01`] = historical.id; state.writeIndex(dir, index); });
+  const hist = passes(human(dir));
+  assert.match(line(hist, 'Provenance'), /C-01 failed \(000099-\S+, different source: historical\)/);
+  assert.equal(json(dir).candidate.newer_attempts.find(a => a.attempt === historical.id).same_source, false);
+  assert.ok(!json(dir).candidate.reasons.some(r => /000099/.test(r.detail)), 'a different-source failure does not block');
+  // Fresh clone: saved record validated, local history unavailable, ready passes with the limit stated.
+  const clone = path.join(tempDir(), 'repo');
+  passes(run(dir, 'git', ['clone', '-q', dir, clone]));
+  const fresh = passes(human(clone));
+  assert.match(line(fresh, 'Provenance'), /^Provenance runtime \(schema 2\) · local verification history unavailable; saved candidate evidence validated only$/);
+  assert.match(line(fresh, 'Evidence'), / · ok$/);
+  assert.match(line(fresh, 'Next'), /pincer-release/);
+  assert.match(line(fresh, 'Local'), /^Local +verification history unavailable: 1 done ticket\(s\) rely on the saved candidate evidence until verified here$/);
+  assert.doesNotMatch(fresh, /WARN/);
+  assert.equal(rt(clone, 'ready', 'T-01').status, 1, 'a single ticket is not locally verified in a clone');
+  const jf = json(clone);
+  assert.equal(jf.candidate.local_attempts, 'unavailable'); assert.equal(jf.candidate.evidence.provenance, 'runtime');
+  assert.equal(rt(clone, 'ready').status, 0);
+  assert.ok(!fs.existsSync(path.join(clone, '.pincer')), 'inspection created no local state');
+}
+
+// S-25 (migrated) and S-26: every migrated failure fixture maps to a stable reason
+// code and next action, and status, JSON, done and ready agree; JSON never carries
+// a secret marker from a fixture log.
+{
+  const state = (await import('node:module')).createRequire(import.meta.url)(path.join(repo, 'template/scripts/pincer-runtime/state.cjs'));
+  const fixture = () => {
+    const dir = tempDir(); git(dir, 'init', '-q'); createPrd(dir);
+    const file = createTicket(dir, { command: 'echo "API_KEY=fixture-secret-marker"; test -f value.txt', criteria: '- [x] ok' });
+    write(dir, 'value.txt', 'good'); write(dir, 'src/app.js', '1\n'); write(dir, '.gitignore', '.pincer/\n'); commit(dir, 'base');
+    passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md')); commit(dir, 'register');
+    passes(run(dir, 'bash', [ticketScriptPath, 'start', 'T-01'])); passes(run(dir, 'bash', [ticketScriptPath, 'verify', 'T-01'])); commit(dir, 'started');
+    return { dir, file };
+  };
+  const cases = [
+    ['SOURCE_CHANGED', ({ dir }) => write(dir, 'src/app.js', '2\n'), /verify/],
+    ['CHECK_CHANGED', ({ dir, file }) => write(dir, file, read(dir, file).replace('test -f value.txt', 'test -f value.txt && true')), /verify/],
+    ['CHECK_FAILED', ({ dir }) => { fs.unlinkSync(path.join(dir, 'value.txt')); run(dir, 'bash', [ticketScriptPath, 'verify', 'T-01']); write(dir, 'value.txt', 'good'); }, /fix, then verify/],
+    ['CRITERIA_UNTICKED', ({ dir, file }) => write(dir, file, read(dir, file).replace('- [x] ok', '- [ ] ok')), /tick verified criteria/],
+    ['EVIDENCE_MISSING', ({ dir }) => fs.rmSync(path.join(dir, '.pincer/runtime'), { recursive: true }), /verify/],
+    ['ATTEMPT_INTERRUPTED', ({ dir }) => { const a = state.latestAttempt(dir, 'ticket:prd-v1:T-01'); a.outcome = 'interrupted'; state.writeAttempt(dir, a); }, /verify/],
+    ['ATTEMPT_TIMED_OUT', ({ dir }) => { const a = state.latestAttempt(dir, 'ticket:prd-v1:T-01'); a.outcome = 'timed_out'; state.writeAttempt(dir, a); }, /timeout, then verify/],
+    ['REVISION_CHANGED', ({ dir }) => write(dir, '.prd/prd-v1.md', `${read(dir, '.prd/prd-v1.md')}\nmore scope\n`), /rebind/],
+  ];
+  for (const [code, inject, next] of cases) {
+    const f = fixture();
+    assert.equal(rt(f.dir, 'ready', 'T-01').status, 0, `${code}: fixture starts ready`);
+    inject(f);
+    const j = json(f.dir);
+    const codes = [...j.tickets[0].readiness.reasons.map(r => r.code), ...j.reasons.map(r => r.code)];
+    assert.ok(codes.includes(code), `${code}: reason reported (${codes.join(',')})`);
+    if (code !== 'REVISION_CHANGED') assert.match(j.tickets[0].readiness.next, next, `${code}: next action`);
+    assert.match(j.next, code === 'REVISION_CHANGED' ? /--rebind/ : /pincer-code|verify/, `${code}: workflow next`);
+    const gate = rt(f.dir, 'ready', 'T-01');
+    assert.equal(gate.status, 1, `${code}: ready exits 1`);
+    const done = run(f.dir, 'bash', [ticketScriptPath, 'done', 'T-01']);
+    assert.notEqual(done.status, 0, `${code}: done refuses`);
+    if (code !== 'REVISION_CHANGED') assert.match(done.stderr, new RegExp(code), `${code}: done names the same code`);
+    const humanOut = human(f.dir).stdout;
+    if (code === 'EVIDENCE_MISSING') assert.match(humanOut, /T-01 +in_progress .* no attempt yet/, 'in-progress without attempts is reported in the row');
+    else if (!['REVISION_CHANGED', 'CRITERIA_UNTICKED'].includes(code)) assert.match(humanOut, new RegExp(`WARN T-01 ${code}`), `${code}: human WARN agrees`);
+    assert.doesNotMatch(JSON.stringify(j) + gate.stdout + humanOut, /fixture-secret-marker/, `${code}: no secret marker from the log in any report`);
+  }
 }
 console.log('runtime status tests passed');

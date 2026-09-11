@@ -41,7 +41,9 @@ discovered consequential choice is surfaced before implementation.
    - Every ticket gets a runnable command in its Verification block — a fenced `bash`
      block that exits 0 only when the ticket is done. `scripts/pincer-ticket.sh verify`
      runs it verbatim and stamps the receipt that `done` requires, so it must be
-     non-interactive and self-contained (no "check by hand").
+     non-interactive and self-contained (no "check by hand"). An optional
+     `timeout: <seconds>` frontmatter field (default 600) bounds the run; it is part of
+     the check identity, so changing it invalidates earlier passes.
    - Each Verification section opens with `Proves:` — what the check establishes and
      which regression it detects. A check for an executable change must exercise
      observable behavior (including relevant rejection paths and, in brownfield work,

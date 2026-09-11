@@ -209,7 +209,10 @@ function gather(root, { budget } = {}) {
     return r;
   };
 
-  let nOpen = 0, nProg = 0, nDone = 0, firstStart = null;
+  let nOpen = 0, nProg = 0, nDone = 0, firstStart = null, localMissing = 0;
+  // Without local runtime state (a fresh clone) done tickets rely on the saved
+  // candidate evidence; they are not re-verify work until verified here.
+  const localUnavailable = mode === 'migrated' && !state.exists(root);
   const inProg = [], reverify = [];
   let nextOpen = null;
   const rows = [];
@@ -223,8 +226,11 @@ function gather(root, { budget } = {}) {
     if (mode === 'legacy' && st !== 'done' && f.last_check && !/ passed /.test(` ${f.last_check} `)) {
       out.warnings.push(`  WARN ${id} latest verification: ${f.last_check} — re-run verify`);
     }
-    if (mode === 'migrated' && st !== 'done' && r.attempt && r.attempt.outcome !== 'passed') {
-      out.warnings.push(`  WARN ${id} ${r.reasons[0].code}: ${r.reasons[0].detail} — ${r.reasons[0].next}`);
+    if (mode === 'migrated' && st !== 'done' && r.attempt && !r.ready) {
+      // Unticked criteria are expected while work is in progress; anything else
+      // (a failed, stale or superseded attempt) is a warning here too.
+      const blocking = r.reasons.find(x => x.code !== 'CRITERIA_UNTICKED');
+      if (blocking) out.warnings.push(`  WARN ${id} ${blocking.code}: ${blocking.detail} — ${blocking.next}`);
     }
     if (f.started) { const se = toEpoch(f.started); if (firstStart === null || se < firstStart) firstStart = se; }
     let detail;
@@ -233,9 +239,12 @@ function gather(root, { budget } = {}) {
       detail = `started ${hhmm(f.started)} · finished ${hhmm(f.finished)}`;
       if (f.started && f.finished) detail += ` (${mins(toEpoch(f.started), toEpoch(f.finished))})`;
       if (!r.ready) {
-        const message = mode === 'legacy' ? r.legacyMessage : `${r.reasons[0].code}: ${r.reasons[0].detail} — ${r.reasons[0].next}`;
-        out.warnings.push(`  WARN ${id} ${message}`);
-        reverify.push(id);
+        if (localUnavailable && r.reasons[0].code === 'EVIDENCE_MISSING') localMissing++;
+        else {
+          const message = mode === 'legacy' ? r.legacyMessage : `${r.reasons[0].code}: ${r.reasons[0].detail} — ${r.reasons[0].next}`;
+          out.warnings.push(`  WARN ${id} ${message}`);
+          reverify.push(id);
+        }
       }
     } else if (st === 'in_progress') {
       nProg++; inProg.push(id);
@@ -260,6 +269,7 @@ function gather(root, { budget } = {}) {
     line(`Tickets  ${nOpen + nProg + nDone} total · ${nDone} done · ${nProg} in progress · ${nOpen} open`);
     for (const r of rows) line(r);
     for (const w of out.warnings) line(w);
+    if (localMissing) line(`Local    verification history unavailable: ${localMissing} done ticket(s) rely on the saved candidate evidence until verified here`);
     if (firstStart !== null && (nProg > 0 || budget)) {
       let build = `Build    wall-clock elapsed ${mins(firstStart, now)} since the first ticket started (not active execution time)`;
       if (budget) build += ` · budget ${budget}m`;
@@ -277,8 +287,45 @@ function gather(root, { budget } = {}) {
     candidate: notes.candidate || (notes.fields && notes.fields.candidate) || null, base: notes.base || (notes.fields && notes.fields.base) || null,
     evidence: ev ? { manifest: ev.manifest, schema: ev.schema, provenance: ev.schema === 2 ? 'runtime' : ev.schema === 1 ? 'legacy' : null, verdict: ev.ok ? 'ok' : ev.reason } : null,
     local_attempts: mode === 'migrated' ? (state.exists(root) ? 'available' : 'unavailable') : 'not applicable (legacy mode)',
+    newer_attempts: [],
     reasons: notes.state === 'current' ? [] : [{ code: notes.state === 'missing' ? 'EVIDENCE_MISSING' : 'CANDIDATE_STALE', detail: notes.text }],
   };
+  // Provenance and newer local attempts (contract "Evidence schema 2"): a newer
+  // nonpassing attempt for the same check and candidate on the same source inputs
+  // blocks local readiness; on different inputs it is history; without local
+  // state only the saved record can be validated.
+  const newerBlockers = [];
+  if (ev && ev.ok) {
+    if (ev.schema !== 2) line('Provenance legacy (schema 1, authored command results)');
+    else if (!state.exists(root)) {
+      line('Provenance runtime (schema 2) · local verification history unavailable; saved candidate evidence validated only');
+    } else {
+      let manifestDoc = null;
+      try { manifestDoc = JSON.parse(fs.readFileSync(path.resolve(root, ev.manifest), 'utf8')); } catch { manifestDoc = null; }
+      const cand = manifestDoc && manifestDoc.candidate;
+      const idx = indexRead.index || (state.readIndex(root).index || null);
+      const details = [];
+      for (const check of (manifestDoc && manifestDoc.checks) || []) {
+        if (check.provenance !== 'runtime' || !check.attempt) continue;
+        // Every attempt newer than the exported one counts: a same-source
+        // nonpassing attempt blocks until the candidate is re-exported, even
+        // when a later attempt passed again.
+        const key = state.contextKey({ kind: 'candidate', candidate: cand, check: check.id });
+        const newer = idx ? state.listAttempts(root, key).filter(a => a.sequence > check.attempt.sequence && a.outcome !== 'passed') : [];
+        for (const latest of newer) {
+          const sameSource = latest.source && latest.source.before === check.attempt.source_before;
+          j.candidate.newer_attempts.push({ check: check.id, attempt: latest.id, outcome: latest.outcome, same_source: Boolean(sameSource) });
+          if (sameSource) {
+            const code = { failed: 'CHECK_FAILED', running: 'ATTEMPT_RUNNING', timed_out: 'ATTEMPT_TIMED_OUT', interrupted: 'ATTEMPT_INTERRUPTED', error: 'ATTEMPT_ERROR' }[latest.outcome] || 'ATTEMPT_ERROR';
+            newerBlockers.push({ code, detail: `${check.id}: newer local attempt ${latest.id} ${latest.outcome} on the same source inputs as the exported pass` });
+            details.push(`${check.id} ${latest.outcome} (${latest.id}, same source: blocks until re-exported)`);
+          } else details.push(`${check.id} ${latest.outcome} (${latest.id}, different source: historical)`);
+        }
+      }
+      line(`Provenance runtime (schema 2) · local attempts ${details.length ? details.join('; ') : 'consistent with the exported checks'}`);
+      j.candidate.reasons.push(...newerBlockers);
+    }
+  }
 
   // Next action.
   let next;
@@ -294,6 +341,8 @@ function gather(root, { budget } = {}) {
   else if (notes.state !== 'current' || prdStatus !== 'built') {
     next = '/pincer-evaluate — all tickets done';
     if (prdStatus !== 'built') next += ` (PRD status is '${prdStatus || '?'}', expected 'built')`;
+  } else if (newerBlockers.length) {
+    next = `/pincer-code — a newer local attempt is not passing for ${newerBlockers.map(b => b.detail.split(':')[0]).join(', ')}; repair, re-run the check and /pincer-evaluate before release`;
   } else next = '/pincer-release — evaluation matches the current PRD and candidate; audit the artifacts';
   line(`Next     ${next}`);
   j.next = next;

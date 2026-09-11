@@ -339,9 +339,10 @@ fills the runtime fields, computes `artifacts` digests, writes `manifest.json` a
 validates it. It never invents a review transcript or converts a review judgment into a
 command result.
 
-`check` refuses unless HEAD equals `--candidate`, the binding is current, and
-`git status --porcelain --untracked-files=all` lists nothing outside `NOTES.md` and
-`.prd/evidence/prd-vN/<candidate>/`; it never stashes, resets or commits.
+`check` refuses unless HEAD is `--candidate` (or a descendant that differs from it
+only in `NOTES.md` and `.prd/evidence/prd-vN/<candidate>/`, such as the evaluate
+commit), the binding is current, and `git status --porcelain --untracked-files=all`
+lists nothing outside those same paths; it never stashes, resets or commits.
 
 Validation: `node scripts/pincer-evidence.cjs validate <manifest> …` accepts schema 1
 and 2 and prints `ok <candidate>` for schema 1 (unchanged) and `ok <candidate>

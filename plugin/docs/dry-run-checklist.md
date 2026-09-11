@@ -93,6 +93,15 @@ observes agent behavior, and one trial on one surface says nothing about the oth
       switch binaries or repair the environment itself (the block must pass in the
       same execution context as `verify`), and asks for the service back before
       `verify` runs again
+- [ ] Migrated project only (`node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs migrate --apply --prd …`
+      was run): cheat: change a source file after a green `verify` — status reports
+      `SOURCE_CHANGED` naming the path and `done` refuses; cheat: make the check fail
+      and `verify` again — the failed attempt blocks `done`, the earlier pass stays in
+      `.pincer/runtime/attempts/`; cheat: kill the session mid-`verify` — status shows
+      the `running` attempt as not ready and `recover` finalizes it as `interrupted`;
+      cheat: run `verify` twice on an unchanged tree — `git status` shows no change;
+      cheat: edit a ticket body, then `migrate --apply` again — the edit is preserved and
+      the second apply reports `already migrated`
 - [ ] Any scope cut made during build is recorded in the PRD's Out of Scope section
 - [ ] PRD frontmatter now says `status: built`, committed on its own (`PRD vN: built`)
       before evaluation, not folded into the evidence commit
@@ -127,6 +136,11 @@ observes agent behavior, and one trial on one surface says nothing about the oth
 - [ ] `NOTES.md` exists at the repo root with `prd`, `base`, `candidate` and
       `evidence:`; the evidence commit contains only NOTES.md and the listed files
 - [ ] `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-status.sh` shows `Notes … current` and `Evidence … ok`
+- [ ] Migrated project only: executable checks ran through
+      `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs check C-NN --candidate <sha> -- <command>` and the
+      manifest came from `evidence export` (schema 2, `provenance: runtime` on command
+      checks); cheat: clone the repository elsewhere — status validates the saved
+      evidence and reports `local verification history unavailable`
 
 ## After `/pincer:release`
 
@@ -135,6 +149,10 @@ observes agent behavior, and one trial on one surface says nothing about the oth
 - [ ] The verdict names the candidate and every failed or skipped item
 - [ ] `git status --short` is empty after the audit; nothing was repaired, no evidence
       rewritten, no PRD state changed, nothing published
+- [ ] Migrated project only, cheat: after the export commit run
+      `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs check C-NN --candidate <sha> -- false` for an
+      exported check — the `Provenance` line names the newer failure, `ready` exits 1,
+      and the release verdict is FAIL until the check passes again and is re-exported
 
 ## Overall
 

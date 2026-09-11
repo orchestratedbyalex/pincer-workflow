@@ -8,7 +8,7 @@
 #   .claude/references/…  ->  ${CLAUDE_PLUGIN_ROOT}/references/…
 #   .claude/commands/…    ->  ${CLAUDE_PLUGIN_ROOT}/commands/…
 #   docs/*.md             ->  ${CLAUDE_PLUGIN_ROOT}/docs/*.md
-#   scripts/pincer-*.sh   ->  ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-*.sh (and pincer-evidence.cjs)
+#   scripts/pincer-*.sh   ->  ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-*.sh (and pincer-evidence.cjs, pincer-runtime.cjs)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -25,7 +25,7 @@ xform() {
       s{\.claude/references/}{\${CLAUDE_PLUGIN_ROOT}/references/}g;
       s{\.claude/commands/}{\${CLAUDE_PLUGIN_ROOT}/commands/}g;
       s{docs/((?:release|dry-run)-checklist\.md|runtime-contracts\.md)}{\${CLAUDE_PLUGIN_ROOT}/docs/$1}g;
-      s{(?<![\w/])scripts/(pincer-(?:ticket|status)\.sh|pincer-evidence\.cjs)}{\${CLAUDE_PLUGIN_ROOT}/scripts/$1}g;
+      s{(?<![\w/])scripts/(pincer-(?:ticket|status)\.sh|pincer-evidence\.cjs|pincer-runtime\.cjs)}{\${CLAUDE_PLUGIN_ROOT}/scripts/$1}g;
     '
 }
 

@@ -175,6 +175,32 @@ assert.match(releaseChecklist, /`evidence:` manifest/);
 assert.match(releaseChecklist, /visual_review\.applicable: false/);
 assert.match(releaseChecklist, /repaired no ticket, rewrote no evidence, changed no PRD state, and published nothing/);
 
+// PRD v4 (T-39): runtime semantics in the playbooks, templates and checklists.
+assert.match(code, /records an attempt with the\s+captured log under `\.pincer\/runtime\/` and writes no receipt into the ticket/);
+assert.match(code, /`done` consumes the current passing attempt and does not re-run the check/);
+assert.match(code, /Never restore a\s+ticket file or delete `\.pincer\/runtime` to obtain a green status; the legacy exception\s+above applies only before migration/);
+assert.match(code, /pincer-runtime\.cjs recover/);
+assert.match(code, /never edit or delete them by hand/);
+assert.match(evaluate, /pincer-runtime\.cjs check C-NN --candidate <sha> -- <command>/);
+assert.match(evaluate, /evidence export --candidate <sha> --base <base> --prd \.prd\/prd-vN\.md --draft <file>/);
+assert.match(evaluate, /a `passed` or `failed` command result written by hand/);
+assert.match(evaluate, /Legacy project \(no change binding\):\s+author the schema 1 manifest as follows/);
+assert.match(release, /Provenance/);
+assert.match(release, /local verification history\s+unavailable; saved candidate evidence validated only/);
+assert.match(release, /Release never\s+runs `verify`, `check` or `done`/);
+assert.match(statusPlaybook, /--json/);
+assert.match(statusPlaybook, /pincer-runtime\.cjs recover/);
+assert.match(narrow, /`timeout: <seconds>` frontmatter field \(default 600\)/);
+assert.match(ticketTemplate, /^timeout: 600/m);
+assert.match(ticketTemplate, /consumes the current passing attempt against the current source/);
+const agentsRules = read('template/AGENTS.md');
+assert.match(agentsRules, /Never\s+edit or delete `\.pincer\/` or `\.prd\/changes\/` by hand/);
+assert.match(agentsRules, /pincer-runtime\.cjs status --json/);
+assert.match(releaseChecklist, /`Provenance` line names the evidence schema/);
+assert.match(releaseChecklist, /a current passing attempt after it \(`node scripts\/pincer-runtime\.cjs ready` exits 0\)/);
+const dryRun = read('template/docs/dry-run-checklist.md');
+for (const phrase of ['SOURCE_CHANGED', 'recover', 'already migrated', 'evidence export', 'local verification history unavailable', 'ready` exits 1']) assert.match(dryRun, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `dry-run cheat: ${phrase}`);
+
 for (const source of [rootReadme, codex]) {
   assert.doesNotMatch(source, /Codex has no PreToolUse hooks/i);
   assert.match(source, /does not currently install a Codex hook adapter/i);

@@ -63,9 +63,18 @@ function usage(message) {
 function requireCandidateView(root, candidate, prd) {
   const head = identity.head(root);
   if (!head) fail('pincer', 'not a git repository with commits', EXIT.INVALID);
-  if (head !== candidate) fail('pincer', `HEAD is ${head.slice(0, 7)}, not the candidate ${candidate.slice(0, 7)}; check out the committed candidate first (no stash, reset or commit is made for you)`, EXIT.FAILED);
   const version = prd.match(parse.PRD_REF)[1];
   const allowed = p => p === 'NOTES.md' || p.startsWith(`.prd/evidence/prd-v${version}/${candidate}/`);
+  if (head !== candidate) {
+    // A descendant that only adds NOTES.md and the candidate's evidence (the
+    // evaluate commit) is still a clean view of the candidate's source.
+    const ancestor = tryGit(root, ['merge-base', '--is-ancestor', candidate, 'HEAD']);
+    const diff = ancestor.error ? { error: 'not an ancestor' } : tryGit(root, ['diff', '--name-only', candidate, 'HEAD']);
+    const differing = diff.error ? null : diff.out.split('\n').filter(Boolean).filter(p => !allowed(p));
+    if (!differing || differing.length) {
+      fail('pincer', `HEAD is ${head.slice(0, 7)}, not the candidate ${candidate.slice(0, 7)}${differing ? ` and differs from it in: ${differing.slice(0, 5).join(', ')}` : ' (the candidate is not an ancestor of HEAD)'}; check out the committed candidate first (no stash, reset or commit is made for you)`, EXIT.FAILED);
+    }
+  }
   const dirty = tryGit(root, ['status', '--porcelain', '--untracked-files=all']);
   if (dirty.error) fail('pincer', `git status failed: ${dirty.error}`, EXIT.INVALID);
   const offending = dirty.out.split('\n').filter(Boolean).map(l => l.slice(3).replace(/^"(.*)"$/, '$1')).filter(p => !allowed(p));
@@ -197,9 +206,14 @@ function cmdReady(root, args) {
     process.exit(EXIT.FAILED);
   }
   const blockers = [];
+  const localUnavailable = j.candidate && j.candidate.local_attempts === 'unavailable';
   for (const t of j.tickets) {
     if (t.status !== 'done') blockers.push({ code: t.status === 'in_progress' ? 'ATTEMPT_RUNNING' : 'DEPENDENCY_BLOCKED', detail: `${t.id} is ${t.status}` });
-    else for (const r of t.readiness.reasons) blockers.push({ code: r.code, detail: `${t.id}: ${r.detail}` });
+    else for (const r of t.readiness.reasons) {
+      // A fresh clone validates the saved candidate record only; missing local attempts are its stated limit, not a blocker.
+      if (localUnavailable && r.code === 'EVIDENCE_MISSING') continue;
+      blockers.push({ code: r.code, detail: `${t.id}: ${r.detail}` });
+    }
   }
   if (!j.prd) blockers.push({ code: 'INPUT_INVALID', detail: 'no PRD' });
   else if (j.prd.status !== 'built') blockers.push({ code: 'CANDIDATE_STALE', detail: `PRD status is '${j.prd.status}', expected 'built'` });

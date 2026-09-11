@@ -16,6 +16,11 @@ Ticket state lives in the ticket file's frontmatter and is written **only** by
 Verification block and stamps a receipt only on a green exit; `done` refuses without a
 receipt that matches the current check, or with unticked acceptance criteria. Never edit
 `status`, `started`, `last_check`, `verified`, or `finished` by hand — on Claude Code a hook blocks it.
+On a migrated project (a change binding under `.prd/changes/`; the `Runtime` line of
+`scripts/pincer-status.sh` names it) `verify` records an attempt under `.pincer/runtime/`
+and writes no receipt into the ticket, and `done` consumes the current passing attempt
+against the current source without re-running the check. `.pincer/` and `.prd/changes/`
+are written only by the runtime; never edit or delete them by hand.
 
 ## Before the loop
 
@@ -38,7 +43,9 @@ previously authorized work.
    dispatch a subagent with a clean prompt: paste the full ticket body, the relevant
    conventions, and nothing else.
 3. **Verify:** `scripts/pincer-ticket.sh verify T-{NN}` — runs the Verification block and
-   writes the receipt only if it exits 0. Red → fix and re-run; report the actual output,
+   writes the receipt only if it exits 0 (after migration it records an attempt with the
+   captured log under `.pincer/runtime/` and writes no receipt into the ticket; readiness
+   derives from the latest attempt and the current source). Red → fix and re-run; report the actual output,
    not assumptions. Green output is the definition of done, not your confidence. If the
    check only validated syntax or a build, say so — that is not behavioral proof. A
    visual judgment is recorded separately in evaluation, not as the receipt, and a tool
@@ -56,7 +63,10 @@ previously authorized work.
    - No error path leaks internals (stack traces, key names with values) to the client.
    If the review changed code, run `verify` again — the receipt must match the code you commit.
 5. **Close the ticket:** tick every verified acceptance-criteria checkbox (`- [ ]` → `- [x]`;
-   editing the checkboxes is allowed), then `scripts/pincer-ticket.sh done T-{NN}`. A
+   editing the checkboxes is allowed), then `scripts/pincer-ticket.sh done T-{NN}`. After
+   migration `done` consumes the current passing attempt and does not re-run the check; it
+   refuses with a reason code (`SOURCE_CHANGED`, `CHECK_CHANGED`, `CHECK_FAILED`,
+   `CRITERIA_UNTICKED`, …) and the next step when the latest attempt is not current. A
    criterion that was cut is a scope change to record in the PRD, not a box to skip.
    Inspect `git status --short`, preserve pre-existing staged work, and stage only the
    explicit paths changed for this ticket plus its ticket file. Review `git diff --cached`
@@ -109,8 +119,14 @@ check that reads external data), keep the failure, name the cause you observed, 
 ask for the environment to be repaired before `verify` runs again.
 If source still differs from the candidate, name the differing paths and let the
 user decide rather than asking which way to fix them; permission to restore a ticket
-does not authorize discarding source changes. Automated recovery that preserves
-attempt history is later work (M1).
+does not authorize discarding source changes.
+After migration (a change binding exists) recovery is the lifecycle itself: retain the
+failure, repair the cause, run `verify` again; readiness derives from the latest attempt,
+both attempts stay in `.pincer/runtime/` and no tracked file changes. Never restore a
+ticket file or delete `.pincer/runtime` to obtain a green status; the legacy exception
+above applies only before migration. A session that died mid-`verify` leaves a `running`
+attempt: run `node scripts/pincer-runtime.cjs recover`, which finalizes it as
+`interrupted` once the owner process is gone, then `verify` again.
 
 ## Budget rules
 

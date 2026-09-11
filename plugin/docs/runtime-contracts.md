@@ -1,6 +1,6 @@
 # PINCER Runtime Contracts
 
-The runtime is `scripts/pincer-runtime.cjs` with its modules under
+The runtime is `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs` with its modules under
 `scripts/pincer-runtime/`. It is dependency-free CommonJS for Node.js 18+ and is the
 only writer of ticket lifecycle state, verification attempts, change bindings and
 exported candidate evidence. The shell entry points `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-ticket.sh` and
@@ -27,14 +27,14 @@ A project is in one of two modes per PRD, decided by the presence of a change bi
 | Readiness authority | `last_check`/`verified` receipts in the ticket | attempt records; `verified`/`last_check` are ignored and reported as `LEGACY_RECEIPT` |
 | Local state | none; `.pincer/` is never written | `.pincer/runtime/` (ignored) |
 | Evidence | schema 1, authored | schema 2, exported from attempts (schema 1 still validates with a legacy label) |
-| Status line | `Runtime  legacy · no change binding · migrate with node scripts/pincer-runtime.cjs migrate --preview --prd <prd>` | `Runtime  change <id> · revision <12 hex> · base <short sha>` |
+| Status line | `Runtime  legacy · no change binding · migrate with node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs migrate --preview --prd <prd>` | `Runtime  change <id> · revision <12 hex> · base <short sha>` |
 
 Legacy mode is recognizable in every output; nothing switches modes implicitly.
 Migration (`migrate --apply`) is the only transition.
 
 ## Commands and exit codes
 
-All commands: `node scripts/pincer-runtime.cjs <command> [arguments]`. The project
+All commands: `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs <command> [arguments]`. The project
 root is `CLAUDE_PROJECT_DIR`, else `git rev-parse --show-toplevel`, else the working
 directory. Diagnostics go to stderr, prefixed `pincer-ticket: ` for ticket input,
 `pincer: ` for PRD, NOTES and runtime state, `evidence: ` for manifests.
@@ -339,9 +339,10 @@ fills the runtime fields, computes `artifacts` digests, writes `manifest.json` a
 validates it. It never invents a review transcript or converts a review judgment into a
 command result.
 
-`check` refuses unless HEAD equals `--candidate`, the binding is current, and
-`git status --porcelain --untracked-files=all` lists nothing outside `NOTES.md` and
-`.prd/evidence/prd-vN/<candidate>/`; it never stashes, resets or commits.
+`check` refuses unless HEAD is `--candidate` (or a descendant that differs from it
+only in `NOTES.md` and `.prd/evidence/prd-vN/<candidate>/`, such as the evaluate
+commit), the binding is current, and `git status --porcelain --untracked-files=all`
+lists nothing outside those same paths; it never stashes, resets or commits.
 
 Validation: `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-evidence.cjs validate <manifest> …` accepts schema 1
 and 2 and prints `ok <candidate>` for schema 1 (unchanged) and `ok <candidate>

@@ -13,8 +13,12 @@ start of a session. Read-only: change nothing.
 1. Run `scripts/pincer-status.sh`. It reads the artifacts on disk (`.prd/`, `tickets/`,
    `NOTES.md`) and prints the PRD state and profile, every ticket with its state and
    clock-based elapsed time, what is blocked, wall-clock build time while a ticket is in
-   progress or against an explicit user budget, the evidence verdict for the evaluated
+   progress or against an explicit user budget, the `Runtime` line (legacy receipts or
+   the registered change), the evidence verdict and `Provenance` line for the evaluated
    candidate, any warnings (each readiness problem once), and the next command to run.
+   `scripts/pincer-status.sh --json` prints one status object with reason codes and the
+   next action for tooling; `node scripts/pincer-runtime.cjs ready [T-NN]` is the
+   read-only gate.
 2. Report in three lines: where the workflow is, what is in progress or blocked, and the
    next command. Quote the `Next` line as-is.
 3. If a ticket is `in_progress`, read it and `git status`, then offer to resume it with
@@ -26,4 +30,7 @@ start of a session. Read-only: change nothing.
    It applies only when the recorded failure is explained by a since-reverted source
    change and the block passes in the same execution context as `verify`; an
    unexplained failure (a service down, a missing dependency) stays a failure until the
-   environment is repaired and `verify` passes again.
+   environment is repaired and `verify` passes again. After migration never restore a
+   ticket file or delete `.pincer/runtime` to clear a warning: repair the cause and run
+   `verify` again; a dead session's `running` attempt is finalized by
+   `node scripts/pincer-runtime.cjs recover`.
