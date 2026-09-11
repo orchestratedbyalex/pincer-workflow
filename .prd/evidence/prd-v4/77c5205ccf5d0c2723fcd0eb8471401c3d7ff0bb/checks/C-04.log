@@ -1,0 +1,2 @@
+$ git diff 6771fbcc08bcac866037a9aa45af75fc07599ce1..77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb | grep -nE "^\+.*(api[_-]?key|secret|password|token)\s*[:=]\s*['\"][A-Za-z0-9_-]{8,}" | cut -d: -f1,2
+grep exit 1 (1 = no matches)

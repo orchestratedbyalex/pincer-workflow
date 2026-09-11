@@ -1,101 +1,111 @@
 ---
-prd: .prd/prd-v3.md
-base: d15933d4ade60bc283aaef0ed846dee5085dbbae
-candidate: a10358ea452aa0d31e015beb0288b720029c0038
-evidence: .prd/evidence/prd-v3/a10358ea452aa0d31e015beb0288b720029c0038/manifest.json
+prd: .prd/prd-v4.md
+base: 6771fbcc08bcac866037a9aa45af75fc07599ce1
+candidate: 77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb
+evidence: .prd/evidence/prd-v4/77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb/manifest.json
 ---
 
-# Evaluation — PRD v3: Recovery, evidence checks and plan questions after the interactive trial
+# Evaluation — PRD v4: Record verification automatically and invalidate stale evidence
 
-Reviewed candidate `a10358e` against base `d15933d` (main after the interactive-trial
-record, before `Add PRD v3`), tickets T-24..T-28. Evidence manifest: see frontmatter;
-validated with
-`node template/scripts/pincer-evidence.cjs validate <manifest> --candidate a10358e… --base d15933d… --prd .prd/prd-v3.md`.
+Reviewed candidate `77c5205` against base `6771fbc` (main after the wiki commit that
+recorded the PRD draft, before `Add PRD v4`), tickets T-29..T-44 on `feat/prd-v4`.
+Evidence manifest: see frontmatter (schema 1, authored with the pinned v0.4.1 kit
+because this repository is deliberately not migrated, PRD v4 §9); validated with
+`node <pinned kit>/scripts/pincer-evidence.cjs validate <manifest> --candidate 77c5205… --base 6771fbc… --prd .prd/prd-v4.md`.
 
 ## Requirement dispositions
 
 | Requirement | Disposition | Where it lives | Checks |
 | --- | --- | --- | --- |
-| R-01 A tree that is back at the evaluated candidate commits nothing | delivered | Code playbook recovery section (T-24, condition corrected in T-28), status playbook sentence, dry-run cheat box, five assertions in `test/workflow.test.js`; live eligible case in `docs/trial-2026-09-10-prd-v3.md` (T-27) | C-01, C-02, C-06 (trial record), C-07 (review). Negative-scenario live observation `outstanding`; see below |
-| R-02 Separate independently reported executable checks | delivered | Evaluate step 9 (T-25), dry-run box, four assertions; by-product live observation: the trial re-evaluation manifest had six checks with the security pass as three entries | C-01, C-02, C-06, C-07; this manifest itself records one command per check |
-| R-03 Plan asks only what the brief leaves open | delivered | Plan Phase 1 steps 2 and 3 (T-26), six assertions incl. budget and design question unchanged | C-01, C-02, C-07. Live observation `outstanding` |
+| R-01 correct recovery without erasing failures | delivered | T-29 (legacy exception tightened, service fixture), T-36/T-39 (migrated recovery through attempts), T-41 trial scenarios (c) and (e) on both kits | C-01, C-07, C-08; remaining-source live case outstanding (deterministic in `test/recovery.test.js`) |
+| R-02 one runtime, explicit identity | delivered | `identity.cjs`, `register`, wrappers (T-32, T-36), playbook steps (T-42), `.pincer/` ignored on register (T-43) | C-01, C-07 |
+| R-03 attempts from actual execution | delivered | `runner.cjs`, `sanitize.cjs` (T-35, T-44) | C-01, C-07 |
+| R-04 readiness bound to inputs | delivered | `source.cjs`, `parse.cjs` normalizations, before/after snapshots (T-31, T-32, T-35) | C-01, C-07 |
+| R-05 durable transitions, recoverable interruptions | delivered | `state.cjs` (rename-based lock, stale claim, recover), runner timeout and signals (T-34, T-35, T-44) | C-01, C-07 |
+| R-06 operational records separate from product changes | delivered | `.pincer/runtime/`, `lifecycle.cjs` closure, guard (T-36, T-43, T-44) | C-01, C-07 |
+| R-07 exported evidence, read-only release | delivered | `evidence.cjs` schema 2 + export, `check`, provenance and newer-attempt rule (T-38, T-39, T-44); observed live in the greenfield trial | C-01, C-07, C-08 |
+| R-08 state explained without an LLM | delivered | `readiness.cjs`, `status.cjs`, `ready` (T-33, T-39, T-44) | C-01, C-07 |
+| R-09 installations preserved, explicit migration | delivered | `migrate.cjs`, `bin/pincer.js` doctor, packaging parity (T-30, T-37, T-40, T-43, T-44) | C-01, C-02, C-06, C-07 |
+| R-10 behavior demonstrated, friction recorded | delivered | failure-injection suites (S-30); `docs/trial-2026-09-11-prd-v4.md` (S-31 on Claude Code `-p` + Sonnet; other surfaces untested) | C-01, C-07, C-08 |
 
-Coverage review: every requirement maps to a ticket and to the wording assertions
-in C-01; R-01 additionally to the live eligible case. Wording assertions prove that
-the contract is present, not that an agent follows it. This mapping and the adequacy
-of static assertions for playbook text are my judgment as reviewer, as in PRD v2.
+Coverage review: the per-scenario table in `docs/prd-v4-review-packet.md` maps every
+S-01..S-31 to a suite or the trial record; the packet and the manifest agree. Whether
+the fixture suites are adequate proof of the runtime is my judgment as evaluator; the
+reviewer confirmed no assertion is vacuous and every suite drives real subprocesses.
 
 ## Evaluation history
 
-- Candidate `7c19e42` (T-24..T-27) was reviewed by the code-quality subagent, which
-  confirmed no generator drift and no vacuous assertion and returned four wording
-  defects: the exception's second condition was literally unsatisfiable (the ticket
-  file being restored is itself a tracked file that differs), T-27's Objective and
-  Requirement still described the negative case as observed, the PRD's Problem
-  paragraph misstated when the fault was reverted, and two Success Criteria rows were
-  stale against the trial record. T-28 fixed all four; candidate `a10358e` re-ran
-  every check. Known issue kept: T-25's `git diff --quiet HEAD` clause is vacuous
-  after its commit; changing a done ticket's block would invalidate its receipt.
-- The R-01 negative scenario (tree at the candidate, check fails for a real reason)
-  was attempted in the trial with an `npm` shim on `PATH`. Sonnet found the shim, ran
-  the real binary, saw the check pass and applied the exception, keeping the failed
-  receipt but recommending the restore. The fault was bypassable, so the observation
-  is recorded as `outstanding` in the PRD's Out of Scope. That cut is agent-recorded;
-  the user confirms or rejects it at release.
+- Candidate `7b561b1` (T-29..T-43 plus `PRD v4: built`) was reviewed by two subagents
+  applying the code-quality rubric: one over the runtime code and tests, one over
+  docs, playbooks, installer, packaging and records. Eighteen findings
+  (`review/code-quality.md` in the evidence directory): one high (the ticket guard
+  blocked the documented evidence-draft location), five medium in the runtime (stale-lock
+  reclaim race, `recover` never escalating to SIGKILL, a missing pointed-at record
+  falling back to an older pass, a contract disagreement on partial migration, a
+  sanitizer gap for `Basic`/quoted values), four low, and eight documentation and
+  packaging items. T-44 fixed sixteen with assertions; the obsolete `pincer-ticket-lib.sh`
+  left on disk by `update` and the README's release number are recorded as known
+  issues. Candidate `77c5205` (T-44 plus the wiki commit) re-ran every check; the
+  evaluator checked each finding against it rather than re-dispatching the reviewers.
+- The live trial (T-41) itself produced T-42 and T-43 before the first candidate.
 
 ## What was built
 
-- The code playbook's recovery section keeps the default (a restored receipt is never
-  evidence) and adds one exception with three checkable conditions: PRD built with
-  valid evidence, tracked files other than the ticket file match the candidate with
-  nothing untracked, and the Verification block passes when run directly. The agent
-  then names the restore command for the user and runs no `verify`, refreshes no
-  receipt and commits nothing. The status playbook points at it; the checklist gained
-  the matching cheat.
-- Evaluate step 9: one check per command, `command` is the command line as run, the
-  security pass is three entries, `npm test` stays one aggregate check, review and
-  visual checks get no artificial command.
-- Plan discovery: a partly answered question is asked only for its open part; a fully
-  settled brief gets no discovery question; the design question follows the same rule.
-- A focused trial record from a packed kit installed into a copy of the interactive
-  fixture (`docs/trial-2026-09-10-prd-v3.md`), with the eligible case observed live.
+A dependency-free Node runtime (`template/scripts/pincer-runtime.cjs` +
+`template/scripts/pincer-runtime/`, Node 18+) that now owns the ticket lifecycle,
+readiness and status (human and `--json`), change registration
+(`.prd/changes/<id>.json` with a PRD content revision and recorded authorization), a
+SHA-256 source manifest, verification attempts with sanitized captured logs under the
+ignored `.pincer/runtime/`, an exclusive lock with deterministic `recover`, explicit
+`migrate --preview|--apply` with backups, candidate `check`s and evidence schema 2
+export. `pincer-ticket.sh` and `pincer-status.sh` are wrappers; the Bash policy
+library is gone; the guard protects `.pincer/runtime/`, `.pincer/backups/` and
+`.prd/changes/`. Unmigrated projects keep the v0.4.1 receipt contract. The legacy
+recovery exception was tightened first (T-29) so it can ship on its own. The contract
+is `template/docs/runtime-contracts.md`; the review packet for the user's later check is
+`docs/prd-v4-review-packet.md` with `docs/prd-v4-artifacts/`.
 
 ## What was cut and why
 
-- Live observation of the R-01 negative scenario with a persistent failure: not
-  constructible on the dependency-free fixture without a source change; attempted
-  with an environment fault that the agent bypassed. Recorded in the PRD's Out of
-  Scope by the evaluator, pending user confirmation.
-- Out of scope by the PRD itself: runtime log capture and automated recovery (M1),
-  validator heuristics for prose commands, the `4xx` wording leak, `verify` re-stamp on
-  success.
+Nothing from the PRD's scope. The follow-up PRDs of section 10 (lifecycle and resume,
+mechanical coverage impact, platform parity and measured quality) were never in scope.
 
 ## Known issues
 
-- The exception says the block must pass "when run directly" but not in which
-  environment; in the trial the agent chose the working binary over the session's
-  broken `PATH`. Trial finding 1; candidate for a follow-up PRD together with the
-  negative-scenario observation.
-- T-25's Verification clause `git diff --quiet HEAD -- pincer-evidence.cjs
-  test/evidence.test.js` proves nothing on re-verify after commit; `test/evidence.test.js`
-  inside `npm test` is the durable guard.
-- `npm audit` remains `unverified` (no lockfile, no dependencies).
+- `pincer update` from 0.4.x leaves `scripts/pincer-ticket-lib.sh` on disk; `doctor`
+  names it as obsolete and the README says it is safe to delete; the installer never
+  deletes files (open thread: decide whether it should).
+- The README names the runtime release v0.5.0; the documented `npm version patch` flow
+  would produce 0.4.2. The bump must be `minor` (0.5.0) with the plugin rebuilt.
+- `MIGRATION_REQUIRED` is a documented reason code that status never emits (it reports
+  `LEGACY_RECEIPT` instead).
+- A check that writes untracked, non-ignored files ends `error` (`SOURCE_CHANGED`)
+  unless those paths are ignored or listed in `.prd/source-exclude`; a kit update
+  inside a migrated project makes every done ticket `SOURCE_CHANGED` until re-verified.
+- Process cleanup relies on POSIX process groups; a grandchild that leaves the group
+  survives. Windows is unsupported. CI has not run on `feat/prd-v4`; Node 18 and
+  ubuntu are untested for the runtime in this evaluation.
+- The sanitizer covers documented patterns only; checks must avoid printing secrets.
+- The trial covered Claude Code print mode with Sonnet only.
 
 ## What I would do next
 
-Release this candidate, then a small follow-up PRD: tighten "run directly" to "the
-recorded failure is explained by a working-tree change since reverted; any other
-cause is fixed first and re-run through `verify`", and design a fixture with an
-external dependency so the negative scenario can be observed. Then the M1 runtime.
+Push the branch and let CI run the matrix before merging; bump to 0.5.0 and publish;
+trial the runtime on Codex, Copilot and the plugin; then the section 10 follow-ups,
+starting with lifecycle and resume (change selection, pause/reopen/supersede).
 
 ## Handover
 
-Read `docs/wiki/briefing.md` first, then `.prd/prd-v3.md` and the two trial records
-from 2026-09-10. The kit has no runtime dependencies; `npm test` runs twelve suites
-under `node --test`, of which `test/workflow.test.js` pins playbook wording and
-`test/distribution.test.js` fails on stale generated output. Every edit under
-`template/` must be followed by both generators. The riskiest assumption is that an
-agent reads the recovery section when a ticket is in a failed state; the two live
-sessions did, the wording tests cannot check it. The least-tested path is the
-recovery exception under a real environment failure: the only attempt was bypassed,
-and the wording does not yet say which environment counts.
+Read `docs/wiki/briefing.md`, then `template/docs/runtime-contracts.md` (the contract
+every runtime behavior is pinned to) and `docs/wiki/systems/runtime.md` (module map and
+gotchas). The runtime has no dependencies by design: Node built-ins, `bash` for the
+Verification blocks, `git` for identity; the plugin and every installer layout bundle
+the same files (`test/distribution.test.js` compares their digests). What breaks first
+as the code ages: the source manifest hashes every tracked and untracked non-ignored
+file on each `verify`, `done` and `status` in migrated mode, so large repositories will
+feel it before anything else; and the sanitizer's regexes are the one place where a
+careless edit can reintroduce quadratic backtracking (the first version hung on a
+64 KB line). The least-tested path is the stale-lock claim race, which is reasoned
+about and covered by a static fixture rather than a reproducible concurrent race.
+This repository stays in legacy mode on purpose; its own tickets were verified with a
+pinned copy of the v0.4.1 kit (`git show 1cb5ab4:template/scripts/<file>`).

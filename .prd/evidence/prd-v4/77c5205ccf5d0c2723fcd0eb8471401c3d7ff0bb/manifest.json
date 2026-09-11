@@ -1,0 +1,311 @@
+{
+  "schema": 1,
+  "prd": ".prd/prd-v4.md",
+  "base": "6771fbcc08bcac866037a9aa45af75fc07599ce1",
+  "candidate": "77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb",
+  "created": "2026-09-11T12:50:44Z",
+  "environment": {
+    "os": "macOS 26.6.2 (darwin 25.6.0)",
+    "node": "v22.23.1",
+    "tools": [
+      "npm 10.9.8",
+      "git 2.50.1",
+      "Claude Code 2.1.267 print mode (trial sessions, Sonnet)",
+      "general-purpose subagents applying the code-quality-reviewer rubric"
+    ],
+    "limitations": [
+      "npm audit cannot run: no dependencies and no lockfile (C-05 unverified, non-required)",
+      "no UI in this repository; visual review not applicable",
+      "CI has not run on feat/prd-v4 (no remote push yet); Node 18 and ubuntu untested for the runtime in this evaluation",
+      "live observations on one agent surface only (Claude Code -p, Sonnet, macOS)",
+      "this repository was not migrated to the runtime (PRD v4 section 9), so its own evidence is schema 1 authored with the pinned v0.4.1 kit; schema 2 is demonstrated in fixtures and the trial repositories",
+      "the final candidate 77c5205 (T-44 fixes plus a wiki commit) was checked by the evaluator against the review findings, not re-sent to the reviewer subagents"
+    ]
+  },
+  "coverage_review": "Every R-01..R-10 maps to tickets and to C-01 (the deterministic suites that inject the S-NN failures), C-07 (the review record) and, for R-01/R-07/R-10, C-08 (the live trial record). docs/prd-v4-review-packet.md carries the per-scenario table (S-01..S-31); S-31 is delivered on one surface only and the remaining-source case is live-outstanding. The adequacy of the fixture suites as proof of the runtime's behavior is my judgment as evaluator; they drive real subprocesses and check on-disk state, which the reviewer confirmed is not vacuous.",
+  "requirements": [
+    {
+      "id": "R-01",
+      "disposition": "delivered",
+      "tickets": [
+        "T-29",
+        "T-36",
+        "T-39",
+        "T-41",
+        "T-42"
+      ],
+      "checks": [
+        "C-01",
+        "C-07",
+        "C-08"
+      ],
+      "note": "legacy exception tightened (T-29) and migrated recovery through attempts (T-36/T-39); live (c) and (e) observed on both kits; remaining-source case live observation outstanding (deterministic in test/recovery.test.js)"
+    },
+    {
+      "id": "R-02",
+      "disposition": "delivered",
+      "tickets": [
+        "T-32",
+        "T-36",
+        "T-42",
+        "T-43"
+      ],
+      "checks": [
+        "C-01",
+        "C-07"
+      ],
+      "note": "explicit registration with recorded authorization; wrappers delegate; Bash policy library removed"
+    },
+    {
+      "id": "R-03",
+      "disposition": "delivered",
+      "tickets": [
+        "T-35",
+        "T-44"
+      ],
+      "checks": [
+        "C-01",
+        "C-07"
+      ],
+      "note": "attempts recorded from actual execution with sanitized capture; S-07..S-10 in test/runtime-runner.test.js"
+    },
+    {
+      "id": "R-04",
+      "disposition": "delivered",
+      "tickets": [
+        "T-31",
+        "T-32",
+        "T-35"
+      ],
+      "checks": [
+        "C-01",
+        "C-07"
+      ],
+      "note": "SHA-256 source manifest, contracted normalizations, before/after snapshots; S-11..S-14"
+    },
+    {
+      "id": "R-05",
+      "disposition": "delivered",
+      "tickets": [
+        "T-34",
+        "T-35",
+        "T-44"
+      ],
+      "checks": [
+        "C-01",
+        "C-07"
+      ],
+      "note": "rename-based lock, stale claim by rename, timeout escalation, deterministic recover; S-15..S-17"
+    },
+    {
+      "id": "R-06",
+      "disposition": "delivered",
+      "tickets": [
+        "T-36",
+        "T-43",
+        "T-44"
+      ],
+      "checks": [
+        "C-01",
+        "C-07"
+      ],
+      "note": "attempts under ignored .pincer/runtime/, done consumes the current pass, guard protects runtime state; S-18..S-20"
+    },
+    {
+      "id": "R-07",
+      "disposition": "delivered",
+      "tickets": [
+        "T-38",
+        "T-39",
+        "T-44"
+      ],
+      "checks": [
+        "C-01",
+        "C-07",
+        "C-08"
+      ],
+      "note": "schema 2 export from candidate attempts, schema 1 kept with legacy label, newer same-source attempts block release; S-21..S-24; observed live in the greenfield trial"
+    },
+    {
+      "id": "R-08",
+      "disposition": "delivered",
+      "tickets": [
+        "T-33",
+        "T-39",
+        "T-44"
+      ],
+      "checks": [
+        "C-01",
+        "C-07"
+      ],
+      "note": "one readiness computation, human and JSON status, ready gate, reason codes; S-25, S-26"
+    },
+    {
+      "id": "R-09",
+      "disposition": "delivered",
+      "tickets": [
+        "T-30",
+        "T-37",
+        "T-40",
+        "T-43",
+        "T-44"
+      ],
+      "checks": [
+        "C-01",
+        "C-02",
+        "C-06",
+        "C-07"
+      ],
+      "note": "preview/apply migration with backups, installer diagnosis, identical runtime on every layout; S-27..S-29"
+    },
+    {
+      "id": "R-10",
+      "disposition": "delivered",
+      "tickets": [
+        "T-40",
+        "T-41"
+      ],
+      "checks": [
+        "C-01",
+        "C-07",
+        "C-08"
+      ],
+      "note": "failure-injection suites (S-30) and the live trial record (S-31 on Claude Code -p + Sonnet; other surfaces untested)"
+    }
+  ],
+  "checks": [
+    {
+      "id": "C-01",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "npm test",
+      "timestamp": "2026-09-11T12:50:44Z",
+      "artifacts": [
+        ".prd/evidence/prd-v4/77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb/checks/C-01.log"
+      ],
+      "note": "21 suites: legacy kit suites plus runtime-parse, runtime-identity, runtime-state, runtime-status, runtime-runner, runtime-lifecycle, runtime-migrate, runtime-evidence, contracts, distribution; macOS 26.6.2, Node v22.23.1"
+    },
+    {
+      "id": "C-02",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "bash template/scripts/sync-prompts.sh && bash scripts/build-plugin.sh && git status --short -- template plugin",
+      "timestamp": "2026-09-11T12:50:44Z",
+      "artifacts": [
+        ".prd/evidence/prd-v4/77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb/checks/C-02.log"
+      ],
+      "note": "generated adapters and plugin are current; empty status after regeneration"
+    },
+    {
+      "id": "C-03",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "git ls-files | grep -i env; grep -n -E '\\.env' .gitignore",
+      "timestamp": "2026-09-11T12:50:44Z",
+      "artifacts": [
+        ".prd/evidence/prd-v4/77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb/checks/C-03.log"
+      ],
+      "note": "no tracked env files; .gitignore covers .env and .env.* except .env.example"
+    },
+    {
+      "id": "C-04",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "git diff 6771fbcc08bcac866037a9aa45af75fc07599ce1..77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb | grep -nE \"^\\+.*(api[_-]?key|secret|password|token)\\s*[:=]\\s*['\\\"][A-Za-z0-9_-]{8,}\" | cut -d: -f1,2",
+      "timestamp": "2026-09-11T12:50:44Z",
+      "artifacts": [
+        ".prd/evidence/prd-v4/77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb/checks/C-04.log"
+      ],
+      "note": "no secret-like assignments added in the candidate diff; matches would be reported as diff line numbers only"
+    },
+    {
+      "id": "C-05",
+      "kind": "command",
+      "required": false,
+      "result": "unverified",
+      "command": "npm audit --omit=dev",
+      "timestamp": "2026-09-11T12:50:44Z",
+      "artifacts": [
+        ".prd/evidence/prd-v4/77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb/checks/C-05.log"
+      ],
+      "note": "cannot run: no lockfile and no dependencies (loadVirtual requires existing shrinkwrap file)"
+    },
+    {
+      "id": "C-06",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "node test/distribution.test.js",
+      "timestamp": "2026-09-11T12:50:44Z",
+      "artifacts": [
+        ".prd/evidence/prd-v4/77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb/checks/C-06.log"
+      ],
+      "note": "packed tarball installs for Claude, Codex, Copilot and all layouts plus the plugin carry the identical runtime and execute the compatibility commands"
+    },
+    {
+      "id": "C-07",
+      "kind": "review",
+      "required": true,
+      "result": "passed",
+      "timestamp": "2026-09-11T12:50:44Z",
+      "artifacts": [
+        ".prd/evidence/prd-v4/77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb/review/code-quality.md"
+      ],
+      "note": "two reviewer subagents over 6771fbc..7b561b1 (runtime code/tests; docs/playbooks/packaging): 18 findings, all fixed in T-44 except two recorded as known issues (obsolete lib file left by update; README release number); the final candidate 77c5205 was checked by the evaluator against each finding, not re-sent to the subagents"
+    },
+    {
+      "id": "C-08",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "f=$(ls docs/trial-*-prd-v4.md | tail -1) && for s in Brief Base Kit Versions Artifacts Results Interventions Baseline Untested R-01 R-10 S-31; do grep -q \"$s\" \"$f\" || { echo \"missing $s\"; exit 1; }; done && grep -q \"$(basename \"$f\")\" docs/prd-v4-review-packet.md && echo ok",
+      "timestamp": "2026-09-11T12:50:44Z",
+      "artifacts": [
+        ".prd/evidence/prd-v4/77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb/checks/C-08.log"
+      ],
+      "note": "T-41 Verification block re-run: docs/trial-2026-09-11-prd-v4.md carries every required section and the packet cites it"
+    }
+  ],
+  "visual_review": {
+    "applicable": false,
+    "reason": "The kit is Node, Bash and Markdown; nothing renders. docs/index.html gained one table row, not a rendered change worth a capture."
+  },
+  "artifacts": [
+    {
+      "path": ".prd/evidence/prd-v4/77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb/checks/C-01.log",
+      "sha256": "a03c12e0d01220d0319299dc6c53f91922aa95b4ef234dd48adeb8c003d04da1"
+    },
+    {
+      "path": ".prd/evidence/prd-v4/77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb/checks/C-02.log",
+      "sha256": "f74f047efcc49c31941737db52b2fa7fece113f827666e05686fa817d7763c2b"
+    },
+    {
+      "path": ".prd/evidence/prd-v4/77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb/checks/C-03.log",
+      "sha256": "5db639a721c96f44c682a6d6774ebd6c1ff7461709165fed826426417b8525d4"
+    },
+    {
+      "path": ".prd/evidence/prd-v4/77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb/checks/C-04.log",
+      "sha256": "9d5b36e65a11e05bbd4b4e48e815c92a8d7167e40b6434e518466bb82482ed1d"
+    },
+    {
+      "path": ".prd/evidence/prd-v4/77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb/checks/C-05.log",
+      "sha256": "83534e4423c3523888f7121476600ca306ce9b7a7c114e9447d63ff1c735d1d6"
+    },
+    {
+      "path": ".prd/evidence/prd-v4/77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb/checks/C-06.log",
+      "sha256": "0ab89babecfe33047b6ee6129475fa5ec71653929414b0e0447feea311085f6d"
+    },
+    {
+      "path": ".prd/evidence/prd-v4/77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb/checks/C-08.log",
+      "sha256": "03ef8047fba4bf3578b17f4806c4fbb8350116b5aabc42063ec8504c9056711f"
+    },
+    {
+      "path": ".prd/evidence/prd-v4/77c5205ccf5d0c2723fcd0eb8471401c3d7ff0bb/review/code-quality.md",
+      "sha256": "f878e8446aee6bbf6177956caad9bcd67be7f9ca10607761078224fae48174a4"
+    }
+  ]
+}
