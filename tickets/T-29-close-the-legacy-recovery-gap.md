@@ -1,9 +1,13 @@
 ---
 ticket: T-29
-status: open
+status: done
 size: S
 prd: .prd/prd-v4.md
 depends_on: []
+started: 2026-09-11T09:34:04Z
+last_check: 2026-09-11T09:41:57Z passed 83e6362fcc83
+verified: 2026-09-11T09:41:57Z 83e6362fcc83
+finished: 2026-09-11T09:41:57Z
 ---
 
 ## Objective
@@ -22,9 +26,9 @@ Tighten the v0.4.1 recovery exception so a receipt can be restored only when the
 - Generated adapters and plugin are regenerated with no further diff.
 
 ## Acceptance Criteria
-- [ ] The five recovery conditions are present in code, status and checklist wording, asserted in `test/workflow.test.js`, and the existing R-01 assertions still hold.
-- [ ] The local-service fixture runs from the test harness and from a shell, and the S-02 and S-03 fixtures in `test/recovery.test.js` fail on the wrong behavior (a receipt that survives the service failure would fail the test).
-- [ ] `npm test` passes and both generators produce no diff.
+- [x] The five recovery conditions are present in code, status and checklist wording, asserted in `test/workflow.test.js`, and the existing R-01 assertions still hold.
+- [x] The local-service fixture runs from the test harness and from a shell, and the S-02 and S-03 fixtures in `test/recovery.test.js` fail on the wrong behavior (a receipt that survives the service failure would fail the test).
+- [x] `npm test` passes and both generators produce no diff.
 
 ## Verification
 Proves: the tightened exception is in the playbooks and pinned by assertions, the service-failure fixture observes failure recorded and receipt revoked with unchanged source, and generated output is current; regression: any condition phrase missing, the fixture passing without the service, or stale adapters.

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { repo, tempDir, createTicket, createPrd, write, read, step, run, statusScript, ticketScript, writeEvidence } from './helpers.js';
+import { repo, tempDir, createTicket, createPrd, write, read, step, run, statusScript, ticketScript, writeEvidence, writeNotes, startService } from './helpers.js';
 
 const status = dir => run(dir, 'bash', [statusScript]);
 const next = dir => status(dir).stdout.split('\n').find(line => line.startsWith('Next')) || '';
@@ -172,5 +172,62 @@ assert.doesNotMatch(next(noGit), /pincer-release/, 'unresolvable candidate canno
   assert.match(read(dir, file), /^last_check: .* failed /m, 'failed attempt preserved');
   assert.match(status(dir).stdout, /WARN T-01 latest verification: .* failed .* re-run verify/);
   assert.doesNotMatch(next(dir), /pincer-release/);
+}
+
+// PRD v4 R-01 S-02: a required local service is unavailable while the source is
+// unchanged. The failure is recorded and blocks readiness until the service is
+// repaired and verify passes again; no source revert explains it, so the legacy
+// restore exception never applies. The service is harness-owned: no other
+// binary can stand in for it.
+{
+  const dir = tempDir(); git(dir, 'init', '-q'); createPrd(dir);
+  const service = await startService();
+  const file = createTicket(dir, { command: 'curl -sf "http://127.0.0.1:$(cat service.port)/health" >/dev/null' });
+  write(dir, 'service.port', `${service.port}\n`);
+  complete(dir); commit(dir, 'T-01 done');
+  await service.stop();
+  assert.equal(git(dir, 'status', '--porcelain'), '', 'source unchanged before the failing attempt');
+  const failed = step(dir, 'verify');
+  assert.notEqual(failed.status, 0, 'verify fails while the service is down');
+  assert.match(failed.stderr, /failure recorded in last_check/);
+  assert.match(failed.stderr, /prior successful receipt was revoked/);
+  assert.match(read(dir, file), /^last_check: .* failed /m);
+  assert.doesNotMatch(read(dir, file), /^verified:/m, 'the receipt is revoked, not preserved');
+  assert.equal(git(dir, 'status', '--porcelain').trim(), 'M tickets/T-01-example.md', 'only the ticket file changed');
+  assert.match(status(dir).stdout, /WARN T-01 latest verification: .* failed .* re-run verify/);
+  assert.match(next(dir), /re-run verify/);
+  assert.doesNotMatch(next(dir), /pincer-release/);
+  assert.notEqual(step(dir, 'done').status, 0, 'done cannot close on the revoked receipt');
+  assert.doesNotMatch(read(dir, file), /^verified:/m, 'a refused done writes no receipt');
+  const restarted = await startService(service.port);
+  assert.equal(restarted.port, service.port, 'service repaired on the same port');
+  passes(step(dir, 'verify'));
+  assert.match(read(dir, file), /^verified:/m, 'a fresh pass after repair restores readiness');
+  assert.match(read(dir, file), /^last_check: .* passed /m);
+  await restarted.stop();
+}
+
+// PRD v4 R-01 S-03: source changes remain relative to the evaluated candidate.
+// Status reports them and never routes to release, whether or not the ticket's own
+// check still passes; the ticket permission does not cover the source.
+{
+  const dir = tempDir(); git(dir, 'init', '-q');
+  write(dir, 'base.txt', 'original\n');
+  const base = commit(dir, 'base');
+  createPrd(dir); createTicket(dir, { command: 'test -f source.txt' });
+  write(dir, 'source.txt', 'good'); complete(dir);
+  write(dir, '.prd/prd-v1.md', read(dir, '.prd/prd-v1.md').replace('ticketed', 'built'));
+  const candidate = commit(dir, 'candidate');
+  const evidence = writeEvidence(dir, { base, candidate });
+  writeNotes(dir, { base, candidate, evidence: evidence.manifest });
+  commit(dir, 'evaluate: PRD v1');
+  assert.match(next(dir), /pincer-release/, 'evaluated candidate is current');
+  write(dir, 'source.txt', 'changed but still present');
+  const out = status(dir).stdout;
+  assert.match(out, /Notes .*stale: working tree has changes outside NOTES\.md/, 'remaining source change is reported');
+  assert.doesNotMatch(next(dir), /pincer-release/, 'remaining source changes never release');
+  passes(step(dir, 'verify'));
+  assert.doesNotMatch(next(dir), /pincer-release/, 'a passing verify on the changed tree does not make the candidate current');
+  assert.equal(read(dir, 'source.txt'), 'changed but still present', 'nothing discarded the source change');
 }
 console.log('PRD recovery tests passed');

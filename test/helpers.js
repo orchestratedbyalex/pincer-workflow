@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 export const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -61,4 +61,22 @@ export function writeNotes(dir, { version = 1, base, candidate, evidence }) {
   const lines = [`prd: .prd/prd-v${version}.md`, `base: ${base}`, `candidate: ${candidate}`];
   if (evidence) lines.push(`evidence: ${evidence}`);
   write(dir, 'NOTES.md', `---\n${lines.join('\n')}\n---\n# Evaluation\nReviewed candidate.\n`);
+}
+// A harness-owned local HTTP service (test/fixtures/local-service.cjs) for
+// checks that must fail for an environmental reason no source revert explains.
+export function startService(port = 0) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [path.join(repo, 'test/fixtures/local-service.cjs'), String(port)], { stdio: ['ignore', 'pipe', 'inherit'] });
+    let out = '';
+    child.stdout.on('data', chunk => {
+      out += chunk;
+      const line = out.split('\n')[0];
+      if (/^\d+$/.test(line)) resolve({ port: Number(line), pid: child.pid, stop: () => stopService(child) });
+    });
+    child.on('error', reject);
+    child.on('exit', code => { if (!/^\d+\n/.test(out)) reject(new Error(`service exited early (${code})`)); });
+  });
+}
+export function stopService(child) {
+  return new Promise(resolve => { if (child.exitCode !== null) return resolve(); child.once('exit', () => resolve()); child.kill('SIGTERM'); });
 }

@@ -155,9 +155,19 @@ assert.match(code, /the committed evaluation still describes the tree/);
 assert.match(code, /do not run `verify`, refresh the receipt or commit anything/);
 assert.match(code, /If the block fails on that clean tree,\s+the failure is real/);
 assert.match(code, /does not authorize discarding source changes/);
+// PRD v4 R-01 (before migration): the exception needs a since-reverted source change
+// and the same execution context; an unexplained failure stays a failure.
+assert.match(code, /explained by a working-tree change that has since been reverted/);
+assert.match(code, /same execution context as `verify`/);
+assert.match(code, /no substituted binary and no repair made first/);
+assert.match(code, /A changed executable, runner, working directory or environment repair requires a\s+new recorded verification/);
+assert.match(code, /An unexplained failure cannot be cleared by restoring a receipt/);
 const statusPlaybook = read('template/.claude/commands/pincer-status.md');
 assert.match(statusPlaybook, /Never restore a ticket file from git/i);
 assert.match(statusPlaybook, /the user restores the ticket file, and nothing is verified or committed/);
+assert.match(statusPlaybook, /explained by a since-reverted source\s+change and the block passes in the same execution context as `verify`/);
+assert.match(read('template/docs/dry-run-checklist.md'), /keeps the failed `last_check`, names no restore command, does not\s+switch binaries or repair the environment itself/);
+assert.match(read('template/docs/dry-run-checklist.md'), /same execution context as `verify`/);
 assert.match(read('template/docs/dry-run-checklist.md'), /runs no `verify`, and\s+commits nothing/);
 assert.match(read('template/scripts/pincer-status.sh'), /wall-clock elapsed/);
 const releaseChecklist = read('template/docs/release-checklist.md');

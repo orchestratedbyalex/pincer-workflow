@@ -87,16 +87,26 @@ the script or `scripts/pincer-status.sh` printed, and hand the repair to the use
 performs it in their own terminal. Then return through the lifecycle — `start`,
 `verify`, `done` — so the ticket carries fresh verification; a restored receipt is
 never evidence. Do not recommend restoring source files or unrelated edits as routine
-ticket repair. One exception: when the PRD is built with valid candidate evidence,
+ticket repair. One exception: when the PRD is built with valid candidate evidence;
 tracked files other than the ticket file being restored match the evaluated candidate
-(or the candidate plus its evidence-only commit) with nothing untracked, and the
-ticket's Verification block passes when run
-directly rather than through `verify` (which would write a receipt), then
+(or the candidate plus its evidence-only commit) with nothing untracked; the recorded
+failure is explained by a working-tree change that has since been reverted (the failed
+`last_check` was stamped while source differed from the candidate, and that difference
+is gone); and the ticket's Verification block passes when run
+directly rather than through `verify` (which would write a receipt), in the
+same execution context as `verify` — the same shell, working directory, `PATH`
+and environment, with no substituted binary and no repair made first — then
 the committed evaluation still describes the tree. Say so, name the exact command
 for the user to restore the ticket file in their own terminal, and
 do not run `verify`, refresh the receipt or commit anything — the restored file is
 what is already committed, not new evidence. If the block fails on that clean tree,
 the failure is real: keep the failed `last_check` and repair through the lifecycle.
+A changed executable, runner, working directory or environment repair requires a
+new recorded verification through `verify`; the exception does not apply to it.
+An unexplained failure cannot be cleared by restoring a receipt: when no
+since-reverted source change explains it (a service down, a missing dependency, a
+check that reads external data), keep the failure, name the cause you observed, and
+ask for the environment to be repaired before `verify` runs again.
 If source still differs from the candidate, name the differing paths and let the
 user decide rather than asking which way to fix them; permission to restore a ticket
 does not authorize discarding source changes. Automated recovery that preserves

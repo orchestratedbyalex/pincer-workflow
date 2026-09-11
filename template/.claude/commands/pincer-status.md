@@ -23,3 +23,7 @@ start of a session. Read-only: change nothing.
    Never restore a ticket file from git to clear a warning; a failed attempt is a record.
    The one exception is the tree-back-at-candidate case in the recovery section of
    `/pincer-code`: the user restores the ticket file, and nothing is verified or committed.
+   It applies only when the recorded failure is explained by a since-reverted source
+   change and the block passes in the same execution context as `verify`; an
+   unexplained failure (a service down, a missing dependency) stays a failure until the
+   environment is repaired and `verify` passes again.
