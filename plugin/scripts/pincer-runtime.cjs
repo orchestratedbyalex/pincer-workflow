@@ -16,6 +16,7 @@
 //   node scripts/pincer-runtime.cjs change authorize <id> --agreement <digest> (--reference <text> --excerpt <text> | --delegated --basis A-NN --explanation <text>) [--decision D-NN]...
 //   node scripts/pincer-runtime.cjs change decide <id> --summary <text> [--id D-NN] | --resolve D-NN --reference <text> --excerpt <text>
 //   node scripts/pincer-runtime.cjs change activate|pause|resume|complete|reopen|cancel|supersede <id> [--reason <text>] [--note <text>] [--decision D-NN] [--with <id>]
+//   node scripts/pincer-runtime.cjs resume [--change <id>] [--json]
 //
 // Exit codes: 0 ok · 1 failed/not ready/refused · 2 usage · 3 state busy ·
 // 4 invalid input or state · 124 timed out · 130 interrupted.
@@ -39,6 +40,7 @@ const authorization = require('./pincer-runtime/authorization.cjs');
 const transitions = require('./pincer-runtime/transitions.cjs');
 const gates = require('./pincer-runtime/gates.cjs');
 const locator = require('./pincer-runtime/locator.cjs');
+const resume = require('./pincer-runtime/resume.cjs');
 const { atomicWrite, nowIso, tryGit } = require('./pincer-runtime/fsutil.cjs');
 const EXIT = { OK: 0, FAILED: 1, USAGE: 2, BUSY: 3, INVALID: 4, TIMED_OUT: 124, INTERRUPTED: 130 };
 
@@ -68,7 +70,8 @@ function usage(message) {
     '       pincer-runtime.cjs change authorize <id> --agreement <digest> (--reference <text> --excerpt <text> [--constraints <text>] | --delegated --basis A-NN --explanation <text>) [--decision D-NN]...\n' +
     '       pincer-runtime.cjs change decide <id> --summary <text> [--id D-NN] | --resolve D-NN --reference <text> --excerpt <text>\n' +
     '       pincer-runtime.cjs change activate|resume|complete <id> · change pause <id> --reason <text> [--note <text>] · change reopen <id> --reason <text>\n' +
-    '       pincer-runtime.cjs change cancel <id> --decision D-NN --reason <text> · change supersede <id> --with <id> --decision D-NN\n');
+    '       pincer-runtime.cjs change cancel <id> --decision D-NN --reason <text> · change supersede <id> --with <id> --decision D-NN\n' +
+    '       pincer-runtime.cjs resume [--change <id>] [--json]   (the read-only report; `change resume` is the lifecycle operation)\n');
   process.exit(EXIT.USAGE);
 }
 
@@ -357,6 +360,16 @@ function cmdRegister(root, args) {
   process.exit(EXIT.OK);
 }
 
+// resume [--change <id>] [--json] — the read-only resume report (never the lifecycle operation).
+function cmdResume(root, args) {
+  const o = parseOptions(args, { switches: ['--json'], valued: ['--change'] });
+  if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
+  const result = resume.build(root, { change: o.change || null });
+  if (o.json) process.stdout.write(`${JSON.stringify(result.json, null, 2)}\n`);
+  else process.stdout.write(result.text);
+  process.exit(result.exit);
+}
+
 // The current agreement of a record against its recorded entries (read-only).
 function agreementNow(root, record) {
   const now = agreement.compute(root, record);
@@ -522,6 +535,7 @@ function main(argv) {
   if (command === 'check') return cmdCheck(root, rest);
   if (command === 'evidence') return cmdEvidence(root, rest);
   if (command === 'change') return cmdChange(root, rest);
+  if (command === 'resume') return cmdResume(root, rest);
   usage(command ? `unknown command ${command}` : undefined);
 }
 

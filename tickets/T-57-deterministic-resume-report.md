@@ -1,9 +1,13 @@
 ---
 ticket: T-57
-status: open
+status: done
 size: M
 prd: .prd/prd-v5.md
 depends_on: [T-56]
+started: 2026-09-11T21:50:17Z
+last_check: 2026-09-11T21:57:10Z passed 270759d73793
+verified: 2026-09-11T21:57:10Z 270759d73793
+finished: 2026-09-11T21:57:10Z
 ---
 
 ## Objective
@@ -24,9 +28,9 @@ Render deterministic resume context and next actions so PRD v5 can be implemente
 - Use a fresh subprocess with no prior conversation to inspect saved records; keep full machine-readable diagnostics behind concise human output.
 
 ## Acceptance Criteria
-- [ ] All required report fields and actionable blockers are available from files alone, including multiple simultaneous blockers with deterministic precedence.
-- [ ] A note claiming approval or success cannot override an unmatched agreement or failed/stale check.
-- [ ] Repeated reports create no writes, child verification, duplicate approvals or selection changes; human/JSON/command verdicts agree.
+- [x] All required report fields and actionable blockers are available from files alone, including multiple simultaneous blockers with deterministic precedence.
+- [x] A note claiming approval or success cannot override an unmatched agreement or failed/stale check.
+- [x] Repeated reports create no writes, child verification, duplicate approvals or selection changes; human/JSON/command verdicts agree.
 
 ## Verification
 Proves: Loads fresh-process state, injects misleading notes and competing blockers, and compares reports to gates while asserting zero inspection side effects.
