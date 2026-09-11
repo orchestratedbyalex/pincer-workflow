@@ -227,7 +227,7 @@ function unchanged(dir, before, fn, label) {
   assert.deepEqual(snapshotTree(dir), listed, 'inspection is read-only (the ignored lock layout came from registration, not from list/show)');
   refuses(rt(dir, 'change', 'show', 'nope'), 4, /INPUT_INVALID: no change record \.prd\/changes\/nope\.json \(retained: prd-v1\)/);
   refuses(rt(dir, 'change', 'show'), 2, /exactly one change ID/);
-  refuses(rt(dir, 'change', 'activate', 'prd-v1'), 2, /not available in this build/);
+  refuses(rt(dir, 'change', 'frobnicate', 'prd-v1'), 2, /unknown change subcommand frobnicate/);
   // Legacy project: list says so and register creates the first record (no migration needed without receipts).
   const legacy = fixture();
   assert.match(passes(rt(legacy, 'change', 'list')), /^Changes  none \(legacy project; register with/);

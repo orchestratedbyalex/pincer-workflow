@@ -1,9 +1,13 @@
 ---
 ticket: T-53
-status: open
+status: done
 size: L
 prd: .prd/prd-v5.md
 depends_on: [T-50, T-52]
+started: 2026-09-11T21:19:25Z
+last_check: 2026-09-11T21:25:56Z passed ba9ce34e9314
+verified: 2026-09-11T21:25:56Z ba9ce34e9314
+finished: 2026-09-11T21:25:56Z
 ---
 
 ## Objective
@@ -24,10 +28,10 @@ Implement the change lifecycle and preserve event history so PRD v5 can be imple
 - Reopen retains completion history; idempotent repetitions write no event. Running attempts block pause/cancel/supersede without killing them. Invalid transitions preserve files.
 
 ## Acceptance Criteria
-- [ ] All valid/invalid transition pairs are covered by observable CLI tests, including idempotence and state/history agreement.
-- [ ] Stale/red evidence, unfinished work or unresolved decisions block completion; reopened work retains historical events without inventing fresh evidence.
-- [ ] Cancelled/superseded execution and cyclic supersession refuse; concurrent activation never leaves two active changes.
-- [ ] Running-attempt races and transition crash points recover through the real transaction layer.
+- [x] All valid/invalid transition pairs are covered by observable CLI tests, including idempotence and state/history agreement.
+- [x] Stale/red evidence, unfinished work or unresolved decisions block completion; reopened work retains historical events without inventing fresh evidence.
+- [x] Cancelled/superseded execution and cyclic supersession refuse; concurrent activation never leaves two active changes.
+- [x] Running-attempt races and transition crash points recover through the real transaction layer.
 
 ## Verification
 Proves: Exercises the transition matrix and actual concurrency/recovery boundaries; detects false completion, lost history, invalid terminal execution and duplicate activation.

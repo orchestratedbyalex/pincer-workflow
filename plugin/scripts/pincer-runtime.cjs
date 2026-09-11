@@ -15,6 +15,7 @@
 //   node scripts/pincer-runtime.cjs change list [--json] · change show <id> [--json] · change select <id> · change revise <id>
 //   node scripts/pincer-runtime.cjs change authorize <id> --agreement <digest> (--reference <text> --excerpt <text> | --delegated --basis A-NN --explanation <text>) [--decision D-NN]...
 //   node scripts/pincer-runtime.cjs change decide <id> --summary <text> [--id D-NN] | --resolve D-NN --reference <text> --excerpt <text>
+//   node scripts/pincer-runtime.cjs change activate|pause|resume|complete|reopen|cancel|supersede <id> [--reason <text>] [--note <text>] [--decision D-NN] [--with <id>]
 //
 // Exit codes: 0 ok · 1 failed/not ready/refused · 2 usage · 3 state busy ·
 // 4 invalid input or state · 124 timed out · 130 interrupted.
@@ -35,6 +36,7 @@ const evidence = require('./pincer-runtime/evidence.cjs');
 const changes = require('./pincer-runtime/changes.cjs');
 const agreement = require('./pincer-runtime/agreement.cjs');
 const authorization = require('./pincer-runtime/authorization.cjs');
+const transitions = require('./pincer-runtime/transitions.cjs');
 const { atomicWrite, nowIso, tryGit } = require('./pincer-runtime/fsutil.cjs');
 const EXIT = { OK: 0, FAILED: 1, USAGE: 2, BUSY: 3, INVALID: 4, TIMED_OUT: 124, INTERRUPTED: 130 };
 
@@ -62,7 +64,9 @@ function usage(message) {
     '       pincer-runtime.cjs evidence export --candidate <sha> --base <sha> --prd .prd/prd-vN.md --draft <file>\n' +
     '       pincer-runtime.cjs change list [--json] · change show <id> [--json] · change select <id> · change revise <id>\n' +
     '       pincer-runtime.cjs change authorize <id> --agreement <digest> (--reference <text> --excerpt <text> [--constraints <text>] | --delegated --basis A-NN --explanation <text>) [--decision D-NN]...\n' +
-    '       pincer-runtime.cjs change decide <id> --summary <text> [--id D-NN] | --resolve D-NN --reference <text> --excerpt <text>\n');
+    '       pincer-runtime.cjs change decide <id> --summary <text> [--id D-NN] | --resolve D-NN --reference <text> --excerpt <text>\n' +
+    '       pincer-runtime.cjs change activate|resume|complete <id> · change pause <id> --reason <text> [--note <text>] · change reopen <id> --reason <text>\n' +
+    '       pincer-runtime.cjs change cancel <id> --decision D-NN --reason <text> · change supersede <id> --with <id> --decision D-NN\n');
   process.exit(EXIT.USAGE);
 }
 
@@ -370,6 +374,20 @@ function cmdChange(root, args) {
     else process.stdout.write(changes.renderShow(o.positional[0], result, { agreement: now, verdict: v }));
     process.exit(EXIT.OK);
   }
+  if (transitions.OPS.includes(sub)) {
+    const o = parseOptions(rest, { valued: ['--reason', '--note', '--decision', '--with'] });
+    if (o.positional.length !== 1) usage(`change ${sub} requires exactly one change ID`);
+    const id = o.positional[0];
+    const result = transitions.transition(root, id, sub, { reason: o.reason, note: o.note, decision: o.decision, with: o.with });
+    if (result.code) fail('pincer', `${result.code}: ${result.problem}`, exitForCode(result.code));
+    if (result.action === 'unchanged') { process.stdout.write(`change ${id} is already ${result.to}${result.record.lifecycle.superseded_by ? ` by ${result.record.lifecycle.superseded_by}` : ''}; nothing written\n`); process.exit(EXIT.OK); }
+    const e = result.event;
+    const past = { activate: 'activated', pause: 'paused', resume: 'resumed', complete: 'completed', reopen: 'reopened', cancel: 'cancelled', supersede: 'superseded' }[sub];
+    process.stdout.write(`${past} change ${id}: ${result.from} → ${result.to} (event ${e.sequence}${e.authorization ? `, authorization ${e.authorization}` : ''}${e.decision ? `, decision ${e.decision}` : ''}${e.replacement ? `, replaced by ${e.replacement}` : ''}${e.reason ? `; reason: ${e.reason}` : ''})\n`);
+    if (sub === 'complete') process.stderr.write('pincer: note: completed means implementation complete and ready for evaluation, not evaluated or released; commit the record before choosing the candidate\n');
+    if (sub === 'pause' && e.note) process.stderr.write('pincer: note: the handoff note is authored text; status and resume show it but never derive readiness from it\n');
+    process.exit(EXIT.OK);
+  }
   if (sub === 'authorize') {
     const o = parseOptions(rest, { valued: ['--agreement', '--reference', '--excerpt', '--constraints', '--basis', '--explanation'], switches: ['--delegated'], repeated: ['--decision'] });
     if (o.positional.length !== 1) usage('change authorize requires exactly one change ID');
@@ -404,7 +422,7 @@ function cmdChange(root, args) {
     if (result.action === 'recorded') process.stderr.write('pincer: note: recording an agreement authorizes nothing; record its disposition with `change authorize`\n');
     process.exit(EXIT.OK);
   }
-  usage(sub ? `change ${sub} is not available in this build (change supports: list, show, select, revise, authorize, decide)` : 'change requires a subcommand: list, show, select, revise, authorize, decide');
+  usage(sub ? `unknown change subcommand ${sub} (change supports: list, show, select, revise, authorize, decide, activate, pause, resume, complete, reopen, cancel, supersede)` : 'change requires a subcommand: list, show, select, revise, authorize, decide, activate, pause, resume, complete, reopen, cancel, supersede');
 }
 
 function cmdSnapshot(root, args) {
