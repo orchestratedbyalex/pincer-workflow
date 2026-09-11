@@ -244,6 +244,26 @@ function cmdDoctor() {
   const stale = fs.existsSync(TEMPLATE) && manifest.version !== VERSION;
   check(!stale, `install is current (v${manifest.version})`, 'run: pincer update');
 
+  // The runtime ships with every layout; a project with legacy receipts and no
+  // change binding can migrate explicitly (never silently here).
+  const runtimeFiles = Object.keys(manifest.files).filter((rel) => rel === 'scripts/pincer-runtime.cjs' || rel.startsWith('scripts/pincer-runtime/'));
+  if (runtimeFiles.length) {
+    const missingRuntime = runtimeFiles.filter((rel) => !fs.existsSync(path.join(dir, rel)));
+    check(missingRuntime.length === 0, 'runtime files present', `missing: ${missingRuntime.join(', ')} — run: pincer update`);
+  }
+  const ticketsDir = path.join(dir, 'tickets');
+  const legacyReceipts = fs.existsSync(ticketsDir)
+    ? fs.readdirSync(ticketsDir).filter((n) => /^T-\d+.*\.md$/.test(n)).filter((n) => /^(verified|last_check):/m.test(fs.readFileSync(path.join(ticketsDir, n), 'utf8')))
+    : [];
+  const bindingsDir = path.join(dir, '.prd', 'changes');
+  const hasBinding = fs.existsSync(bindingsDir) && fs.readdirSync(bindingsDir).some((n) => n.endsWith('.json'));
+  if (legacyReceipts.length && !hasBinding) {
+    const prdDir = path.join(dir, '.prd');
+    const prds = fs.existsSync(prdDir) ? fs.readdirSync(prdDir).map((n) => n.match(/^prd-v(\d+)\.md$/)).filter(Boolean).map((m) => Number(m[1])) : [];
+    const latest = prds.length ? `.prd/prd-v${Math.max(...prds)}.md` : '.prd/prd-vN.md';
+    console.log(`  note  migration available: ${legacyReceipts.length} ticket(s) carry legacy receipts and no change binding exists — preview with: node scripts/pincer-runtime.cjs migrate --preview --prd ${latest}`);
+  }
+
   const edited = Object.entries(manifest.files)
     .filter(([rel, h]) => fs.existsSync(path.join(dir, rel)) && sha(fs.readFileSync(path.join(dir, rel))) !== h)
     .map(([rel]) => rel);

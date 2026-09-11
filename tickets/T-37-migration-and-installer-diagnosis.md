@@ -1,9 +1,13 @@
 ---
 ticket: T-37
-status: open
+status: done
 size: M
 prd: .prd/prd-v4.md
 depends_on: [T-36]
+started: 2026-09-11T10:57:00Z
+last_check: 2026-09-11T11:02:04Z passed 2c481a54ef09
+verified: 2026-09-11T11:02:04Z 2c481a54ef09
+finished: 2026-09-11T11:02:04Z
 ---
 
 ## Objective
@@ -22,9 +26,9 @@ Provide read-only migration preview and explicit apply with backups, idempotent 
 - Tests (`test/runtime-migrate.test.js`, added to `npm test`): clean (no tickets), customized (user edits in ticket bodies and AGENTS.md preserved byte for byte), ambiguous (two PRDs, `--prd` required and the other binding refused without `--replace`), partly migrated (binding present, receipts still there → preview names it, apply completes it), and legacy (receipts on done tickets) fixtures; preview writes nothing (snapshot equality); apply then re-apply are idempotent; the backup restores the original ticket byte for byte; a malformed ticket makes apply fail before any write; existing installer conflict tests stay green.
 
 ## Acceptance Criteria
-- [ ] Preview is read-only and names every change and conflict; apply backs up, migrates once, and re-apply is idempotent.
-- [ ] Legacy receipts become history, never source-bound evidence; user files are preserved in every fixture.
-- [ ] `npm test` passes with the new suite and the installer suites.
+- [x] Preview is read-only and names every change and conflict; apply backs up, migrates once, and re-apply is idempotent.
+- [x] Legacy receipts become history, never source-bound evidence; user files are preserved in every fixture.
+- [x] `npm test` passes with the new suite and the installer suites.
 
 ## Verification
 Proves: migration preserves user work and fails closed on conflicts; regression: a lost user edit, a receipt relabelled as runtime evidence, a partial migration reported as complete, or an installer that migrates silently.

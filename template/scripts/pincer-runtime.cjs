@@ -9,6 +9,7 @@
 //   node scripts/pincer-runtime.cjs status [--json]
 //   node scripts/pincer-runtime.cjs ready [T-NN]
 //   node scripts/pincer-runtime.cjs start|verify|done T-NN · bind T-NN .prd/prd-vN.md
+//   node scripts/pincer-runtime.cjs migrate --preview|--apply --prd .prd/prd-vN.md [--change <id>] [--authorization <text>]
 //
 // Exit codes: 0 ok · 1 failed/not ready/refused · 2 usage · 3 state busy ·
 // 4 invalid input or state · 124 timed out · 130 interrupted.
@@ -24,6 +25,7 @@ const status = require('./pincer-runtime/status.cjs');
 const runner = require('./pincer-runtime/runner.cjs');
 const sanitize = require('./pincer-runtime/sanitize.cjs');
 const lifecycle = require('./pincer-runtime/lifecycle.cjs');
+const migrate = require('./pincer-runtime/migrate.cjs');
 const EXIT = { OK: 0, FAILED: 1, USAGE: 2, BUSY: 3, INVALID: 4, TIMED_OUT: 124, INTERRUPTED: 130 };
 
 function repoRoot() {
@@ -44,8 +46,31 @@ function usage(message) {
     '       pincer-runtime.cjs status [--json]\n' +
     '       pincer-runtime.cjs ready [T-NN]\n' +
     '       pincer-runtime.cjs start|verify|done T-NN\n' +
-    '       pincer-runtime.cjs bind T-NN .prd/prd-vN.md\n');
+    '       pincer-runtime.cjs bind T-NN .prd/prd-vN.md\n' +
+    '       pincer-runtime.cjs migrate --preview|--apply --prd .prd/prd-vN.md [--change <id>] [--authorization <text>]\n');
   process.exit(EXIT.USAGE);
+}
+
+function cmdMigrate(root, args) {
+  const o = parseOptions(args, { valued: ['--prd', '--change', '--authorization'], switches: ['--preview', '--apply'] });
+  if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
+  if (!o.prd) usage('migrate requires --prd .prd/prd-vN.md');
+  if (Boolean(o.preview) === Boolean(o.apply)) usage('migrate requires exactly one of --preview or --apply');
+  const options = { prd: o.prd, change: o.change, authorization: o.authorization ?? null };
+  if (o.preview) {
+    const p = migrate.plan(root, options);
+    process.stdout.write(migrate.renderPlan(p));
+    process.exit(p.conflicts.length ? EXIT.FAILED : EXIT.OK);
+  }
+  const result = migrate.apply(root, options);
+  if (result.plan.conflicts.length) { process.stdout.write(migrate.renderPlan(result.plan)); process.exit(EXIT.FAILED); }
+  if (result.already) { process.stdout.write(`already migrated: ${o.prd} is bound as change ${result.plan.change}; nothing changed\n`); process.exit(EXIT.OK); }
+  if (result.error) { process.stderr.write(`pincer: migration stopped before the binding was written: ${result.error}\n`); process.exit(EXIT.INVALID); }
+  const b = result.binding;
+  process.stdout.write(`migrated ${o.prd} → change ${b.change} (revision ${b.prd_revision.slice(0, 12)}, base ${b.base.slice(0, 7)}, ${Object.keys(result.plan.tickets.length ? b.legacy_receipts : {}).length || result.plan.tickets.length} ticket(s) rewritten)\n`);
+  if (result.backupDir) process.stdout.write(`backups: ${result.backupDir} (${result.backups.length} file(s)); rollback per docs/runtime-contracts.md\n`);
+  if (!o.authorization) process.stderr.write('pincer: note: no --authorization recorded; migration does not prove human approval\n');
+  process.exit(EXIT.OK);
 }
 
 const fail = (prefix, message, code = EXIT.INVALID) => { process.stderr.write(`${prefix}: ${message}\n`); process.exit(code); };
@@ -219,6 +244,7 @@ function main(argv) {
   if (command === 'status') return cmdStatus(root, rest);
   if (command === 'ready') return cmdReady(root, rest);
   if (['start', 'verify', 'done', 'bind'].includes(command)) return cmdLifecycle(root, command, rest);
+  if (command === 'migrate') return cmdMigrate(root, rest);
   usage(command ? `unknown command ${command}` : undefined);
 }
 
