@@ -90,8 +90,9 @@ performs it in their own terminal. Then return through the lifecycle — `start`
 `verify`, `done` — so the ticket carries fresh verification; a restored receipt is
 never evidence. Do not recommend restoring source files or unrelated edits as routine
 ticket repair. One exception: when the PRD is built with valid candidate evidence,
-tracked files match the evaluated candidate (or the candidate plus its evidence-only
-commit) with nothing untracked, and the ticket's Verification block passes when run
+tracked files other than the ticket file being restored match the evaluated candidate
+(or the candidate plus its evidence-only commit) with nothing untracked, and the
+ticket's Verification block passes when run
 directly rather than through `verify` (which would write a receipt), then
 the committed evaluation still describes the tree. Say so, name the exact command
 for the user to restore the ticket file in their own terminal, and

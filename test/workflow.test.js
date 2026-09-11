@@ -150,6 +150,7 @@ assert.match(code, /Branch\s+switches and file-specific restores outside `ticket
 assert.match(code, /safety net for documented mistake forms, not a complete shell\s+boundary/i);
 assert.match(code, /not a measure\s+of active execution time/i);
 // PRD v3 R-01: the one exception — tree back at the evaluated candidate, check passes directly.
+assert.match(code, /tracked files other than the ticket file being restored match the evaluated candidate/);
 assert.match(code, /the committed evaluation still describes the tree/);
 assert.match(code, /do not run `verify`, refresh the receipt or commit anything/);
 assert.match(code, /If the block fails on that clean tree,\s+the failure is real/);

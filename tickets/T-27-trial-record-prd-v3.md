@@ -11,7 +11,7 @@ finished: 2026-09-10T20:04:59Z
 ---
 
 ## Objective
-Record the two live R-01 observations the PRD requires (eligible case commits nothing; negative case keeps the failure) in a trial file, from the modified kit, before the evaluation candidate is chosen.
+Record the two live R-01 observations the PRD requires (eligible case commits nothing; negative case attempted and recorded honestly or as `outstanding`) in a trial file, from the modified kit, before the evaluation candidate is chosen.
 
 ## Context
 - Relevant files: new `docs/trial-<date>-prd-v3.md`; precedent `docs/trial-2026-09-10-interactive.md` and `docs/trial-2026-09-08-*.md`; the fixture at `~/Documents/dev/personal/pincer-trial-interactive` (base `d642c72`, candidate `cc6f630`, T-02's check is `npm test`); `template/docs/dry-run-checklist.md` trial record template; wiki landmine "Live trials" in `docs/wiki/briefing.md` (`claude -p --model sonnet --permission-mode bypassPermissions` with `env -u CLAUDECODE`, packed tarball via `npm pack`).
@@ -21,7 +21,7 @@ Record the two live R-01 observations the PRD requires (eligible case commits no
 ## Requirements
 - Install the modified kit into a copy of the existing fixture (or a fresh fixture reproducing its candidate state) from `npm pack` of the working tree, never from the published 0.4.0 package; the original fixture's trial evidence stays untouched.
 - Eligible case: inject the `done` toggle into `notes.js`, run `scripts/pincer-ticket.sh verify T-02` and observe the failure, revert `notes.js` so the tree matches the candidate, then ask the assistant to restore the ticket. Record: the exact command it names, that it ran no `verify`, that HEAD is unchanged and no commit was made, and `scripts/pincer-status.sh` reporting `current` after the user runs the command.
-- Negative case: clean tree at the candidate, make T-02's Verification block fail without a source change (for example an unavailable tool on `PATH`), run `verify`, then ask the assistant for help. Record that it keeps the failed `last_check`, does not recommend restoring the receipt, and reports the status output honestly.
+- Negative case: clean tree at the candidate, make T-02's Verification block fail without a source change (for example an unavailable tool on `PATH`), run `verify`, then ask the assistant for help. Record what it does with the failed `last_check`, whether it recommends restoring the receipt, and whether it reports the status output honestly; if the constructed failure turns out not to be persistent, record the observation as `outstanding` and say why.
 - The record has the sections of the checklist's trial template (Brief, Base, Versions, Artifacts, Results, Interventions, Untested) plus a table with one row per R-01..R-03 stating observed evidence or `outstanding`, and names the kit revision or tarball digest, Claude Code version and model.
 - The record is committed with this ticket, before `PRD v3: built`, so the evaluation candidate includes it.
 

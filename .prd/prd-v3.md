@@ -20,7 +20,7 @@ focused live observations check that an agent follows it.
 The first interactive trial of the published 0.4.0 kit
 (`docs/trial-2026-09-10-interactive.md`) passed release but showed three
 places where the playbooks leave the agent to guess. Asked to restore a ticket
-after a source fault had been reverted, the agent repaired the source itself,
+while a source fault was still in place, the agent reverted the source itself,
 re-verified the ticket and committed a receipt refresh nobody asked for; the
 candidate rule then correctly demanded a second full evaluation for a
 two-timestamp change. Evaluate bundled three commands under one check and
@@ -69,7 +69,8 @@ logs and any automated ticket recovery, which belong to the M1 runtime.
   and the ticket returns through `start`, `verify`, `done` for fresh
   verification. Source restoration is not routine ticket repair.
 - Exception, checkable by the agent: the PRD is built and its evaluated
-  candidate has valid evidence; tracked files match that candidate (or the
+  candidate has valid evidence; tracked files
+  other than the ticket file being restored match that candidate (or the
   candidate plus its evidence-only commit) and nothing is untracked; and the
   ticket's Verification block passes when run directly, not through `verify`,
   which would write a receipt. When all three hold, the committed evaluation
@@ -188,8 +189,8 @@ Playbook text → generators (`template/scripts/sync-prompts.sh`,
 | Code and status carry the same rule and the R-06 assertions still hold | `npm test` passes with the new wording assertions added |
 | Generated outputs are current | Run both generators, then run them again with no further diff; distribution parity passes |
 | R-01 eligible case commits nothing | In the existing fixture, from the modified kit's packed tarball: inject the `done` fault, observe the failed `verify`, revert the source, then ask the assistant to restore the ticket; observe the named command, no `verify`, no commit, unchanged HEAD, and `current` status after the user runs it |
-| R-01 negative case keeps the failure | Same fixture, clean tree, a Verification block made to fail without a source change (e.g. a missing tool); observe that the assistant keeps the failed `last_check` and does not recommend restoring the receipt |
-| R-02 and R-03 wording present | Wording assertions; live observation of both is outstanding until the next full trial |
+| R-01 negative case keeps the failure — `outstanding (see Out of Scope)` | Same fixture, clean tree, a Verification block made to fail without a source change; observe that the assistant keeps the failed `last_check` and does not recommend restoring the receipt. Attempted 2026-09-10 with a bypassable environment fault; not observed |
+| R-02 and R-03 wording present | Wording assertions. R-02 was observed as a by-product of the trial re-evaluation (six checks, security pass as three entries); R-03 live observation is outstanding until the next full trial |
 
 Record kit revision or package digest, agent and model versions, prompts and
 observed outputs in the trial record, and finalize that record before
