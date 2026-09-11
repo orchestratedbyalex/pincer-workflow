@@ -36,7 +36,12 @@ that was not made. Rows marked `outstanding` are not passed gates.
   log that no longer matches its recorded digest is `EVIDENCE_MISSING` (export
   refuses), `recover` records the digests of the logs a dead runner captured, and the
   timeout signals the process group whether or not the shell has exited, with capture
-  abandoned 2 s after SIGKILL and the signals actually sent named in the record.
+  abandoned 2 s after SIGKILL and the signals actually sent named in the record. A
+  reviewer subagent over the T-45 diff added a seventh (T-46): only delivered signals
+  are named, an `interrupted` record may lack log digests (export refuses it), every
+  record field through `artifacts` is validated, the record must carry the id the
+  index points at, and the group-id reuse window after the shell is reaped is a
+  stated limit.
 
 ## 2. Traceability
 

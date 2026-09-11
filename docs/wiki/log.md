@@ -143,3 +143,9 @@ Outcome: npm publish still pending (needs the user's OTP); next is `/pincer-narr
 - Why: the runtime's record and log digests existed but were never checked; the timeout logic keyed on the shell's exit rather than the group.
 - Files: `template/scripts/pincer-runtime/{state,readiness,lifecycle,status,evidence,runner}.cjs`, `template/docs/runtime-contracts.md`, three runtime test suites, packet, this wiki.
 - Outcome: T-45 done via the pinned kit (`2ff2b1a`); candidate 3 = this wiki commit; its evaluation commit follows.
+
+## [2026-09-11] end | Reviewer findings on T-45 fixed in T-46; candidate 4
+- What: a reviewer subagent over the T-45 diff reported five Low findings (limitation naming undelivered signals, old `recover` records reclassified as malformed, contract overstating validated fields, a record copied over the pointed-at one accepted, group-id reuse window); T-46 fixed four with assertions and recorded the fifth as a contract limit.
+- Why: the evaluation of candidate 3 was not yet committed, so the fixes went in before evidence rather than into known issues.
+- Files: `template/scripts/pincer-runtime/{state,runner,readiness,lifecycle,status,evidence}.cjs`, `pincer-runtime.cjs` (export passes the pointed id), contract, three suites, packet, this wiki.
+- Outcome: T-46 done via the pinned kit; candidate 4 = this wiki commit; the evaluation commit follows.

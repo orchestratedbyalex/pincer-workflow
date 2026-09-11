@@ -10,16 +10,18 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 
 **PRD v4 ("Record verification automatically and invalidate stale evidence",
 `.prd/prd-v4.md`, `profile: standard`) is fully implemented on `feat/prd-v4`
-(2026-09-11, T-29..T-45) and built (`PRD v4: built`). Candidate 1 `7b561b1` was
+(2026-09-11, T-29..T-46) and built (`PRD v4: built`). Candidate 1 `7b561b1` was
 reviewed by two subagents (T-44, eighteen fixes); candidate 2 `77c5205` was evaluated
 (`883ae14`) and then reviewed externally with a reproduction script: three defects
 (incomplete attempt records counted as passes, altered captured logs exported as
 runtime evidence, timeout not enforced when the shell exits before a background
-child) became T-45 (`2ff2b1a`). Candidate 3 is the wiki commit on top of T-45; its
-evaluation (schema 1 via the pinned v0.4.1 kit, `review/code-quality.md` with the
-external findings and one reviewer subagent over the T-45 diff, NOTES.md) is the
-next commit; then the release audit, merge, the 0.5.0 bump and publish; v0.4.1 is
-still unpublished.** The kit now has a Node runtime
+child) became T-45 (`2ff2b1a`). A reviewer subagent over the T-45 diff found five
+Low items (undelivered signals named, old `recover` records shown as malformed,
+contract overstating validated fields, a record copied over the pointed-at one,
+group-id reuse window) which became T-46. Candidate 4 is the wiki commit on top of
+T-46; its evaluation (schema 1 via the pinned v0.4.1 kit, `review/code-quality.md`
+with both review rounds, NOTES.md) is the next commit; then the release audit, merge,
+the 0.5.0 bump and publish; v0.4.1 is still unpublished.** The kit now has a Node runtime
 ([[runtime]], decision [[runtime-owned-verification]]): `scripts/pincer-runtime.cjs`
 + `scripts/pincer-runtime/` own the ticket lifecycle, readiness, status (`--json`),
 change registration (`.prd/changes/<id>.json`), the SHA-256 source manifest,
@@ -42,11 +44,11 @@ schema 1 and the read-only release audit ([[requirements-through-delivery]],
 
 ## Active / next task
 
-1. Evaluation of candidate 3 with the pinned v0.4.1 kit (this repo is deliberately
+1. Evaluation of candidate 4 with the pinned v0.4.1 kit (this repo is deliberately
    not migrated, PRD v4 §9): schema 1 manifest under `.prd/evidence/prd-v4/<candidate>/`
    (re-run C-01..C-08 as for `77c5205`), `review/code-quality.md` (external findings
-   with dispositions + the T-45 reviewer report), NOTES.md, the evidence commit; then
-   `/pincer-release`.
+   and the T-45 reviewer report with dispositions), NOTES.md, the evidence commit;
+   then `/pincer-release`.
 2. Merge `feat/prd-v4` into main, bump 0.5.0 (`--no-git-tag-version`, rebuild plugin,
    commit, annotated tag), publish (user runs `npm publish --otp`), push
    `--follow-tags`, confirm CI on ubuntu/macOS × Node 18/22.
@@ -62,9 +64,9 @@ schema 1 and the read-only release audit ([[requirements-through-delivery]],
 
 ## Landmines
 
-- The repo's own tickets (T-29..T-45) were verified with a pinned v0.4.1 kit copied from `1cb5ab4` into the session scratchpad; recreate it with `git show 1cb5ab4:template/scripts/<file>`. Never export `CLAUDE_PROJECT_DIR` in the shell (`test/ticket.test.js` inherits it) and never pipe `verify`/`done` through `tail` before a `git commit` (the pipe masks the exit code).
+- The repo's own tickets (T-29..T-46) were verified with a pinned v0.4.1 kit copied from `1cb5ab4` into the session scratchpad; recreate it with `git show 1cb5ab4:template/scripts/<file>`. Never export `CLAUDE_PROJECT_DIR` in the shell (`test/ticket.test.js` inherits it) and never pipe `verify`/`done` through `tail` before a `git commit` (the pipe masks the exit code).
 - A check that writes untracked non-ignored files ends `error` (`SOURCE_CHANGED`); a kit update inside a migrated project makes every done ticket `SOURCE_CHANGED` until re-verified; a check that exits 0 leaving a background child on the pipes is `timed_out` (T-45).
-- Attempt records are validated field by field (`state.validateAttempt`, T-45): a new field the runner writes and readiness reads must be added there, and every finalizing path (runner, `recover`) must set `finished` and the log digests.
+- Attempt records are validated field by field (`state.validateAttempt`, T-45/T-46): a new field the runner writes and readiness reads must be added there, every finalizing path (runner, `recover`) must set `finished` and the log digests, and the record must carry the pointed id. `test/runtime-runner.test.js` needs `perl` (setsid case).
 - After editing `template/`, run BOTH generators (`scripts/sync-prompts.sh`,
   `scripts/build-plugin.sh`); `test/distribution.test.js` fails on stale output.
   `build-plugin.sh` copies `pincer-runtime.cjs` and `pincer-runtime/*.cjs`; a new module elsewhere must be added explicitly, and `bin/pincer.js`

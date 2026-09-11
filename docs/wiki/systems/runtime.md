@@ -31,7 +31,8 @@ Decision: [[runtime-owned-verification]]. Extends [[ticket-state-machine]],
   `PINCER_LOCK_WAIT_MS`), journal + rename writes, `recover` (finalizes dead-owner
   running attempts as `interrupted`, records the digests of the logs they captured,
   kills orphaned child groups, removes stray journal files; never promotes to passed),
-  `validateAttempt(record, key)` (record schema 1 + context identity; T-45) and
+  `validateAttempt(record, key, pointedId)` (record schema 1 + context identity +
+  pointer id; T-45/T-46; `interrupted` may lack digests) and
   `inspectArtifacts(root, attempt)` (marks `missing`/`altered` logs by digest; T-45).
 - `runner.cjs` — `runAttempt`: running record first (supersedes readiness), snapshot
   before/after, `bash -eo pipefail -c` in its own process group, bounded (1 MiB)
@@ -82,8 +83,13 @@ Decision: [[runtime-owned-verification]]. Extends [[ticket-state-machine]],
 - Readiness guards used to be `attempt.x && …`, so a record stripped to
   `{id, outcome}` passed (external review of 77c5205). Every new field the runner
   writes that readiness or export reads must be added to `state.validateAttempt`;
-  a finished record needs `finished` and 64-hex artifact digests, so any path that
-  finalizes a record (runner, `recover`) must set them.
+  a finished record needs `finished` and 64-hex artifact digests (except
+  `interrupted`, for records an old `recover` finalized), so any path that
+  finalizes a record (runner, `recover`) must set them. The record must also carry
+  the id `index.current[key]` names (a copied record is `ATTEMPT_ERROR`, T-46).
+- A `setsid` descendant is unreachable: the run is abandoned 2 s after the SIGKILL
+  point, `timed_out`, and the limitation says no reachable process remained (T-46).
+  `test/runtime-runner.test.js` uses perl for that case; it must exist on CI.
 - A check that exits 0 leaving a background child holding the pipes is `timed_out`,
   not `passed`; daemons started by a check must be detached from the group's pipes.
 - Tests: `test/runtime-{parse,identity,state,status,runner,lifecycle,migrate,evidence}
