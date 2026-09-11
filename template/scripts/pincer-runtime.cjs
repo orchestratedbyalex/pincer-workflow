@@ -5,6 +5,7 @@
 //   node scripts/pincer-runtime.cjs validate <file>... [--digests]
 //   node scripts/pincer-runtime.cjs register --prd .prd/prd-vN.md [--change <id>] [--authorization <text>] [--replace] [--rebind]
 //   node scripts/pincer-runtime.cjs snapshot [--json] [--store]
+//   node scripts/pincer-runtime.cjs recover
 //
 // Exit codes: 0 ok · 1 failed/not ready/refused · 2 usage · 3 state busy ·
 // 4 invalid input or state · 124 timed out · 130 interrupted.
@@ -15,6 +16,7 @@ const { execFileSync } = require('node:child_process');
 const parse = require('./pincer-runtime/parse.cjs');
 const identity = require('./pincer-runtime/identity.cjs');
 const source = require('./pincer-runtime/source.cjs');
+const state = require('./pincer-runtime/state.cjs');
 const EXIT = { OK: 0, FAILED: 1, USAGE: 2, BUSY: 3, INVALID: 4, TIMED_OUT: 124, INTERRUPTED: 130 };
 
 function repoRoot() {
@@ -30,8 +32,32 @@ function usage(message) {
   if (message) process.stderr.write(`pincer: ${message}\n`);
   process.stderr.write('usage: pincer-runtime.cjs validate <file>... [--digests]\n' +
     '       pincer-runtime.cjs register --prd .prd/prd-vN.md [--change <id>] [--authorization <text>] [--replace] [--rebind]\n' +
-    '       pincer-runtime.cjs snapshot [--json] [--store]\n');
+    '       pincer-runtime.cjs snapshot [--json] [--store]\n' +
+    '       pincer-runtime.cjs recover\n');
   process.exit(EXIT.USAGE);
+}
+
+// Run a state operation, mapping the contracted failures to exit codes.
+function guarded(fn) {
+  try { return fn(); } catch (error) {
+    if (error && error.code === 'STATE_BUSY') { process.stderr.write(`pincer: STATE_BUSY: ${error.message}\n`); process.exit(EXIT.BUSY); }
+    if (error && error.code === 'INVALID') { process.stderr.write(`pincer: ${error.message}\n`); process.exit(EXIT.INVALID); }
+    throw error;
+  }
+}
+
+function cmdRecover(root, args) {
+  const o = parseOptions(args, {});
+  if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
+  if (!state.exists(root)) { process.stdout.write('nothing to recover: no local runtime state\n'); process.exit(EXIT.OK); }
+  const report = guarded(() => state.recover(root));
+  for (const id of report.finalized) process.stdout.write(`finalized ${id} as interrupted (owner no longer running)\n`);
+  for (const { id, owner } of report.live) process.stdout.write(`still running ${id} (pid ${owner.pid} is alive)\n`);
+  for (const { id, owner } of report.foreign) process.stdout.write(`still running ${id} (owned by ${owner.host}; not reclaimed from another host)\n`);
+  for (const id of report.missing) process.stdout.write(`dropped ${id} from running: record missing\n`);
+  for (const file of report.journal) process.stdout.write(`removed stray journal file ${file}\n`);
+  if (!Object.values(report).some(list => list.length)) process.stdout.write('nothing to recover\n');
+  process.exit(EXIT.OK);
 }
 
 // `--flag value` and `--switch` options; positional arguments keep their order.
@@ -117,6 +143,7 @@ function main(argv) {
   if (command === 'validate') return cmdValidate(root, rest);
   if (command === 'register') return cmdRegister(root, rest);
   if (command === 'snapshot') return cmdSnapshot(root, rest);
+  if (command === 'recover') return cmdRecover(root, rest);
   usage(command ? `unknown command ${command}` : undefined);
 }
 

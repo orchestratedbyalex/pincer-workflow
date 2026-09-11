@@ -232,8 +232,8 @@ source mutation during the run is `error` (a mutation names the first changed pa
 forced kill leaves `running`, which status reports as non-ready and `recover`
 finalizes as `interrupted` after verifying the owner pid is dead on this host.
 
-Lock: acquired by `mkdir lock/` (atomic); waiters poll every 100 ms for up to 10 s,
-then fail with exit 3 naming the owner. A lock whose owner pid is on this host and no
+Lock: acquired by `mkdir lock/` (atomic); waiters poll every 100 ms for up to 10 s
+(`PINCER_LOCK_WAIT_MS` overrides the bound), then fail with exit 3 naming the owner. A lock whose owner pid is on this host and no
 longer alive is reclaimed with a diagnostic; a live owner is never stolen; a foreign
 host is never reclaimed automatically. The lock is held while records are written and
 released while the child runs. Every write goes to `journal/` on the same filesystem

@@ -1,9 +1,13 @@
 ---
 ticket: T-34
-status: open
+status: done
 size: M
 prd: .prd/prd-v4.md
 depends_on: [T-31]
+started: 2026-09-11T10:06:58Z
+last_check: 2026-09-11T10:11:49Z passed 376d5fe206ca
+verified: 2026-09-11T10:11:49Z 376d5fe206ca
+finished: 2026-09-11T10:11:49Z
 ---
 
 ## Objective
@@ -22,9 +26,9 @@ Implement the local runtime state store with atomic replacement, a per-worktree 
 - Tests (`test/runtime-state.test.js`, added to `npm test`): S-15 two writers, one holding the lock through `test/fixtures/hold-lock.cjs`, the second receives exit 3 within the bound and, after release, succeeds and both records exist; a crash-simulated stale lock (owner file with a dead pid) is reclaimed; a live owner is not; corrupt `index.json` yields exit 4 with a diagnostic and no overwrite; an interrupted write (a stray journal temp file plus a valid index) leaves the prior state readable and `recover` names the stray file; sequence numbers are strictly increasing across writers.
 
 ## Acceptance Criteria
-- [ ] Overlapping writers cannot corrupt or lose records; the second receives a bounded busy result or starts after the first completes.
-- [ ] Restart diagnosis is deterministic: a dead-owner running attempt becomes `interrupted` only through `recover`, and nothing is promoted to success.
-- [ ] `npm test` passes with the new suite.
+- [x] Overlapping writers cannot corrupt or lose records; the second receives a bounded busy result or starts after the first completes.
+- [x] Restart diagnosis is deterministic: a dead-owner running attempt becomes `interrupted` only through `recover`, and nothing is promoted to success.
+- [x] `npm test` passes with the new suite.
 
 ## Verification
 Proves: locking, atomic replacement and recovery behave as contracted under concurrent and interrupted writers; regression: a lost record, a stolen live lock, a promoted running attempt, or a corrupt index silently rewritten.
