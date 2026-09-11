@@ -37,3 +37,18 @@ that can never be withdrawn is not enforcement.
 
 Implementation: [[ticket-state-machine]]. Same trust principle applied to the
 installer: [[never-clobber-updates]] (manifest schema 2).
+
+## Addendum (PRD v3, 2026-09-11): the one restore exception
+
+"A restored receipt is never evidence" stays. PRD v3 added the single case where
+restoring the ticket file from git is the right repair: the PRD is built with valid
+candidate evidence, tracked files other than the ticket file being restored match the
+evaluated candidate (or candidate + evidence-only commit) with nothing untracked, and
+the ticket's Verification block passes when run directly (not via `verify`, which
+would re-stamp). Then the committed evaluation still describes the tree; the agent
+names the `git checkout -- tickets/…` command for the user and runs no `verify`,
+refreshes no receipt and commits nothing. Without it, the interactive trial showed a
+hand repair turning into a receipt-refresh commit that forced a second full
+evaluation. Observed live once (eligible case, Sonnet `-p`). Open: the wording does
+not say in which environment "run directly" counts; a Sonnet session bypassed a
+broken `PATH` and applied the exception ([[open-threads]]).

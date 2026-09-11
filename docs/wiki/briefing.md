@@ -8,9 +8,24 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 
 ## Current state
 
-**v0.4.0 is published on npm, tagged and pushed on `main` (2026-09-09);
-CI is green for both the `main` and `v0.4.0` runs.**
-PRD v2 ("Make requirements and release evidence reviewable", `.prd/prd-v2.md`,
+**v0.4.1 is bumped and tagged locally (2026-09-11) on top of the PRD v3
+evaluation; `npm publish` and `git push --follow-tags` are pending, so the
+registry still serves 0.4.0.** PRD v3 (`.prd/prd-v3.md`, `profile: small`,
+T-24..T-28) shipped three wording fixes from the interactive trial: the code
+playbook's recovery exception (tree back at the evaluated candidate, ticket
+file excepted, check passes directly → the user restores the ticket, nothing
+is verified or committed; [[revocable-receipts]] addendum), evaluate's one
+check per command with the command line as run, and plan asking only the open
+part of a partly answered question. The first candidate `7c19e42` was rejected
+on four wording findings (the exception's second condition was literally
+unsatisfiable); T-28 fixed them; candidate `a10358e` evaluated (`8cc6299`,
+manifest `ok`) and passed release. `docs/trial-2026-09-10-prd-v3.md` records
+the live eligible case (Sonnet `-p`, packed kit in a fixture copy) and the
+negative case as outstanding: the injected `npm` shim was found and bypassed.
+Because the bump commit follows the evaluation, `pincer-status` reports
+`stale: candidate changed after evaluation: package.json` by design.
+
+Before v0.4.1: PRD v2 ("Make requirements and release evidence reviewable", `.prd/prd-v2.md`,
 `profile: standard`) shipped as T-11..T-23: stable `R-NN` requirement IDs from
 plan to evaluation, `Proves:` behavioral checks, `profile: small|standard`, one
 shared authorization rule ([[requirements-through-delivery]]); evidence schema 1
@@ -35,13 +50,17 @@ claims a two-hour timebox and lists the evidence validator.
 
 ## Active / next task
 
-1. Nothing in flight. Next PRD candidates (`docs/pincer-improvement-plan.md`): M1 runtime that
-   absorbs `notes_current`, captures command logs itself and writes the
-   reviewer transcript; the recovery-section wording from trial finding 1 (no
-   receipt refresh commit when the committed receipt is the right one; one
-   check per command in evaluate); a Codex run of the full chain.
-2. Still untested: interrupt-and-resume, a new decision during narrow,
-   Copilot prompt chain in VS Code, public plugin install.
+1. Publish v0.4.1 (`npm publish --otp=<code>`, user-run) and `git push
+   --follow-tags`; confirm CI. Then next PRD candidates
+   (`docs/pincer-improvement-plan.md`): M1 runtime that absorbs `notes_current`,
+   captures command logs itself and writes the reviewer transcript; a small
+   follow-up tightening the recovery exception ("run directly" in which
+   environment; the recorded failure must be explained by a since-reverted tree
+   change) plus a fixture with an external dependency so the negative scenario
+   can be observed; a Codex run of the full chain.
+2. Still untested: interrupt-and-resume, a new decision during narrow, R-03
+   live, the R-01 negative and remaining-source-changes scenarios, Copilot
+   prompt chain in VS Code, public plugin install.
 
 ## Recent decisions
 

@@ -115,3 +115,9 @@ Outcome: npm publish still pending (needs the user's OTP); next is `/pincer-narr
 - Observed live for the first time: human-answered plan questions (3, none re-asked at narrow), the fix-ticket path in evaluate (reviewer bugs → T-03 → new candidate), the R-06 failed-recheck message and status, the evidence digest mismatch.
 - Finding 1: asked to git-checkout a ticket, the assistant declined by judgment, reverted the source itself, re-verified and committed a receipt refresh, which R-04 treated as a new candidate; a second evaluation was needed. Recorded as a playbook follow-up.
 - Files: `docs/trial-2026-09-10-interactive.md` (new), `docs/wiki/briefing.md`, `docs/wiki/open-threads.md`.
+
+## [2026-09-11] end | PRD v3 shipped as v0.4.1: recovery exception, one check per command, plan asks only the open part
+- What: PRD v3 (`profile: small`, R-01..R-03) planned, narrowed into T-24..T-27, built, evaluated (first candidate rejected on four wording findings, T-28 fixed them), release PASS on candidate `a10358e`; bumped to 0.4.1 and tagged, publish pending.
+- Why: the interactive trial's finding 1 (receipt-refresh commit after a hand repair), finding 3 (three commands under one `unverified`) and finding 4 (plan re-asked what the brief settled).
+- Files: `template/.claude/commands/pincer-{code,status,evaluate,plan}.md`, `template/docs/dry-run-checklist.md`, `test/workflow.test.js`, `docs/trial-2026-09-10-prd-v3.md`, `.prd/prd-v3.md`, `.prd/evidence/prd-v3/a10358e…/`, `NOTES.md`, README, `docs/index.html`, generated adapters and plugin.
+- Outcome: eligible recovery case observed live (named command, no verify, no commit); negative case stays outstanding because the injected `npm` shim was detected and bypassed; the reviewer caught that the exception's second condition was literally unsatisfiable before T-28.
