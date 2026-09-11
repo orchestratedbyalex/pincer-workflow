@@ -187,6 +187,27 @@ for (const command of [
   'git checkout "$BRANCH"', 'git checkout $branch', 'git switch "$b"', 'git -C packages/app checkout -- src/app.js', 'echo src/app.js | xargs git checkout -- src/app.js',
 ]) check('ticket', `allow non-ticket git ${command}`, bash(command), 0);
 
+// PRD v4 (T-36): exact runtime calls are the writers; runtime state and change
+// bindings are protected from shell and editor writes like ticket fields.
+for (const command of [
+  'node scripts/pincer-runtime.cjs verify T-01', 'node scripts/pincer-runtime.cjs done T-01', 'node scripts/pincer-runtime.cjs start T-01',
+  'node scripts/pincer-runtime.cjs migrate --apply --prd .prd/prd-v1.md', 'node scripts/pincer-runtime.cjs register --prd .prd/prd-v1.md --authorization "approved"',
+  'node scripts/pincer-runtime.cjs recover', 'node scripts/pincer-runtime.cjs check C-01 --candidate aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa -- npm test',
+  'node scripts/pincer-runtime.cjs evidence export --candidate aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --base bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb --prd .prd/prd-v1.md --draft draft.json',
+  'scripts/pincer-runtime.cjs status --json', 'node scripts/pincer-runtime.cjs status', 'cat .pincer/runtime/index.json', 'ls .pincer/runtime/attempts',
+  'git diff -- .prd/changes/prd-v1.json', 'cat .prd/changes/prd-v1.json', 'grep outcome .pincer/runtime/attempts/000001.json',
+]) check('ticket', `allow runtime ${command}`, bash(command), 0);
+for (const command of [
+  'rm -rf .pincer/runtime', 'rm -rf .pincer', 'rm .pincer/runtime/index.json', 'echo "{}" > .prd/changes/prd-v1.json', 'echo x >> .pincer/runtime/index.json',
+  "sed -i '' 's/failed/passed/' .pincer/runtime/attempts/000001.json", 'mv .pincer/runtime .pincer/old', 'cp fake.json .pincer/runtime/index.json',
+  'git checkout -- .prd/changes/', 'git restore .prd/changes/prd-v1.json', 'node -e "require(\'fs\').writeFileSync(\'.pincer/runtime/index.json\', \'{}\')"',
+  'bash -c "rm -rf .pincer/runtime"', 'node scripts/pincer-runtime.cjs verify T-01; rm -rf .pincer/runtime',
+]) check('ticket', `block runtime state write ${command}`, bash(command), 2);
+check('ticket', 'Edit blocks change binding edits', edit('"base"', '"base_"', path.join(dir, '.prd/changes/prd-v1.json')), 2);
+check('ticket', 'Write blocks change binding writes', replace('{}', path.join(dir, '.prd/changes/prd-v1.json')), 2);
+check('ticket', 'Write blocks runtime state writes', replace('{}', path.join(dir, '.pincer/runtime/index.json')), 2);
+check('ticket', 'Edit blocks attempt record edits', edit('failed', 'passed', path.join(dir, '.pincer/runtime/attempts/000001.json')), 2);
+check('ticket', 'Edit allows the exclude file', edit('a', 'b', path.join(dir, '.prd/source-exclude')), 0);
 assert.equal(read(dir, file), completed, 'hooks are read-only and never execute tested command strings');
 assert.equal(failures.length, 0, `${failures.length}/${checked} hook regressions failed:\n${failures.join('\n')}`);
 console.log(`hook regression tests passed (${checked} payloads)`);

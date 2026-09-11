@@ -1,9 +1,13 @@
 ---
 ticket: T-36
-status: open
+status: done
 size: L
 prd: .prd/prd-v4.md
 depends_on: [T-33, T-35]
+started: 2026-09-11T10:43:38Z
+last_check: 2026-09-11T10:54:39Z passed e552864bf112
+verified: 2026-09-11T10:54:39Z e552864bf112
+finished: 2026-09-11T10:54:39Z
 ---
 
 ## Objective
@@ -22,9 +26,9 @@ Move `start`, `verify`, `done` and `bind` onto the runtime for both modes, make 
 - Tests (`test/runtime-lifecycle.test.js`, added to `npm test`): S-18 on a registered fixture, two successful `verify` runs create two attempts and `git status --porcelain` shows nothing; `done` closes without launching the check again (a counter file written by the check proves the run count); S-19 stale inputs, a later failure, a missing log file, a deleted `.pincer/runtime`, and an unticked criterion each block `done` with the code and next step; S-20 deleting `.pincer/runtime` on a ticket that still carries a legacy `verified` line does not make it ready, and a fresh clone (`git clone` of the fixture) reports the candidate evidence separately and requires `verify` before `done`; S-01 migrated: inject a source regression, `verify` fails, revert the source, `verify` passes, both attempts are retained, and no tracked file changed.
 
 ## Acceptance Criteria
-- [ ] Every existing lifecycle, validation, verification, recovery, candidate and hook test passes through the wrapper with the Bash library deleted.
-- [ ] Migrated closure consumes the current pass without a duplicate run, refuses every S-19 case with a next step, and repeated `done` is idempotent; S-20 holds.
-- [ ] `npm test` passes with the new suite.
+- [x] Every existing lifecycle, validation, verification, recovery, candidate and hook test passes through the wrapper with the Bash library deleted.
+- [x] Migrated closure consumes the current pass without a duplicate run, refuses every S-19 case with a next step, and repeated `done` is idempotent; S-20 holds.
+- [x] `npm test` passes with the new suite.
 
 ## Verification
 Proves: one policy implementation serves both modes, receipts stop rewriting tracked files after migration, and closure is bound to current inputs; regression: a tracked diff after `verify`, a duplicate run on `done`, a legacy receipt revived by deleting local state, or a Bash policy path left behind.

@@ -26,7 +26,7 @@ const MANIFEST_SCHEMA = 2;
 // and Copilot prompts point at them), so they ship everywhere; only Claude
 // Code's own wiring (CLAUDE.md, settings.json, hooks) is platform-specific.
 const PLATFORM_ROOTS = {
-  common: ['AGENTS.md', 'docs/release-checklist.md', 'docs/dry-run-checklist.md', 'docs/runtime-contracts.md', 'scripts/sync-prompts.sh', 'scripts/pincer-ticket.sh', 'scripts/pincer-ticket-lib.sh', 'scripts/pincer-status.sh', 'scripts/pincer-evidence.cjs', 'scripts/pincer-runtime.cjs', 'scripts/pincer-runtime', '.claude/commands', '.claude/agents', '.claude/references'],
+  common: ['AGENTS.md', 'docs/release-checklist.md', 'docs/dry-run-checklist.md', 'docs/runtime-contracts.md', 'scripts/sync-prompts.sh', 'scripts/pincer-ticket.sh', 'scripts/pincer-status.sh', 'scripts/pincer-evidence.cjs', 'scripts/pincer-runtime.cjs', 'scripts/pincer-runtime', '.claude/commands', '.claude/agents', '.claude/references'],
   claude: ['CLAUDE.md', '.claude/settings.json', '.claude/hooks'],
   codex: ['.codex', '.agents'],
   copilot: ['.github'],

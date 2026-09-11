@@ -283,13 +283,17 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
   assert.equal(rt(ok, 'verify', 'T-01').status, 0, 'environment references are allowed');
 }
 
-// Refusals before launch: legacy mode, draft PRD, open ticket, changed revision.
+// Mode boundaries: an unregistered PRD keeps the legacy receipt contract (no local
+// state), an open migrated ticket is started by verify, and a changed revision
+// refuses before any child process starts.
 {
   const dir = tempDir(); git(dir, 'init', '-q'); createPrd(dir); createTicket(dir); commit(dir, 'base');
   const legacy = rt(dir, 'verify', 'T-01');
-  assert.equal(legacy.status, 1); assert.match(legacy.stderr, /not registered \(legacy mode\)/);
-  const { dir: open } = migrated('true', { status: 'open' });
-  assert.match(rt(open, 'verify', 'T-01').stderr, /T-01 is open — run start T-01 first/);
+  assert.equal(legacy.status, 0, legacy.stderr); assert.match(legacy.stdout, /receipt: /);
+  assert.ok(!fs.existsSync(path.join(dir, '.pincer')), 'legacy mode never writes local state');
+  const { dir: open, file: openFile } = migrated('true', { status: 'open' });
+  assert.equal(rt(open, 'verify', 'T-01').status, 0);
+  assert.match(read(open, openFile), /^status: in_progress$/m, 'verify starts an open migrated ticket');
   const { dir: rev } = migrated('true');
   write(rev, '.prd/prd-v1.md', `${read(rev, '.prd/prd-v1.md')}\nmore\n`);
   const changed = rt(rev, 'verify', 'T-01');

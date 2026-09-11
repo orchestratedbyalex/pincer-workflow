@@ -8,7 +8,7 @@
 //   node scripts/pincer-runtime.cjs recover
 //   node scripts/pincer-runtime.cjs status [--json]
 //   node scripts/pincer-runtime.cjs ready [T-NN]
-//   node scripts/pincer-runtime.cjs verify T-NN
+//   node scripts/pincer-runtime.cjs start|verify|done T-NN · bind T-NN .prd/prd-vN.md
 //
 // Exit codes: 0 ok · 1 failed/not ready/refused · 2 usage · 3 state busy ·
 // 4 invalid input or state · 124 timed out · 130 interrupted.
@@ -23,6 +23,7 @@ const state = require('./pincer-runtime/state.cjs');
 const status = require('./pincer-runtime/status.cjs');
 const runner = require('./pincer-runtime/runner.cjs');
 const sanitize = require('./pincer-runtime/sanitize.cjs');
+const lifecycle = require('./pincer-runtime/lifecycle.cjs');
 const EXIT = { OK: 0, FAILED: 1, USAGE: 2, BUSY: 3, INVALID: 4, TIMED_OUT: 124, INTERRUPTED: 130 };
 
 function repoRoot() {
@@ -42,53 +43,30 @@ function usage(message) {
     '       pincer-runtime.cjs recover\n' +
     '       pincer-runtime.cjs status [--json]\n' +
     '       pincer-runtime.cjs ready [T-NN]\n' +
-    '       pincer-runtime.cjs verify T-NN\n');
+    '       pincer-runtime.cjs start|verify|done T-NN\n' +
+    '       pincer-runtime.cjs bind T-NN .prd/prd-vN.md\n');
   process.exit(EXIT.USAGE);
 }
 
 const fail = (prefix, message, code = EXIT.INVALID) => { process.stderr.write(`${prefix}: ${message}\n`); process.exit(code); };
 
-// Resolve a ticket, its PRD and the change binding for a runtime command.
-function resolveTicket(root, input) {
-  const tf = parse.ticketFile(root, input);
-  if (tf.problem) fail('pincer-ticket', tf.problem);
-  const set = parse.validateTicketSet(root);
-  if (!set.ok) { for (const p of set.problems) process.stderr.write(`pincer-ticket: ${set.file ? `${set.file}: ` : ''}${p}\n`); process.exit(EXIT.INVALID); }
-  const text = fs.readFileSync(path.join(root, tf.file), 'utf8');
-  const v = parse.validateTicket(tf.file, text);
-  const assoc = status.ticketPrd(root, tf.file, v.fields);
-  if (assoc.problem) fail('pincer', assoc.problem);
-  const bind = identity.loadBinding(root, { prd: assoc.prd });
-  return { id: tf.id, file: tf.file, text, fields: v.fields, timeout: v.timeout, prd: assoc.prd, prdResult: assoc.prdResult, bind };
-}
-
-async function cmdVerify(root, args) {
+// start | verify | done | bind — both modes; refusals carry their prefix and exit code.
+async function cmdLifecycle(root, command, args) {
+  const usageLine = { start: 'start T-NN', verify: 'verify T-NN', done: 'done T-NN', bind: 'bind T-NN .prd/prd-vN.md' }[command];
+  const expected = command === 'bind' ? 2 : 1;
   const o = parseOptions(args, {});
-  if (o.positional.length !== 1) usage('usage: pincer-runtime.cjs verify T-NN');
-  const t = resolveTicket(root, o.positional[0]);
-  if (t.bind.code === 'CHANGE_REQUIRED') fail('pincer', `${t.prd} is not registered (legacy mode): run scripts/pincer-ticket.sh verify ${t.id}, or migrate with node scripts/pincer-runtime.cjs migrate --preview --prd ${t.prd}`, EXIT.FAILED);
-  if (t.bind.code) fail('pincer', `${t.bind.code}: ${t.bind.problem}`);
-  if (!status.usablePrd(t.prdResult)) fail('pincer', `${t.prd}: PRD is draft; complete the authorized breakdown before starting (expected ticketed or built)`, EXIT.FAILED);
-  if (t.fields.status === 'open') fail('pincer-ticket', `${t.id} is open — run start ${t.id} first`, EXIT.FAILED);
-  if (t.fields.status === 'done') process.stdout.write(`${t.id} is done — re-running its check and recording the latest outcome\n`);
-  const commands = parse.verificationCommands(t.text);
-  const secretLine = sanitize.inlineSecretLine(commands);
-  if (secretLine) fail('pincer-ticket', `${t.file}: Verification block line ${secretLine} assigns a secret-like literal; reference it from the environment instead (the block is recorded as display text)`);
-  process.stdout.write(`── ${t.id} verification ──\n`);
-  for (const c of commands) process.stdout.write(`  $ ${sanitize.sanitizeText(c).text}\n`);
-  const b = t.bind.binding;
-  const context = { kind: 'ticket', change: b.change, prd: b.prd, prd_revision: b.prd_revision, base: b.base, ticket: t.id, ticket_digest: parse.ticketDigest(t.text) };
-  const result = await runner.runAttempt({ root, context, commands, timeoutSeconds: t.timeout, command: `verify ${t.id}` });
-  if (result.code) fail('pincer', `${result.code}: ${result.problem}`, problemExit(result.code));
-  const a = result.attempt;
-  const logs = `${state.RUNTIME_DIR}/attempts/${a.id}/`;
-  if (a.outcome === 'passed') {
-    process.stdout.write(`✓ ${t.id} verified — attempt ${a.id} passed (source ${a.source.after.slice(0, 12)}, logs ${logs})\n`);
-    process.exit(EXIT.OK);
+  if (o.positional.length !== expected) usage(`usage: pincer-runtime.cjs ${usageLine}`);
+  try {
+    const result = command === 'bind' ? lifecycle.bind(root, o.positional[0], o.positional[1])
+      : command === 'start' ? lifecycle.start(root, o.positional[0])
+        : command === 'verify' ? await lifecycle.verify(root, o.positional[0])
+          : await lifecycle.done(root, o.positional[0]);
+    if (result.out) process.stdout.write(result.out);
+    process.exit(result.exit ?? EXIT.OK);
+  } catch (error) {
+    if (error instanceof lifecycle.Refusal) fail(error.prefix, error.message, error.exit);
+    throw error;
   }
-  const why = a.outcome === 'failed' ? `FAILED (exit ${a.exit_code ?? a.signal})` : a.outcome === 'timed_out' ? `TIMED OUT after ${a.check.timeout_seconds} s` : a.outcome === 'interrupted' ? 'INTERRUPTED' : `ERROR: ${a.error}`;
-  process.stderr.write(`✗ ${t.id} verification ${why} — recorded as attempt ${a.id} (logs ${logs}); any prior passing attempt is superseded. Fix, then re-run verify.\n`);
-  process.exit(runner.exitFor(a));
 }
 
 function cmdStatus(root, args) {
@@ -240,7 +218,7 @@ function main(argv) {
   if (command === 'recover') return cmdRecover(root, rest);
   if (command === 'status') return cmdStatus(root, rest);
   if (command === 'ready') return cmdReady(root, rest);
-  if (command === 'verify') return cmdVerify(root, rest);
+  if (['start', 'verify', 'done', 'bind'].includes(command)) return cmdLifecycle(root, command, rest);
   usage(command ? `unknown command ${command}` : undefined);
 }
 
