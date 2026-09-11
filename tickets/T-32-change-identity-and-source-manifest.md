@@ -1,9 +1,13 @@
 ---
 ticket: T-32
-status: open
+status: done
 size: M
 prd: .prd/prd-v4.md
 depends_on: [T-31]
+started: 2026-09-11T09:58:54Z
+last_check: 2026-09-11T10:04:58Z passed aec1a45d804a
+verified: 2026-09-11T10:04:58Z aec1a45d804a
+finished: 2026-09-11T10:04:58Z
 ---
 
 ## Objective
@@ -22,9 +26,9 @@ Implement explicit change registration and the versioned SHA-256 source manifest
 - Tests (`test/runtime-identity.test.js`, added to `npm test`): S-04 two PRDs with identical ticket commands register as different changes and the binding names each; S-05 editing PRD content changes `prd_revision` mismatch (`REVISION_CHANGED`) while a `status:` change does not, and `--rebind` clears it; S-06 missing, duplicate, malformed JSON, unsupported schema and ambiguous bindings each produce the named code before any child process would start; S-11 static: a source edit, a test edit, a lockfile edit, a config edit, a new untracked file, a deletion, and a mode change each change the digest; S-12: ticking a box or changing lifecycle fields leaves the digest stable, editing acceptance text or the exclude file changes it; S-14: a tracked `.env` yields `SECRET_PATH` with no file content in the output, `.env.example` is ordinary input, a symlink and a submodule are refused, an ignored `node_modules` is a limitation, a non-git directory is refused.
 
 ## Acceptance Criteria
-- [ ] Registration writes a valid binding, refuses ambiguity and unsupported schemas, and never selects the highest PRD number on its own.
-- [ ] The manifest changes for every source change class in S-11 and stays stable for S-12; every S-14 case follows the contract with no secret value in any output.
-- [ ] `npm test` passes with the new suite.
+- [x] Registration writes a valid binding, refuses ambiguity and unsupported schemas, and never selects the highest PRD number on its own.
+- [x] The manifest changes for every source change class in S-11 and stays stable for S-12; every S-14 case follows the contract with no secret value in any output.
+- [x] `npm test` passes with the new suite.
 
 ## Verification
 Proves: change identity and source identity behave as contracted on real fixtures; regression: a stable digest across a source change, a changed digest across a checkbox tick, or a secret path silently included.
