@@ -1,9 +1,13 @@
 ---
 ticket: T-54
-status: open
+status: done
 size: M
 prd: .prd/prd-v5.md
 depends_on: [T-53]
+started: 2026-09-11T21:26:41Z
+last_check: 2026-09-11T21:33:47Z passed 1846cd64f380
+verified: 2026-09-11T21:33:47Z 1846cd64f380
+finished: 2026-09-11T21:33:47Z
 ---
 
 ## Objective
@@ -24,10 +28,10 @@ Apply selection, lifecycle, and authorization gates to commands so PRD v5 can be
 - Preserve released legacy/v0.5.0 behavior until migration; new-schema errors cannot switch to permissive fallback.
 
 ## Acceptance Criteria
-- [ ] Every executable/mutating entry point rejects wrong selection, invalid lifecycle, stale agreement and unresolved decisions before side effects.
-- [ ] Unchanged authorization survives ordinary start/verify/done and fresh-session resume; delegated revisions require new verification but no redundant user approval.
-- [ ] Historical inspection and explicit recovery remain usable while execution is blocked; human/JSON/gate reason codes agree.
-- [ ] Existing legacy regression suites remain green.
+- [x] Every executable/mutating entry point rejects wrong selection, invalid lifecycle, stale agreement and unresolved decisions before side effects.
+- [x] Unchanged authorization survives ordinary start/verify/done and fresh-session resume; delegated revisions require new verification but no redundant user approval.
+- [x] Historical inspection and explicit recovery remain usable while execution is blocked; human/JSON/gate reason codes agree.
+- [x] Existing legacy regression suites remain green.
 
 ## Verification
 Proves: Tests the public command boundary with execution markers, unchanged-file assertions and matching readiness verdicts; catches unguarded alternate entry points.

@@ -37,6 +37,7 @@ const changes = require('./pincer-runtime/changes.cjs');
 const agreement = require('./pincer-runtime/agreement.cjs');
 const authorization = require('./pincer-runtime/authorization.cjs');
 const transitions = require('./pincer-runtime/transitions.cjs');
+const gates = require('./pincer-runtime/gates.cjs');
 const { atomicWrite, nowIso, tryGit } = require('./pincer-runtime/fsutil.cjs');
 const EXIT = { OK: 0, FAILED: 1, USAGE: 2, BUSY: 3, INVALID: 4, TIMED_OUT: 124, INTERRUPTED: 130 };
 
@@ -68,6 +69,21 @@ function usage(message) {
     '       pincer-runtime.cjs change activate|resume|complete <id> · change pause <id> --reason <text> [--note <text>] · change reopen <id> --reason <text>\n' +
     '       pincer-runtime.cjs change cancel <id> --decision D-NN --reason <text> · change supersede <id> --with <id> --decision D-NN\n');
   process.exit(EXIT.USAGE);
+}
+
+// The change context of a candidate command: the v0.5.0 binding in migrated
+// mode, or the selected change's guarded context in changes mode (selected,
+// owning the PRD, completed, compatible view, authorization current).
+function candidateBinding(root, command, prd) {
+  const bind = identity.loadBinding(root, prd ? { prd } : {});
+  if (bind.code === 'CHANGES_MODE') {
+    try { return gates.guard(root, { command, prd }).binding; } catch (error) {
+      if (error && error.refusal) fail('pincer', `${error.code}: ${error.message}`, exitForCode(error.code));
+      throw error;
+    }
+  }
+  if (bind.code) fail('pincer', `${bind.code}: ${bind.problem}`, EXIT.INVALID);
+  return bind.binding;
 }
 
 // The clean-view precondition for candidate checks and exports: HEAD is the
@@ -102,15 +118,13 @@ async function cmdCheck(root, args) {
   if (!command.length) usage('check requires the command after --');
   const timeout = o.timeout === undefined ? parse.DEFAULT_TIMEOUT : Number(o.timeout);
   if (!Number.isInteger(timeout) || timeout <= 0) usage('--timeout must be a positive integer number of seconds');
-  const bind = identity.loadBinding(root);
-  if (bind.code) fail('pincer', `${bind.code}: ${bind.problem}`, EXIT.INVALID);
-  const b = bind.binding;
+  const b = candidateBinding(root, 'check', null);
   requireCandidateView(root, o.candidate, b.prd);
   const line = command.join(' ');
   const secretLine = sanitize.inlineSecretLine([line]);
   if (secretLine) fail('pincer', 'the check command assigns a secret-like literal; reference it from the environment instead', EXIT.INVALID);
   process.stdout.write(`── ${checkId} candidate ${o.candidate.slice(0, 7)} ──\n  $ ${sanitize.sanitizeText(line).text}\n`);
-  const context = { kind: 'candidate', change: b.change, prd: b.prd, prd_revision: b.prd_revision, base: b.base, candidate: o.candidate, check: checkId };
+  const context = { kind: 'candidate', change: b.change, prd: b.prd, prd_revision: b.prd_revision, base: b.base, candidate: o.candidate, check: checkId, ...(b.mode === 'changes' ? { mode: 'changes', agreement: b.agreement } : {}) };
   const result = await runner.runAttempt({ root, context, commands: [line], timeoutSeconds: timeout, command: `check ${checkId}` });
   if (result.code) fail('pincer', `${result.code}: ${result.problem}`, problemExit(result.code));
   const a = result.attempt;
@@ -128,8 +142,8 @@ function cmdEvidence(root, args) {
   for (const key of ['candidate', 'base']) if (!o[key] || !parse.HEX40.test(o[key])) usage(`evidence export requires --${key} <full 40-hex commit ID>`);
   if (!o.prd || !parse.PRD_REF.test(o.prd)) usage('evidence export requires --prd .prd/prd-vN.md');
   if (!o.draft) usage('evidence export requires --draft <file>');
-  const bind = identity.loadBinding(root, { prd: o.prd });
-  if (bind.code) fail('pincer', `${bind.code}: ${bind.problem}`, EXIT.INVALID);
+  const b = candidateBinding(root, 'export', o.prd);
+  const bind = { binding: b };
   requireCandidateView(root, o.candidate, o.prd);
   let draft;
   try { draft = JSON.parse(fs.readFileSync(path.resolve(root, o.draft), 'utf8')); } catch (error) { fail('pincer', `cannot read draft ${o.draft}: ${error.message}`, EXIT.INVALID); }
@@ -137,7 +151,7 @@ function cmdEvidence(root, args) {
   if (indexRead.error) fail('pincer', indexRead.error, EXIT.INVALID);
   const attemptsFor = checkId => {
     if (!indexRead.index) return { attempt: null, pointed: null };
-    const key = state.contextKey({ kind: 'candidate', candidate: o.candidate, check: checkId });
+    const key = state.contextKey({ kind: 'candidate', change: b.change, candidate: o.candidate, check: checkId, mode: b.mode });
     return { attempt: state.latestAttempt(root, key, indexRead.index), pointed: indexRead.index.current[key] || null };
   };
   const os = require('node:os');
@@ -213,16 +227,22 @@ function cmdReady(root, args) {
   const result = status.render(root, { change: o.change || null });
   if (result.exit !== 0) { process.stderr.write(result.text); process.exit(result.exit); }
   const j = result.json;
+  // Changes mode: the selection, lifecycle, view and authorization gates block
+  // read-only readiness too (the same codes the execution guard would refuse with).
+  const changeBlockers = j.mode === 'changes' ? j.reasons.filter(r => gates.ORDER.includes(r.code)) : [];
+  if (j.mode === 'changes' && j.change && j.change.lifecycle.state !== 'active' && o.positional.length === 1) changeBlockers.push({ code: 'LIFECYCLE_BLOCKED', detail: `change ${j.change.id} is ${j.change.lifecycle.state}; ticket execution runs on an active change` });
   if (o.positional.length === 1) {
     const id = parse.normalizeId(o.positional[0]);
     const ticket = id && j.tickets.find(t => t.id === id);
-    if (!ticket) { process.stderr.write(`pincer: no ticket ${o.positional[0]} is associated with the selected PRD\n`); process.exit(EXIT.INVALID); }
-    if (ticket.readiness.ready) { process.stdout.write(`ready ${id}\n`); process.exit(EXIT.OK); }
+    if (!ticket) { process.stderr.write(`pincer: no ticket ${o.positional[0]} is associated with the selected PRD${j.mode === 'changes' && !j.change ? ` (${j.selection.problem ? j.selection.problem.detail : 'no change selected'})` : ''}\n`); process.exit(EXIT.INVALID); }
+    if (ticket.readiness.ready && !changeBlockers.length) { process.stdout.write(`ready ${id}\n`); process.exit(EXIT.OK); }
+    for (const r of changeBlockers) process.stdout.write(`not ready ${id}: ${r.code} ${r.detail}\n`);
     for (const r of ticket.readiness.reasons) process.stdout.write(`not ready ${id}: ${r.code} ${r.detail}\n`);
-    process.stdout.write(`next: ${ticket.readiness.next}\n`);
+    process.stdout.write(`next: ${changeBlockers.length ? `${changeBlockers[0].code}: ${changeBlockers[0].detail}` : ticket.readiness.next}\n`);
     process.exit(EXIT.FAILED);
   }
-  const blockers = [];
+  const blockers = [...changeBlockers];
+  if (j.mode === 'changes' && j.change && j.change.lifecycle.state !== 'completed') blockers.push({ code: 'LIFECYCLE_BLOCKED', detail: `change ${j.change.id} is ${j.change.lifecycle.state}, not completed; release audits completed changes only` });
   const localUnavailable = j.candidate && j.candidate.local_attempts === 'unavailable';
   for (const t of j.tickets) {
     if (t.status !== 'done') blockers.push({ code: 'EVIDENCE_MISSING', detail: `${t.id} is ${t.status}, not done` });
@@ -235,6 +255,7 @@ function cmdReady(root, args) {
   if (!j.prd) blockers.push({ code: 'INPUT_INVALID', detail: 'no PRD' });
   else if (j.prd.status !== 'built') blockers.push({ code: 'CANDIDATE_STALE', detail: `PRD status is '${j.prd.status}', expected 'built'` });
   if (j.candidate) blockers.push(...j.candidate.reasons);
+  if (j.mode === 'changes' && !j.change) blockers.push({ code: 'SELECTION_REQUIRED', detail: 'no change is selected' });
   if (!blockers.length) { process.stdout.write(`ready candidate ${j.candidate.candidate}\n`); process.exit(EXIT.OK); }
   for (const b of blockers) process.stdout.write(`not ready: ${b.code} ${b.detail}\n`);
   process.stdout.write(`next: ${j.next}\n`);
