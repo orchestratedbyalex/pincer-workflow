@@ -640,22 +640,23 @@ files themselves:
    `STATE_CHANGED` and the operation is refused (a decision prepared against an
    agreement that changed meanwhile is never applied).
 3. Compute the outcome in memory. A refusal returns here; nothing has been written.
-4. Stage every new file under `journal/txn-<sequence>-<6 hex>/` on the same
-   filesystem, then write the transaction manifest
-   `journal/txn-<sequence>-<6 hex>/manifest.json` last, atomically:
+4. Stage every new file under `journal/txn-<UTC compact timestamp>-<6 hex>/` on
+   the same filesystem, then write the transaction manifest
+   `journal/txn-<UTC compact timestamp>-<6 hex>/manifest.json` last, atomically:
 
    ```json
-   { "schema": 1, "id": "txn-000007-a1b2c3", "command": "change activate prd-v2", "started": "2026-09-12T10:01:00Z", "writes": [ { "target": ".prd/changes/prd-v2.json", "staged": "prd-v2.json" }, { "target": ".pincer/runtime/selection.json", "staged": "selection.json" } ] }
+   { "schema": 1, "id": "txn-20260912T100100Z-a1b2c3", "command": "change activate prd-v2", "started": "2026-09-12T10:01:00Z", "writes": [ { "target": ".prd/changes/prd-v2.json", "staged": "01-prd-v2.json" }, { "target": ".pincer/runtime/selection.json", "staged": "02-selection.json" } ] }
    ```
 
 5. Rename each staged file onto its target in the listed order, remove the manifest,
    remove the staging directory, release the lock.
 
 The manifest is the commit point. A process killed before it exists leaves the old
-state; the staging directory is discarded by the next lock acquisition or `recover`.
+state; the staging directory is discarded by the next transaction or `recover`.
 A process killed after it exists leaves a committed transaction whose renames are
 completed (each rename is idempotent: a staged file that is already gone was
-renamed) by the next lock acquisition or `recover` before anything else runs.
+renamed) by the next transaction or `recover` before anything else runs; a manifest
+that cannot be read is left in place and named, never guessed at.
 Read-only commands that find a manifest report `STATE_INCOMPLETE` with the command
 named and refuse to interpret the half-applied files; they never repair. A record is
 therefore always the state before a transition or the state after it with its event;

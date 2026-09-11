@@ -231,10 +231,14 @@ function latestAttempt(root, key, index) {
 function recover(root, options = {}) {
   return withLock(root, () => {
     const p = paths(root);
+    // Committed-but-unapplied transactions are completed and uncommitted staging
+    // is discarded before anything else is read (docs/runtime-contracts.md,
+    // "Transactions and recovery"); required lazily to avoid a module cycle.
+    const transactions = require('./transaction.cjs').recoverPending(root);
     const read = readIndex(root);
     if (read.error) { const e = new Error(read.error); e.code = 'INVALID'; throw e; }
     const index = read.index;
-    const report = { finalized: [], live: [], foreign: [], missing: [], journal: [] };
+    const report = { finalized: [], live: [], foreign: [], missing: [], journal: [], transactions };
     const stillRunning = [];
     for (const id of index.running) {
       const attempt = readAttempt(root, id).attempt;
@@ -274,6 +278,9 @@ function recover(root, options = {}) {
     if (fs.existsSync(p.journal)) {
       for (const name of fs.readdirSync(p.journal)) {
         const file = path.join(p.journal, name);
+        let stat = null;
+        try { stat = fs.lstatSync(file); } catch { continue; }
+        if (stat.isDirectory()) continue; // transaction staging is handled above; an unreadable manifest stays for inspection
         try { fs.rmSync(file, { force: true }); report.journal.push(`${RUNTIME_DIR}/journal/${name}`); } catch { /* ignore */ }
       }
     }

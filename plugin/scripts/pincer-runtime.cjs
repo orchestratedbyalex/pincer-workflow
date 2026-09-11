@@ -242,12 +242,16 @@ function cmdRecover(root, args) {
   if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
   if (!state.exists(root)) { process.stdout.write('nothing to recover: no local runtime state\n'); process.exit(EXIT.OK); }
   const report = guarded(() => state.recover(root));
+  for (const t of report.transactions.completed) process.stdout.write(`completed transaction ${t.id} (${t.command}): ${t.targets.join(', ')}\n`);
+  for (const t of report.transactions.discarded) process.stdout.write(`discarded uncommitted staging ${t.id}\n`);
+  for (const t of report.transactions.unreadable) process.stdout.write(`left transaction ${t.id} in place: ${t.problem} (inspect ${state.RUNTIME_DIR}/journal/${t.id}/manifest.json by hand)\n`);
   for (const id of report.finalized) process.stdout.write(`finalized ${id} as interrupted (owner no longer running)\n`);
   for (const { id, owner } of report.live) process.stdout.write(`still running ${id} (pid ${owner.pid} is alive)\n`);
   for (const { id, owner } of report.foreign) process.stdout.write(`still running ${id} (owned by ${owner.host}; not reclaimed from another host)\n`);
   for (const id of report.missing) process.stdout.write(`dropped ${id} from running: record missing\n`);
   for (const file of report.journal) process.stdout.write(`removed stray journal file ${file}\n`);
-  if (!Object.values(report).some(list => list.length)) process.stdout.write('nothing to recover\n');
+  const { transactions, ...lists } = report;
+  if (!Object.values(lists).some(list => list.length) && !Object.values(transactions).some(list => list.length)) process.stdout.write('nothing to recover\n');
   process.exit(EXIT.OK);
 }
 

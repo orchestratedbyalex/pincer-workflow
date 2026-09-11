@@ -1,9 +1,13 @@
 ---
 ticket: T-48
-status: open
+status: done
 size: L
 prd: .prd/prd-v5.md
 depends_on: [T-47]
+started: 2026-09-11T20:36:02Z
+last_check: 2026-09-11T20:41:13Z passed ba710d8dd597
+verified: 2026-09-11T20:41:13Z ba710d8dd597
+finished: 2026-09-11T20:41:13Z
 ---
 
 ## Objective
@@ -24,9 +28,9 @@ Add atomic change transactions and recovery so PRD v5 can be implemented and rev
 - Do not hold locks across user interaction; stale prepared decisions refuse when their expected agreement changed.
 
 ## Acceptance Criteria
-- [ ] Overlapping writers cannot lose events, overwrite a newer revision, or admit conflicting state; real process barriers make contested interleavings reproducible.
-- [ ] Forced termination at each journal boundary produces diagnosed and recoverable state; read-only inspection leaves journal and authored files unchanged.
-- [ ] Live attempts block conflicting transitions; dead-owner recovery preserves interrupted evidence and allows a subsequent transaction.
+- [x] Overlapping writers cannot lose events, overwrite a newer revision, or admit conflicting state; real process barriers make contested interleavings reproducible.
+- [x] Forced termination at each journal boundary produces diagnosed and recoverable state; read-only inspection leaves journal and authored files unchanged.
+- [x] Live attempts block conflicting transitions; dead-owner recovery preserves interrupted evidence and allows a subsequent transaction.
 
 ## Verification
 Proves: Injects concurrent writers, stale-owner contention, stale revisions, running checks and process death to detect lost or partially committed state.

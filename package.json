@@ -14,7 +14,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node test/smoke.test.js && node test/installer.test.js && node test/ticket.test.js && node test/validation.test.js && node test/verification.test.js && node test/behavioral-verification.test.js && node test/evidence.test.js && node test/candidate.test.js && node test/recovery.test.js && node test/hooks.test.js && node test/runtime-parse.test.js && node test/runtime-identity.test.js && node test/runtime-state.test.js && node test/runtime-status.test.js && node test/runtime-runner.test.js && node test/runtime-lifecycle.test.js && node test/runtime-migrate.test.js && node test/runtime-evidence.test.js && node test/workflow.test.js && node test/contracts.test.js && node test/change-contracts.test.js && node test/distribution.test.js"
+    "test": "node test/smoke.test.js && node test/installer.test.js && node test/ticket.test.js && node test/validation.test.js && node test/verification.test.js && node test/behavioral-verification.test.js && node test/evidence.test.js && node test/candidate.test.js && node test/recovery.test.js && node test/hooks.test.js && node test/runtime-parse.test.js && node test/runtime-identity.test.js && node test/runtime-state.test.js && node test/change-transactions.test.js && node test/runtime-status.test.js && node test/runtime-runner.test.js && node test/runtime-lifecycle.test.js && node test/runtime-migrate.test.js && node test/runtime-evidence.test.js && node test/workflow.test.js && node test/contracts.test.js && node test/change-contracts.test.js && node test/distribution.test.js"
   },
   "keywords": [
     "claude-code",
