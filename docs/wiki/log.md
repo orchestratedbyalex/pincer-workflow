@@ -133,3 +133,7 @@ Outcome: npm publish still pending (needs the user's OTP); next is `/pincer-narr
 - Why: PRD v4 (verification slice of M1): runtime-owned, source-bound attempts instead of agent-authored receipts and logs.
 - How: this repo's own tickets ran on a pinned v0.4.1 kit (dogfooding rule); T-42/T-43 came out of the live trial (register/migrate steps in playbooks; register ignores `.pincer/`).
 - Outcome: all 15 tickets done; greenfield chain on the runtime passed release with schema 2 evidence; baseline comparison recorded. Next: `PRD v4: built`, evaluate (schema 1 via the pinned kit), merge, bump 0.5.0, publish.
+
+## [2026-09-11] end | PRD v4 built; candidate 7b561b1 reviewed, T-44 fixes, final candidate
+- What: `PRD v4: built`; two reviewer subagents (runtime code/tests; docs/playbooks/packaging) returned 18 findings; T-44 fixed them (guard leaves `.pincer/drafts/` writable, rename-based lock acquire and stale claim, `recover` waits and escalates to SIGKILL, `index.current` is the attempt authority, sanitizer covers Basic/Token/Digest and quoted values, export validates ids and artifact paths, `timeout` ≤ 2147483, contract/checklist/playbook alignment, plugin transform of `scripts/pincer-runtime/`, doctor names obsolete files).
+- Outcome: the final candidate is this wiki commit on top of T-44; evaluation and release follow in the same session.

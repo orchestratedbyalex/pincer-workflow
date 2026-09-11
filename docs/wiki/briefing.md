@@ -10,8 +10,11 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 
 **PRD v4 ("Record verification automatically and invalidate stale evidence",
 `.prd/prd-v4.md`, `profile: standard`) is fully implemented on `feat/prd-v4`
-(2026-09-11, T-29..T-43) and awaits `PRD v4: built`, evaluation, merge, the 0.5.0
-bump and publish; v0.4.1 is still unpublished.** The kit now has a Node runtime
+(2026-09-11, T-29..T-44) and built (`PRD v4: built`); the review of the first
+candidate `7b561b1` produced T-44 (eighteen fixes), and the final candidate is the
+wiki commit on top of it. Evaluation evidence (schema 1 via the pinned v0.4.1 kit),
+NOTES.md and the release audit follow; then merge, the 0.5.0 bump and publish; v0.4.1
+is still unpublished.** The kit now has a Node runtime
 ([[runtime]], decision [[runtime-owned-verification]]): `scripts/pincer-runtime.cjs`
 + `scripts/pincer-runtime/` own the ticket lifecycle, readiness, status (`--json`),
 change registration (`.prd/changes/<id>.json`), the SHA-256 source manifest,
@@ -34,10 +37,10 @@ schema 1 and the read-only release audit ([[requirements-through-delivery]],
 
 ## Active / next task
 
-1. Commit `PRD v4: built`, then `/pincer-evaluate` with the pinned v0.4.1 kit (this
-   repo is deliberately not migrated, PRD v4 §9): code-quality review of
-   `6771fbc..<candidate>`, schema 1 manifest, NOTES.md, evidence commit; then
-   `/pincer-release`.
+1. Evaluation of the final candidate with the pinned v0.4.1 kit (this repo is
+   deliberately not migrated, PRD v4 §9): schema 1 manifest under
+   `.prd/evidence/prd-v4/<candidate>/`, `review/code-quality.md` (two subagent
+   reports with dispositions), NOTES.md, the evidence commit; then `/pincer-release`.
 2. Merge `feat/prd-v4` into main, bump 0.5.0 (`--no-git-tag-version`, rebuild plugin,
    commit, annotated tag), publish (user runs `npm publish --otp`), push
    `--follow-tags`, confirm CI on ubuntu/macOS × Node 18/22.
