@@ -54,7 +54,7 @@ function replay(events) {
   for (const [i, e] of events.entries()) {
     if (!isObject(e)) return { error: `event ${i + 1} is not an object` };
     if (e.sequence !== i + 1) return { error: `event ${i + 1} carries sequence ${JSON.stringify(e.sequence)}` };
-    const rule = LIFECYCLE_KINDS[e.kind];
+    const rule = e.kind === 'migrate' && state !== null ? null : LIFECYCLE_KINDS[e.kind];
     if (rule) {
       if (!rule[0].includes(state)) return { error: `event ${e.sequence} (${e.kind}) is not permitted from ${state === null ? 'no record' : state}` };
       if (e.from !== state || e.to !== rule[1]) return { error: `event ${e.sequence} (${e.kind}) records ${JSON.stringify(e.from)} → ${JSON.stringify(e.to)}, expected ${JSON.stringify(state)} → ${rule[1]}` };
@@ -62,7 +62,7 @@ function replay(events) {
       superseded_by = e.kind === 'supersede' ? e.replacement : null;
       if (e.kind === 'supersede' && !(typeof e.replacement === 'string' && CHANGE_ID.test(e.replacement))) return { error: `event ${e.sequence} (supersede) names no replacement change` };
       if ((e.kind === 'cancel' || e.kind === 'supersede') && !(typeof e.decision === 'string' && SUB_ID.test(e.decision) && e.decision.startsWith('D-'))) return { error: `event ${e.sequence} (${e.kind}) names no decision` };
-    } else if (OTHER_KINDS.includes(e.kind)) {
+    } else if (OTHER_KINDS.includes(e.kind) || e.kind === 'migrate') {
       if (state === null) return { error: `event ${e.sequence} (${e.kind}) precedes the record's creation` };
       if (e.from !== state || e.to !== state) return { error: `event ${e.sequence} (${e.kind}) changes the state` };
     } else return { error: `event ${e.sequence} has unknown kind ${JSON.stringify(e.kind)}` };

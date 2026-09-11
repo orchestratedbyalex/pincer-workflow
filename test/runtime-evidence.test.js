@@ -181,9 +181,9 @@ function draftFor(dir, candidate, { required = true, extra = [] } = {}) {
   assert.match(j.next, /pincer-release/, 'schema 1 remains release-ready under the legacy contract');
   const legacyLabelled = passes(run(dir, 'bash', [statusScript]));
   assert.match(line(legacyLabelled, 'Evidence'), / · ok$/);
-  // Migrate, then ask for runtime evidence without having run the checks.
+  // A v0.5.0 binding (migrated mode), then ask for runtime evidence without having run the checks.
   write(dir, '.gitignore', '.pincer/\n');
-  passes(rt(dir, 'migrate', '--apply', '--prd', '.prd/prd-v1.md'));
+  bindV050(dir);
   const migrated = commit(dir, 'migrated');
   draftFor(dir, migrated, { required: true });
   const none = rt(dir, 'evidence', 'export', '--candidate', migrated, '--base', JSON.parse(read(dir, '.prd/changes/prd-v1.json')).base, '--prd', '.prd/prd-v1.md', '--draft', '.pincer/drafts/candidate.json');

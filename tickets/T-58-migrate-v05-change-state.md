@@ -1,9 +1,13 @@
 ---
 ticket: T-58
-status: open
+status: done
 size: L
 prd: .prd/prd-v5.md
 depends_on: [T-57]
+started: 2026-09-11T21:58:00Z
+last_check: 2026-09-11T23:56:47Z passed 469e8487d7ba
+verified: 2026-09-11T23:56:47Z 469e8487d7ba
+finished: 2026-09-11T23:56:47Z
 ---
 
 ## Objective
@@ -24,9 +28,9 @@ Migrate v0.5.0 change state explicitly with backups so PRD v5 can be implemented
 - Unknown schemas, conflicts and dirty customized records refuse or preserve according to the contract; never fall back to legacy or delete user data.
 
 ## Acceptance Criteria
-- [ ] Clean/customized/legacy/v0.5.0 fixtures migrate with correct preview, backups and preserved historical evidence.
-- [ ] Faults at each migration boundary recover safely; reapply is idempotent; tested rollback restores original files.
-- [ ] Old free-text approval alone never enables execution; new-schema unreadability and conflicting history fail closed.
+- [x] Clean/customized/legacy/v0.5.0 fixtures migrate with correct preview, backups and preserved historical evidence.
+- [x] Faults at each migration boundary recover safely; reapply is idempotent; tested rollback restores original files.
+- [x] Old free-text approval alone never enables execution; new-schema unreadability and conflicting history fail closed.
 
 ## Verification
 Proves: Uses pinned released records, customized files and migration fault injection to detect silent approval, lost work, partial-state fallback and broken rollback.

@@ -196,12 +196,13 @@ function cmdMigrate(root, args) {
   }
   const result = migrate.apply(root, options);
   if (result.plan.conflicts.length) { process.stdout.write(migrate.renderPlan(result.plan)); process.exit(EXIT.FAILED); }
-  if (result.already) { process.stdout.write(`already migrated: ${o.prd} is bound as change ${result.plan.change}; nothing changed\n`); process.exit(EXIT.OK); }
-  if (result.error) { process.stderr.write(`pincer: migration stopped before the binding was written: ${result.error}\n`); process.exit(EXIT.INVALID); }
-  const b = result.binding;
-  process.stdout.write(`migrated ${o.prd} → change ${b.change} (revision ${b.prd_revision.slice(0, 12)}, base ${b.base.slice(0, 7)}, ${Object.keys(result.plan.tickets.length ? b.legacy_receipts : {}).length || result.plan.tickets.length} ticket(s) rewritten)\n`);
+  if (result.already) { process.stdout.write(`already migrated: ${o.prd} is change ${result.plan.change} (schema 2 record); nothing changed\n`); process.exit(EXIT.OK); }
+  if (result.error) { process.stderr.write(`pincer: ${result.code}: migration refused; nothing was written: ${result.error}\n`); process.exit(exitForCode(result.code)); }
+  const r = result.record, p = result.plan;
+  process.stdout.write(`migrated ${o.prd} → change ${r.change} (schema 2 record, ${r.lifecycle.state}${p.source === 'binding' ? ', converted from the v0.5.0 binding' : p.source === 'record' ? ', receipts imported' : ''}; base ${r.base.slice(0, 7)}; ${p.tickets.length} ticket(s) rewritten; ${Object.keys(r.legacy.receipts).length} legacy receipt(s) as history${p.index ? `; ${p.index.rewritten.length} candidate pointer(s) rewritten` : ''})\n`);
   if (result.backupDir) process.stdout.write(`backups: ${result.backupDir} (${result.backups.length} file(s)); rollback per docs/runtime-contracts.md\n`);
-  if (!o.authorization) process.stderr.write('pincer: note: no --authorization recorded; migration does not prove human approval\n');
+  if (p.selection) process.stdout.write(`selected change ${r.change} in this worktree (${changes.SELECTION_FILE})\n`);
+  process.stderr.write(`pincer: note: the change is planned with no authorization${r.legacy.authorization_text ? ' (the v0.5.0 authorization text is history only)' : ''}; existing attempts and evaluations are history until verified again — next: node scripts/pincer-runtime.cjs change authorize ${r.change} --agreement <digest> --reference <text> --excerpt <text>, then change activate ${r.change}\n`);
   process.exit(EXIT.OK);
 }
 

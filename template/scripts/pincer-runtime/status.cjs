@@ -122,6 +122,20 @@ function gather(root, { budget, change = null } = {}) {
   const j = out.json;
   line(`PINCER status · ${new Date().toISOString().replace(/:\d{2}\.\d{3}Z$/, 'Z')} · ${root}`);
 
+  // A committed-but-unapplied transaction (a migration or transition killed
+  // mid-rename) is reported in every mode and never interpreted or repaired here.
+  const pendingTxn = transaction.pending(root);
+  if (pendingTxn.committed.length) {
+    const t = pendingTxn.committed[0];
+    const detail = `a committed transaction (${t.command || t.id}) was not fully applied; run: node scripts/pincer-runtime.cjs recover`;
+    j.mode = changes.scan(root).mode;
+    if (j.mode === 'changes') { j.schema = 2; j.runtime = changes.RUNTIME; j.selection = { change: null, problem: null }; j.changes = []; }
+    line(`WARN     STATE_INCOMPLETE: ${detail}`);
+    j.reasons.push({ code: 'STATE_INCOMPLETE', detail });
+    j.next = 'node scripts/pincer-runtime.cjs recover';
+    line(`Next     ${j.next}`);
+    out.exit = 4; return out;
+  }
   // Mode and selected PRD.
   const bindingResult = identity.loadBinding(root);
   if (bindingResult.code === 'CHANGES_MODE') return gatherChanges(root, out, { budget, now, change });
