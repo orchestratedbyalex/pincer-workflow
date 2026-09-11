@@ -122,7 +122,11 @@ function cmdEvidence(root, args) {
   try { draft = JSON.parse(fs.readFileSync(path.resolve(root, o.draft), 'utf8')); } catch (error) { fail('pincer', `cannot read draft ${o.draft}: ${error.message}`, EXIT.INVALID); }
   const indexRead = state.exists(root) ? state.readIndex(root) : { index: null };
   if (indexRead.error) fail('pincer', indexRead.error, EXIT.INVALID);
-  const attemptsFor = checkId => (indexRead.index ? state.latestAttempt(root, state.contextKey({ kind: 'candidate', candidate: o.candidate, check: checkId }), indexRead.index) : null);
+  const attemptsFor = checkId => {
+    if (!indexRead.index) return { attempt: null, pointed: null };
+    const key = state.contextKey({ kind: 'candidate', candidate: o.candidate, check: checkId });
+    return { attempt: state.latestAttempt(root, key, indexRead.index), pointed: indexRead.index.current[key] || null };
+  };
   const os = require('node:os');
   const result = evidence.exportEvidence(root, {
     candidate: o.candidate, base: o.base, prd: o.prd, draft, binding: bind.binding, attemptsFor,

@@ -36,9 +36,10 @@ function legacyTicketReadiness(text, fields) {
 // Migrated mode: readiness derives from the latest attempt for the ticket's
 // context and the current inputs. `current` carries the digests computed now;
 // `sourceProblems` are snapshot problems (secret path, unsupported input);
-// `contextKey` is the key the attempt was read for (its record must match);
-// the attempt's artifacts carry `missing`/`altered` from state.inspectArtifacts.
-function migratedTicketReadiness({ text, fields, timeout, attempt, legacyReceipt, current, sourceProblems = [], changedPaths = [], contextKey = null }) {
+// `contextKey` is the key the attempt was read for and `pointedId` the id the
+// index names for it (the record must match both); the attempt's artifacts
+// carry `missing`/`altered` from state.inspectArtifacts.
+function migratedTicketReadiness({ text, fields, timeout, attempt, legacyReceipt, current, sourceProblems = [], changedPaths = [], contextKey = null, pointedId = null }) {
   const reasons = [];
   for (const p of sourceProblems) reasons.push(reason(p.code, p.detail, p.code === 'SECRET_PATH' ? 'remove or ignore the secret file' : 'remove the input or change the configuration'));
   if (reasons.length) return { ready: false, reasons };
@@ -49,7 +50,7 @@ function migratedTicketReadiness({ text, fields, timeout, attempt, legacyReceipt
   const id = typeof attempt.id === 'string' && attempt.id ? attempt.id : '?';
   // The record must be complete and written for this context before any
   // outcome is honored: a stripped or foreign record is never a pass.
-  const invalid = validateAttempt(attempt, contextKey);
+  const invalid = validateAttempt(attempt, contextKey, pointedId);
   if (invalid) return { ready: false, reasons: [reason('ATTEMPT_ERROR', `attempt ${id} ${invalid}`, 'verify')] };
   switch (attempt.outcome) {
     case 'running': return { ready: false, reasons: [reason('ATTEMPT_RUNNING', `attempt ${id} is running`, 'wait, or run recover if its owner died')] };

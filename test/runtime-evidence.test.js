@@ -240,7 +240,22 @@ function draftFor(dir, candidate, { required = true, extra = [] } = {}) {
   fs.writeFileSync(record, JSON.stringify(foreign));
   refuses(exportNow(), /C-01: attempt .* belongs to candidate:[0-9a-f]{40}:C-02/, 'record for another check');
   fs.writeFileSync(record, original);
+  // T-46: the first C-01 record copied over the one the index points at; a record
+  // finalized by an old recover without log digests.
+  passes(rt(dir, 'check', 'C-01', '--candidate', candidate, '--', 'echo', 'second-run'), 'check C-01 again');
+  const pointed = state.readIndex(dir).index.current[`candidate:${candidate}:C-01`];
+  assert.notEqual(pointed, a.id);
+  const pointedRecord = path.join(dir, `.pincer/runtime/attempts/${pointed}.json`);
+  const pointedOriginal = fs.readFileSync(pointedRecord, 'utf8');
+  fs.writeFileSync(pointedRecord, original);
+  refuses(exportNow(), /C-01: attempt .* is not the attempt the index points at/, 'copied record');
+  const oldRecover = JSON.parse(pointedOriginal);
+  oldRecover.outcome = 'interrupted'; oldRecover.exit_code = null;
+  for (const k of ['stdout', 'stderr']) oldRecover.artifacts[k].sha256 = null;
+  fs.writeFileSync(pointedRecord, JSON.stringify(oldRecover));
+  refuses(exportNow(), /C-01: attempt .* has no recorded digest/, 'interrupted record without digests');
+  fs.writeFileSync(pointedRecord, pointedOriginal);
   passes(exportNow(), 'restored state exports');
-  assert.match(read(dir, `${evidenceDir(candidate)}/checks/C-01.log`), /--- stdout ---\noriginal-output\n/);
+  assert.match(read(dir, `${evidenceDir(candidate)}/checks/C-01.log`), /--- stdout ---\nsecond-run\n/);
 }
 console.log('runtime evidence tests passed');

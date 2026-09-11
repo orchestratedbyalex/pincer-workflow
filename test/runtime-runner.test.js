@@ -345,4 +345,21 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
   assert.ok(bg > 0 && !alive(bg), 'the SIGTERM-ignoring child was killed');
   assert.ok(latest(dir).limitations.some(l => /SIGKILL/.test(l)), JSON.stringify(latest(dir).limitations));
 }
+// T-46: a descendant that left the group (setsid) cannot be reached; nothing is
+// claimed to have been sent, capture is abandoned after the drain bound, the run
+// still ends and is timed_out.
+{
+  const { dir } = migrated("perl -e 'use POSIX; setsid(); sleep 30' & echo $! > .pincer/bg.pid; exit 0", { timeout: 1 });
+  const started = Date.now();
+  const r = rt(dir, 'verify', 'T-01');
+  const elapsed = Date.now() - started;
+  const bg = Number(read(dir, '.pincer/bg.pid').trim());
+  try { process.kill(bg, 'SIGKILL'); } catch { /* already gone */ }
+  assert.equal(r.status, 124, r.stdout + r.stderr);
+  assert.ok(elapsed >= 8000 && elapsed < 12000, `timeout, grace and drain bound the run (${elapsed} ms)`);
+  const a = latest(dir);
+  assert.equal(a.outcome, 'timed_out');
+  assert.ok(a.limitations.some(l => /no reachable process remained/.test(l) && /abandoned/.test(l)), JSON.stringify(a.limitations));
+  assert.ok(!a.limitations.some(l => /was sent/.test(l)), 'no signal is claimed that was not delivered');
+}
 console.log('runtime runner tests passed');

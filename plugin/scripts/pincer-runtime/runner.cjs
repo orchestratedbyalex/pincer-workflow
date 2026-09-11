@@ -133,14 +133,18 @@ async function runAttempt({ root, context, commands, timeoutSeconds, command = '
   // Signal the whole group, whether or not the shell itself has exited: a
   // background child that inherited the output pipes keeps the run alive and
   // must be terminated the same way. The bare pid is a fallback only while the
-  // shell is known to be alive (after it is reaped the pid may be reused).
+  // shell is known to be alive (after it is reaped the pid may be reused). The
+  // group id itself can be reused only once every member is gone; the window
+  // between the two attempts is a documented limit, not something detected here.
+  // `sent` records only signals a kill call delivered.
   const signalGroup = signal => {
-    sent.push(signal);
-    try { process.kill(-child.pid, signal); return; } catch { /* no group left */ }
-    if (child.exitCode === null && child.signalCode === null) { try { process.kill(child.pid, signal); } catch { /* gone */ } }
+    try { process.kill(-child.pid, signal); sent.push(signal); return; } catch { /* no group left */ }
+    if (child.exitCode === null && child.signalCode === null) { try { process.kill(child.pid, signal); sent.push(signal); } catch { /* gone */ } }
   };
+  let terminating = false;
   const terminate = () => {
-    if (!child || !child.pid || sent.length) return;
+    if (!child || !child.pid || terminating) return;
+    terminating = true;
     signalGroup('SIGTERM');
     graceTimer = setTimeout(() => {
       signalGroup('SIGKILL');
@@ -174,7 +178,7 @@ async function runAttempt({ root, context, commands, timeoutSeconds, command = '
   clearTimeout(killTimer); clearTimeout(graceTimer); clearTimeout(drainTimer);
   process.off('SIGINT', onSignal); process.off('SIGTERM', onSignal);
   const outInfo = stdout.close(), errInfo = stderr.close();
-  const termination = `the child process group was sent ${sent.join(' then ')}${abandoned ? `; output capture was abandoned ${DRAIN_MS / 1000} s after SIGKILL and a descendant may still be running` : ''}`;
+  const termination = `${sent.length ? `the child process group was sent ${sent.join(' then ')}` : 'no reachable process remained in the child\'s group (the shell had exited and its descendants left the group)'}${abandoned ? `; output capture was abandoned ${DRAIN_MS / 1000} s after the SIGKILL point and a descendant may still be running` : ''}`;
 
   const after = source.snapshot(root);
   const changed = after.digest && before.digest !== after.digest ? source.diffManifests(before, after) : [];

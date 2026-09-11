@@ -1,9 +1,13 @@
 ---
 ticket: T-46
-status: open
+status: done
 size: S
 prd: .prd/prd-v4.md
 depends_on: [T-45]
+started: 2026-09-11T15:11:42Z
+last_check: 2026-09-11T15:22:23Z passed 51caaba6166b
+verified: 2026-09-11T15:22:23Z 51caaba6166b
+finished: 2026-09-11T15:22:23Z
 ---
 
 ## Objective
@@ -23,8 +27,8 @@ Fix the reviewer subagent's findings on the T-45 diff: the termination limitatio
 - Assertions for each runtime fix; generated outputs regenerated.
 
 ## Acceptance Criteria
-- [ ] Each finding has an assertion or a contract sentence.
-- [ ] `npm test` passes and generators produce no diff.
+- [x] Each finding has an assertion or a contract sentence.
+- [x] `npm test` passes and generators produce no diff.
 
 ## Verification
 Proves: the five reviewer findings are fixed or recorded; regression: a limitation claiming a signal that was not sent, an old interrupted record shown as malformed, a copied record accepted under another pointer, or stale generated output.

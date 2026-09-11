@@ -242,11 +242,15 @@ before returning, records what it sent, and records the digests of the logs the 
 runner captured).
 
 A record is evidence only when it is complete and was written for the context it is
-read for: readiness validates the record against this schema (every field above up to
-`artifacts`, with `finished` and the artifact digests present once the outcome is not
-`running`) and that its context key equals the key the index was read for. A record
-that is incomplete, malformed or written for another ticket or check is
-`ATTEMPT_ERROR` (never ready) and `evidence export` refuses it. Readiness and export
+read for: readiness validates the record against this schema (every field above
+through `artifacts`; `owner`, `child`, `limitations` and `error` are not checked; `finished`
+and the artifact digests must be present once the outcome is not `running`, except
+that an `interrupted` record may carry `null` digests when a `recover` older than their
+recording finalized it), that its context key equals the key the index was read for,
+and that its `id` is the one `index.current[key]` names. A record that is incomplete,
+malformed, written for another ticket or check, or copied over the pointed-at record
+is `ATTEMPT_ERROR` (never ready) and `evidence export` refuses it; export also refuses
+an `interrupted` record without log digests. Readiness and export
 also compare each captured log with the digest the record carries: a log that was
 altered after the run is `EVIDENCE_MISSING` (the reason names the stream) and export
 refuses it; a missing log is `EVIDENCE_MISSING` as before. This detects mistakes and
@@ -272,7 +276,12 @@ the output pipes keeps the attempt open and is terminated the same way, so a che
 exits 0 leaving one behind is `timed_out`. If the pipes are still open 2 s after
 SIGKILL, capture is abandoned and the record's limitation says a descendant may still
 be running; the attempt never waits for a descendant's own schedule. The limitation
-names the signals actually sent.
+names the signals a kill call delivered, or says that no reachable process remained
+in the group (a descendant that left the group with `setsid` holds the pipes and
+survives; see "Platform limits"). Signalling the group after the shell was reaped
+relies on the group id not being reused while any member is alive; between the
+SIGTERM and SIGKILL attempts an empty group's id could in principle be reused by an
+unrelated process, which is accepted as a limit.
 
 ## Capture and sanitization
 

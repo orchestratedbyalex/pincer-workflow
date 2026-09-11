@@ -129,27 +129,33 @@ const contextKey = context => (context.kind === 'candidate' ? `candidate:${conte
 const OUTCOMES = ['running', 'passed', 'failed', 'interrupted', 'timed_out', 'error'];
 const SHA256 = /^[0-9a-f]{64}$/;
 // Validate an attempt record read from disk against record schema 1 and, when
-// `key` is given, the context it is read for. A record that is incomplete,
-// malformed or written for another context is never evidence: readiness
-// reports ATTEMPT_ERROR and export refuses. Returns null or a problem string.
-function validateAttempt(a, key) {
+// given, the context `key` it is read for and the `pointedId` the index names.
+// A record that is incomplete, malformed, written for another context or
+// carrying another id than the pointer is never evidence: readiness reports
+// ATTEMPT_ERROR and export refuses. An `interrupted` record may lack log
+// digests (a `recover` that predates their recording). Returns null or a problem.
+function validateAttempt(a, key, pointedId) {
   const obj = v => v && typeof v === 'object' && !Array.isArray(v);
   const str = v => typeof v === 'string' && v.length > 0;
   const digestOrNull = v => v === null || (typeof v === 'string' && SHA256.test(v));
   if (!obj(a)) return 'record is not a JSON object';
   const bad = [];
   if (a.schema !== 1) bad.push('schema');
+  if (a.runtime !== 1) bad.push('runtime');
   if (!str(a.id)) bad.push('id');
   if (!Number.isInteger(a.sequence) || a.sequence < 1) bad.push('sequence');
   const c = a.context;
-  if (!obj(c) || !['ticket', 'candidate'].includes(c.kind) || !str(c.change) || !str(c.prd) || !str(c.prd_revision)
+  if (!obj(c) || !['ticket', 'candidate'].includes(c.kind) || !str(c.change) || !str(c.prd) || !str(c.prd_revision) || !str(c.base)
     || (c.kind === 'ticket' ? !str(c.ticket) || !str(c.ticket_digest) : !str(c.candidate) || !str(c.check))) bad.push('context');
   if (!obj(a.check) || typeof a.check.digest !== 'string' || !SHA256.test(a.check.digest) || typeof a.check.display !== 'string'
     || !Number.isInteger(a.check.timeout_seconds) || a.check.timeout_seconds <= 0) bad.push('check');
   if (!OUTCOMES.includes(a.outcome)) bad.push('outcome');
   const finished = OUTCOMES.includes(a.outcome) && a.outcome !== 'running';
   if (!(a.exit_code === null || Number.isInteger(a.exit_code))) bad.push('exit_code');
+  if (!(a.signal === null || str(a.signal))) bad.push('signal');
   if (!obj(a.runner) || !str(a.runner.shell) || !Array.isArray(a.runner.args)) bad.push('runner');
+  if (!str(a.cwd)) bad.push('cwd');
+  if (!obj(a.environment)) bad.push('environment');
   if (!str(a.started)) bad.push('started');
   if (finished ? !str(a.finished) : a.finished !== null) bad.push('finished');
   if (!obj(a.source) || !digestOrNull(a.source.before) || !digestOrNull(a.source.after)) bad.push('source');
@@ -158,11 +164,13 @@ function validateAttempt(a, key) {
     for (const k of ['stdout', 'stderr']) {
       const info = a.artifacts[k];
       const expectedPath = str(a.id) ? `${RUNTIME_DIR}/attempts/${a.id}/${k}.log` : null;
-      if (!obj(info) || info.path !== expectedPath || !(finished ? typeof info.sha256 === 'string' && SHA256.test(info.sha256) : digestOrNull(info.sha256))) bad.push(`artifacts.${k}`);
+      const digestRequired = finished && a.outcome !== 'interrupted';
+      if (!obj(info) || info.path !== expectedPath || !(digestRequired ? typeof info.sha256 === 'string' && SHA256.test(info.sha256) : digestOrNull(info.sha256))) bad.push(`artifacts.${k}`);
     }
   }
   if (bad.length) return `record is incomplete or malformed: ${bad.join(', ')}`;
   if (key && contextKey(c) !== key) return `record belongs to ${contextKey(c)}, not ${key}`;
+  if (pointedId && a.id !== pointedId) return `record ${a.id} is not the attempt the index points at (${pointedId})`;
   return null;
 }
 // Compare an attempt's captured logs with local state: `missing` when a log is

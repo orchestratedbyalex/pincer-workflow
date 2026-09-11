@@ -326,11 +326,11 @@ function exportEvidence(root, { candidate, base, prd, draft, binding, attemptsFo
       checks.push(authored);
       continue;
     }
-    const attempt = attemptsFor(stub.id);
+    const { attempt, pointed } = attemptsFor(stub.id);
     if (!attempt) { problems.push(`draft check ${stub.id}: no runtime attempt for candidate ${candidate}; run: node scripts/pincer-runtime.cjs check ${stub.id} --candidate ${candidate} -- <command>`); continue; }
     // The record must be complete, written for this check, and its captured
     // logs must still match the digests it recorded; anything else is refused.
-    const invalid = validateAttempt(attempt, contextKey({ kind: 'candidate', candidate, check: stub.id }));
+    const invalid = validateAttempt(attempt, contextKey({ kind: 'candidate', candidate, check: stub.id }), pointed || null);
     if (invalid) { problems.push(`draft check ${stub.id}: attempt ${typeof attempt.id === 'string' ? attempt.id : '?'} ${invalid}; run the check again`); continue; }
     if (attempt.outcome === 'running') { problems.push(`draft check ${stub.id}: attempt ${attempt.id} is still running`); continue; }
     const logRel = `${dirRel}/checks/${stub.id}.log`;
@@ -342,7 +342,8 @@ function exportEvidence(root, { candidate, base, prd, draft, binding, attemptsFo
       let text = '';
       if (fs.existsSync(file)) {
         const data = fs.readFileSync(file);
-        if (crypto.createHash('sha256').update(data).digest('hex') !== info.sha256) { altered = altered || `captured ${stream} log ${info.path} does not match the digest the attempt recorded`; }
+        if (info.sha256 === null) { altered = altered || `captured ${stream} log ${info.path} has no recorded digest (the attempt was finalized by recover)`; }
+        else if (crypto.createHash('sha256').update(data).digest('hex') !== info.sha256) { altered = altered || `captured ${stream} log ${info.path} does not match the digest the attempt recorded`; }
         text = data.toString('utf8');
       } else { missing = true; text = '[pincer: captured log missing from local state]'; }
       pieces.push(`--- ${stream}${info.truncated ? ' (truncated by the runtime)' : ''}${info.redactions ? ` (${info.redactions} redaction(s))` : ''} ---`);

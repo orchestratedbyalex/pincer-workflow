@@ -181,20 +181,21 @@ const front = (dir, file, key) => (read(dir, file).match(new RegExp(`^${key}: *(
   assert.ok(!fs.existsSync(path.join(repo, 'template/scripts/pincer-ticket-lib.sh')), 'the Bash policy library is gone');
 }
 
-// Review fixes (T-45): an attempt record is evidence only when it is complete,
-// belongs to the ticket it is read for, and its captured logs still match the
-// digests it recorded. Readiness, ready, status and done agree on each case.
+// Review fixes (T-45, T-46): an attempt record is evidence only when it is
+// complete, belongs to the ticket it is read for, carries the id the index points
+// at, and its captured logs still match the digests it recorded. Readiness,
+// ready, status and done agree on each case.
 {
   const { dir, file } = migrated();
   passes(sh(dir, 'start', 'T-01')); passes(sh(dir, 'verify', 'T-01')); tick(dir, file);
   const key = 'ticket:prd-v1:T-01';
   const good = state.latestAttempt(dir, key);
   assert.equal(good.outcome, 'passed');
-  const record = path.join(dir, `.pincer/runtime/attempts/${good.id}.json`);
-  const original = fs.readFileSync(record, 'utf8');
+  const recordOf = id => path.join(dir, `.pincer/runtime/attempts/${id}.json`);
+  const original = fs.readFileSync(recordOf(good.id), 'utf8');
   const codeOf = () => JSON.parse(passes(rt(dir, 'status', '--json'))).tickets[0].readiness.reasons[0].code;
   // An incomplete record keeps only the pointer identity and the outcome.
-  fs.writeFileSync(record, JSON.stringify({ id: good.id, outcome: 'passed' }));
+  fs.writeFileSync(recordOf(good.id), JSON.stringify({ id: good.id, outcome: 'passed' }));
   assert.equal(codeOf(), 'ATTEMPT_ERROR', 'an incomplete record is not a pass');
   assert.equal(rt(dir, 'ready', 'T-01').status, 1, 'ready refuses an incomplete record');
   assert.match(rt(dir, 'ready', 'T-01').stdout, /ATTEMPT_ERROR .*incomplete|ATTEMPT_ERROR .*malformed/);
@@ -202,12 +203,34 @@ const front = (dir, file, key) => (read(dir, file).match(new RegExp(`^${key}: *(
   assert.equal(front(dir, file, 'status'), 'in_progress');
   // A complete record for another ticket, pointed at by this ticket's index entry.
   const foreign = JSON.parse(original); foreign.context.ticket = 'T-02';
-  fs.writeFileSync(record, JSON.stringify(foreign));
+  fs.writeFileSync(recordOf(good.id), JSON.stringify(foreign));
   assert.equal(codeOf(), 'ATTEMPT_ERROR', 'a record for another context is not this ticket\'s evidence');
   refuses(sh(dir, 'done', 'T-01'), /ATTEMPT_ERROR/, 'done refuses a mismatched record');
-  fs.writeFileSync(record, original);
+  fs.writeFileSync(recordOf(good.id), original);
+  // The old passing record copied over the failed one the index points at (T-46).
+  write(dir, 'value.txt', 'bad');
+  assert.equal(sh(dir, 'verify', 'T-01').status, 1, 'the second attempt fails');
+  git(dir, 'checkout', '--', 'value.txt');
+  const pointed = state.readIndex(dir).index.current[key];
+  assert.notEqual(pointed, good.id);
+  const failedOriginal = fs.readFileSync(recordOf(pointed), 'utf8');
+  fs.writeFileSync(recordOf(pointed), original);
+  assert.equal(codeOf(), 'ATTEMPT_ERROR', 'a record copied over the pointed-at one is not evidence');
+  assert.match(rt(dir, 'ready', 'T-01').stdout, /not the attempt the index points at/);
+  refuses(sh(dir, 'done', 'T-01'), /ATTEMPT_ERROR/, 'done refuses a copied record');
+  // A record finalized by a recover that predates log digests stays interrupted (T-46).
+  const oldRecover = JSON.parse(failedOriginal);
+  oldRecover.outcome = 'interrupted'; oldRecover.exit_code = null; oldRecover.signal = null;
+  for (const k of ['stdout', 'stderr']) oldRecover.artifacts[k].sha256 = null;
+  oldRecover.limitations = ['finalized as interrupted by recover: owner pid 1 was no longer running'];
+  fs.writeFileSync(recordOf(pointed), JSON.stringify(oldRecover));
+  assert.equal(codeOf(), 'ATTEMPT_INTERRUPTED', 'missing digests on an interrupted record are not a malformed record');
+  fs.writeFileSync(recordOf(pointed), failedOriginal);
   // A captured log replaced after the run no longer matches its recorded digest.
-  const stdoutLog = path.join(dir, good.artifacts.stdout.path);
+  passes(sh(dir, 'verify', 'T-01'));
+  const latest = state.latestAttempt(dir, key);
+  assert.equal(latest.outcome, 'passed');
+  const stdoutLog = path.join(dir, latest.artifacts.stdout.path);
   const stdoutOriginal = fs.readFileSync(stdoutLog);
   fs.writeFileSync(stdoutLog, 'REPLACED OUTPUT\n');
   assert.equal(codeOf(), 'EVIDENCE_MISSING', 'an altered log is not evidence');
