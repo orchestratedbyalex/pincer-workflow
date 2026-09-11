@@ -157,14 +157,17 @@ function revise(root, id, { expect = null, hooks = null } = {}) {
 // in-memory record; shared with `change authorize` (which records the agreement
 // it binds when it is not recorded yet). Mutates `record`; the caller must stage
 // the record write when it adds more.
-function appendAgreement(ctx, changes, record, file, computed, { previous = null, stage = true } = {}) {
+function appendAgreement(ctx, changes, record, file, computed, { previous = null, stage = true, event = true } = {}) {
   const gid = `G-${String(record.agreements.length + 1).padStart(2, '0')}`;
   const snapshotRel = changes.snapshotFile(record.change, gid);
   const entry = { id: gid, digest: computed.digest, prd_revision: computed.prd.revision, breakdown: computed.breakdown, tickets: Object.keys(computed.tickets).sort((a, b) => ticketNumber(a) - ticketNumber(b)), decisions: Object.keys(computed.decisions).sort(), snapshot: snapshotRel, recorded: ctx.now };
   record.agreements.push(entry);
-  const sequence = record.sequence + 1;
-  record.events.push({ sequence, kind: 'agreement', from: record.lifecycle.state, to: record.lifecycle.state, at: ctx.now, reason: null, agreement: gid, authorization: null, decision: null, replacement: null, note: null });
-  record.sequence = sequence;
+  if (event) {
+    // `change authorize` records the entry inside its own event instead.
+    const sequence = record.sequence + 1;
+    record.events.push({ sequence, kind: 'agreement', from: record.lifecycle.state, to: record.lifecycle.state, at: ctx.now, reason: null, agreement: gid, authorization: null, decision: null, replacement: null, note: null });
+    record.sequence = sequence;
+  }
   ctx.write(snapshotRel, snapshotDoc(record, gid, computed, ctx.now));
   if (stage) ctx.write(file, record);
   return { action: 'recorded', agreement: entry, record, difference: previous ? difference(previous, computed) : null };

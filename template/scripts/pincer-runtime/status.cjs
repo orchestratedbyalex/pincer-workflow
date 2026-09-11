@@ -17,6 +17,7 @@ const evidence = require('./evidence.cjs');
 const changes = require('./changes.cjs');
 const transaction = require('./transaction.cjs');
 const agreement = require('./agreement.cjs');
+const authorization = require('./authorization.cjs');
 const { tryGit } = require('./fsutil.cjs');
 
 const RUNTIME = 1;
@@ -382,7 +383,7 @@ function gatherChanges(root, out, { budget, now, change }) {
   const loaded = resolved.loaded;
   const selection = resolved.selection;
   j.selection = selection ? { change: selection.change, problem: null } : { change: null, problem: resolved.selectionProblem ? { code: resolved.selectionProblem.code, detail: resolved.selectionProblem.problem } : null };
-  j.changes = [...loaded.records.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([id, e]) => ({ ...changes.summarize(id, e), selected: Boolean(selection && selection.change === id), authorization: null, agreement: null }));
+  j.changes = [...loaded.records.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([id, e]) => { const v = loaded.problems.length ? null : authorization.verdict(root, e.record); return { ...changes.summarize(id, e), selected: Boolean(selection && selection.change === id), authorization: v ? v.verdict : null, agreement: v ? v.current : null }; });
   const retained = j.changes.map(c => c.id).join(', ') || 'none';
   if (loaded.problems.length && (resolved.code || !resolved.record)) {
     for (const p of loaded.problems) { line(`WARN     invalid change records: ${p.code}: ${p.detail}`); j.reasons.push({ code: p.code, detail: p.detail }); }
@@ -425,11 +426,12 @@ function gatherChanges(root, out, { budget, now, change }) {
   const latest = agreement.latestEntry(record);
   let difference = null;
   if (!agreed.code && !entry && latest) { const snap = agreement.readSnapshot(root, record, latest); if (!snap.code) difference = agreement.difference(snap.snapshot, agreed); }
-  j.change = { id, prd, prd_revision: binding.prd_revision, base: record.base, sequence: record.sequence, lifecycle: { ...record.lifecycle }, agreement: { current: agreed.code ? null : agreed.digest, recorded: entry ? entry.id : null, latest: latest ? { id: latest.id, digest: latest.digest, recorded: latest.recorded } : null, difference, authorized: null, verdict: null, open_decisions: record.decisions.filter(d => d.status === 'open').map(d => d.id) }, view: { head: v.head, branch: v.branch, base_is_ancestor: v.base_is_ancestor, dirty: v.dirty } };
+  const auth = authorization.verdict(root, record, agreed);
+  j.change = { id, prd, prd_revision: binding.prd_revision, base: record.base, sequence: record.sequence, lifecycle: { ...record.lifecycle }, agreement: { current: agreed.code ? null : agreed.digest, recorded: entry ? entry.id : null, latest: latest ? { id: latest.id, digest: latest.digest, recorded: latest.recorded } : null, difference, authorized: auth.authorized ? { id: auth.authorized.id, agreement: auth.authorized.agreement, digest: auth.authorized.digest, disposition: auth.authorized.disposition, recorded: auth.authorized.recorded } : null, verdict: auth.verdict, verdict_detail: auth.detail, open_decisions: auth.open }, view: { head: v.head, branch: v.branch, base_is_ancestor: v.base_is_ancestor, dirty: v.dirty } };
   if (prdResult.ok) { line(`PRD      ${prd} · status: ${prdStatus} · profile: ${prdResult.profile} · date: ${prdResult.fields.date || ''}`); j.prd = { path: prd, status: prdStatus, profile: prdResult.profile, date: prdResult.fields.date || null }; }
   else line(`PRD      ${prd} · invalid: ${prdResult.problems[0]}`);
   const agreementText = agreed.code ? 'agreement unavailable' : `agreement ${short(agreed.digest)}${entry ? ` (${entry.id})` : latest ? ` (≠ ${latest.id}: ${agreement.renderDifference(difference || { same: false, prd_changed: false, tickets_added: [], tickets_removed: [], tickets_changed: [], decisions_added: [], decisions_removed: [] })})` : ' (not recorded)'}`;
-  line(`Runtime  changes · ${resolved.explicit ? 'inspecting' : 'selected'} ${id} · ${record.lifecycle.state} · ${agreementText} · base ${record.base.slice(0, 7)}`);
+  line(`Runtime  changes · ${resolved.explicit ? 'inspecting' : 'selected'} ${id} · ${record.lifecycle.state} · ${agreementText} · authorization ${auth.verdict}${auth.authorized ? ` (${auth.authorized.id})` : ''} · base ${record.base.slice(0, 7)}`);
   line(`Changes  ${j.changes.length} retained: ${j.changes.map(c => `${c.id} (${c.state}${c.selected ? ', selected' : ''})`).join(', ')}`);
   line(`View     HEAD ${v.head ? v.head.slice(0, 7) : 'none'} · branch ${v.branch || 'detached'} · base ${v.base_is_ancestor ? 'is an ancestor' : 'is NOT an ancestor'} · dirty ${v.dirty.length} path(s)${v.dirty.length ? `: ${v.dirty.slice(0, 5).join(', ')}${v.dirty.length > 5 ? ` (+${v.dirty.length - 5})` : ''}` : ''}`);
   if (record.lifecycle.reason || record.lifecycle.note) line(`Handoff (authored) ${record.lifecycle.reason ? `reason: ${record.lifecycle.reason}` : ''}${record.lifecycle.reason && record.lifecycle.note ? ' · ' : ''}${record.lifecycle.note ? `note: ${record.lifecycle.note}` : ''}`);
@@ -443,13 +445,16 @@ function gatherChanges(root, out, { budget, now, change }) {
     if (changes.TERMINAL.includes(st)) return `change ${id} is ${st}${record.lifecycle.superseded_by ? ` by ${record.lifecycle.superseded_by}` : ''}: inspect it with ${cmd('show')}; execution needs a new change (register one and reference this record)`;
     if (v.problems.length) return `${v.problems[0].code}: ${v.problems[0].detail}`;
     if (computed.unresolved > 0 || computed.sourceProblems.length) return computed.defaultNext;
-    if (st === 'planned') return `${cmd('activate')} — activate the change before executing tickets (authorization is checked at activation)`;
+    if (auth.verdict !== 'current' && !agreed.code) return `${auth.verdict}: ${auth.detail}`;
+    if (st === 'planned') return `${cmd('activate')} — activate the change before executing tickets`;
     if (st === 'paused') return `${cmd('resume')} — the change is paused${record.lifecycle.reason ? ` (${record.lifecycle.reason})` : ''}; resume it before executing tickets`;
     if (st === 'active' && computed.allReady && computed.prdStatus !== 'draft') return `${cmd('complete')} — every ticket is done and ready; complete the change before choosing the candidate`;
     return computed.defaultNext;
   };
   gatherBody(root, out, { mode: 'changes', binding, prd, prdResult, bindingResult: null, budget, now, decideNext });
-  for (const p of v.problems) if (!j.reasons.includes(p)) j.reasons.unshift(p);
+  // Reasons in gate order: repository view first, then the authorization verdict, then the rest.
+  const front = [...v.problems, ...(auth.verdict !== 'current' && !agreed.code ? [{ code: auth.verdict, detail: auth.detail }] : [])];
+  j.reasons = [...front, ...j.reasons.filter(r => !front.includes(r))];
   return out;
 }
 

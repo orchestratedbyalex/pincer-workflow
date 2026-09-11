@@ -13,6 +13,8 @@
 //   node scripts/pincer-runtime.cjs check C-NN --candidate <sha> [--timeout <seconds>] -- <command...>
 //   node scripts/pincer-runtime.cjs evidence export --candidate <sha> --base <sha> --prd .prd/prd-vN.md --draft <file>
 //   node scripts/pincer-runtime.cjs change list [--json] · change show <id> [--json] · change select <id> · change revise <id>
+//   node scripts/pincer-runtime.cjs change authorize <id> --agreement <digest> (--reference <text> --excerpt <text> | --delegated --basis A-NN --explanation <text>) [--decision D-NN]...
+//   node scripts/pincer-runtime.cjs change decide <id> --summary <text> [--id D-NN] | --resolve D-NN --reference <text> --excerpt <text>
 //
 // Exit codes: 0 ok · 1 failed/not ready/refused · 2 usage · 3 state busy ·
 // 4 invalid input or state · 124 timed out · 130 interrupted.
@@ -32,6 +34,7 @@ const migrate = require('./pincer-runtime/migrate.cjs');
 const evidence = require('./pincer-runtime/evidence.cjs');
 const changes = require('./pincer-runtime/changes.cjs');
 const agreement = require('./pincer-runtime/agreement.cjs');
+const authorization = require('./pincer-runtime/authorization.cjs');
 const { atomicWrite, nowIso, tryGit } = require('./pincer-runtime/fsutil.cjs');
 const EXIT = { OK: 0, FAILED: 1, USAGE: 2, BUSY: 3, INVALID: 4, TIMED_OUT: 124, INTERRUPTED: 130 };
 
@@ -57,7 +60,9 @@ function usage(message) {
     '       pincer-runtime.cjs migrate --preview|--apply --prd .prd/prd-vN.md [--change <id>] [--authorization <text>]\n' +
     '       pincer-runtime.cjs check C-NN --candidate <sha> [--timeout <seconds>] -- <command...>\n' +
     '       pincer-runtime.cjs evidence export --candidate <sha> --base <sha> --prd .prd/prd-vN.md --draft <file>\n' +
-    '       pincer-runtime.cjs change list [--json] · change show <id> [--json] · change select <id> · change revise <id>\n');
+    '       pincer-runtime.cjs change list [--json] · change show <id> [--json] · change select <id> · change revise <id>\n' +
+    '       pincer-runtime.cjs change authorize <id> --agreement <digest> (--reference <text> --excerpt <text> [--constraints <text>] | --delegated --basis A-NN --explanation <text>) [--decision D-NN]...\n' +
+    '       pincer-runtime.cjs change decide <id> --summary <text> [--id D-NN] | --resolve D-NN --reference <text> --excerpt <text>\n');
   process.exit(EXIT.USAGE);
 }
 
@@ -260,12 +265,17 @@ function cmdRecover(root, args) {
 }
 
 // `--flag value` and `--switch` options; positional arguments keep their order.
-function parseOptions(args, { valued = [], switches = [] } = {}) {
+function parseOptions(args, { valued = [], switches = [], repeated = [] } = {}) {
   const options = { positional: [] };
+  for (const arg of repeated) options[arg.slice(2)] = [];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--') { options.positional.push(...args.slice(i + 1)); break; }
-    if (valued.includes(arg)) {
+    if (repeated.includes(arg)) {
+      const value = args[++i];
+      if (value === undefined) usage(`${arg} requires a value`);
+      options[arg.slice(2)].push(value);
+    } else if (valued.includes(arg)) {
       const value = args[++i];
       if (value === undefined) usage(`${arg} requires a value`);
       options[arg.slice(2)] = value;
@@ -330,6 +340,8 @@ function cmdChange(root, args) {
     const o = parseOptions(rest, { switches: ['--json'] });
     if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
     const result = changes.list(root);
+    const loaded = changes.loadRecords(root);
+    for (const c of result.changes) { const e = loaded.records.get(c.id); if (e) { const v = authorization.verdict(root, e.record); c.authorization = v.verdict; c.agreement = v.current; } }
     const sel = changes.readSelection(root);
     const selection = sel.code ? { change: null, problem: { code: sel.code, detail: sel.problem } } : { change: sel.change, problem: null };
     result.changes.forEach(c => { c.selected = Boolean(sel.change) && sel.change === c.id; });
@@ -353,8 +365,33 @@ function cmdChange(root, args) {
     if (result.code) fail('pincer', `${result.code}: ${result.problem}`, exitForCode(result.code));
     const sel = changes.readSelection(root);
     const now = agreementNow(root, result.record);
-    if (o.json) process.stdout.write(`${JSON.stringify({ schema: 1, runtime: changes.RUNTIME, generated: nowIso(), root, file: result.file, selected: !sel.code && sel.change === o.positional[0], record: result.record, agreement: now.code ? { current: null, problem: { code: now.code, detail: now.problem } } : { current: now.digest, recorded: now.entry ? now.entry.id : null, latest: now.latest ? now.latest.id : null, difference: now.difference }, evaluations: [] }, null, 2)}\n`);
-    else process.stdout.write(changes.renderShow(o.positional[0], result, { agreement: now }));
+    const v = authorization.verdict(root, result.record);
+    if (o.json) process.stdout.write(`${JSON.stringify({ schema: 1, runtime: changes.RUNTIME, generated: nowIso(), root, file: result.file, selected: !sel.code && sel.change === o.positional[0], record: result.record, agreement: now.code ? { current: null, problem: { code: now.code, detail: now.problem } } : { current: now.digest, recorded: now.entry ? now.entry.id : null, latest: now.latest ? now.latest.id : null, difference: now.difference }, authorization: { verdict: v.verdict, detail: v.detail, authorized: v.authorized ? v.authorized.id : null, open_decisions: v.open }, evaluations: [] }, null, 2)}\n`);
+    else process.stdout.write(changes.renderShow(o.positional[0], result, { agreement: now, verdict: v }));
+    process.exit(EXIT.OK);
+  }
+  if (sub === 'authorize') {
+    const o = parseOptions(rest, { valued: ['--agreement', '--reference', '--excerpt', '--constraints', '--basis', '--explanation'], switches: ['--delegated'], repeated: ['--decision'] });
+    if (o.positional.length !== 1) usage('change authorize requires exactly one change ID');
+    if (!o.agreement) usage('change authorize requires --agreement <digest>');
+    const result = authorization.authorize(root, o.positional[0], { agreement: o.agreement, delegated: Boolean(o.delegated), reference: o.reference, excerpt: o.excerpt, constraints: o.constraints, basis: o.basis, explanation: o.explanation, decisions: o.decision });
+    if (result.code) fail('pincer', `${result.code}: ${result.problem}`, exitForCode(result.code));
+    const a = result.authorization;
+    if (result.action === 'unchanged') process.stdout.write(`unchanged: ${a.id} (${a.disposition}) already records this authorization of agreement ${a.agreement} ${a.digest.slice(0, 12)} for ${o.positional[0]}; nothing written\n`);
+    else process.stdout.write(`recorded authorization ${a.id} (${a.disposition}${a.basis ? `, basis ${a.basis}` : ''}) of agreement ${a.agreement} ${a.digest.slice(0, 12)} for ${o.positional[0]}${a.decisions.length ? ` · decisions ${a.decisions.join(', ')}` : ''}\n`);
+    if (result.action === 'recorded') process.stderr.write(`pincer: note: this records local provenance of ${a.disposition === 'user' ? "the user's instruction" : 'a delegation judgment'}, not authenticated identity; execution still needs the change selected and active\n`);
+    process.exit(EXIT.OK);
+  }
+  if (sub === 'decide') {
+    const o = parseOptions(rest, { valued: ['--summary', '--id', '--resolve', '--reference', '--excerpt'] });
+    if (o.positional.length !== 1) usage('change decide requires exactly one change ID');
+    if (!o.resolve && !o.summary) usage('change decide requires --summary <text> (raise) or --resolve D-NN --reference <text> --excerpt <text>');
+    const result = authorization.decide(root, o.positional[0], { summary: o.summary, id: o.id, resolve: o.resolve, reference: o.reference, excerpt: o.excerpt });
+    if (result.code) fail('pincer', `${result.code}: ${result.problem}`, exitForCode(result.code));
+    const d = result.decision;
+    if (result.action === 'unchanged') process.stdout.write(`unchanged: ${d.id} is already ${d.status} (${d.summary}); nothing written\n`);
+    else if (result.action === 'raised') { process.stdout.write(`raised decision ${d.id} on ${o.positional[0]}: ${d.summary}\n`); process.stderr.write(`pincer: note: execution of ${o.positional[0]} is blocked (DECISION_REQUIRED) until the user's decision is recorded with: node scripts/pincer-runtime.cjs change decide ${o.positional[0]} --resolve ${d.id} --reference <text> --excerpt <text>\n`); }
+    else { process.stdout.write(`resolved decision ${d.id} on ${o.positional[0]}: "${d.excerpt}" (${d.reference})\n`); process.stderr.write(`pincer: note: the agreement is now ${result.agreement ? result.agreement.slice(0, 12) : 'unavailable'} and needs authorization: node scripts/pincer-runtime.cjs change authorize ${o.positional[0]} --agreement ${result.agreement || '<digest>'} --decision ${d.id} …\n`); }
     process.exit(EXIT.OK);
   }
   if (sub === 'revise') {
@@ -367,7 +404,7 @@ function cmdChange(root, args) {
     if (result.action === 'recorded') process.stderr.write('pincer: note: recording an agreement authorizes nothing; record its disposition with `change authorize`\n');
     process.exit(EXIT.OK);
   }
-  usage(sub ? `change ${sub} is not available in this build (change supports: list, show, select, revise)` : 'change requires a subcommand: list, show, select, revise');
+  usage(sub ? `change ${sub} is not available in this build (change supports: list, show, select, revise, authorize, decide)` : 'change requires a subcommand: list, show, select, revise, authorize, decide');
 }
 
 function cmdSnapshot(root, args) {

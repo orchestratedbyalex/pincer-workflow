@@ -1,9 +1,13 @@
 ---
 ticket: T-52
-status: open
+status: done
 size: M
 prd: .prd/prd-v5.md
 depends_on: [T-51]
+started: 2026-09-11T21:09:55Z
+last_check: 2026-09-11T21:17:50Z passed f31247b9fac4
+verified: 2026-09-11T21:17:50Z f31247b9fac4
+finished: 2026-09-11T21:17:50Z
 ---
 
 ## Objective
@@ -24,9 +28,9 @@ Record authorization and disposition agreement changes so PRD v5 can be implemen
 - Reject duplicate conflicting decisions, dangling references, invalid schemas and stale agreement commits. Repeating the identical valid record is idempotent.
 
 ## Acceptance Criteria
-- [ ] Existing exact user authorization enables the agreement once, with no duplicate event on repeat; wrong-change/missing/mismatched references remain blocked.
-- [ ] A delegated regression-check improvement records its original basis against the new digest without a new user approval and still requires fresh verification.
-- [ ] Changed behavior and unresolved consequential decisions cannot be silently approved or presented as delivered; historical free text alone is insufficient.
+- [x] Existing exact user authorization enables the agreement once, with no duplicate event on repeat; wrong-change/missing/mismatched references remain blocked.
+- [x] A delegated regression-check improvement records its original basis against the new digest without a new user approval and still requires fresh verification.
+- [x] Changed behavior and unresolved consequential decisions cannot be silently approved or presented as delivered; historical free text alone is insufficient.
 
 ## Verification
 Proves: Exercises concrete authorization/disposition records and rejection paths, including prior instructions and legacy text. Tests validate structure and enforcement, not human intent.

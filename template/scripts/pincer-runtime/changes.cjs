@@ -349,7 +349,7 @@ function renderList(result, { selection = null } = {}) {
   lines.push(`Changes  ${result.changes.length} retained${selection && selection.change ? ` · selected ${selection.change}` : ' · no selection'}`);
   for (const c of result.changes) {
     const mark = selection && selection.change === c.id ? '*' : ' ';
-    let detail = `${c.prd} · since ${c.since} · sequence ${c.sequence}`;
+    let detail = `${c.prd} · since ${c.since} · sequence ${c.sequence}${c.authorization ? ` · authorization ${c.authorization}` : ''}`;
     if (c.state === 'superseded') detail += ` · by ${c.superseded_by}`;
     if (c.reason) detail += ` · ${c.reason}`;
     lines.push(`${mark} ${c.id.padEnd(16)} ${c.state.padEnd(10)} ${detail}`);
@@ -369,6 +369,7 @@ function renderShow(id, { record, file }, extra = {}) {
     else lines.push(`Agreement  now ${short(a.digest)}${a.entry ? ` = ${a.entry.id}` : a.latest ? ` ≠ latest recorded ${a.latest.id} ${short(a.latest.digest)} (${a.rendered}); record it with: node scripts/pincer-runtime.cjs change revise ${id}` : ' (not recorded; record it with: node scripts/pincer-runtime.cjs change revise ' + id + ')'}`);
   }
   lines.push(`Authorizations ${r.authorizations.length ? r.authorizations.map(a => `${a.id} ${a.disposition} for ${a.agreement} (${short(a.digest)}) recorded ${a.recorded}${a.disposition === 'user' ? ` — "${a.excerpt}" (${a.reference})` : ` — basis ${a.basis}: ${a.explanation}`}`).join('; ') : 'none'}`);
+  if (extra.verdict) lines.push(`Authorization ${extra.verdict.verdict}${extra.verdict.verdict === 'current' ? ` — ${extra.verdict.detail}` : `: ${extra.verdict.detail}`}`);
   lines.push(`Decisions  ${r.decisions.length ? r.decisions.map(d => `${d.id} ${d.status}: ${d.summary}${d.status === 'resolved' ? ` — "${d.excerpt}" (${d.reference})` : ''}`).join('; ') : 'none'}`);
   lines.push(`Evaluations ${extra.evaluations && extra.evaluations.length ? extra.evaluations.map(e => `${e.candidate.slice(0, 7)} ${e.manifest} recorded ${e.recorded}`).join('; ') : 'none recorded'}`);
   lines.push(`Legacy     ${r.legacy.migrated_from ? `migrated from ${r.legacy.migrated_from} at ${r.legacy.migrated}; ${Object.keys(r.legacy.receipts).length} receipt(s) as history${r.legacy.authorization_text ? `; v0.5.0 authorization text (unvalidated): "${r.legacy.authorization_text}"` : ''}` : 'none'}`);

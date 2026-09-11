@@ -82,9 +82,9 @@ function fixture() {
   assert.deepEqual(s.json.change.view.dirty.sort(), ['README.md', 'notes.txt', 'src/app.js', 'tickets/T-02-example.md']);
   assert.deepEqual(s.json.tickets.map(t => t.id), ['T-01']); assert.equal(s.json.history, 1);
   assert.deepEqual(s.json.changes.map(c => [c.id, c.selected]), [['feature-b', false], ['prd-v1', true]]);
-  assert.match(s.json.next, /^node scripts\/pincer-runtime\.cjs change activate prd-v1 — activate the change before executing tickets/);
+  assert.match(s.json.next, /^AUTHORIZATION_REQUIRED: change prd-v1 has no authorization record/, 'without authorization the next step is recording it, not activation');
   const human = passes(run(dir, 'bash', [statusScript]));
-  assert.match(human, /^Runtime  changes · selected prd-v1 · planned · agreement [0-9a-f]{12} \(not recorded\) · base [0-9a-f]{7}$/m);
+  assert.match(human, /^Runtime  changes · selected prd-v1 · planned · agreement [0-9a-f]{12} \(not recorded\) · authorization AUTHORIZATION_REQUIRED · base [0-9a-f]{7}$/m);
   assert.match(human, /^Changes  2 retained: feature-b \(planned\), prd-v1 \(planned, selected\)$/m);
   const viewLine = human.split('\n').find(l => l.startsWith('View     '));
   assert.match(viewLine, /^View     HEAD [0-9a-f]{7} · branch (main|master) · base is an ancestor · dirty 4 path\(s\): /);

@@ -145,7 +145,7 @@ const edit = (dir, file, from, to) => write(dir, file, read(dir, file).replace(f
   const status = JSON.parse(passes(rt(dir, 'status', '--json', '--change', 'prd-v1')));
   assert.equal(status.change.agreement.recorded, null); assert.equal(status.change.agreement.latest.id, 'G-01');
   assert.deepEqual(status.change.agreement.difference, { same: false, prd_changed: true, tickets_added: ['T-04'], tickets_removed: [], tickets_changed: [{ id: 'T-01', parts: ['acceptance'] }, { id: 'T-02', parts: ['verification'] }], decisions_added: [], decisions_removed: [] });
-  assert.match(passes(rt(dir, 'status', '--change', 'prd-v1')), /^Runtime  changes · inspecting prd-v1 · planned · agreement [0-9a-f]{12} \(≠ G-01: PRD body changed; tickets added: T-04; tickets changed: T-01 \(acceptance\), T-02 \(verification\)\) · base/m);
+  assert.match(passes(rt(dir, 'status', '--change', 'prd-v1')), /^Runtime  changes · inspecting prd-v1 · planned · agreement [0-9a-f]{12} \(≠ G-01: PRD body changed; tickets added: T-04; tickets changed: T-01 \(acceptance\), T-02 \(verification\)\) · authorization AUTHORIZATION_REQUIRED · base/m);
   const show = passes(rt(dir, 'change', 'show', 'prd-v1'));
   assert.match(show, /^Agreement  now [0-9a-f]{12} ≠ latest recorded G-01 [0-9a-f]{12} \(PRD body changed; tickets added: T-04; tickets changed: T-01 \(acceptance\), T-02 \(verification\)\); record it with: node scripts\/pincer-runtime\.cjs change revise prd-v1$/m);
   const second = passes(rt(dir, 'change', 'revise', 'prd-v1'));

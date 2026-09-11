@@ -78,7 +78,7 @@ function unchanged(dir, before, fn, label) {
   // list/show report both, human and JSON; show returns the record as stored.
   const list = passes(rt(dir, 'change', 'list'), 'list');
   assert.match(list, /^Changes  2 retained · no selection$/m);
-  assert.match(list, /^  feature-b        planned    \.prd\/prd-v2\.md · since \d{4}-.* · sequence 1$/m);
+  assert.match(list, /^  feature-b        planned    \.prd\/prd-v2\.md · since \d{4}-.* · sequence 1 · authorization AUTHORIZATION_REQUIRED$/m);
   assert.match(list, /^  prd-v1           planned    \.prd\/prd-v1\.md/m);
   const listJson = JSON.parse(passes(rt(dir, 'change', 'list', '--json')));
   assert.equal(listJson.schema, 1); assert.equal(listJson.mode, 'changes');
