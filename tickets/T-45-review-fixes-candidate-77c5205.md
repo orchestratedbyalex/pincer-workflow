@@ -1,9 +1,13 @@
 ---
 ticket: T-45
-status: open
+status: done
 size: M
 prd: .prd/prd-v4.md
 depends_on: [T-44]
+started: 2026-09-11T14:49:05Z
+last_check: 2026-09-11T15:03:53Z passed e74a93eca2db
+verified: 2026-09-11T15:03:53Z e74a93eca2db
+finished: 2026-09-11T15:03:53Z
 ---
 
 ## Objective
@@ -22,9 +26,9 @@ Fix the three findings of the external review of candidate `77c5205`: an incompl
 - Assertions for every fix; generated outputs regenerated.
 
 ## Acceptance Criteria
-- [ ] Every finding has a failing-before, passing-after assertion.
-- [ ] Contract, readiness, export and runner agree.
-- [ ] `npm test` passes and generators produce no diff.
+- [x] Every finding has a failing-before, passing-after assertion.
+- [x] Contract, readiness, export and runner agree.
+- [x] `npm test` passes and generators produce no diff.
 
 ## Verification
 Proves: the three review findings are fixed and pinned; regression: an incomplete attempt record closing a ticket, a replaced captured log exported as runtime evidence or leaving readiness green, a background child outliving a one-second timeout, or stale generated output.

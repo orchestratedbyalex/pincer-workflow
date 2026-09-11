@@ -19,6 +19,7 @@ const { nowIso } = require('./fsutil.cjs');
 const CAPTURE_LIMIT = 1024 * 1024;
 const PARTIAL_LINE_LIMIT = 64 * 1024;
 const GRACE_MS = 5000;
+const DRAIN_MS = 2000;
 const RUNNER_ARGS = ['-eo', 'pipefail', '-c'];
 
 let bashInfo = null;
@@ -75,8 +76,6 @@ class Capture {
   }
 }
 
-const killGroup = (pid, signal) => { try { process.kill(-pid, signal); return true; } catch { try { process.kill(pid, signal); return true; } catch { return false; } } };
-
 // Run one attempt. `context` is the attempt context (kind, change, prd, prd_revision,
 // base, ticket/ticket_digest or candidate/check); `commands` the block lines;
 // `timeoutSeconds` the effective timeout; `echo` when the output should also reach
@@ -129,18 +128,38 @@ async function runAttempt({ root, context, commands, timeoutSeconds, command = '
   let child, launchError = null;
   const stdout = new Capture(path.join(logDir, 'stdout.log'), echo ? process.stdout : null);
   const stderr = new Capture(path.join(logDir, 'stderr.log'), echo ? process.stderr : null);
-  let timedOut = false, interruptedBy = null, killTimer = null, graceTimer = null;
+  let timedOut = false, interruptedBy = null, abandoned = false, killTimer = null, graceTimer = null, drainTimer = null, settle = null;
+  const sent = [];
+  // Signal the whole group, whether or not the shell itself has exited: a
+  // background child that inherited the output pipes keeps the run alive and
+  // must be terminated the same way. The bare pid is a fallback only while the
+  // shell is known to be alive (after it is reaped the pid may be reused).
+  const signalGroup = signal => {
+    sent.push(signal);
+    try { process.kill(-child.pid, signal); return; } catch { /* no group left */ }
+    if (child.exitCode === null && child.signalCode === null) { try { process.kill(child.pid, signal); } catch { /* gone */ } }
+  };
   const terminate = () => {
-    if (!child || child.exitCode !== null || child.signalCode !== null) return;
-    killGroup(child.pid, 'SIGTERM');
-    graceTimer = setTimeout(() => killGroup(child.pid, 'SIGKILL'), GRACE_MS);
-    graceTimer.unref();
+    if (!child || !child.pid || sent.length) return;
+    signalGroup('SIGTERM');
+    graceTimer = setTimeout(() => {
+      signalGroup('SIGKILL');
+      // Bound the wait for the pipes to close: a descendant that survives
+      // SIGKILL (or was never reachable) must not hold the run open forever.
+      drainTimer = setTimeout(() => {
+        abandoned = true;
+        try { child.stdout.destroy(); child.stderr.destroy(); child.unref(); } catch { /* best effort */ }
+        settle({ code: child.exitCode, signal: child.signalCode });
+      }, DRAIN_MS);
+    }, GRACE_MS);
   };
   const onSignal = signal => { interruptedBy = signal; terminate(); };
   const exit = await new Promise(resolve => {
+    let settled = false;
+    settle = result => { if (!settled) { settled = true; resolve(result); } };
     try {
       child = spawn(runnerInfo().shell, [...RUNNER_ARGS, block], { cwd: root, detached: true, stdio: ['ignore', 'pipe', 'pipe'], env: process.env });
-    } catch (error) { launchError = error.message; return resolve({ code: null, signal: null }); }
+    } catch (error) { launchError = error.message; return settle({ code: null, signal: null }); }
     child.on('error', error => { launchError = error.message; });
     if (child.pid) {
       attempt.child = { pid: child.pid };
@@ -150,11 +169,12 @@ async function runAttempt({ root, context, commands, timeoutSeconds, command = '
     child.stderr.on('data', chunk => stderr.write(chunk));
     process.on('SIGINT', onSignal); process.on('SIGTERM', onSignal);
     killTimer = setTimeout(() => { timedOut = true; terminate(); }, timeoutSeconds * 1000);
-    child.on('close', (code, signal) => resolve({ code, signal }));
+    child.on('close', (code, signal) => settle({ code, signal }));
   });
-  clearTimeout(killTimer); clearTimeout(graceTimer);
+  clearTimeout(killTimer); clearTimeout(graceTimer); clearTimeout(drainTimer);
   process.off('SIGINT', onSignal); process.off('SIGTERM', onSignal);
   const outInfo = stdout.close(), errInfo = stderr.close();
+  const termination = `the child process group was sent ${sent.join(' then ')}${abandoned ? `; output capture was abandoned ${DRAIN_MS / 1000} s after SIGKILL and a descendant may still be running` : ''}`;
 
   const after = source.snapshot(root);
   const changed = after.digest && before.digest !== after.digest ? source.diffManifests(before, after) : [];
@@ -170,8 +190,8 @@ async function runAttempt({ root, context, commands, timeoutSeconds, command = '
   }
   const captureFailure = outInfo.failed || errInfo.failed;
   if (launchError) { attempt.outcome = 'error'; attempt.error = `cannot launch the check: ${launchError}`; }
-  else if (interruptedBy) { attempt.outcome = 'interrupted'; attempt.limitations.push(`interrupted by ${interruptedBy}; the child process group was terminated`); }
-  else if (timedOut) { attempt.outcome = 'timed_out'; attempt.limitations.push(`terminated after ${timeoutSeconds} s; the child process group was sent SIGTERM then SIGKILL`); }
+  else if (interruptedBy) { attempt.outcome = 'interrupted'; attempt.limitations.push(`interrupted by ${interruptedBy}; ${termination}`); }
+  else if (timedOut) { attempt.outcome = 'timed_out'; attempt.limitations.push(`terminated after ${timeoutSeconds} s; ${termination}`); }
   else if (captureFailure) { attempt.outcome = 'error'; attempt.error = `capture failed: ${captureFailure}`; }
   else if (after.problems.length) { attempt.outcome = 'error'; attempt.error = `source view invalid after the run: ${after.problems[0].code} ${after.problems[0].detail}`; }
   else if (exit.code === 0 && changed.length) { attempt.outcome = 'error'; attempt.error = `SOURCE_CHANGED: the check mutated source: ${changed.slice(0, 5).join(', ')}${changed.length > 5 ? ` (+${changed.length - 5})` : ''}`; }
@@ -197,4 +217,4 @@ async function runAttempt({ root, context, commands, timeoutSeconds, command = '
 
 const exitFor = attempt => ({ passed: 0, failed: 1, timed_out: 124, interrupted: 130, error: 4 })[attempt.outcome] ?? 4;
 
-module.exports = { runAttempt, exitFor, CAPTURE_LIMIT, GRACE_MS, runnerInfo };
+module.exports = { runAttempt, exitFor, CAPTURE_LIMIT, GRACE_MS, DRAIN_MS, runnerInfo };

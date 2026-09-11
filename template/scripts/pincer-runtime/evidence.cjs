@@ -12,6 +12,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
+const { validateAttempt, contextKey } = require('./state.cjs');
 
 const SCHEMA = 1;
 const HEX40 = /^[0-9a-f]{40}$/;
@@ -327,20 +328,28 @@ function exportEvidence(root, { candidate, base, prd, draft, binding, attemptsFo
     }
     const attempt = attemptsFor(stub.id);
     if (!attempt) { problems.push(`draft check ${stub.id}: no runtime attempt for candidate ${candidate}; run: node scripts/pincer-runtime.cjs check ${stub.id} --candidate ${candidate} -- <command>`); continue; }
+    // The record must be complete, written for this check, and its captured
+    // logs must still match the digests it recorded; anything else is refused.
+    const invalid = validateAttempt(attempt, contextKey({ kind: 'candidate', candidate, check: stub.id }));
+    if (invalid) { problems.push(`draft check ${stub.id}: attempt ${typeof attempt.id === 'string' ? attempt.id : '?'} ${invalid}; run the check again`); continue; }
     if (attempt.outcome === 'running') { problems.push(`draft check ${stub.id}: attempt ${attempt.id} is still running`); continue; }
     const logRel = `${dirRel}/checks/${stub.id}.log`;
     const pieces = [`$ ${(attempt.check && attempt.check.display) || ''}`.replace(/\n$/, ''), ''];
-    let missing = false;
+    let missing = false, altered = null;
     for (const stream of ['stdout', 'stderr']) {
-      const info = attempt.artifacts && attempt.artifacts[stream];
-      const file = info && info.path ? path.join(root, info.path) : null;
+      const info = attempt.artifacts[stream];
+      const file = path.join(root, info.path);
       let text = '';
-      if (file && fs.existsSync(file)) text = fs.readFileSync(file, 'utf8');
-      else { missing = true; text = '[pincer: captured log missing from local state]'; }
-      pieces.push(`--- ${stream}${info && info.truncated ? ' (truncated by the runtime)' : ''}${info && info.redactions ? ` (${info.redactions} redaction(s))` : ''} ---`);
+      if (fs.existsSync(file)) {
+        const data = fs.readFileSync(file);
+        if (crypto.createHash('sha256').update(data).digest('hex') !== info.sha256) { altered = altered || `captured ${stream} log ${info.path} does not match the digest the attempt recorded`; }
+        text = data.toString('utf8');
+      } else { missing = true; text = '[pincer: captured log missing from local state]'; }
+      pieces.push(`--- ${stream}${info.truncated ? ' (truncated by the runtime)' : ''}${info.redactions ? ` (${info.redactions} redaction(s))` : ''} ---`);
       pieces.push(text.replace(/\n$/, ''));
     }
     if (missing) { problems.push(`draft check ${stub.id}: attempt ${attempt.id} has no captured log; run the check again`); continue; }
+    if (altered) { problems.push(`draft check ${stub.id}: attempt ${attempt.id}: ${altered}; run the check again`); continue; }
     pieces.push(`--- outcome ${attempt.outcome}${attempt.exit_code !== null && attempt.exit_code !== undefined ? ` (exit ${attempt.exit_code})` : ''} ---`);
     const content = `${pieces.join('\n')}\n`;
     atomicWrite(path.join(dirAbs, 'checks', `${stub.id}.log`), content);

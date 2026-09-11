@@ -238,7 +238,19 @@ forced kill leaves `running`, which status reports as non-ready and `recover`
 finalizes as `interrupted` after verifying the owner pid is dead on this host,
 terminating the orphaned child process group when it is still alive (SIGTERM, then
 SIGKILL when it is still running after the 5 s grace period; `recover` waits for that
-before returning and records what it sent).
+before returning, records what it sent, and records the digests of the logs the dead
+runner captured).
+
+A record is evidence only when it is complete and was written for the context it is
+read for: readiness validates the record against this schema (every field above up to
+`artifacts`, with `finished` and the artifact digests present once the outcome is not
+`running`) and that its context key equals the key the index was read for. A record
+that is incomplete, malformed or written for another ticket or check is
+`ATTEMPT_ERROR` (never ready) and `evidence export` refuses it. Readiness and export
+also compare each captured log with the digest the record carries: a log that was
+altered after the run is `EVIDENCE_MISSING` (the reason names the stream) and export
+refuses it; a missing log is `EVIDENCE_MISSING` as before. This detects mistakes and
+stale copies, not a deliberate rewrite of both the log and its record.
 
 Lock: acquired by building `lock/` with its `owner.json` in a staging directory and
 renaming it into place (atomic; a waiter never sees an owner-less lock); waiters poll
@@ -253,8 +265,14 @@ and is renamed into place; a stray journal file is ignored on read and reported 
 `recover`. A malformed `index.json` is exit 4 and is never overwritten by inspection.
 
 Timeout: the effective timeout is the ticket's `timeout` field or 600 s, or `--timeout`
-for `check`; it is part of the check digest. On expiry the runtime sends SIGTERM to the
-child's process group, waits 5 s, then sends SIGKILL.
+for `check`; it is part of the check digest. On expiry (and on SIGINT/SIGTERM) the
+runtime sends SIGTERM to the child's process group, waits 5 s, then sends SIGKILL,
+whether or not the shell itself has already exited: a background child that inherited
+the output pipes keeps the attempt open and is terminated the same way, so a check that
+exits 0 leaving one behind is `timed_out`. If the pipes are still open 2 s after
+SIGKILL, capture is abandoned and the record's limitation says a descendant may still
+be running; the attempt never waits for a descendant's own schedule. The limitation
+names the signals actually sent.
 
 ## Capture and sanitization
 
@@ -291,8 +309,8 @@ can be stale or failed without its `finished` date changing.
 | `ATTEMPT_RUNNING` | an attempt is `running` | wait, or `recover` if its owner died |
 | `ATTEMPT_INTERRUPTED` | the latest attempt was interrupted | `verify` |
 | `ATTEMPT_TIMED_OUT` | the latest attempt timed out | fix or raise `timeout`, then `verify` |
-| `ATTEMPT_ERROR` | the latest attempt could not be recorded or mutated source | inspect the record, then `verify` |
-| `EVIDENCE_MISSING` | no attempt, missing log, or missing local state | `verify` |
+| `ATTEMPT_ERROR` | the latest attempt could not be recorded, is incomplete or malformed, belongs to another context, or mutated source | inspect the record, then `verify` |
+| `EVIDENCE_MISSING` | no attempt, missing or altered log, or missing local state | `verify` |
 | `LEGACY_RECEIPT` | only a migrated legacy receipt exists | `verify` |
 | `CRITERIA_UNTICKED` | unticked acceptance criteria | tick verified criteria |
 | `DEPENDENCY_BLOCKED` | a `depends_on` ticket is not ready | finish the dependency |

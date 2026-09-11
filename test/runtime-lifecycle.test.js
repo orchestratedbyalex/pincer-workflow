@@ -180,4 +180,41 @@ const front = (dir, file, key) => (read(dir, file).match(new RegExp(`^${key}: *(
   assert.ok(!fs.existsSync(path.join(dir, '.pincer')), 'legacy mode never writes local state');
   assert.ok(!fs.existsSync(path.join(repo, 'template/scripts/pincer-ticket-lib.sh')), 'the Bash policy library is gone');
 }
+
+// Review fixes (T-45): an attempt record is evidence only when it is complete,
+// belongs to the ticket it is read for, and its captured logs still match the
+// digests it recorded. Readiness, ready, status and done agree on each case.
+{
+  const { dir, file } = migrated();
+  passes(sh(dir, 'start', 'T-01')); passes(sh(dir, 'verify', 'T-01')); tick(dir, file);
+  const key = 'ticket:prd-v1:T-01';
+  const good = state.latestAttempt(dir, key);
+  assert.equal(good.outcome, 'passed');
+  const record = path.join(dir, `.pincer/runtime/attempts/${good.id}.json`);
+  const original = fs.readFileSync(record, 'utf8');
+  const codeOf = () => JSON.parse(passes(rt(dir, 'status', '--json'))).tickets[0].readiness.reasons[0].code;
+  // An incomplete record keeps only the pointer identity and the outcome.
+  fs.writeFileSync(record, JSON.stringify({ id: good.id, outcome: 'passed' }));
+  assert.equal(codeOf(), 'ATTEMPT_ERROR', 'an incomplete record is not a pass');
+  assert.equal(rt(dir, 'ready', 'T-01').status, 1, 'ready refuses an incomplete record');
+  assert.match(rt(dir, 'ready', 'T-01').stdout, /ATTEMPT_ERROR .*incomplete|ATTEMPT_ERROR .*malformed/);
+  refuses(sh(dir, 'done', 'T-01'), /ATTEMPT_ERROR/, 'done refuses an incomplete record');
+  assert.equal(front(dir, file, 'status'), 'in_progress');
+  // A complete record for another ticket, pointed at by this ticket's index entry.
+  const foreign = JSON.parse(original); foreign.context.ticket = 'T-02';
+  fs.writeFileSync(record, JSON.stringify(foreign));
+  assert.equal(codeOf(), 'ATTEMPT_ERROR', 'a record for another context is not this ticket\'s evidence');
+  refuses(sh(dir, 'done', 'T-01'), /ATTEMPT_ERROR/, 'done refuses a mismatched record');
+  fs.writeFileSync(record, original);
+  // A captured log replaced after the run no longer matches its recorded digest.
+  const stdoutLog = path.join(dir, good.artifacts.stdout.path);
+  const stdoutOriginal = fs.readFileSync(stdoutLog);
+  fs.writeFileSync(stdoutLog, 'REPLACED OUTPUT\n');
+  assert.equal(codeOf(), 'EVIDENCE_MISSING', 'an altered log is not evidence');
+  assert.match(rt(dir, 'ready', 'T-01').stdout, /EVIDENCE_MISSING .*altered/);
+  refuses(sh(dir, 'done', 'T-01'), /EVIDENCE_MISSING: .*altered/, 'done refuses an altered log');
+  fs.writeFileSync(stdoutLog, stdoutOriginal);
+  assert.equal(passes(rt(dir, 'ready', 'T-01')).trim(), 'ready T-01', 'the restored record and log are evidence again');
+  passes(sh(dir, 'done', 'T-01'));
+}
 console.log('runtime lifecycle tests passed');

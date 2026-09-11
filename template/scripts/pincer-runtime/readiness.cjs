@@ -5,6 +5,7 @@
 // these so they cannot disagree. Nothing here reads the clock, executes a
 // command or writes a file.
 const parse = require('./parse.cjs');
+const { validateAttempt } = require('./state.cjs');
 
 const reason = (code, detail, next) => ({ code, detail, next });
 
@@ -34,8 +35,10 @@ function legacyTicketReadiness(text, fields) {
 
 // Migrated mode: readiness derives from the latest attempt for the ticket's
 // context and the current inputs. `current` carries the digests computed now;
-// `sourceProblems` are snapshot problems (secret path, unsupported input).
-function migratedTicketReadiness({ text, fields, timeout, attempt, legacyReceipt, current, sourceProblems = [], changedPaths = [] }) {
+// `sourceProblems` are snapshot problems (secret path, unsupported input);
+// `contextKey` is the key the attempt was read for (its record must match);
+// the attempt's artifacts carry `missing`/`altered` from state.inspectArtifacts.
+function migratedTicketReadiness({ text, fields, timeout, attempt, legacyReceipt, current, sourceProblems = [], changedPaths = [], contextKey = null }) {
   const reasons = [];
   for (const p of sourceProblems) reasons.push(reason(p.code, p.detail, p.code === 'SECRET_PATH' ? 'remove or ignore the secret file' : 'remove the input or change the configuration'));
   if (reasons.length) return { ready: false, reasons };
@@ -43,7 +46,11 @@ function migratedTicketReadiness({ text, fields, timeout, attempt, legacyReceipt
     if (legacyReceipt) return { ready: false, reasons: [reason('LEGACY_RECEIPT', `migrated legacy receipt (${legacyReceipt.verified || legacyReceipt.last_check || 'present'}) is history, not runtime evidence`, 'verify')] };
     return { ready: false, reasons: [reason('EVIDENCE_MISSING', 'no runtime attempt recorded', 'verify')] };
   }
-  const id = attempt.id || '?';
+  const id = typeof attempt.id === 'string' && attempt.id ? attempt.id : '?';
+  // The record must be complete and written for this context before any
+  // outcome is honored: a stripped or foreign record is never a pass.
+  const invalid = validateAttempt(attempt, contextKey);
+  if (invalid) return { ready: false, reasons: [reason('ATTEMPT_ERROR', `attempt ${id} ${invalid}`, 'verify')] };
   switch (attempt.outcome) {
     case 'running': return { ready: false, reasons: [reason('ATTEMPT_RUNNING', `attempt ${id} is running`, 'wait, or run recover if its owner died')] };
     case 'interrupted': return { ready: false, reasons: [reason('ATTEMPT_INTERRUPTED', `attempt ${id} was interrupted`, 'verify')] };
@@ -66,8 +73,13 @@ function migratedTicketReadiness({ text, fields, timeout, attempt, legacyReceipt
     const shown = changedPaths.slice(0, 5).join(', ') + (changedPaths.length > 5 ? `, … (${changedPaths.length} paths)` : '');
     reasons.push(reason('SOURCE_CHANGED', `source changed since the passing attempt${shown ? `: ${shown}` : ''}`, 'verify'));
   }
-  if (attempt.artifacts && ['stdout', 'stderr'].some(k => attempt.artifacts[k] && attempt.artifacts[k].missing)) {
+  const streams = ['stdout', 'stderr'];
+  if (streams.some(k => attempt.artifacts[k].missing)) {
     reasons.push(reason('EVIDENCE_MISSING', 'the attempt\'s captured log is missing from local state', 'verify'));
+  }
+  const altered = streams.filter(k => attempt.artifacts[k].altered);
+  if (altered.length) {
+    reasons.push(reason('EVIDENCE_MISSING', `the attempt's captured ${altered.join(' and ')} log was altered after the run and no longer matches the recorded digest`, 'verify'));
   }
   if (parse.unticked(text).length) reasons.push(reason('CRITERIA_UNTICKED', 'unticked acceptance criteria', 'tick verified criteria'));
   return { ready: reasons.length === 0, reasons };

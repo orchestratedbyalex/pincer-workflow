@@ -126,6 +126,60 @@ const compactTimestamp = () => nowIso().replace(/[-:]/g, '');
 const attemptId = sequence => `${String(sequence).padStart(6, '0')}-${compactTimestamp()}-${crypto.randomBytes(3).toString('hex')}`;
 const contextKey = context => (context.kind === 'candidate' ? `candidate:${context.candidate}:${context.check}` : `ticket:${context.change}:${context.ticket}`);
 
+const OUTCOMES = ['running', 'passed', 'failed', 'interrupted', 'timed_out', 'error'];
+const SHA256 = /^[0-9a-f]{64}$/;
+// Validate an attempt record read from disk against record schema 1 and, when
+// `key` is given, the context it is read for. A record that is incomplete,
+// malformed or written for another context is never evidence: readiness
+// reports ATTEMPT_ERROR and export refuses. Returns null or a problem string.
+function validateAttempt(a, key) {
+  const obj = v => v && typeof v === 'object' && !Array.isArray(v);
+  const str = v => typeof v === 'string' && v.length > 0;
+  const digestOrNull = v => v === null || (typeof v === 'string' && SHA256.test(v));
+  if (!obj(a)) return 'record is not a JSON object';
+  const bad = [];
+  if (a.schema !== 1) bad.push('schema');
+  if (!str(a.id)) bad.push('id');
+  if (!Number.isInteger(a.sequence) || a.sequence < 1) bad.push('sequence');
+  const c = a.context;
+  if (!obj(c) || !['ticket', 'candidate'].includes(c.kind) || !str(c.change) || !str(c.prd) || !str(c.prd_revision)
+    || (c.kind === 'ticket' ? !str(c.ticket) || !str(c.ticket_digest) : !str(c.candidate) || !str(c.check))) bad.push('context');
+  if (!obj(a.check) || typeof a.check.digest !== 'string' || !SHA256.test(a.check.digest) || typeof a.check.display !== 'string'
+    || !Number.isInteger(a.check.timeout_seconds) || a.check.timeout_seconds <= 0) bad.push('check');
+  if (!OUTCOMES.includes(a.outcome)) bad.push('outcome');
+  const finished = OUTCOMES.includes(a.outcome) && a.outcome !== 'running';
+  if (!(a.exit_code === null || Number.isInteger(a.exit_code))) bad.push('exit_code');
+  if (!obj(a.runner) || !str(a.runner.shell) || !Array.isArray(a.runner.args)) bad.push('runner');
+  if (!str(a.started)) bad.push('started');
+  if (finished ? !str(a.finished) : a.finished !== null) bad.push('finished');
+  if (!obj(a.source) || !digestOrNull(a.source.before) || !digestOrNull(a.source.after)) bad.push('source');
+  if (!obj(a.artifacts)) bad.push('artifacts');
+  else {
+    for (const k of ['stdout', 'stderr']) {
+      const info = a.artifacts[k];
+      const expectedPath = str(a.id) ? `${RUNTIME_DIR}/attempts/${a.id}/${k}.log` : null;
+      if (!obj(info) || info.path !== expectedPath || !(finished ? typeof info.sha256 === 'string' && SHA256.test(info.sha256) : digestOrNull(info.sha256))) bad.push(`artifacts.${k}`);
+    }
+  }
+  if (bad.length) return `record is incomplete or malformed: ${bad.join(', ')}`;
+  if (key && contextKey(c) !== key) return `record belongs to ${contextKey(c)}, not ${key}`;
+  return null;
+}
+// Compare an attempt's captured logs with local state: `missing` when a log is
+// gone, `altered` when its content no longer matches the digest the record
+// carries. Annotates and returns the record; never writes.
+function inspectArtifacts(root, attempt) {
+  if (!attempt || !attempt.artifacts || typeof attempt.artifacts !== 'object') return attempt;
+  for (const k of ['stdout', 'stderr']) {
+    const info = attempt.artifacts[k];
+    if (!info || typeof info !== 'object' || typeof info.path !== 'string') continue;
+    let data;
+    try { data = fs.readFileSync(path.join(root, info.path)); } catch { attempt.artifacts[k] = { ...info, missing: true }; continue; }
+    if (attempt.outcome !== 'running' && typeof info.sha256 === 'string' && crypto.createHash('sha256').update(data).digest('hex') !== info.sha256) attempt.artifacts[k] = { ...info, altered: true };
+  }
+  return attempt;
+}
+
 function attemptFile(root, id) { return path.join(paths(root).attempts, `${id}.json`); }
 function writeAttempt(root, attempt) {
   const p = ensureLayout(root);
@@ -184,6 +238,13 @@ function recover(root, options = {}) {
       attempt.outcome = 'interrupted';
       attempt.finished = nowIso();
       attempt.limitations = [...(attempt.limitations || []), `finalized as interrupted by recover: owner pid ${owner.pid} was no longer running`];
+      // Record what the dead runner captured so the logs are bound to the
+      // record like every finalized attempt's (a missing log stays unrecorded).
+      for (const k of ['stdout', 'stderr']) {
+        const info = attempt.artifacts && attempt.artifacts[k];
+        if (!info || typeof info.path !== 'string') continue;
+        try { const data = fs.readFileSync(path.join(root, info.path)); attempt.artifacts[k] = { ...info, sha256: crypto.createHash('sha256').update(data).digest('hex'), bytes: data.length }; } catch { /* leave as recorded */ }
+      }
       const childPid = attempt.child && attempt.child.pid;
       if (childPid && isAlive(childPid)) {
         // Terminate the orphaned group and wait for it here: an unref'd timer
@@ -219,5 +280,5 @@ function recover(root, options = {}) {
 module.exports = {
   RUNTIME_DIR, INDEX_SCHEMA, LOCK_WAIT_MS, StateBusy,
   paths, ensureLayout, exists, emptyIndex, readIndex, writeIndex, isAlive,
-  acquireLock, withLock, attemptId, contextKey, writeAttempt, readAttempt, listAttempts, latestAttempt, recover,
+  acquireLock, withLock, attemptId, contextKey, validateAttempt, inspectArtifacts, writeAttempt, readAttempt, listAttempts, latestAttempt, recover,
 };

@@ -94,17 +94,14 @@ function currentInputs(root, binding) {
 }
 function migratedReadiness(root, t, binding, inputs) {
   const key = state.contextKey({ kind: 'ticket', change: binding.change, ticket: t.id });
-  const attempt = inputs.index ? state.latestAttempt(root, key, inputs.index) : null;
-  if (attempt && attempt.artifacts) {
-    for (const k of ['stdout', 'stderr']) if (attempt.artifacts[k] && attempt.artifacts[k].path && !fs.existsSync(path.join(root, attempt.artifacts[k].path))) attempt.artifacts[k] = { ...attempt.artifacts[k], missing: true };
-  }
+  const attempt = inputs.index ? state.inspectArtifacts(root, state.latestAttempt(root, key, inputs.index)) : null;
   let changedPaths = [];
   if (attempt && attempt.source && inputs.manifest.digest && attempt.source.after !== inputs.manifest.digest) {
     const before = source.readManifest(root, attempt.source.after);
     if (before) changedPaths = source.diffManifests(before, inputs.manifest);
   }
   const legacyReceipt = (binding.legacy_receipts && binding.legacy_receipts[t.id]) || (t.fields.verified || t.fields.last_check ? { verified: t.fields.verified, last_check: t.fields.last_check } : null);
-  const r = readiness.migratedTicketReadiness({ text: t.text, fields: t.fields, timeout: t.timeout, attempt, legacyReceipt, current: inputs.current, sourceProblems: inputs.manifest.problems, changedPaths });
+  const r = readiness.migratedTicketReadiness({ text: t.text, fields: t.fields, timeout: t.timeout, attempt, legacyReceipt, current: inputs.current, sourceProblems: inputs.manifest.problems, changedPaths, contextKey: key });
   r.attempt = attempt;
   return r;
 }

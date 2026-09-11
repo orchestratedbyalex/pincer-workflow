@@ -215,4 +215,32 @@ function draftFor(dir, candidate, { required = true, extra = [] } = {}) {
   refuses(validate(dir, ev.manifest), /missing "change"|provenance must be runtime or authored/, 'relabelled schema 1 fails schema 2 rules');
   git(dir, 'checkout', '--', ev.manifest);
 }
+
+// Review fixes (T-45): export refuses a captured log that no longer matches the
+// digest its attempt recorded, and an attempt record that is incomplete or
+// belongs to another check; the restored state exports again.
+{
+  const { dir, base, candidate } = candidateFixture();
+  passes(rt(dir, 'check', 'C-01', '--candidate', candidate, '--', 'echo', 'original-output'), 'check C-01');
+  passes(rt(dir, 'check', 'C-02', '--candidate', candidate, '--', 'true'), 'check C-02');
+  draftFor(dir, candidate);
+  const exportNow = () => rt(dir, 'evidence', 'export', '--candidate', candidate, '--base', base, '--prd', '.prd/prd-v1.md', '--draft', '.pincer/drafts/candidate.json');
+  const a = state.latestAttempt(dir, `candidate:${candidate}:C-01`);
+  const stdoutLog = path.join(dir, a.artifacts.stdout.path);
+  const stdoutOriginal = fs.readFileSync(stdoutLog);
+  fs.writeFileSync(stdoutLog, 'REPLACED OUTPUT\n');
+  refuses(exportNow(), /C-01: attempt .* captured stdout .*does not match the digest the attempt recorded/, 'altered captured log');
+  assert.ok(!fs.existsSync(path.join(dir, `${evidenceDir(candidate)}/checks/C-01.log`)), 'nothing exported for the altered log');
+  fs.writeFileSync(stdoutLog, stdoutOriginal);
+  const record = path.join(dir, `.pincer/runtime/attempts/${a.id}.json`);
+  const original = fs.readFileSync(record, 'utf8');
+  fs.writeFileSync(record, JSON.stringify({ id: a.id, outcome: 'passed' }));
+  refuses(exportNow(), /C-01: attempt .* record is (incomplete|malformed)/, 'incomplete attempt record');
+  const foreign = JSON.parse(original); foreign.context.check = 'C-02';
+  fs.writeFileSync(record, JSON.stringify(foreign));
+  refuses(exportNow(), /C-01: attempt .* belongs to candidate:[0-9a-f]{40}:C-02/, 'record for another check');
+  fs.writeFileSync(record, original);
+  passes(exportNow(), 'restored state exports');
+  assert.match(read(dir, `${evidenceDir(candidate)}/checks/C-01.log`), /--- stdout ---\noriginal-output\n/);
+}
 console.log('runtime evidence tests passed');

@@ -316,4 +316,33 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
   assert.equal(changed.status, 4); assert.match(changed.stderr, /REVISION_CHANGED/);
   assert.equal(attempts(rev).length, 0, 'no child process started');
 }
+
+// Review fixes (T-45): the timeout terminates the process group even when the
+// shell has already exited and a background child keeps the output pipes open;
+// a child that ignores SIGTERM is killed after the grace period; the run never
+// waits for the child's own schedule.
+{
+  const { dir } = migrated('sleep 9 & echo $! > .pincer/bg.pid; exit 0', { timeout: 1 });
+  const started = Date.now();
+  const r = rt(dir, 'verify', 'T-01');
+  const elapsed = Date.now() - started;
+  assert.equal(r.status, 124, r.stdout + r.stderr);
+  assert.ok(elapsed < 5000, `the run ends at the timeout, not when the background child exits (${elapsed} ms)`);
+  const a = latest(dir);
+  assert.equal(a.outcome, 'timed_out');
+  const bg = Number(read(dir, '.pincer/bg.pid').trim());
+  assert.ok(bg > 0 && !alive(bg), 'the background child was terminated with the group');
+  assert.ok(a.limitations.some(l => /SIGTERM/.test(l)), JSON.stringify(a.limitations));
+}
+{
+  const { dir } = migrated('bash -c \'trap "" TERM; sleep 30\' & echo $! > .pincer/bg.pid; exit 0', { timeout: 1 });
+  const started = Date.now();
+  const r = rt(dir, 'verify', 'T-01');
+  const elapsed = Date.now() - started;
+  assert.equal(r.status, 124, r.stdout + r.stderr);
+  assert.ok(elapsed >= 5000 && elapsed < 12000, `SIGKILL after the grace period bounds the run (${elapsed} ms)`);
+  const bg = Number(read(dir, '.pincer/bg.pid').trim());
+  assert.ok(bg > 0 && !alive(bg), 'the SIGTERM-ignoring child was killed');
+  assert.ok(latest(dir).limitations.some(l => /SIGKILL/.test(l)), JSON.stringify(latest(dir).limitations));
+}
 console.log('runtime runner tests passed');

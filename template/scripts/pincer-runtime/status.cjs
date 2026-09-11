@@ -192,17 +192,14 @@ function gather(root, { budget } = {}) {
     if (mode === 'legacy') r = readiness.legacyTicketReadiness(t.text, t.fields);
     else {
       const key = state.contextKey({ kind: 'ticket', change: binding.change, ticket: t.fields.ticket });
-      const attempt = indexRead.index ? state.latestAttempt(root, key, indexRead.index) : null;
-      if (attempt && attempt.artifacts) {
-        for (const k of ['stdout', 'stderr']) if (attempt.artifacts[k] && attempt.artifacts[k].path && !fs.existsSync(path.join(root, attempt.artifacts[k].path))) attempt.artifacts[k] = { ...attempt.artifacts[k], missing: true };
-      }
+      const attempt = indexRead.index ? state.inspectArtifacts(root, state.latestAttempt(root, key, indexRead.index)) : null;
       let changedPaths = [];
       if (attempt && attempt.source && manifestNow && manifestNow.digest && attempt.source.after !== manifestNow.digest) {
         const before = source.readManifest(root, attempt.source.after);
         if (before) changedPaths = source.diffManifests(before, manifestNow);
       }
       const legacyReceipt = (binding.legacy_receipts && binding.legacy_receipts[t.fields.ticket]) || (t.fields.verified || t.fields.last_check ? { verified: t.fields.verified, last_check: t.fields.last_check } : null);
-      r = readiness.migratedTicketReadiness({ text: t.text, fields: t.fields, timeout: t.timeout, attempt, legacyReceipt, current, sourceProblems, changedPaths });
+      r = readiness.migratedTicketReadiness({ text: t.text, fields: t.fields, timeout: t.timeout, attempt, legacyReceipt, current, sourceProblems, changedPaths, contextKey: key });
       r.attempt = attempt;
     }
     readinessOf.set(t.file, r);
