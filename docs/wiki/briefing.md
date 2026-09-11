@@ -18,10 +18,12 @@ runtime evidence, timeout not enforced when the shell exits before a background
 child) became T-45 (`2ff2b1a`). A reviewer subagent over the T-45 diff found five
 Low items (undelivered signals named, old `recover` records shown as malformed,
 contract overstating validated fields, a record copied over the pointed-at one,
-group-id reuse window) which became T-46. Candidate 4 is the wiki commit on top of
-T-46; its evaluation (schema 1 via the pinned v0.4.1 kit, `review/code-quality.md`
-with both review rounds, NOTES.md) is the next commit; then the release audit, merge,
-the 0.5.0 bump and publish; v0.4.1 is still unpublished.** The kit now has a Node runtime
+group-id reuse window) which became T-46. Candidate 4 `1a7fb78` was evaluated
+(`e2d389e`, schema 1 via the pinned v0.4.1 kit, both review rounds in
+`review/code-quality.md`), the release audit passed (no status warnings, evidence ok,
+`npm test` green, tree clean), `feat/prd-v4` was fast-forwarded into `main`, and this
+commit is the 0.5.0 bump with tag `v0.5.0`. Pending: `npm publish --otp` (the user),
+`git push --follow-tags`, CI on the matrix; v0.4.1 was never published to npm.** The kit now has a Node runtime
 ([[runtime]], decision [[runtime-owned-verification]]): `scripts/pincer-runtime.cjs`
 + `scripts/pincer-runtime/` own the ticket lifecycle, readiness, status (`--json`),
 change registration (`.prd/changes/<id>.json`), the SHA-256 source manifest,
@@ -44,14 +46,11 @@ schema 1 and the read-only release audit ([[requirements-through-delivery]],
 
 ## Active / next task
 
-1. Evaluation of candidate 4 with the pinned v0.4.1 kit (this repo is deliberately
-   not migrated, PRD v4 §9): schema 1 manifest under `.prd/evidence/prd-v4/<candidate>/`
-   (re-run C-01..C-08 as for `77c5205`), `review/code-quality.md` (external findings
-   and the T-45 reviewer report with dispositions), NOTES.md, the evidence commit;
-   then `/pincer-release`.
-2. Merge `feat/prd-v4` into main, bump 0.5.0 (`--no-git-tag-version`, rebuild plugin,
-   commit, annotated tag), publish (user runs `npm publish --otp`), push
-   `--follow-tags`, confirm CI on ubuntu/macOS × Node 18/22.
+1. Publish 0.5.0 (user runs `npm publish --otp=<code>` on `main` at tag `v0.5.0`),
+   then `git push --follow-tags origin main`, then confirm CI on ubuntu/macOS ×
+   Node 18/22 (`test/runtime-runner.test.js` needs `perl`; Node 18 and ubuntu are
+   untested for the runtime so far).
+2. Delete `feat/prd-v4` once pushed (it is fully merged).
 3. Follow-ups (PRD v4 §10): lifecycle/resume, coverage impact, platform parity; trial the
    runtime on Codex, Copilot and the plugin.
 

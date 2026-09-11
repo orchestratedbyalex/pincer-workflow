@@ -149,3 +149,9 @@ Outcome: npm publish still pending (needs the user's OTP); next is `/pincer-narr
 - Why: the evaluation of candidate 3 was not yet committed, so the fixes went in before evidence rather than into known issues.
 - Files: `template/scripts/pincer-runtime/{state,runner,readiness,lifecycle,status,evidence}.cjs`, `pincer-runtime.cjs` (export passes the pointed id), contract, three suites, packet, this wiki.
 - Outcome: T-46 done via the pinned kit; candidate 4 = this wiki commit; the evaluation commit follows.
+
+## [2026-09-11] end | Release audit PASS for candidate 1a7fb78; merged; 0.5.0 bump
+- What: `/pincer-release` audit against `template/docs/release-checklist.md` (status no warnings, 18/18 done, notes current, evidence ok, provenance legacy schema 1 by design, artifacts tracked, `npm test` green, tree clean before and after); `feat/prd-v4` fast-forwarded into `main`; `npm version minor --no-git-tag-version` → 0.5.0, plugin rebuilt, site stamp updated.
+- Why: the user asked for release, merge, bump and publish after the T-45/T-46 fixes.
+- Files: `package.json`, `plugin/.claude-plugin/plugin.json`, `docs/index.html`, this wiki.
+- Outcome: commit `v0.5.0: …` with annotated tag `v0.5.0`; publish and push are the next actions (publish needs the user's OTP).
