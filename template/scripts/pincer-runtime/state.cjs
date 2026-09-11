@@ -124,7 +124,12 @@ function withLock(root, fn, options) {
 
 const compactTimestamp = () => nowIso().replace(/[-:]/g, '');
 const attemptId = sequence => `${String(sequence).padStart(6, '0')}-${compactTimestamp()}-${crypto.randomBytes(3).toString('hex')}`;
-const contextKey = context => (context.kind === 'candidate' ? `candidate:${context.candidate}:${context.check}` : `ticket:${context.change}:${context.ticket}`);
+// Context keys (docs/runtime-contracts.md, "Attempts"): ticket keys are change-scoped
+// in every runtime mode; candidate keys gain the change in changes mode (schema 2
+// records) so two changes sharing a check ID and a candidate never share a pointer.
+const contextKey = context => (context.kind === 'candidate'
+  ? (context.mode === 'changes' || context.agreement ? `candidate:${context.change}:${context.candidate}:${context.check}` : `candidate:${context.candidate}:${context.check}`)
+  : `ticket:${context.change}:${context.ticket}`);
 
 const OUTCOMES = ['running', 'passed', 'failed', 'interrupted', 'timed_out', 'error'];
 const SHA256 = /^[0-9a-f]{64}$/;

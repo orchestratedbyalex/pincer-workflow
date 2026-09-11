@@ -1,9 +1,13 @@
 ---
 ticket: T-50
-status: open
+status: done
 size: M
 prd: .prd/prd-v5.md
 depends_on: [T-49]
+started: 2026-09-11T20:56:11Z
+last_check: 2026-09-11T21:03:45Z passed de199e227bd6
+verified: 2026-09-11T21:03:45Z de199e227bd6
+finished: 2026-09-11T21:03:45Z
 ---
 
 ## Objective
@@ -24,9 +28,9 @@ Select changes explicitly per worktree so PRD v5 can be implemented and reviewed
 - Use real linked worktrees to verify independent pointers and attempt stores. Starting the wrong change is finally wired in T-54.
 
 ## Acceptance Criteria
-- [ ] Selecting A with staged, unstaged and untracked user edits changes only its local pointer.
-- [ ] Missing/deleted selection refuses resolution without fallback; a fresh clone requires explicit selection.
-- [ ] Two linked worktrees retain independent selection/state, and incompatible repository views receive actionable diagnostics.
+- [x] Selecting A with staged, unstaged and untracked user edits changes only its local pointer.
+- [x] Missing/deleted selection refuses resolution without fallback; a fresh clone requires explicit selection.
+- [x] Two linked worktrees retain independent selection/state, and incompatible repository views receive actionable diagnostics.
 
 ## Verification
 Proves: Compares Git/index/file state around selection, exercises fresh clones and real worktrees, and rejects missing/wrong repository contexts.

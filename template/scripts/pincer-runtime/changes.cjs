@@ -371,3 +371,104 @@ module.exports = {
   SCHEMA, RUNTIME, CHANGE_ID, STATES, TERMINAL, LIFECYCLE_KINDS, EVENT_KINDS, RECORD_KEYS, CHANGES_DIR, IGNORE_LINE,
   recordFile, snapshotFile, replay, validateRecord, scan, loadRecords, loadRecord, ownerOf, newRecord, register, list, summarize, renderList, renderShow, head, gitignoreHas, gitignoreWith,
 };
+
+// --- Selection (docs/runtime-contracts.md, "Selection") ---------------------------
+// The selected change of this worktree: .pincer/runtime/selection.json, written
+// only by `change select` and migration. No file → SELECTION_REQUIRED even when a
+// single record exists; a file naming a missing or unreadable record →
+// SELECTION_INVALID; never a fallback to another record or the highest PRD.
+const state = require('./state.cjs');
+const SELECTION_FILE = `${state.RUNTIME_DIR}/selection.json`;
+const SELECTION_KEYS = ['schema', 'change', 'selected'];
+function readSelection(root) {
+  const file = path.join(root, SELECTION_FILE);
+  const read = readJson(file);
+  if (read.error === 'missing') return { code: 'SELECTION_REQUIRED', problem: 'no change is selected in this worktree; select one with: node scripts/pincer-runtime.cjs change select <id>' };
+  if (read.error) return { code: 'MALFORMED', problem: `${SELECTION_FILE}: ${read.error}; select again with: node scripts/pincer-runtime.cjs change select <id>` };
+  const doc = read.data;
+  if (!isObject(doc) || doc.schema !== 1 || Object.keys(doc).some(k => !SELECTION_KEYS.includes(k)) || !SELECTION_KEYS.every(k => k in doc) || !str(doc.change) || !CHANGE_ID.test(doc.change) || !timestamp(doc.selected)) {
+    return { code: 'MALFORMED', problem: `${SELECTION_FILE}: not a schema 1 selection { schema, change, selected }; select again with: node scripts/pincer-runtime.cjs change select <id>` };
+  }
+  return { change: doc.change, selected: doc.selected, file: SELECTION_FILE };
+}
+// Resolve the record commands act on: `--change <id>` inspects without touching
+// the selection; otherwise the selection. Returns { record, file, id, loaded,
+// selection, explicit } or { code, problem, loaded, selection }.
+function resolveSelected(root, { change = null } = {}) {
+  const loaded = loadRecords(root);
+  const selection = readSelection(root);
+  const base = { loaded, selection: selection.code ? null : selection, selectionProblem: selection.code ? selection : null };
+  if (loaded.mode === 'legacy') return { ...base, code: 'CHANGE_REQUIRED', problem: `no change record under ${CHANGES_DIR}/ — register with: node scripts/pincer-runtime.cjs register --prd .prd/prd-vN.md` };
+  if (loaded.mode === 'migrated') return { ...base, code: 'MIGRATION_REQUIRED', problem: `${CHANGES_DIR}/ holds a v0.5.0 binding; migrate it first: node scripts/pincer-runtime.cjs migrate --preview --prd <prd>` };
+  if (loaded.problems.length && !(change || !selection.code)) return { ...base, code: loaded.problems[0].code, problem: loaded.problems[0].detail };
+  const id = change || (selection.code ? null : selection.change);
+  if (!id) return { ...base, code: selection.code, problem: `${selection.problem} (retained: ${[...loaded.records.keys()].join(', ') || 'none'})` };
+  if (!CHANGE_ID.test(id)) return { ...base, code: 'INPUT_INVALID', problem: `change ID must match [a-z0-9][a-z0-9-]{0,63}: ${id}` };
+  const entry = loaded.records.get(id);
+  if (!entry) {
+    const own = loaded.problems.find(p => p.detail.startsWith(`${recordFile(id)}:`));
+    const why = own ? `is unreadable (${own.code}: ${own.detail})` : `does not exist (retained: ${[...loaded.records.keys()].join(', ') || 'none'})`;
+    if (change) return { ...base, code: own ? own.code : 'INPUT_INVALID', problem: `change record ${recordFile(id)} ${why}` };
+    return { ...base, code: 'SELECTION_INVALID', problem: `the selected change "${id}" ${why}; select another with: node scripts/pincer-runtime.cjs change select <id>, or repair the record` };
+  }
+  if (loaded.problems.length) return { ...base, code: loaded.problems[0].code, problem: loaded.problems[0].detail };
+  return { ...base, ...entry, id, explicit: Boolean(change) };
+}
+// change select <id>: the local pointer only. Never touches HEAD, the index,
+// tracked or untracked files; refuses an unknown or unreadable record.
+function select(root, id) {
+  if (typeof id !== 'string' || !CHANGE_ID.test(id)) return { code: 'INPUT_INVALID', problem: `change ID must match [a-z0-9][a-z0-9-]{0,63}: ${id}` };
+  try {
+    const out = transaction.run(root, { command: `change select ${id}` }, ctx => {
+      const loaded = loadRecords(root);
+      if (loaded.mode === 'legacy') ctx.refuse('CHANGE_REQUIRED', `no change record under ${CHANGES_DIR}/ — register with: node scripts/pincer-runtime.cjs register --prd .prd/prd-vN.md`);
+      if (loaded.mode === 'migrated') ctx.refuse('MIGRATION_REQUIRED', `${CHANGES_DIR}/ holds a v0.5.0 binding; migrate it first: node scripts/pincer-runtime.cjs migrate --preview --prd <prd>`);
+      if (loaded.problems.length) ctx.refuse(loaded.problems[0].code, loaded.problems[0].detail);
+      const entry = loaded.records.get(id);
+      if (!entry) ctx.refuse('INPUT_INVALID', `no change record ${recordFile(id)} (retained: ${[...loaded.records.keys()].join(', ') || 'none'})`);
+      const current = readSelection(root);
+      if (!current.code && current.change === id) return { action: 'unchanged', record: entry.record, file: entry.file, selected: current.selected };
+      const selected = ctx.now;
+      ctx.write(SELECTION_FILE, { schema: 1, change: id, selected });
+      return { action: 'selected', record: entry.record, file: entry.file, selected, previous: current.code ? null : current.change };
+    });
+    return out.result;
+  } catch (error) {
+    if (error.refusal) return { code: error.code, problem: error.message };
+    if (error.code === 'STATE_BUSY') return { code: 'STATE_BUSY', problem: error.message };
+    throw error;
+  }
+}
+
+// --- Repository view ---------------------------------------------------------------------
+// Compatibility of a record with the working tree: HEAD exists, the PRD validates,
+// the recorded base is an ancestor of HEAD. The branch name is printed as a hint
+// only. Returns { head, branch, base_is_ancestor, dirty, prdResult, problems }.
+function view(root, record) {
+  const problems = [];
+  const headSha = head(root);
+  const branchRead = tryGit(root, ['symbolic-ref', '--short', '-q', 'HEAD']);
+  const branch = branchRead.error ? null : branchRead.out.trim() || null;
+  const dirtyRead = tryGit(root, ['status', '--porcelain', '--untracked-files=all']);
+  const dirty = dirtyRead.error ? [] : dirtyRead.out.split('\n').filter(Boolean).map(l => l.slice(3).replace(/^"(.*)"$/, '$1'));
+  const prdResult = parse.validatePrd(root, record.prd);
+  let ancestor = false;
+  if (!headSha) problems.push({ code: 'BASE_MISMATCH', detail: 'no commit at HEAD (not a git repository with commits)' });
+  else {
+    ancestor = !tryGit(root, ['merge-base', '--is-ancestor', record.base, 'HEAD']).error;
+    if (!ancestor) problems.push({ code: 'BASE_MISMATCH', detail: `the recorded base ${record.base.slice(0, 7)} of change "${record.change}" is not an ancestor of HEAD ${headSha.slice(0, 7)}${branch ? ` (branch ${branch})` : ' (detached HEAD)'}${dirty.length ? `; dirty: ${dirty.slice(0, 5).join(', ')}${dirty.length > 5 ? ` (+${dirty.length - 5})` : ''}` : ''} — check out the branch that carries the change; the branch name is a hint, not proof` });
+  }
+  if (!prdResult.ok) problems.push({ code: 'BASE_MISMATCH', detail: `${record.prd}: ${prdResult.problems[0]} — the change's PRD is missing or invalid in this working tree` });
+  return { head: headSha, branch, base_is_ancestor: ancestor, dirty, prdResult, problems };
+}
+// The change a ticket belongs to, through its PRD association. Returns
+// { id, prd } or { problem } (no owner, or an unresolved association).
+function ticketOwner(root, loaded, file, fields) {
+  const assoc = require('./status.cjs').ticketPrd(root, file, fields);
+  if (assoc.problem) return { problem: assoc.problem };
+  const owner = ownerOf(loaded, assoc.prd);
+  if (!owner) return { prd: assoc.prd, problem: `${file} belongs to ${assoc.prd}, which no change record owns — register it with: node scripts/pincer-runtime.cjs register --prd ${assoc.prd}` };
+  return { id: owner[0], prd: assoc.prd, prdResult: assoc.prdResult };
+}
+
+Object.assign(module.exports, { SELECTION_FILE, readSelection, resolveSelected, select, view, ticketOwner });

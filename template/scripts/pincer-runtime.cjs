@@ -6,13 +6,13 @@
 //   node scripts/pincer-runtime.cjs register --prd .prd/prd-vN.md [--change <id>] [--authorization <text>] [--replace] [--rebind]
 //   node scripts/pincer-runtime.cjs snapshot [--json] [--store]
 //   node scripts/pincer-runtime.cjs recover
-//   node scripts/pincer-runtime.cjs status [--json]
+//   node scripts/pincer-runtime.cjs status [--json] [--change <id>]
 //   node scripts/pincer-runtime.cjs ready [T-NN]
 //   node scripts/pincer-runtime.cjs start|verify|done T-NN · bind T-NN .prd/prd-vN.md
 //   node scripts/pincer-runtime.cjs migrate --preview|--apply --prd .prd/prd-vN.md [--change <id>] [--authorization <text>]
 //   node scripts/pincer-runtime.cjs check C-NN --candidate <sha> [--timeout <seconds>] -- <command...>
 //   node scripts/pincer-runtime.cjs evidence export --candidate <sha> --base <sha> --prd .prd/prd-vN.md --draft <file>
-//   node scripts/pincer-runtime.cjs change list [--json] · change show <id> [--json]
+//   node scripts/pincer-runtime.cjs change list [--json] · change show <id> [--json] · change select <id>
 //
 // Exit codes: 0 ok · 1 failed/not ready/refused · 2 usage · 3 state busy ·
 // 4 invalid input or state · 124 timed out · 130 interrupted.
@@ -49,14 +49,14 @@ function usage(message) {
     '       pincer-runtime.cjs register --prd .prd/prd-vN.md [--change <id>] [--authorization <text>] [--replace] [--rebind]\n' +
     '       pincer-runtime.cjs snapshot [--json] [--store]\n' +
     '       pincer-runtime.cjs recover\n' +
-    '       pincer-runtime.cjs status [--json]\n' +
+    '       pincer-runtime.cjs status [--json] [--change <id>]\n' +
     '       pincer-runtime.cjs ready [T-NN]\n' +
     '       pincer-runtime.cjs start|verify|done T-NN\n' +
     '       pincer-runtime.cjs bind T-NN .prd/prd-vN.md\n' +
     '       pincer-runtime.cjs migrate --preview|--apply --prd .prd/prd-vN.md [--change <id>] [--authorization <text>]\n' +
     '       pincer-runtime.cjs check C-NN --candidate <sha> [--timeout <seconds>] -- <command...>\n' +
     '       pincer-runtime.cjs evidence export --candidate <sha> --base <sha> --prd .prd/prd-vN.md --draft <file>\n' +
-    '       pincer-runtime.cjs change list [--json] · change show <id> [--json]\n');
+    '       pincer-runtime.cjs change list [--json] · change show <id> [--json] · change select <id>\n');
   process.exit(EXIT.USAGE);
 }
 
@@ -187,10 +187,10 @@ async function cmdLifecycle(root, command, args) {
 }
 
 function cmdStatus(root, args) {
-  const o = parseOptions(args, { switches: ['--json'] });
+  const o = parseOptions(args, { switches: ['--json'], valued: ['--change'] });
   if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
   const budget = process.env.PINCER_BUILD_BUDGET_MIN || '';
-  const result = status.render(root, { budget });
+  const result = status.render(root, { budget, change: o.change || null });
   if (o.json) process.stdout.write(`${JSON.stringify(result.json, null, 2)}\n`);
   else process.stdout.write(result.text);
   process.exit(result.exit);
@@ -198,9 +198,9 @@ function cmdStatus(root, args) {
 
 // Read-only readiness gate: a ticket, or the candidate when no ticket is named.
 function cmdReady(root, args) {
-  const o = parseOptions(args, {});
+  const o = parseOptions(args, { valued: ['--change'] });
   if (o.positional.length > 1) usage('ready takes at most one ticket ID');
-  const result = status.render(root, {});
+  const result = status.render(root, { change: o.change || null });
   if (result.exit !== 0) { process.stderr.write(result.text); process.exit(result.exit); }
   const j = result.json;
   if (o.positional.length === 1) {
@@ -315,20 +315,33 @@ function cmdChange(root, args) {
     const o = parseOptions(rest, { switches: ['--json'] });
     if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
     const result = changes.list(root);
-    if (o.json) process.stdout.write(`${JSON.stringify({ schema: 1, runtime: changes.RUNTIME, generated: nowIso(), root, mode: result.mode, selection: null, changes: result.changes, problems: result.problems }, null, 2)}\n`);
-    else process.stdout.write(changes.renderList(result));
+    const sel = changes.readSelection(root);
+    const selection = sel.code ? { change: null, problem: { code: sel.code, detail: sel.problem } } : { change: sel.change, problem: null };
+    result.changes.forEach(c => { c.selected = Boolean(sel.change) && sel.change === c.id; });
+    if (o.json) process.stdout.write(`${JSON.stringify({ schema: 1, runtime: changes.RUNTIME, generated: nowIso(), root, mode: result.mode, selection, changes: result.changes, problems: result.problems }, null, 2)}\n`);
+    else process.stdout.write(changes.renderList(result, { selection: sel.code ? null : sel }));
     process.exit(result.problems.length ? EXIT.INVALID : EXIT.OK);
+  }
+  if (sub === 'select') {
+    const o = parseOptions(rest, {});
+    if (o.positional.length !== 1) usage('change select requires exactly one change ID');
+    const result = changes.select(root, o.positional[0]);
+    if (result.code) fail('pincer', `${result.code}: ${result.problem}`, exitForCode(result.code));
+    process.stdout.write(`${result.action === 'unchanged' ? 'already selected' : 'selected'} change ${o.positional[0]} → ${result.record.prd} · ${result.record.lifecycle.state} (${changes.SELECTION_FILE}, local to this worktree${result.previous ? `; previously ${result.previous}` : ''})\n`);
+    if (result.action === 'selected') process.stderr.write('pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization\n');
+    process.exit(EXIT.OK);
   }
   if (sub === 'show') {
     const o = parseOptions(rest, { switches: ['--json'] });
     if (o.positional.length !== 1) usage('change show requires exactly one change ID');
     const result = changes.loadRecord(root, o.positional[0]);
     if (result.code) fail('pincer', `${result.code}: ${result.problem}`, exitForCode(result.code));
-    if (o.json) process.stdout.write(`${JSON.stringify({ schema: 1, runtime: changes.RUNTIME, generated: nowIso(), root, file: result.file, selected: null, record: result.record, evaluations: [] }, null, 2)}\n`);
+    const sel = changes.readSelection(root);
+    if (o.json) process.stdout.write(`${JSON.stringify({ schema: 1, runtime: changes.RUNTIME, generated: nowIso(), root, file: result.file, selected: !sel.code && sel.change === o.positional[0], record: result.record, evaluations: [] }, null, 2)}\n`);
     else process.stdout.write(changes.renderShow(o.positional[0], result));
     process.exit(EXIT.OK);
   }
-  usage(sub ? `change ${sub} is not available in this build (change supports: list, show)` : 'change requires a subcommand: list, show');
+  usage(sub ? `change ${sub} is not available in this build (change supports: list, show, select)` : 'change requires a subcommand: list, show, select');
 }
 
 function cmdSnapshot(root, args) {
