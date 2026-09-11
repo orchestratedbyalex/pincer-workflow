@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "runtime": 1,
+  "id": "000004-20260911T112451Z-c0ee9b",
+  "sequence": 4,
+  "context": {
+    "kind": "ticket",
+    "change": "prd-v1",
+    "prd": ".prd/prd-v1.md",
+    "prd_revision": "4d3a3085e5615fb17ea5f28f1b78194a813aef51e6e46b4b20f7bf1581492478",
+    "base": "289726ea5c1a0f10336da520eafc12ca1ee291b9",
+    "ticket": "T-02",
+    "ticket_digest": "c15a8a503f5eea4621eb4d9e651736caf4912b37b730681e1f62590541cada67"
+  },
+  "check": {
+    "digest": "df2b553fcffc200203670c9363a086a72d595fd542e2532d2875fd35bf1c7d57",
+    "display": "sleep 20\n",
+    "timeout_seconds": 30
+  },
+  "outcome": "interrupted",
+  "exit_code": null,
+  "signal": "SIGTERM",
+  "runner": {
+    "shell": "/bin/bash",
+    "args": [
+      "-eo",
+      "pipefail",
+      "-c"
+    ],
+    "version": "GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)"
+  },
+  "cwd": ".",
+  "environment": {
+    "os": "darwin 25.6.0",
+    "node": "v22.23.1",
+    "declared": {}
+  },
+  "started": "2026-09-11T11:24:51Z",
+  "finished": "2026-09-11T11:24:53Z",
+  "source": {
+    "before": "4127d4ace1196b422bac2d3c355c4ca970f3974df24d891f53cabbccafc3d898",
+    "after": "4127d4ace1196b422bac2d3c355c4ca970f3974df24d891f53cabbccafc3d898",
+    "files": 5,
+    "limitations": [
+      "external services and installed toolchains are not part of the source identity"
+    ]
+  },
+  "artifacts": {
+    "stdout": {
+      "path": ".pincer/runtime/attempts/000004-20260911T112451Z-c0ee9b/stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "truncated": false,
+      "redactions": 0
+    },
+    "stderr": {
+      "path": ".pincer/runtime/attempts/000004-20260911T112451Z-c0ee9b/stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "truncated": false,
+      "redactions": 0
+    }
+  },
+  "owner": {
+    "pid": 77773,
+    "ppid": 77180,
+    "host": "example-host"
+  },
+  "child": {
+    "pid": 77924
+  },
+  "limitations": [
+    "interrupted by SIGINT; the child process group was terminated"
+  ]
+}

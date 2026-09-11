@@ -1,9 +1,13 @@
 ---
 ticket: T-40
-status: open
+status: done
 size: M
 prd: .prd/prd-v4.md
 depends_on: [T-39]
+started: 2026-09-11T11:24:28Z
+last_check: 2026-09-11T11:32:08Z passed 67de5e81d0c8
+verified: 2026-09-11T11:32:08Z 67de5e81d0c8
+finished: 2026-09-11T11:32:08Z
 ---
 
 ## Objective
@@ -21,9 +25,9 @@ Ship the runtime in every distribution channel with identical files, prove the p
 - `npm test` includes every runtime suite; both generators produce no diff; `npm pack --dry-run` lists the runtime directory.
 
 ## Acceptance Criteria
-- [ ] Packed Claude-only, Codex-only, Copilot-only, all-platform and plugin layouts contain the identical runtime and execute the compatibility commands.
-- [ ] README, contract document and review packet are complete and make no unsupported claims; every S-NN has a disposition.
-- [ ] Full suite, packed installs and generator parity pass.
+- [x] Packed Claude-only, Codex-only, Copilot-only, all-platform and plugin layouts contain the identical runtime and execute the compatibility commands.
+- [x] README, contract document and review packet are complete and make no unsupported claims; every S-NN has a disposition.
+- [x] Full suite, packed installs and generator parity pass.
 
 ## Verification
 Proves: the runtime is distributed identically on every channel and the review packet maps every requirement and scenario to evidence; regression: a layout missing a runtime file, a plugin copy that drifts, or a scenario without a disposition.

@@ -1,0 +1,7 @@
+$ node src/notes.js list
+
+--- stdout ---
+hello
+--- stderr ---
+
+--- outcome passed (exit 0) ---

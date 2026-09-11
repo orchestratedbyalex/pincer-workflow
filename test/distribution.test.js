@@ -89,9 +89,45 @@ function pincer(project, ...args) {
   return run(project, process.execPath, [cli, ...args]);
 }
 
+// PRD v4 S-28: every layout and the plugin carry the identical runtime, and the
+// installed copy executes the compatibility commands on a small git fixture.
+const runtimeFiles = root => Object.fromEntries(
+  ['scripts/pincer-runtime.cjs', ...fs.readdirSync(path.join(root, 'scripts/pincer-runtime')).map(n => `scripts/pincer-runtime/${n}`), 'scripts/pincer-ticket.sh', 'scripts/pincer-status.sh', 'scripts/pincer-evidence.cjs']
+    .map(rel => [rel, crypto.createHash('sha256').update(fs.readFileSync(path.join(root, rel))).digest('hex')]),
+);
+const canonicalRuntime = runtimeFiles(path.join(repo, 'template'));
+assert.ok(Object.keys(canonicalRuntime).length >= 12, 'runtime modules present in the template');
+assert.deepEqual(runtimeFiles(path.join(repo, 'plugin')), canonicalRuntime, 'plugin ships the identical runtime');
+function exercisesRuntime(project, label) {
+  const sh = (...args) => run(project, 'bash', args, { timeout: 60000 });
+  const node = (...args) => run(project, process.execPath, args, { timeout: 60000 });
+  const git = (...args) => passes(run(project, 'git', args), `${label}: git ${args.join(' ')}`);
+  git('init', '-q');
+  write(project, '.prd/prd-v1.md', '---\nversion: 1\nstatus: ticketed\ndate: 2026-09-11\n---\n# Fixture\n');
+  write(project, 'tickets/T-01-fixture.md', '---\nticket: T-01\nstatus: open\nsize: S\nprd: .prd/prd-v1.md\ndepends_on: []\n---\n\n## Objective\nFixture.\n\n## Acceptance Criteria\n- [x] ok\n\n## Verification\n```bash\ntest -f value.txt\n```\n');
+  write(project, 'value.txt', 'good\n');
+  fs.appendFileSync(path.join(project, '.gitignore'), '.pincer/\n');
+  git('add', '-A'); git('-c', 'user.name=t', '-c', 'user.email=t@example.invalid', 'commit', '-q', '-m', 'fixture');
+  assert.match(passes(sh('scripts/pincer-status.sh'), `${label}: legacy status`), /^Runtime  legacy/m);
+  assert.match(passes(sh('scripts/pincer-ticket.sh', 'verify', 'T-01'), `${label}: legacy verify`), /receipt: /);
+  assert.match(passes(sh('scripts/pincer-ticket.sh', 'done', 'T-01'), `${label}: legacy done`), /T-01 done/);
+  git('add', '-A'); git('-c', 'user.name=t', '-c', 'user.email=t@example.invalid', 'commit', '-q', '-m', 'done');
+  assert.match(passes(node('scripts/pincer-runtime.cjs', 'migrate', '--preview', '--prd', '.prd/prd-v1.md'), `${label}: migrate preview`), /migration plan/);
+  assert.match(passes(node('scripts/pincer-runtime.cjs', 'migrate', '--apply', '--prd', '.prd/prd-v1.md'), `${label}: migrate apply`), /^migrated/m);
+  assert.match(passes(node('scripts/pincer-runtime.cjs', 'register', '--prd', '.prd/prd-v1.md'), `${label}: register`), /^unchanged change prd-v1/m);
+  assert.match(passes(sh('scripts/pincer-ticket.sh', 'verify', 'T-01'), `${label}: migrated verify`), /attempt 000001-/);
+  const status = JSON.parse(passes(node('scripts/pincer-runtime.cjs', 'status', '--json'), `${label}: status --json`));
+  assert.equal(status.mode, 'migrated', label);
+  assert.equal(status.tickets[0].latest_attempt.outcome, 'passed', label);
+  assert.match(passes(sh('scripts/pincer-status.sh'), `${label}: migrated status`), /^Runtime  change prd-v1/m);
+  assert.equal(node('scripts/pincer-runtime.cjs', 'ready', 'T-01').status, 0, `${label}: ready`);
+}
+
 for (const [platform, layout] of Object.entries(layouts)) {
   const greenfield = tempDir();
   passes(pincer(greenfield, 'init', '--platform', platform), `${platform} greenfield init`);
+  assert.deepEqual(runtimeFiles(greenfield), canonicalRuntime, `${platform} layout ships the identical runtime`);
+  exercisesRuntime(greenfield, platform);
   for (const relative of ['AGENTS.md', 'docs/release-checklist.md', 'docs/runtime-contracts.md', 'scripts/pincer-ticket.sh', 'scripts/pincer-runtime.cjs', 'scripts/pincer-runtime/lifecycle.cjs', 'scripts/pincer-evidence.cjs', '.claude/commands/pincer-plan.md', ...layout.present])
     assert.ok(fs.existsSync(path.join(greenfield, relative)), `${platform} greenfield missing ${relative}`);
   for (const relative of layout.absent)

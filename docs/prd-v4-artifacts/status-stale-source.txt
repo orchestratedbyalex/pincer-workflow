@@ -1,0 +1,9 @@
+PINCER status · 2026-09-11T11:24Z · /private/tmp/fixture
+PRD      .prd/prd-v1.md · status: ticketed · profile: standard · date: 2026-09-11
+Runtime  change prd-v1 · revision 4d3a3085e561 · base 289726e
+Tickets  1 total · 0 done · 1 in progress · 0 open
+  T-01  in_progress  S  started 11:24 · elapsed 0m · latest attempt passed
+  WARN T-01 SOURCE_CHANGED: source changed since the passing attempt: src/notes.js — verify
+Build    wall-clock elapsed 0m since the first ticket started (not active execution time)
+Notes    NOTES.md: missing
+Next     resume T-01: /pincer-code T-01 (check git status for uncommitted work; then verify → done)

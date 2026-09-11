@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "runtime": 1,
+  "id": "000002-20260911T112450Z-0fe61e",
+  "sequence": 2,
+  "context": {
+    "kind": "ticket",
+    "change": "prd-v1",
+    "prd": ".prd/prd-v1.md",
+    "prd_revision": "4d3a3085e5615fb17ea5f28f1b78194a813aef51e6e46b4b20f7bf1581492478",
+    "base": "289726ea5c1a0f10336da520eafc12ca1ee291b9",
+    "ticket": "T-01",
+    "ticket_digest": "2b34447b5fd81dfdcee455846891d6a09b1d6e08963f1e40103a58c4bc1881c5"
+  },
+  "check": {
+    "digest": "8875fd610dc5e068538fea9f9c05d0d4335a5596d10b06fd5c9ec8c55013d301",
+    "display": "node src/notes.js list | grep -q \"hello\"\n",
+    "timeout_seconds": 5
+  },
+  "outcome": "failed",
+  "exit_code": 1,
+  "signal": null,
+  "runner": {
+    "shell": "/bin/bash",
+    "args": [
+      "-eo",
+      "pipefail",
+      "-c"
+    ],
+    "version": "GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)"
+  },
+  "cwd": ".",
+  "environment": {
+    "os": "darwin 25.6.0",
+    "node": "v22.23.1",
+    "declared": {}
+  },
+  "started": "2026-09-11T11:24:50Z",
+  "finished": "2026-09-11T11:24:51Z",
+  "source": {
+    "before": "d22a0510d5cb849050e4f6f1a4cea099244c2cb2ffa8242fa631f622b8ff618d",
+    "after": "d22a0510d5cb849050e4f6f1a4cea099244c2cb2ffa8242fa631f622b8ff618d",
+    "files": 4,
+    "limitations": [
+      "external services and installed toolchains are not part of the source identity"
+    ]
+  },
+  "artifacts": {
+    "stdout": {
+      "path": ".pincer/runtime/attempts/000002-20260911T112450Z-0fe61e/stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "truncated": false,
+      "redactions": 0
+    },
+    "stderr": {
+      "path": ".pincer/runtime/attempts/000002-20260911T112450Z-0fe61e/stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "truncated": false,
+      "redactions": 0
+    }
+  },
+  "owner": {
+    "pid": 77405,
+    "ppid": 77180,
+    "host": "example-host"
+  },
+  "child": {
+    "pid": 77488
+  },
+  "limitations": []
+}

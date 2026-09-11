@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "runtime": 1,
+  "generated": "2026-09-11T11:24:51Z",
+  "root": "/private/tmp/fixture",
+  "mode": "migrated",
+  "change": {
+    "id": "prd-v1",
+    "prd": ".prd/prd-v1.md",
+    "prd_revision": "4d3a3085e5615fb17ea5f28f1b78194a813aef51e6e46b4b20f7bf1581492478",
+    "base": "289726ea5c1a0f10336da520eafc12ca1ee291b9"
+  },
+  "prd": {
+    "path": ".prd/prd-v1.md",
+    "status": "ticketed",
+    "profile": "standard",
+    "date": "2026-09-11"
+  },
+  "tickets": [
+    {
+      "id": "T-01",
+      "file": "tickets/T-01-list-command.md",
+      "status": "in_progress",
+      "size": "S",
+      "depends_on": [],
+      "started": "2026-09-11T11:24:50Z",
+      "finished": null,
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          {
+            "code": "SOURCE_CHANGED",
+            "detail": "source changed since the passing attempt: src/notes.js"
+          }
+        ],
+        "next": "verify"
+      },
+      "latest_attempt": {
+        "id": "000003-20260911T112451Z-b872d8",
+        "sequence": 3,
+        "outcome": "passed",
+        "started": "2026-09-11T11:24:51Z",
+        "finished": "2026-09-11T11:24:51Z"
+      },
+      "legacy_receipt": null
+    }
+  ],
+  "history": 0,
+  "candidate": {
+    "notes": "missing",
+    "reason": "missing",
+    "candidate": null,
+    "base": null,
+    "evidence": null,
+    "local_attempts": "available",
+    "newer_attempts": [],
+    "reasons": [
+      {
+        "code": "EVIDENCE_MISSING",
+        "detail": "missing"
+      }
+    ]
+  },
+  "reasons": [
+    {
+      "code": "SOURCE_CHANGED",
+      "detail": "T-01: source changed since the passing attempt: src/notes.js"
+    },
+    {
+      "code": "EVIDENCE_MISSING",
+      "detail": "missing"
+    }
+  ],
+  "next": "resume T-01: /pincer-code T-01 (check git status for uncommitted work; then verify → done)"
+}
