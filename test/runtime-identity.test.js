@@ -1,5 +1,6 @@
-// Change identity and source identity (PRD v4 R-02, R-04): registration binds
-// one explicitly selected PRD revision; the source manifest changes for every
+// Change identity and source identity (PRD v4 R-02, R-04; PRD v5 T-49): registration
+// writes one schema 2 change record per explicitly named PRD (v0.5.0 bindings keep
+// their released semantics until migrated); the source manifest changes for every
 // source change class and stays stable for lifecycle fields and checkbox marks;
 // secret, symlink, submodule and non-git inputs follow the contract with no
 // silent omission and no secret value in any output.
@@ -7,13 +8,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { repo, tempDir, createTicket, createPrd, write, read, run } from './helpers.js';
+import { repo, tempDir, createTicket, createPrd, write, read, run, bindV050 } from './helpers.js';
 
 const runtime = path.join(repo, 'template/scripts/pincer-runtime.cjs');
 const require = createRequire(import.meta.url);
 const identity = require(path.join(repo, 'template/scripts/pincer-runtime/identity.cjs'));
 const source = require(path.join(repo, 'template/scripts/pincer-runtime/source.cjs'));
 const parse = require(path.join(repo, 'template/scripts/pincer-runtime/parse.cjs'));
+const changes = require(path.join(repo, 'template/scripts/pincer-runtime/changes.cjs'));
 
 const rt = (dir, ...args) => run(dir, process.execPath, [runtime, ...args]);
 function passes(result, label) { assert.equal(result.status, 0, `${label}\n${result.stdout}${result.stderr}`); return result.stdout; }
@@ -38,23 +40,22 @@ function fixture({ prds = [1] } = {}) {
 const digestOf = dir => { const m = source.snapshot(dir); assert.deepEqual(m.problems, [], `snapshot problems: ${JSON.stringify(m.problems)}`); return m.digest; };
 const binding = (dir, id = 'prd-v1') => JSON.parse(read(dir, `.prd/changes/${id}.json`));
 
-// Registration writes a valid binding; base is HEAD; default change ID is prd-vN.
+// Registration writes a valid schema 2 change record (PRD v5); base is HEAD;
+// default change ID is prd-vN; it is idempotent, grants nothing, and ignores the
+// runtime state once.
 {
   const dir = fixture();
   const out = passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md'), 'register');
-  assert.match(out, /^registered change prd-v1 → \.prd\/prd-v1\.md revision [0-9a-f]{12} base [0-9a-f]{7} \(\.prd\/changes\/prd-v1\.json\)$/m);
-  const b = binding(dir);
-  assert.equal(identity.validateBinding(b), null);
-  assert.equal(b.base, git(dir, 'rev-parse', 'HEAD'));
-  assert.equal(b.prd_revision, parse.prdDigest(read(dir, '.prd/prd-v1.md')));
-  assert.equal(b.authorization, null);
+  assert.match(out, /^registered change prd-v1 → \.prd\/prd-v1\.md base [0-9a-f]{7} · planned \(\.prd\/changes\/prd-v1\.json\)$/m);
+  const r = binding(dir);
+  assert.equal(changes.validateRecord(r, '.prd/changes/prd-v1.json'), null);
+  assert.equal(r.base, git(dir, 'rev-parse', 'HEAD'));
+  assert.equal(r.lifecycle.state, 'planned'); assert.deepEqual(r.authorizations, []);
   const note = rt(dir, 'register', '--prd', '.prd/prd-v1.md');
-  assert.match(note.stdout, /^unchanged change prd-v1/, 'same revision is idempotent');
-  assert.match(note.stderr, /does not prove human approval/, 'absent authorization is stated, never inferred from PRD status');
-  passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md', '--authorization', 'user approved the breakdown on 2026-09-11'), 'record authorization');
-  assert.equal(binding(dir).authorization, 'user approved the breakdown on 2026-09-11');
-  const loaded = identity.loadBinding(dir, { prd: '.prd/prd-v1.md' });
-  assert.ok(loaded.binding, JSON.stringify(loaded));
+  assert.match(note.stdout, /^unchanged change prd-v1/, 'same PRD is idempotent');
+  const refused = rt(dir, 'register', '--prd', '.prd/prd-v1.md', '--authorization', 'user approved the breakdown on 2026-09-11');
+  assert.equal(refused.status, 1); assert.match(refused.stderr, /AUTHORIZATION_REQUIRED: --authorization is not recorded on change records/, 'free text is never stored as approval');
+  assert.equal(identity.loadBinding(dir, { prd: '.prd/prd-v1.md' }).code, 'CHANGES_MODE', 'the schema 1 loader reports changes mode, never a binding');
   // T-43: registration ignores the runtime state, once.
   assert.match(read(dir, '.gitignore'), /^\.pincer\/$/m, 'register adds .pincer/ to .gitignore');
   assert.equal(read(dir, '.gitignore').split('\n').filter(l => l.trim() === '.pincer/').length, 1, 'no duplicate after re-registration');
@@ -62,31 +63,26 @@ const binding = (dir, id = 'prd-v1') => JSON.parse(read(dir, `.prd/changes/${id}
   assert.equal(git(dir, 'status', '--porcelain', '--untracked-files=all').split('\n').filter(l => /\.pincer/.test(l)).join(''), '', 'runtime state is ignored after register');
 }
 
-// S-04: identical commands in two PRDs are two changes; the binding names each.
+// S-04: identical commands in two PRDs are two changes; both records are retained
+// and each names its PRD; --replace is refused; --prd is required.
 {
   const dir = fixture({ prds: [1, 2] });
   createTicket(dir, { id: 'T-02', prd: '.prd/prd-v2.md' });
   passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md'), 'register v1');
-  const refused = rt(dir, 'register', '--prd', '.prd/prd-v2.md');
-  assert.equal(refused.status, 4, 'second PRD refused without --replace');
-  assert.match(refused.stderr, /already binds \.prd\/prd-v1\.md as change "prd-v1"/);
-  assert.match(refused.stderr, /--replace/);
-  assert.ok(!fs.existsSync(path.join(dir, '.prd/changes/prd-v2.json')));
-  const other = identity.loadBinding(dir, { prd: '.prd/prd-v2.md' });
-  assert.equal(other.code, 'CHANGE_REQUIRED'); assert.equal(other.other, true, 'a binding for another PRD is not this PRD\'s binding');
-  passes(rt(dir, 'register', '--prd', '.prd/prd-v2.md', '--replace'), 'replace');
-  assert.ok(!fs.existsSync(path.join(dir, '.prd/changes/prd-v1.json')), 'old binding removed');
+  passes(rt(dir, 'register', '--prd', '.prd/prd-v2.md'), 'register v2');
+  assert.ok(fs.existsSync(path.join(dir, '.prd/changes/prd-v1.json')), 'the first record is retained');
   assert.equal(binding(dir, 'prd-v2').prd, '.prd/prd-v2.md');
-  assert.notEqual(binding(dir, 'prd-v2').prd_revision, parse.prdDigest(read(dir, '.prd/prd-v1.md')), 'revisions differ per PRD');
-  // Never the highest PRD number on its own: --prd is required.
-  assert.equal(rt(dir, 'register').status, 2);
+  const replace = rt(dir, 'register', '--prd', '.prd/prd-v2.md', '--replace');
+  assert.equal(replace.status, 1); assert.match(replace.stderr, /--replace is not supported for change records/);
+  assert.equal(rt(dir, 'register').status, 2, '--prd is required');
 }
 
-// S-05: PRD content edits invalidate the binding; a status change does not; --rebind clears it.
+// S-05 (v0.5.0 binding, migrated mode): PRD content edits invalidate the binding;
+// a status change does not; --rebind clears it. The released semantics are kept
+// until the binding is migrated to a change record.
 {
   const dir = fixture();
-  passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md'), 'register');
-  const before = binding(dir);
+  const before = bindV050(dir);
   write(dir, '.prd/prd-v1.md', read(dir, '.prd/prd-v1.md').replace('status: ticketed', 'status: built'));
   assert.ok(identity.loadBinding(dir, { prd: '.prd/prd-v1.md' }).binding, 'lifecycle status change keeps the binding current');
   write(dir, '.prd/prd-v1.md', `${read(dir, '.prd/prd-v1.md')}\nR-02 added later.\n`);
@@ -105,12 +101,13 @@ const binding = (dir, id = 'prd-v1') => JSON.parse(read(dir, `.prd/changes/${id}
   assert.notEqual(binding(dir).prd_revision, before.prd_revision);
 }
 
-// S-06: missing, duplicate, malformed, unsupported-schema and ambiguous identifiers.
+// S-06: missing, duplicate, malformed, unsupported-schema and ambiguous identifiers
+// (schema 1 bindings keep their v0.5.0 codes; registration validates its inputs).
 {
   const dir = fixture();
   let r = identity.loadBinding(dir, { prd: '.prd/prd-v1.md' });
   assert.equal(r.code, 'CHANGE_REQUIRED'); assert.match(r.problem, /register --prd \.prd\/prd-v1\.md/);
-  passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md'), 'register');
+  bindV050(dir);
   const good = read(dir, '.prd/changes/prd-v1.json');
   write(dir, '.prd/changes/other.json', good.replace('"prd-v1"', '"other"'));
   r = identity.loadBinding(dir); assert.equal(r.code, 'AMBIGUOUS'); assert.match(r.problem, /other\.json, prd-v1\.json/);
@@ -119,7 +116,7 @@ const binding = (dir, id = 'prd-v1') => JSON.parse(read(dir, `.prd/changes/${id}
   write(dir, '.prd/changes/prd-v1.json', '{"schema": 1,');
   r = identity.loadBinding(dir); assert.equal(r.code, 'MALFORMED'); assert.match(r.problem, /malformed JSON/);
   write(dir, '.prd/changes/prd-v1.json', good.replace('"schema": 1', '"schema": 9'));
-  r = identity.loadBinding(dir); assert.equal(r.code, 'UNSUPPORTED_SCHEMA'); assert.match(r.problem, /unsupported binding schema 9/);
+  r = identity.loadBinding(dir); assert.equal(r.code, 'UNSUPPORTED_SCHEMA'); assert.match(r.problem, /unsupported schema 9/);
   write(dir, '.prd/changes/prd-v1.json', good.replace(/"base": "[0-9a-f]{40}"/, '"base": "short"'));
   r = identity.loadBinding(dir); assert.equal(r.code, 'MALFORMED'); assert.match(r.problem, /base must be a full 40-hex commit ID/);
   write(dir, '.prd/changes/prd-v1.json', good.replace('"prd-v1"', '"renamed"'));
@@ -132,8 +129,9 @@ const binding = (dir, id = 'prd-v1') => JSON.parse(read(dir, `.prd/changes/${id}
   const noGit = tempDir(); createPrd(noGit);
   const refused = rt(noGit, 'register', '--prd', '.prd/prd-v1.md');
   assert.equal(refused.status, 4); assert.match(refused.stderr, /needs a git repository/);
-  assert.match(rt(dir, 'register', '--prd', '.prd/prd-v7.md').stderr, /PRD does not exist/);
-  assert.match(rt(dir, 'register', '--prd', '.prd/prd-v1.md', '--change', 'Bad_ID').stderr, /change ID must match/);
+  const fresh = fixture();
+  assert.match(rt(fresh, 'register', '--prd', '.prd/prd-v7.md').stderr, /PRD does not exist/);
+  assert.match(rt(fresh, 'register', '--prd', '.prd/prd-v1.md', '--change', 'Bad_ID').stderr, /change ID must match/);
 }
 
 // S-11 (static): every source change class changes the digest; S-12: lifecycle

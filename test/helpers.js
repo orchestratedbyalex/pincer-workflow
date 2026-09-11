@@ -36,6 +36,31 @@ export function createTicket(dir, { id = 'T-01', command = 'true', criteria = '-
 export function createPrd(dir, version = 1, status = 'ticketed') {
   write(dir, `.prd/prd-v${version}.md`, `---\nversion: ${version}\nstatus: ${status}\ndate: 2026-09-05\n---\n# Example PRD\n`);
 }
+// A v0.5.0 (schema 1) change binding, written the way the released kit wrote it,
+// so the migrated-mode suites keep exercising the released behavior after
+// registration started writing schema 2 records (PRD v5). Needs a commit.
+export function bindV050(dir, { prd = '.prd/prd-v1.md', change, authorization = null, legacyReceipts = {} } = {}) {
+  const id = change || `prd-v${prd.match(/prd-v(\d+)\.md$/)[1]}`;
+  const base = spawnSync('git', ['-C', dir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim();
+  const revision = crypto.createHash('sha256').update(normalizePrd(read(dir, prd))).digest('hex');
+  const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const binding = { schema: 1, change: id, prd, prd_revision: revision, base, registered: stamp, authorization, runtime: 1, legacy_receipts: legacyReceipts };
+  const ignore = path.join(dir, '.gitignore');
+  const existing = fs.existsSync(ignore) ? fs.readFileSync(ignore, 'utf8') : '';
+  if (!existing.split('\n').some(l => l.trim() === '.pincer/')) fs.writeFileSync(ignore, `${existing}${existing && !existing.endsWith('\n') ? '\n' : ''}${existing ? '\n' : ''}# pincer runtime state (added by the runtime)\n.pincer/\n`);
+  write(dir, `.prd/changes/${id}.json`, `${JSON.stringify(binding, null, 2)}\n`);
+  return binding;
+}
+function normalizePrd(text) {
+  const rows = text.split('\n'); if (rows.at(-1) === '') rows.pop();
+  const out = []; let closed = rows[0] !== '---';
+  for (let i = 0; i < rows.length; i++) {
+    const line = rows[i];
+    if (!closed) { if (i > 0 && line === '---') closed = true; else if (i > 0 && /^status:/.test(line)) continue; }
+    out.push(line);
+  }
+  return `${out.join('\n')}\n`;
+}
 export const evidenceScript = path.join(repo, 'template/scripts/pincer-evidence.cjs');
 // A minimal valid schema-1 evidence directory for a candidate: one passing
 // command check with a log artifact. Returns the repository-relative paths.

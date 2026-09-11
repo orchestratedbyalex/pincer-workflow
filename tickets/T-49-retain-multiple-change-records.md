@@ -1,9 +1,13 @@
 ---
 ticket: T-49
-status: open
+status: done
 size: M
 prd: .prd/prd-v5.md
 depends_on: [T-48]
+started: 2026-09-11T20:42:01Z
+last_check: 2026-09-11T20:55:14Z passed 7d8793264538
+verified: 2026-09-11T20:55:14Z 7d8793264538
+finished: 2026-09-11T20:55:14Z
 ---
 
 ## Objective
@@ -24,9 +28,9 @@ Retain and validate multiple change records so PRD v5 can be implemented and rev
 - Keep legacy and v0.5.0 inspection behavior until explicit migration; unreadable new records never trigger legacy fallback.
 
 ## Acceptance Criteria
-- [ ] Register A then B retains A's identity, ticket association, history and evaluation references.
-- [ ] Duplicate IDs/PRD ownership, malformed JSON, unresolved references, path escapes and unknown schemas refuse without mutation.
-- [ ] New-schema --replace cannot remove A; list/show are read-only and report all retained changes.
+- [x] Register A then B retains A's identity, ticket association, history and evaluation references.
+- [x] Duplicate IDs/PRD ownership, malformed JSON, unresolved references, path escapes and unknown schemas refuse without mutation.
+- [x] New-schema --replace cannot remove A; list/show are read-only and report all retained changes.
 
 ## Verification
 Proves: Registers and resolves multiple real change records, injects duplicate/malformed input, and verifies preservation and non-destructive replacement refusal.

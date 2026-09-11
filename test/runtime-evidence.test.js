@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { repo, tempDir, createTicket, createPrd, write, read, run, ticketScript, statusScript, writeEvidence, writeNotes } from './helpers.js';
+import { repo, tempDir, createTicket, createPrd, write, read, run, ticketScript, statusScript, writeEvidence, writeNotes, bindV050 } from './helpers.js';
 
 const runtime = path.join(repo, 'template/scripts/pincer-runtime.cjs');
 const validator = path.join(repo, 'template/scripts/pincer-evidence.cjs');
@@ -34,7 +34,7 @@ function candidateFixture() {
   const file = createTicket(dir, { command: 'test "$(cat value.txt)" = good', criteria: '- [x] expected behavior' });
   write(dir, 'value.txt', 'good');
   commit(dir, 'prd and ticket');
-  passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md'), 'register'); commit(dir, 'register');
+  bindV050(dir); commit(dir, 'register');
   passes(sh(dir, 'start', 'T-01')); passes(sh(dir, 'verify', 'T-01')); passes(sh(dir, 'done', 'T-01'));
   assert.equal(git(dir, 'status', '--porcelain').trim(), 'M tickets/T-01-example.md', 'S-22: verify created no product diff; done wrote lifecycle fields only');
   commit(dir, 'T-01 done');

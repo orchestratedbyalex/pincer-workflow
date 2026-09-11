@@ -12,6 +12,7 @@
 //   node scripts/pincer-runtime.cjs migrate --preview|--apply --prd .prd/prd-vN.md [--change <id>] [--authorization <text>]
 //   node scripts/pincer-runtime.cjs check C-NN --candidate <sha> [--timeout <seconds>] -- <command...>
 //   node scripts/pincer-runtime.cjs evidence export --candidate <sha> --base <sha> --prd .prd/prd-vN.md --draft <file>
+//   node scripts/pincer-runtime.cjs change list [--json] · change show <id> [--json]
 //
 // Exit codes: 0 ok · 1 failed/not ready/refused · 2 usage · 3 state busy ·
 // 4 invalid input or state · 124 timed out · 130 interrupted.
@@ -29,6 +30,7 @@ const sanitize = require('./pincer-runtime/sanitize.cjs');
 const lifecycle = require('./pincer-runtime/lifecycle.cjs');
 const migrate = require('./pincer-runtime/migrate.cjs');
 const evidence = require('./pincer-runtime/evidence.cjs');
+const changes = require('./pincer-runtime/changes.cjs');
 const { atomicWrite, nowIso, tryGit } = require('./pincer-runtime/fsutil.cjs');
 const EXIT = { OK: 0, FAILED: 1, USAGE: 2, BUSY: 3, INVALID: 4, TIMED_OUT: 124, INTERRUPTED: 130 };
 
@@ -53,7 +55,8 @@ function usage(message) {
     '       pincer-runtime.cjs bind T-NN .prd/prd-vN.md\n' +
     '       pincer-runtime.cjs migrate --preview|--apply --prd .prd/prd-vN.md [--change <id>] [--authorization <text>]\n' +
     '       pincer-runtime.cjs check C-NN --candidate <sha> [--timeout <seconds>] -- <command...>\n' +
-    '       pincer-runtime.cjs evidence export --candidate <sha> --base <sha> --prd .prd/prd-vN.md --draft <file>\n');
+    '       pincer-runtime.cjs evidence export --candidate <sha> --base <sha> --prd .prd/prd-vN.md --draft <file>\n' +
+    '       pincer-runtime.cjs change list [--json] · change show <id> [--json]\n');
   process.exit(EXIT.USAGE);
 }
 
@@ -272,17 +275,60 @@ function parseOptions(args, { valued = [], switches = [] } = {}) {
   return options;
 }
 const problemExit = code => (code === 'STATE_BUSY' ? EXIT.BUSY : EXIT.INVALID);
+// Contracted exit codes for the change commands: 3 busy, 4 invalid input or
+// unreadable state, 1 for every refusal (docs/runtime-contracts.md, "Exit codes").
+const INVALID_CODES = ['INPUT_INVALID', 'MALFORMED', 'UNSUPPORTED_SCHEMA', 'HISTORY_INVALID', 'STATE_INCOMPLETE', 'UNSUPPORTED_INPUT', 'CHANGES_MODE', 'AMBIGUOUS', 'INVALID'];
+const exitForCode = code => (code === 'STATE_BUSY' ? EXIT.BUSY : INVALID_CODES.includes(code) ? EXIT.INVALID : EXIT.FAILED);
 
 function cmdRegister(root, args) {
   const o = parseOptions(args, { valued: ['--prd', '--change', '--authorization'], switches: ['--replace', '--rebind'] });
   if (!o.prd) usage('register requires --prd .prd/prd-vN.md');
   if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
-  const result = identity.register(root, { prd: o.prd, change: o.change, authorization: o.authorization ?? null, replace: Boolean(o.replace), rebind: Boolean(o.rebind) });
-  if (result.code) { process.stderr.write(`pincer: ${result.problem}\n`); process.exit(problemExit(result.code)); }
-  for (const note of result.notes) process.stderr.write(`pincer: note: ${note}\n`);
-  const b = result.binding;
-  process.stdout.write(`${result.action} change ${b.change} → ${b.prd} revision ${b.prd_revision.slice(0, 12)} base ${b.base.slice(0, 7)} (${result.file})\n`);
+  const mode = changes.scan(root).mode;
+  if (mode === 'migrated') {
+    // v0.5.0 binding: the released semantics, except that a second PRD or
+    // --replace now needs the migration to change records.
+    const result = identity.register(root, { prd: o.prd, change: o.change, authorization: o.authorization ?? null, replace: Boolean(o.replace), rebind: Boolean(o.rebind) });
+    if (result.code) { process.stderr.write(`pincer: ${result.code === 'MIGRATION_REQUIRED' ? 'MIGRATION_REQUIRED: ' : ''}${result.problem}\n`); process.exit(result.code === 'MIGRATION_REQUIRED' ? EXIT.FAILED : problemExit(result.code)); }
+    for (const note of result.notes) process.stderr.write(`pincer: note: ${note}\n`);
+    const b = result.binding;
+    process.stdout.write(`${result.action} change ${b.change} → ${b.prd} revision ${b.prd_revision.slice(0, 12)} base ${b.base.slice(0, 7)} (${result.file})\n`);
+    process.exit(EXIT.OK);
+  }
+  // Legacy or changes mode: a schema 2 record. The v0.5.0 flags are refused
+  // with the command that replaces them; nothing is inferred from them.
+  if (o.replace) fail('pincer', 'LIFECYCLE_BLOCKED: --replace is not supported for change records (they are retained); work on another change with `change select <id>`, retire one with `change supersede <id> --with <replacement> --decision D-NN` or `change cancel <id> --decision D-NN --reason <text>`', EXIT.FAILED);
+  if (o.rebind) fail('pincer', 'AGREEMENT_CHANGED: --rebind is not supported for change records; record the revised agreement with `change revise <id>` and its disposition with `change authorize`', EXIT.FAILED);
+  if (o.authorization !== undefined) fail('pincer', 'AUTHORIZATION_REQUIRED: --authorization is not recorded on change records (free text cannot become approval); record the user\'s instruction with `change authorize <id> --agreement <digest> --reference <text> --excerpt <text>` after registration', EXIT.FAILED);
+  const result = changes.register(root, { prd: o.prd, change: o.change });
+  if (result.code) { process.stderr.write(`pincer: ${result.code}: ${result.problem}\n`); process.exit(exitForCode(result.code)); }
+  const r = result.record;
+  process.stdout.write(`${result.action} change ${r.change} → ${r.prd} base ${r.base.slice(0, 7)} · ${r.lifecycle.state} (${result.file})\n`);
+  if (result.action === 'registered') process.stderr.write('pincer: note: registration grants no authorization; record the user\'s instruction with `change authorize` and select the change with `change select`\n');
   process.exit(EXIT.OK);
+}
+
+// change list | show — read-only inspection of the retained records.
+function cmdChange(root, args) {
+  const [sub, ...rest] = args;
+  if (sub === 'list') {
+    const o = parseOptions(rest, { switches: ['--json'] });
+    if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
+    const result = changes.list(root);
+    if (o.json) process.stdout.write(`${JSON.stringify({ schema: 1, runtime: changes.RUNTIME, generated: nowIso(), root, mode: result.mode, selection: null, changes: result.changes, problems: result.problems }, null, 2)}\n`);
+    else process.stdout.write(changes.renderList(result));
+    process.exit(result.problems.length ? EXIT.INVALID : EXIT.OK);
+  }
+  if (sub === 'show') {
+    const o = parseOptions(rest, { switches: ['--json'] });
+    if (o.positional.length !== 1) usage('change show requires exactly one change ID');
+    const result = changes.loadRecord(root, o.positional[0]);
+    if (result.code) fail('pincer', `${result.code}: ${result.problem}`, exitForCode(result.code));
+    if (o.json) process.stdout.write(`${JSON.stringify({ schema: 1, runtime: changes.RUNTIME, generated: nowIso(), root, file: result.file, selected: null, record: result.record, evaluations: [] }, null, 2)}\n`);
+    else process.stdout.write(changes.renderShow(o.positional[0], result));
+    process.exit(EXIT.OK);
+  }
+  usage(sub ? `change ${sub} is not available in this build (change supports: list, show)` : 'change requires a subcommand: list, show');
 }
 
 function cmdSnapshot(root, args) {
@@ -345,6 +391,7 @@ function main(argv) {
   if (command === 'migrate') return cmdMigrate(root, rest);
   if (command === 'check') return cmdCheck(root, rest);
   if (command === 'evidence') return cmdEvidence(root, rest);
+  if (command === 'change') return cmdChange(root, rest);
   usage(command ? `unknown command ${command}` : undefined);
 }
 

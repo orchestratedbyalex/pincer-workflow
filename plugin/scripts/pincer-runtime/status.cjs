@@ -12,6 +12,7 @@ const source = require('./source.cjs');
 const state = require('./state.cjs');
 const readiness = require('./readiness.cjs');
 const evidence = require('./evidence.cjs');
+const changes = require('./changes.cjs');
 const { tryGit } = require('./fsutil.cjs');
 
 const RUNTIME = 1;
@@ -117,15 +118,18 @@ function gather(root, { budget } = {}) {
 
   // Mode and selected PRD.
   const bindingResult = identity.loadBinding(root);
+  if (bindingResult.code === 'CHANGES_MODE') return gatherChanges(root, out);
   let mode = 'legacy', binding = null, prd = null, prdResult = null;
   if (bindingResult.binding && !bindingResult.code) {
     mode = 'migrated'; binding = bindingResult.binding; prd = binding.prd; prdResult = bindingResult.prd;
-  } else if (bindingResult.code === 'REVISION_CHANGED' || bindingResult.code === 'INPUT_INVALID') {
+  } else if ((bindingResult.code === 'REVISION_CHANGED' || bindingResult.code === 'INPUT_INVALID') && bindingResult.binding) {
     mode = 'migrated'; binding = bindingResult.binding; prd = binding.prd;
     const v = parse.validatePrd(root, prd);
     if (!v.ok) { line(`WARN     invalid PRD: ${v.file || prd}: ${v.problems[0]}`); line('Next     repair PRD input before continuing'); out.exit = 4; return out; }
     prdResult = v;
-  } else if (['MALFORMED', 'AMBIGUOUS', 'UNSUPPORTED_SCHEMA'].includes(bindingResult.code)) {
+  } else if (['MALFORMED', 'AMBIGUOUS', 'UNSUPPORTED_SCHEMA', 'INPUT_INVALID'].includes(bindingResult.code)) {
+    // Unreadable or mixed records: neither legacy nor migrated (never a fallback).
+    j.mode = 'invalid';
     line(`WARN     invalid change binding: ${bindingResult.problem}`);
     line('Next     repair .prd/changes/ before continuing (remove or restore the binding; see docs/runtime-contracts.md)');
     j.reasons.push({ code: 'INPUT_INVALID', detail: bindingResult.problem });
@@ -347,6 +351,36 @@ function gather(root, { budget } = {}) {
   for (const r of j.candidate.reasons) j.reasons.push(r);
   if (unresolved > 0) out.exit = 4;
   out.gathered = { mode, binding, prd, prdResult, tickets, computeReadiness, notes, unresolved, inProg, nOpen, reverify };
+  return out;
+}
+
+// Changes mode (schema 2 records): status JSON schema 2. Without a local
+// selection nothing is selected — never the highest PRD or the only record.
+function gatherChanges(root, out) {
+  const j = out.json;
+  const line = s => out.lines.push(s);
+  j.schema = 2; j.runtime = changes.RUNTIME; j.mode = 'changes';
+  const loaded = changes.loadRecords(root);
+  j.changes = [...loaded.records.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([id, e]) => ({ ...changes.summarize(id, e), selected: false, authorization: null, agreement: null }));
+  j.selection = { change: null, problem: { code: 'SELECTION_REQUIRED', detail: `no change is selected in this worktree; select one with: node scripts/pincer-runtime.cjs change select <id> (retained: ${j.changes.map(c => c.id).join(', ') || 'none'})` } };
+  if (loaded.problems.length) {
+    for (const p of loaded.problems) { line(`WARN     invalid change records: ${p.code}: ${p.detail}`); j.reasons.push({ code: p.code, detail: p.detail }); }
+    line(`Next     ${loaded.problems[0].code === 'STATE_INCOMPLETE' ? 'node scripts/pincer-runtime.cjs recover' : 'repair .prd/changes/ by hand before continuing (see docs/runtime-contracts.md, "Change records")'}`);
+    j.next = out.lines[out.lines.length - 1].slice(9);
+    out.exit = 4; return out;
+  }
+  line('PRD      none selected');
+  line(`Runtime  changes · no selection · change select <id>`);
+  line(`Changes  ${j.changes.length} retained: ${j.changes.map(c => `${c.id} (${c.state})`).join(', ') || 'none'}`);
+  const set = parse.validateTicketSet(root);
+  if (set.ok) { j.history = set.files.length; if (set.files.length) line(`History  ${set.files.length} ticket(s); none belongs to a selected change`); }
+  line('Tickets  none (no change selected)');
+  line('Notes    none (no change selected)');
+  j.candidate = null;
+  j.reasons.push(j.selection.problem);
+  j.next = `node scripts/pincer-runtime.cjs change select <id> — select the change to work on (retained: ${j.changes.map(c => c.id).join(', ') || 'none; register one first'})`;
+  line(`Next     ${j.next}`);
+  out.gathered = { mode: 'changes', binding: null, prd: null, prdResult: null, tickets: [], computeReadiness: null, notes: null, unresolved: 0, inProg: [], nOpen: 0, reverify: [] };
   return out;
 }
 

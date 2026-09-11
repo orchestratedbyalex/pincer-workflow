@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { repo, tempDir, createTicket, createPrd, write, read, run, ticketScript, statusScript } from './helpers.js';
+import { repo, tempDir, createTicket, createPrd, write, read, run, ticketScript, statusScript, bindV050 } from './helpers.js';
 
 const runtime = path.join(repo, 'template/scripts/pincer-runtime.cjs');
 const rt = (dir, ...args) => run(dir, process.execPath, [runtime, ...args], { timeout: 60000 });
@@ -125,7 +125,7 @@ function legacy() {
 {
   const dir = legacy(); createPrd(dir, 2); commit(dir, 'second prd');
   assert.equal(rt(dir, 'migrate', '--preview').status, 2, '--prd is required');
-  passes(rt(dir, 'register', '--prd', '.prd/prd-v2.md'));
+  bindV050(dir, { prd: '.prd/prd-v2.md' });
   const before = snapshot(dir);
   const p = preview(dir);
   assert.equal(p.status, 1); assert.match(p.stdout, /conflict  AMBIGUOUS: \.prd\/changes\/prd-v2\.json binds \.prd\/prd-v2\.md, not \.prd\/prd-v1\.md/);
@@ -138,7 +138,7 @@ function legacy() {
 // Partly migrated: binding present but receipts remain — preview names it, apply completes it.
 {
   const dir = legacy();
-  passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md'));
+  bindV050(dir);
   const p = preview(dir);
   assert.equal(p.status, 0);
   assert.match(p.stdout, /note      an earlier migration was partially applied \(binding present, receipts remain\); apply completes it/);

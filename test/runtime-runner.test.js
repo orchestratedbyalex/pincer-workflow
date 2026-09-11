@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { repo, tempDir, createTicket, createPrd, write, read, run } from './helpers.js';
+import { repo, tempDir, createTicket, createPrd, write, read, run, bindV050 } from './helpers.js';
 
 const runtime = path.join(repo, 'template/scripts/pincer-runtime.cjs');
 const state = createRequire(import.meta.url)(path.join(repo, 'template/scripts/pincer-runtime/state.cjs'));
@@ -29,7 +29,7 @@ function migrated(command, { timeout, status = 'in_progress' } = {}) {
   write(dir, 'value.txt', 'good');
   write(dir, '.gitignore', '.pincer/\n');
   commit(dir, 'base');
-  passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md'), 'register');
+  bindV050(dir);
   commit(dir, 'register');
   return { dir, file };
 }

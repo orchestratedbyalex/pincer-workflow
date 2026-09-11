@@ -14,6 +14,7 @@ const RUNTIME = 1;
 const BINDING_KEYS = ['schema', 'change', 'prd', 'prd_revision', 'base', 'registered', 'authorization', 'runtime', 'legacy_receipts'];
 
 const bindingsDir = root => path.join(root, '.prd', 'changes');
+const CHANGES_HINT = 'this project keeps change records (schema 2) under .prd/changes/; inspect them with: node scripts/pincer-runtime.cjs change list';
 function listBindings(root) {
   const dir = bindingsDir(root);
   if (!fs.existsSync(dir)) return [];
@@ -41,6 +42,12 @@ function validateBinding(doc) {
 // caller needs — a binding for another PRD is CHANGE_REQUIRED with `other` set so
 // callers can treat that PRD as legacy.
 function loadBinding(root, { prd } = {}) {
+  // Mode first (docs/runtime-contracts.md, "Modes"): schema 2 records are the
+  // changes mode and never fall back to a binding or to legacy; mixed or
+  // unreadable directories are invalid.
+  const scan = require('./changes.cjs').scan(root);
+  if (scan.mode === 'changes') return { code: 'CHANGES_MODE', problem: `${CHANGES_HINT}`, scan };
+  if (scan.mode === 'invalid') return { code: scan.problems[0].code, problem: scan.problems[0].detail, scan };
   const files = listBindings(root);
   if (files.length === 0) {
     const hint = prd ? `register it with: node scripts/pincer-runtime.cjs register --prd ${prd}` : 'run register or migrate';
@@ -117,11 +124,11 @@ function register(root, { prd, change, authorization = null, replace = false, re
     if (invalid) return { code: 'MALFORMED', problem: `${files[0]}: ${invalid} — repair or remove it before registering` };
     existing = { file: files[0], binding: read.data };
   }
+  // v0.5.0 replaced the binding here (deleting the other PRD's); several changes
+  // are retained only by schema 2 records, so a second PRD needs the migration.
+  if (replace) return { code: 'MIGRATION_REQUIRED', problem: `--replace would delete ${existing ? existing.file : 'the binding'}; change records are retained instead — migrate first: node scripts/pincer-runtime.cjs migrate --preview --prd ${existing ? existing.binding.prd : prd}, then register ${prd} and select the change to work on with change select (retire one with change supersede or change cancel)` };
   if (existing && (existing.binding.prd !== prd || existing.binding.change !== id)) {
-    if (!replace) return { code: 'AMBIGUOUS', problem: `${existing.file} already binds ${existing.binding.prd} as change "${existing.binding.change}"; one change per worktree — pass --replace to replace it (its attempts stay in local history)` };
-    fs.unlinkSync(path.join(root, existing.file));
-    const binding = { schema: 1, change: id, prd, prd_revision: revision, base, registered: nowIso(), authorization, runtime: RUNTIME, legacy_receipts: {} };
-    return { binding, file: writeBinding(root, binding), action: 'replaced', replaced: existing.file, notes };
+    return { code: 'MIGRATION_REQUIRED', problem: `${existing.file} binds ${existing.binding.prd} as change "${existing.binding.change}"; one binding per worktree in migrated mode — migrate to change records first: node scripts/pincer-runtime.cjs migrate --preview --prd ${existing.binding.prd}, then register ${prd}` };
   }
   if (existing) {
     const current = existing.binding;

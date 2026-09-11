@@ -745,7 +745,7 @@ Status JSON schema 1 (legacy and migrated modes; one object on stdout; diagnosti
 stderr; no progress text, no secret values):
 
 ```
-{ schema: 1, runtime: 1, generated, root, mode: "legacy" | "migrated",
+{ schema: 1, runtime: 1, generated, root, mode: "legacy" | "migrated" | "invalid",
   change: { id, prd, prd_revision, base } | null,
   prd: { path, status, profile, date } | null,
   tickets: [ { id, file, status, size, depends_on, started, finished,
@@ -775,8 +775,11 @@ and `runtime: 2`, and adds:
 ```
 
 `tickets` are the selected change's; without a selection `tickets` is `[]`, `change`
-is `null` and `reasons` starts with `SELECTION_REQUIRED`. `status` exits 0 when
-inspection succeeded; `ready` exits 1 for non-ready work; both exit 4 on invalid input.
+is `null` and `reasons` starts with `SELECTION_REQUIRED`. `mode: "invalid"` (with the
+problem in `reasons`) is reported when `.prd/changes/` mixes schemas or holds a file
+the runtime cannot read: such a project is never reported as legacy or migrated.
+`status` exits 0 when inspection succeeded; `ready` exits 1 for non-ready work; both
+exit 4 on invalid input.
 
 ## Evidence schema 2
 
