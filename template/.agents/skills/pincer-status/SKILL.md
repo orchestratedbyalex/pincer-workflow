@@ -22,7 +22,9 @@ start of a session. Read-only: change nothing.
    next action for tooling; `node scripts/pincer-runtime.cjs ready [T-NN]` is the
    read-only gate.
 2. Report in three lines: where the workflow is, what is in progress or blocked, and the
-   next command. Quote the `Next` line as-is.
+   next command. Quote the `Next` line as-is. When the `Runtime` line says `legacy`,
+   add the register or migrate command it names as the step that precedes the next
+   ticket (fresh project → `register`, legacy receipts → `migrate --preview`).
 3. If a ticket is `in_progress`, read it and `git status`, then offer to resume it with
    `$pincer-code T-{NN}`. If the script printed a warning, surface it — a done ticket
    without a receipt was marked by hand and needs `scripts/pincer-ticket.sh verify T-{NN}`.

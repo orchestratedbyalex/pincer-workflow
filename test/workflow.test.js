@@ -201,6 +201,17 @@ assert.match(releaseChecklist, /a current passing attempt after it \(`node scrip
 const dryRun = read('template/docs/dry-run-checklist.md');
 for (const phrase of ['SOURCE_CHANGED', 'recover', 'already migrated', 'evidence export', 'local verification history unavailable', 'ready` exits 1']) assert.match(dryRun, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `dry-run cheat: ${phrase}`);
 
+// PRD v4 (T-42): registration and migration are explicit steps in the workflow.
+assert.match(narrow, /register --prd \.prd\/prd-vN\.md --authorization "<the user's approval, quoted>"/);
+assert.match(narrow, /commit it as `Register PRD vN`/);
+assert.match(narrow, /running the command proves nothing by itself/);
+assert.match(code, /migrate --preview --prd \.prd\/prd-vN\.md/);
+assert.match(code, /ask once whether to\s+apply\. Apply only on a yes/);
+assert.match(code, /Never migrate silently/);
+assert.match(statusPlaybook, /fresh project → `register`, legacy receipts → `migrate --preview`/);
+assert.match(dryRun, /Register PRD vN/);
+assert.match(dryRun, /nothing was\s+migrated silently/);
+
 for (const source of [rootReadme, codex]) {
   assert.doesNotMatch(source, /Codex has no PreToolUse hooks/i);
   assert.match(source, /does not currently install a Codex hook adapter/i);

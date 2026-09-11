@@ -28,7 +28,15 @@ Run `scripts/pincer-status.sh`. It lists every ticket's state, what is blocked, 
 build time from the clock, and the next action. If a ticket is `in_progress`, you are
 resuming: read it, check `git status` / `git diff` for uncommitted work, and continue
 from wherever the receipt says you are. Do not ask the user to reconfirm unchanged,
-previously authorized work.
+previously authorized work. Read the `Runtime` line before the first ticket: a change
+binding present → continue; `legacy` and no ticket of this PRD carries legacy
+receipts → register now (`node scripts/pincer-runtime.cjs register --prd .prd/prd-vN.md --authorization "<the user's approval, quoted>"`,
+commit `.prd/changes/` as `Register PRD vN`); `legacy` with legacy receipts → run
+`node scripts/pincer-runtime.cjs migrate --preview --prd .prd/prd-vN.md`, show the plan
+(backups, receipts imported as history, `.gitignore` line) and ask once whether to
+apply. Apply only on a yes, then commit the rewritten tickets, `.gitignore` and the
+binding as `Migrate PRD vN to the runtime`. Never migrate silently, and never apply
+when the preview reports a conflict.
 
 ## Loop (per ticket, in dependency order)
 

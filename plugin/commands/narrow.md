@@ -83,7 +83,13 @@ existing authorization for the same scope and order.
    inspect existing staged changes, stage that PRD and the explicit new ticket paths,
    review `git diff --cached`, and commit only those paths. Ask first — and finalize
    once it is resolved — only when step 4 surfaced a newly discovered consequential
-   choice or a scope change the PRD does not cover. Finish with:
+   choice or a scope change the PRD does not cover. Then register the change when the
+   `Runtime` status line says `legacy` and no ticket of this PRD carries legacy
+   receipts: `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs register --prd .prd/prd-vN.md --authorization "<the user's approval, quoted>"`,
+   then stage `.prd/changes/` and commit it as `Register PRD vN`. The authorization
+   text records the user's own words; running the command proves nothing by itself. A
+   project whose tickets carry legacy receipts is migrated from `/pincer:code` after a
+   preview, never here. Finish with:
    "Tickets ready in `tickets/`. Run `/pincer:code` to start implementing."
 
 ## Authorization rule (shared by plan, narrow, code and evaluate)

@@ -69,11 +69,17 @@ observes agent behavior, and one trial on one surface says nothing about the oth
       consequential choice (if any) was surfaced before implementation
 - [ ] PRD frontmatter now says `status: ticketed`
 - [ ] Tickets are committed
+- [ ] The change was registered (`Register PRD vN` commit with `.prd/changes/prd-vN.json`)
+      with the user's approval quoted in `authorization`; status now shows
+      `Runtime  change prd-vN`
 
 ## After `/pincer-code`
 
 - [ ] One commit per ticket, messages formatted `T-{NN}: {title}`
 - [ ] Every ticket file now says `status: done`
+- [ ] Existing project only: the migration preview was shown and `migrate --apply` ran
+      only after your yes, as a `Migrate PRD vN to the runtime` commit; nothing was
+      migrated silently
 - [ ] Every done ticket carries `started`, `verified` (receipt) and `finished`
       stamps — `scripts/pincer-status.sh` prints no readiness warning
 - [ ] Every done ticket has all acceptance-criteria checkboxes ticked

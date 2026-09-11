@@ -1,9 +1,13 @@
 ---
 ticket: T-42
-status: open
+status: done
 size: S
 prd: .prd/prd-v4.md
 depends_on: [T-39]
+started: 2026-09-11T11:32:58Z
+last_check: 2026-09-11T11:38:00Z passed d47751f3c40d
+verified: 2026-09-11T11:38:00Z d47751f3c40d
+finished: 2026-09-11T11:38:00Z
 ---
 
 ## Objective
@@ -22,9 +26,9 @@ Tell the agent when to register a fresh project's change and when to preview and
 - Wording assertions in `test/workflow.test.js`; generated adapters and plugin regenerated with no further diff.
 
 ## Acceptance Criteria
-- [ ] Narrow registers fresh projects with the quoted authorization; code migrates existing projects only after a preview and an explicit yes.
-- [ ] The sentences are pinned by assertions and generated outputs are current.
-- [ ] `npm test` passes.
+- [x] Narrow registers fresh projects with the quoted authorization; code migrates existing projects only after a preview and an explicit yes.
+- [x] The sentences are pinned by assertions and generated outputs are current.
+- [x] `npm test` passes.
 
 ## Verification
 Proves: the registration and migration steps are present in the playbooks and checklist and pinned; regression: a missing step or stale generated output. Static assertions are primary evidence for this playbook change.
