@@ -1,7 +1,6 @@
 # Open threads
 
-- [2026-09-11] 0.5.0 is merged, bumped and tagged on `main` but not yet published (`npm publish --otp`, user) or pushed; CI has never run the runtime suites on ubuntu or Node 18 ([[runtime-owned-verification]], [[distribution-channels]])
-- [2026-09-11] The runtime trial covered Claude Code `-p` + Sonnet only; Codex, Copilot, plugin, Windows and Node 18 are untested for the runtime (`docs/trial-2026-09-11-prd-v4.md`) ([[runtime]])
+- [2026-09-11] The runtime trial covered Claude Code `-p` + Sonnet only; Codex, Copilot, plugin and Windows are untested for the runtime (`docs/trial-2026-09-11-prd-v4.md`); CI has since run the suites on ubuntu and Node 18 ([[runtime]])
 - [2026-09-11] `pincer-ticket-lib.sh` is no longer shipped but `pincer update` leaves the old copy in installed projects; decide whether the installer should remove obsolete files ([[cli-installer]])
 - [2026-09-11] Follow-up PRDs from PRD v4 §10: explicit lifecycle/resume, mechanical requirement coverage and impact, platform parity and measured delivery quality ([[runtime-owned-verification]])
 

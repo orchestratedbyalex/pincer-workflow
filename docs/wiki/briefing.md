@@ -21,9 +21,11 @@ contract overstating validated fields, a record copied over the pointed-at one,
 group-id reuse window) which became T-46. Candidate 4 `1a7fb78` was evaluated
 (`e2d389e`, schema 1 via the pinned v0.4.1 kit, both review rounds in
 `review/code-quality.md`), the release audit passed (no status warnings, evidence ok,
-`npm test` green, tree clean), `feat/prd-v4` was fast-forwarded into `main`, and this
-commit is the 0.5.0 bump with tag `v0.5.0`. Pending: `npm publish --otp` (the user),
-`git push --follow-tags`, CI on the matrix; v0.4.1 was never published to npm.** The kit now has a Node runtime
+`npm test` green, tree clean), `feat/prd-v4` was fast-forwarded into `main`, and
+0.5.0 was released on 2026-09-11 (`2d244eb`, tag `v0.5.0`): published to npm (`latest`
+= 0.5.0; v0.4.1 had in fact been published the same morning), pushed with tags, and CI
+green on ubuntu/macOS × Node 18/22 (the runtime suites' first run off this machine).
+The next work is the PRD v4 §10 follow-ups.** The kit now has a Node runtime
 ([[runtime]], decision [[runtime-owned-verification]]): `scripts/pincer-runtime.cjs`
 + `scripts/pincer-runtime/` own the ticket lifecycle, readiness, status (`--json`),
 change registration (`.prd/changes/<id>.json`), the SHA-256 source manifest,
@@ -46,11 +48,10 @@ schema 1 and the read-only release audit ([[requirements-through-delivery]],
 
 ## Active / next task
 
-1. Publish 0.5.0 (user runs `npm publish --otp=<code>` on `main` at tag `v0.5.0`),
-   then `git push --follow-tags origin main`, then confirm CI on ubuntu/macOS ×
-   Node 18/22 (`test/runtime-runner.test.js` needs `perl`; Node 18 and ubuntu are
-   untested for the runtime so far).
-2. Delete `feat/prd-v4` once pushed (it is fully merged).
+1. Nothing in flight. Next PRD candidates (PRD v4 §10): lifecycle/resume (change
+   selection, pause/reopen/supersede), mechanical requirement coverage and impact,
+   platform parity (Codex, Copilot, plugin trials of the runtime), measured delivery
+   quality.
 3. Follow-ups (PRD v4 §10): lifecycle/resume, coverage impact, platform parity; trial the
    runtime on Codex, Copilot and the plugin.
 

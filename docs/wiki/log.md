@@ -155,3 +155,9 @@ Outcome: npm publish still pending (needs the user's OTP); next is `/pincer-narr
 - Why: the user asked for release, merge, bump and publish after the T-45/T-46 fixes.
 - Files: `package.json`, `plugin/.claude-plugin/plugin.json`, `docs/index.html`, this wiki.
 - Outcome: commit `v0.5.0: …` with annotated tag `v0.5.0`; publish and push are the next actions (publish needs the user's OTP).
+
+## [2026-09-11] end | 0.5.0 published, pushed, CI green
+- What: `npm publish` (user, web auth) landed 0.5.0 as `latest`; `git push --follow-tags origin main` moved origin from `1cb5ab4` to `2d244eb` with tag `v0.5.0`; CI run 34636744572 passed on ubuntu/macOS × Node 18/22; `feat/prd-v4` deleted after the merge.
+- Why: release flow after the PASS audit of candidate 1a7fb78.
+- Correction: the registry shows v0.4.1 published at 2026-09-11T08:14Z, so earlier notes calling it unpublished were wrong.
+- Outcome: nothing in flight; next work is the PRD v4 §10 follow-ups.
