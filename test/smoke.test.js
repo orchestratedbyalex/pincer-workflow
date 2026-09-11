@@ -24,7 +24,7 @@ try {
   // init installs the full kit and writes the manifest
   const out = run('init', '--platform', 'all');
   assert.match(out, /wrote\s+\d+ file/);
-  for (const f of ['AGENTS.md', 'CLAUDE.md', '.pincer.json', '.claude/settings.json', '.claude/hooks/hook-policy.cjs', '.codex/README.md', '.github/copilot-instructions.md', 'docs/release-checklist.md', 'scripts/sync-prompts.sh', 'scripts/pincer-ticket-lib.sh']) {
+  for (const f of ['AGENTS.md', 'CLAUDE.md', '.pincer.json', '.claude/settings.json', '.claude/hooks/hook-policy.cjs', '.codex/README.md', '.github/copilot-instructions.md', 'docs/release-checklist.md', 'docs/runtime-contracts.md', 'scripts/sync-prompts.sh', 'scripts/pincer-ticket-lib.sh']) {
     assert.ok(fs.existsSync(path.join(dir, f)), `missing ${f}`);
   }
   for (const f of ['.claude/hooks/block-dangerous.sh', '.claude/hooks/ticket-guard.sh', 'scripts/pincer-ticket.sh', 'scripts/pincer-status.sh']) {

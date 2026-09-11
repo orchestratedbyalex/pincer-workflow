@@ -1,9 +1,13 @@
 ---
 ticket: T-30
-status: open
+status: done
 size: M
 prd: .prd/prd-v4.md
 depends_on: []
+started: 2026-09-11T09:44:58Z
+last_check: 2026-09-11T09:48:56Z passed 51a449f4b8d4
+verified: 2026-09-11T09:48:56Z 51a449f4b8d4
+finished: 2026-09-11T09:48:56Z
 ---
 
 ## Objective
@@ -20,9 +24,9 @@ Write the runtime contract document that every later ticket implements against: 
 - `test/contracts.test.js` asserts every section heading, the exit-code rows, the reason-code list, the fixed exclusions and the secret-path rule, and that the plugin copy equals the template copy after path rewriting. It is added to the `npm test` script.
 
 ## Acceptance Criteria
-- [ ] `template/docs/runtime-contracts.md` exists with all thirteen sections and the values listed above.
-- [ ] The document ships in the tarball, every installer layout and the plugin; `test/contracts.test.js` runs under `npm test`.
-- [ ] No unsettled state-ownership decision remains: every record in PRD section 5's ownership table names its owner and file location in the document.
+- [x] `template/docs/runtime-contracts.md` exists with all thirteen sections and the values listed above.
+- [x] The document ships in the tarball, every installer layout and the plugin; `test/contracts.test.js` runs under `npm test`.
+- [x] No unsettled state-ownership decision remains: every record in PRD section 5's ownership table names its owner and file location in the document.
 
 ## Verification
 Proves: the contract document is present, complete and distributed; regression: a missing section, exit code, reason code or exclusion, or a plugin copy that drifts from the template. Static assertions are primary evidence for this static contract.
