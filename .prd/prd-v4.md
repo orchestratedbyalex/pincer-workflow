@@ -1,6 +1,6 @@
 ---
 version: 4
-status: draft
+status: ticketed
 date: 2026-09-11
 profile: standard
 ---
