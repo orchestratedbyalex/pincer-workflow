@@ -161,3 +161,15 @@ Outcome: npm publish still pending (needs the user's OTP); next is `/pincer-narr
 - Why: release flow after the PASS audit of candidate 1a7fb78.
 - Correction: the registry shows v0.4.1 published at 2026-09-11T08:14Z, so earlier notes calling it unpublished were wrong.
 - Outcome: nothing in flight; next work is the PRD v4 §10 follow-ups.
+
+## [2026-09-11] end | PRD v5 drafted: change lifecycle, authorization, and resume
+- What: created `.prd/prd-v5.md` against local v0.5.0 (`9bcf8df`), with R-01..R-10, S-01..S-32, seven dependency-ordered implementation packages, migration constraints, and a later-review packet.
+- Why: the user requested a clear PRD for the next lifecycle/resume increment after the v4 fixes. A targeted rerun of the prior three reproductions rejected incomplete attempts and altered logs, and bounded the one-second background-child timeout to 1.22 s.
+- Decisions proposed: selection is local to each worktree; lifecycle and verification readiness are separate; completed means implementation ready for evaluation; agreement changes require explicit authorization or a recorded existing-delegation disposition; no automatic Git source changes.
+- Outcome: draft only; no implementation, ticket creation, migration, or release action. Checked document identifiers, local links, and whitespace; no runtime changes or full-suite rerun for this documentation task.
+
+## [2026-09-11] end | PRD v5 decomposed into T-47..T-61
+- What: created 15 open tickets with explicit PRD associations, dependencies, acceptance criteria and planned verification suites; `docs/prd-v5-ticket-map.md` records build order and all 32 scenario owners. PRD v5 status is now ticketed.
+- Why: the user explicitly requested tickets for the v5 work. This is decomposition for their implementation and later review, not a request to start coding or migrate the distribution repository.
+- Validation: the existing parser validated the repository ticket set and each new ticket; dependency references and acyclicity, initial open state, absence of receipt fields, complete scenario coverage, local links and whitespace checks passed. Planned implementation tests were not created or run.
+- Outcome: start T-47 using a pinned released kit. No prior tickets, runtime files, generated outputs, commits, registration, migration, or release actions changed in this task.

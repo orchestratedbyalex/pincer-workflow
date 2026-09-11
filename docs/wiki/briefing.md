@@ -48,12 +48,16 @@ schema 1 and the read-only release audit ([[requirements-through-delivery]],
 
 ## Active / next task
 
-1. Nothing in flight. Next PRD candidates (PRD v4 §10): lifecycle/resume (change
-   selection, pause/reopen/supersede), mechanical requirement coverage and impact,
-   platform parity (Codex, Copilot, plugin trials of the runtime), measured delivery
-   quality.
-3. Follow-ups (PRD v4 §10): lifecycle/resume, coverage impact, platform parity; trial the
-   runtime on Codex, Copilot and the plugin.
+1. PRD v5 is ticketed at `.prd/prd-v5.md`: preserve multiple changes, explicit
+   worktree selection, lifecycle transitions, agreement-bound authorization and
+   decision history, deterministic resume, and migration from v0.5.0. Ten
+   requirements, 32 scenarios, seven ordered implementation packages, and a review
+   packet. T-47..T-61 are open; `docs/prd-v5-ticket-map.md` gives dependencies and
+   full scenario coverage. Start with T-47, using a pinned released kit to manage
+   this repository. Implementation and runtime migration have not started.
+   Completed means ready for evaluation, not released.
+2. Follow-ups: mechanical coverage/impact, complete platform parity, and repeated
+   delivery benchmarks. V5 starts only a bounded baseline and handoff trial.
 
 ## Recent decisions
 
