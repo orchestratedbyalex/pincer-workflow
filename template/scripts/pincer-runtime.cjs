@@ -12,7 +12,7 @@
 //   node scripts/pincer-runtime.cjs migrate --preview|--apply --prd .prd/prd-vN.md [--change <id>] [--authorization <text>]
 //   node scripts/pincer-runtime.cjs check C-NN --candidate <sha> [--timeout <seconds>] -- <command...>
 //   node scripts/pincer-runtime.cjs evidence export --candidate <sha> --base <sha> --prd .prd/prd-vN.md --draft <file>
-//   node scripts/pincer-runtime.cjs change list [--json] · change show <id> [--json] · change select <id>
+//   node scripts/pincer-runtime.cjs change list [--json] · change show <id> [--json] · change select <id> · change revise <id>
 //
 // Exit codes: 0 ok · 1 failed/not ready/refused · 2 usage · 3 state busy ·
 // 4 invalid input or state · 124 timed out · 130 interrupted.
@@ -31,6 +31,7 @@ const lifecycle = require('./pincer-runtime/lifecycle.cjs');
 const migrate = require('./pincer-runtime/migrate.cjs');
 const evidence = require('./pincer-runtime/evidence.cjs');
 const changes = require('./pincer-runtime/changes.cjs');
+const agreement = require('./pincer-runtime/agreement.cjs');
 const { atomicWrite, nowIso, tryGit } = require('./pincer-runtime/fsutil.cjs');
 const EXIT = { OK: 0, FAILED: 1, USAGE: 2, BUSY: 3, INVALID: 4, TIMED_OUT: 124, INTERRUPTED: 130 };
 
@@ -56,7 +57,7 @@ function usage(message) {
     '       pincer-runtime.cjs migrate --preview|--apply --prd .prd/prd-vN.md [--change <id>] [--authorization <text>]\n' +
     '       pincer-runtime.cjs check C-NN --candidate <sha> [--timeout <seconds>] -- <command...>\n' +
     '       pincer-runtime.cjs evidence export --candidate <sha> --base <sha> --prd .prd/prd-vN.md --draft <file>\n' +
-    '       pincer-runtime.cjs change list [--json] · change show <id> [--json] · change select <id>\n');
+    '       pincer-runtime.cjs change list [--json] · change show <id> [--json] · change select <id> · change revise <id>\n');
   process.exit(EXIT.USAGE);
 }
 
@@ -308,7 +309,21 @@ function cmdRegister(root, args) {
   process.exit(EXIT.OK);
 }
 
-// change list | show — read-only inspection of the retained records.
+// The current agreement of a record against its recorded entries (read-only).
+function agreementNow(root, record) {
+  const now = agreement.compute(root, record);
+  if (now.code) return now;
+  const entry = agreement.entryFor(record, now.digest);
+  const latest = agreement.latestEntry(record);
+  let difference = null, rendered = null;
+  if (!entry && latest) {
+    const snap = agreement.readSnapshot(root, record, latest);
+    if (!snap.code) { difference = agreement.difference(snap.snapshot, now); rendered = agreement.renderDifference(difference); }
+  }
+  return { digest: now.digest, entry, latest, difference, rendered };
+}
+
+// change list | show | select | revise — inspection and local/authored records.
 function cmdChange(root, args) {
   const [sub, ...rest] = args;
   if (sub === 'list') {
@@ -337,11 +352,22 @@ function cmdChange(root, args) {
     const result = changes.loadRecord(root, o.positional[0]);
     if (result.code) fail('pincer', `${result.code}: ${result.problem}`, exitForCode(result.code));
     const sel = changes.readSelection(root);
-    if (o.json) process.stdout.write(`${JSON.stringify({ schema: 1, runtime: changes.RUNTIME, generated: nowIso(), root, file: result.file, selected: !sel.code && sel.change === o.positional[0], record: result.record, evaluations: [] }, null, 2)}\n`);
-    else process.stdout.write(changes.renderShow(o.positional[0], result));
+    const now = agreementNow(root, result.record);
+    if (o.json) process.stdout.write(`${JSON.stringify({ schema: 1, runtime: changes.RUNTIME, generated: nowIso(), root, file: result.file, selected: !sel.code && sel.change === o.positional[0], record: result.record, agreement: now.code ? { current: null, problem: { code: now.code, detail: now.problem } } : { current: now.digest, recorded: now.entry ? now.entry.id : null, latest: now.latest ? now.latest.id : null, difference: now.difference }, evaluations: [] }, null, 2)}\n`);
+    else process.stdout.write(changes.renderShow(o.positional[0], result, { agreement: now }));
     process.exit(EXIT.OK);
   }
-  usage(sub ? `change ${sub} is not available in this build (change supports: list, show, select)` : 'change requires a subcommand: list, show, select');
+  if (sub === 'revise') {
+    const o = parseOptions(rest, {});
+    if (o.positional.length !== 1) usage('change revise requires exactly one change ID');
+    const result = agreement.revise(root, o.positional[0]);
+    if (result.code) fail('pincer', `${result.code}: ${result.problem}`, exitForCode(result.code));
+    if (result.action === 'unchanged') process.stdout.write(`unchanged: the current agreement of ${o.positional[0]} is ${result.agreement.id} ${result.agreement.digest.slice(0, 12)} (recorded ${result.agreement.recorded}); nothing written\n`);
+    else process.stdout.write(`recorded agreement ${result.agreement.id} ${result.agreement.digest.slice(0, 12)} for ${o.positional[0]} (${result.agreement.tickets.length} ticket(s), snapshot ${result.agreement.snapshot})${result.difference ? ` — differs from the previous agreement: ${agreement.renderDifference(result.difference)}` : ''}\n`);
+    if (result.action === 'recorded') process.stderr.write('pincer: note: recording an agreement authorizes nothing; record its disposition with `change authorize`\n');
+    process.exit(EXIT.OK);
+  }
+  usage(sub ? `change ${sub} is not available in this build (change supports: list, show, select, revise)` : 'change requires a subcommand: list, show, select, revise');
 }
 
 function cmdSnapshot(root, args) {

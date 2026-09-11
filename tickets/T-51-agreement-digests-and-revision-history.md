@@ -1,9 +1,13 @@
 ---
 ticket: T-51
-status: open
+status: done
 size: M
 prd: .prd/prd-v5.md
 depends_on: [T-49]
+started: 2026-09-11T21:04:12Z
+last_check: 2026-09-11T21:09:15Z passed 017a041d7a2b
+verified: 2026-09-11T21:09:15Z 017a041d7a2b
+finished: 2026-09-11T21:09:15Z
 ---
 
 ## Objective
@@ -24,9 +28,9 @@ Identify agreements and retain their authored revisions so PRD v5 can be impleme
 - Write revision preparation through T-48 with expected-version comparison; preparation itself authorizes no execution.
 
 ## Acceptance Criteria
-- [ ] Lifecycle/checkbox changes keep the agreement digest stable; PRD body, acceptance, dependencies and check changes each alter it.
-- [ ] Old and new agreement inputs remain recoverable and inspectable, including same-filename PRD revisions.
-- [ ] Malformed authored input, missing historical references and stale revision writes refuse without losing earlier history.
+- [x] Lifecycle/checkbox changes keep the agreement digest stable; PRD body, acceptance, dependencies and check changes each alter it.
+- [x] Old and new agreement inputs remain recoverable and inspectable, including same-filename PRD revisions.
+- [x] Malformed authored input, missing historical references and stale revision writes refuse without losing earlier history.
 
 ## Verification
 Proves: Mutates each included/excluded field and verifies digest changes, revision reconstruction and rejected invalid/stale updates.

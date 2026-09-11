@@ -232,6 +232,11 @@ function loadRecords(root) {
   for (const e of s.entries.filter(x => x.schema === 2)) {
     const invalid = validateRecord(e.doc, e.file);
     if (invalid) { out.problems.push({ code: invalid.code, detail: invalid.problem }); continue; }
+    // Every recorded agreement must be reviewable: its snapshot exists and its
+    // digest recomputes from the snapshot (docs/runtime-contracts.md).
+    const agreement = require('./agreement.cjs');
+    const badSnapshot = e.doc.agreements.map(g => agreement.readSnapshot(root, e.doc, g)).find(r => r.code);
+    if (badSnapshot) { out.problems.push({ code: badSnapshot.code, detail: badSnapshot.problem }); continue; }
     out.records.set(e.id, { record: e.doc, file: e.file });
     const prior = owners.get(e.doc.prd);
     if (prior) out.problems.push({ code: 'INPUT_INVALID', detail: `duplicate PRD ownership: ${e.doc.prd} is owned by change "${prior}" and change "${e.id}"; remove one record by hand` });
@@ -358,6 +363,11 @@ function renderShow(id, { record, file }, extra = {}) {
   const lc = r.lifecycle;
   lines.push(`Lifecycle  ${lc.state} since ${lc.since}${lc.superseded_by ? ` · superseded by ${lc.superseded_by}` : ''}${lc.reason ? ` · reason: ${lc.reason}` : ''}${lc.note ? ` · note (authored): ${lc.note}` : ''}`);
   lines.push(`Agreements ${r.agreements.length ? r.agreements.map(g => `${g.id} ${short(g.digest)} (prd ${short(g.prd_revision)}, ${g.tickets.length} ticket(s), ${g.decisions.length} decision(s)) recorded ${g.recorded}`).join('; ') : 'none recorded'}`);
+  if (extra.agreement) {
+    const a = extra.agreement;
+    if (a.code) lines.push(`Agreement  now: cannot be computed — ${a.code}: ${a.problem}`);
+    else lines.push(`Agreement  now ${short(a.digest)}${a.entry ? ` = ${a.entry.id}` : a.latest ? ` ≠ latest recorded ${a.latest.id} ${short(a.latest.digest)} (${a.rendered}); record it with: node scripts/pincer-runtime.cjs change revise ${id}` : ' (not recorded; record it with: node scripts/pincer-runtime.cjs change revise ' + id + ')'}`);
+  }
   lines.push(`Authorizations ${r.authorizations.length ? r.authorizations.map(a => `${a.id} ${a.disposition} for ${a.agreement} (${short(a.digest)}) recorded ${a.recorded}${a.disposition === 'user' ? ` — "${a.excerpt}" (${a.reference})` : ` — basis ${a.basis}: ${a.explanation}`}`).join('; ') : 'none'}`);
   lines.push(`Decisions  ${r.decisions.length ? r.decisions.map(d => `${d.id} ${d.status}: ${d.summary}${d.status === 'resolved' ? ` — "${d.excerpt}" (${d.reference})` : ''}`).join('; ') : 'none'}`);
   lines.push(`Evaluations ${extra.evaluations && extra.evaluations.length ? extra.evaluations.map(e => `${e.candidate.slice(0, 7)} ${e.manifest} recorded ${e.recorded}`).join('; ') : 'none recorded'}`);
@@ -406,7 +416,7 @@ function resolveSelected(root, { change = null } = {}) {
   if (!CHANGE_ID.test(id)) return { ...base, code: 'INPUT_INVALID', problem: `change ID must match [a-z0-9][a-z0-9-]{0,63}: ${id}` };
   const entry = loaded.records.get(id);
   if (!entry) {
-    const own = loaded.problems.find(p => p.detail.startsWith(`${recordFile(id)}:`));
+    const own = loaded.problems.find(p => p.detail.startsWith(`${recordFile(id)}:`) || p.detail.startsWith(`${CHANGES_DIR}/${id}/`));
     const why = own ? `is unreadable (${own.code}: ${own.detail})` : `does not exist (retained: ${[...loaded.records.keys()].join(', ') || 'none'})`;
     if (change) return { ...base, code: own ? own.code : 'INPUT_INVALID', problem: `change record ${recordFile(id)} ${why}` };
     return { ...base, code: 'SELECTION_INVALID', problem: `the selected change "${id}" ${why}; select another with: node scripts/pincer-runtime.cjs change select <id>, or repair the record` };

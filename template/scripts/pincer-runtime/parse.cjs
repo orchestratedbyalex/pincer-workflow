@@ -252,6 +252,25 @@ function normalizePrd(text) {
   }
   return `${out.join('\n')}\n`;
 }
+// Split a ticket text into the parts the structural agreement difference names:
+// the frontmatter, the Acceptance Criteria section, the Verification section and
+// everything else (headings inside fenced blocks are ignored, as elsewhere).
+function ticketSections(text) {
+  const rows = lines(text);
+  const parts = { frontmatter: [], acceptance: [], verification: [], other: [] };
+  let inFront = rows[0] === '---', section = 'other', fence = false;
+  for (let i = 0; i < rows.length; i++) {
+    const line = rows[i];
+    if (inFront) { parts.frontmatter.push(line); if (i > 0 && line === '---') inFront = false; continue; }
+    if (fence) { parts[section].push(line); if (/^[ \t]*```/.test(line)) fence = false; continue; }
+    if (/^[ \t]*```/.test(line)) { fence = true; parts[section].push(line); continue; }
+    if (/^## Acceptance Criteria[ \t]*$/.test(line)) section = 'acceptance';
+    else if (/^## Verification[ \t]*$/.test(line)) section = 'verification';
+    else if (/^## /.test(line)) section = 'other';
+    parts[section].push(line);
+  }
+  return Object.fromEntries(Object.entries(parts).map(([k, v]) => [k, v.join('\n')]));
+}
 const ticketDigest = text => sha256(normalizeTicket(text));
 const prdDigest = text => sha256(normalizePrd(text));
 const checkDigest = (text, timeoutSeconds = DEFAULT_TIMEOUT) => sha256(`${blockText(text)}timeout=${timeoutSeconds}\n`);
@@ -292,6 +311,6 @@ module.exports = {
   sha256, lines, normalizeId, canonicalId, parseFrontmatter, frontmatterField,
   verificationCommands, blockText, legacyBlockHash, unticked, effectiveTimeout,
   validateTicket, dependencies, validateMetadata, validatePrd,
-  normalizeTicket, normalizePrd, ticketDigest, prdDigest, checkDigest,
+  normalizeTicket, normalizePrd, ticketDigest, prdDigest, checkDigest, ticketSections,
   ticketFiles, ticketFile, validateTicketSet,
 };
