@@ -121,3 +121,9 @@ Outcome: npm publish still pending (needs the user's OTP); next is `/pincer-narr
 - Why: the interactive trial's finding 1 (receipt-refresh commit after a hand repair), finding 3 (three commands under one `unverified`) and finding 4 (plan re-asked what the brief settled).
 - Files: `template/.claude/commands/pincer-{code,status,evaluate,plan}.md`, `template/docs/dry-run-checklist.md`, `test/workflow.test.js`, `docs/trial-2026-09-10-prd-v3.md`, `.prd/prd-v3.md`, `.prd/evidence/prd-v3/a10358e…/`, `NOTES.md`, README, `docs/index.html`, generated adapters and plugin.
 - Outcome: eligible recovery case observed live (named command, no verify, no commit); negative case stays outstanding because the injected `npm` shim was detected and bypassed; the reviewer caught that the exception's second condition was literally unsatisfiable before T-28.
+
+## [2026-09-11] end | PRD v4 drafted for user implementation and later review
+- What: drafted `.prd/prd-v4.md` against local v0.4.1, with R-01..R-10, S-01..S-31, seven ordered implementation packages, validation gates, migration constraints, and a review packet.
+- Why: the user requested detailed logical next steps after the roadmap assessment. The next increment corrects recovery and moves verification execution, source identity, attempts, and evidence capture into a shared runtime.
+- Scope: minimal explicit change identity now; full lifecycle/authorization enforcement, mechanical coverage-impact analysis, and comparative platform trials remain follow-up PRDs.
+- Outcome: draft only; no implementation, tickets, runtime migration, release action, or test-pass claim. Documentation links, identifier uniqueness, and whitespace checked. Wiki briefing points to the draft.

@@ -50,6 +50,14 @@ claims a two-hour timebox and lists the evidence validator.
 
 ## Active / next task
 
+PRD v4 is now drafted at `.prd/prd-v4.md` (2026-09-11): recovery correction plus
+runtime-owned, source-bound verification, with ten requirements, 31 scenarios,
+seven implementation steps, and a later-review packet. The user requested a plan
+to implement themselves and bring back for review; implementation has not started.
+Full lifecycle, coverage-impact analysis, and platform benchmarking are explicit
+follow-up PRDs. Existing release notes below are historical session state, not a
+new registry or remote-status check.
+
 1. Publish v0.4.1 (`npm publish --otp=<code>`, user-run) and `git push
    --follow-tags`; confirm CI. Then next PRD candidates
    (`docs/pincer-improvement-plan.md`): M1 runtime that absorbs `notes_current`,
