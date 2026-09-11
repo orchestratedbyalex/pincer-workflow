@@ -55,7 +55,7 @@ function main(argv) {
       process.exit(1);
     }
     const doc = JSON.parse(fs.readFileSync(path.resolve(manifest), 'utf8'));
-    process.stdout.write(`ok ${doc.candidate}\n`);
+    process.stdout.write(`ok ${doc.candidate}${doc.schema === 2 ? ' schema 2' : ''}\n`);
     if (opts.files) for (const p of opts.list) process.stdout.write(`${p}\n`);
     return;
   }

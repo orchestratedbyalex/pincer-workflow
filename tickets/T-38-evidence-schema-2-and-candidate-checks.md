@@ -1,9 +1,13 @@
 ---
 ticket: T-38
-status: open
+status: done
 size: L
 prd: .prd/prd-v4.md
 depends_on: [T-36]
+started: 2026-09-11T11:02:48Z
+last_check: 2026-09-11T11:10:34Z passed 84039cc9fb04
+verified: 2026-09-11T11:10:34Z 84039cc9fb04
+finished: 2026-09-11T11:10:34Z
 ---
 
 ## Objective
@@ -21,9 +25,9 @@ Run evaluate's executable checks through the runtime against the committed candi
 - Tests (`test/runtime-evidence.test.js`, added to `npm test`): S-21 on a committed fixture candidate, `check` runs, `export` produces a manifest whose command text, outcome, log and source identity match the attempt; editing the log, pointing at a wrong candidate, deleting an artifact, and altering `attempt.log_sha256` each fail validation; a dirty tree, a HEAD that is not the candidate, and an untracked stray file each make `check` refuse; S-22 the tickets' `verify` runs before the candidate created no product diff, and the export commit path (NOTES.md plus the evidence directory) keeps `notes_current` current while an extra source change does not; S-23 a schema-1 fixture validates with the legacy label and cannot satisfy a requirement that a schema-2 runtime check is required for (a draft naming a command check with no attempt refuses export).
 
 ## Acceptance Criteria
-- [ ] Executable candidate checks run only on a clean view of the committed candidate and are exported from attempts, not authored.
-- [ ] Schema 2 validates tamper, wrong-candidate and missing-artifact cases; schema 1 keeps validating with a legacy label.
-- [ ] `npm test` passes with the new suite and the existing evidence suite.
+- [x] Executable candidate checks run only on a clean view of the committed candidate and are exported from attempts, not authored.
+- [x] Schema 2 validates tamper, wrong-candidate and missing-artifact cases; schema 1 keeps validating with a legacy label.
+- [x] `npm test` passes with the new suite and the existing evidence suite.
 
 ## Verification
 Proves: exported evidence is populated from runtime attempts and validated end to end on a real candidate; regression: an export from a dirty tree, a manifest whose log disagrees with its attempt, or schema 1 passing as runtime provenance.

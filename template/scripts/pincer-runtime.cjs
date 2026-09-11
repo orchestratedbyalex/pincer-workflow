@@ -10,6 +10,8 @@
 //   node scripts/pincer-runtime.cjs ready [T-NN]
 //   node scripts/pincer-runtime.cjs start|verify|done T-NN · bind T-NN .prd/prd-vN.md
 //   node scripts/pincer-runtime.cjs migrate --preview|--apply --prd .prd/prd-vN.md [--change <id>] [--authorization <text>]
+//   node scripts/pincer-runtime.cjs check C-NN --candidate <sha> [--timeout <seconds>] -- <command...>
+//   node scripts/pincer-runtime.cjs evidence export --candidate <sha> --base <sha> --prd .prd/prd-vN.md --draft <file>
 //
 // Exit codes: 0 ok · 1 failed/not ready/refused · 2 usage · 3 state busy ·
 // 4 invalid input or state · 124 timed out · 130 interrupted.
@@ -26,6 +28,8 @@ const runner = require('./pincer-runtime/runner.cjs');
 const sanitize = require('./pincer-runtime/sanitize.cjs');
 const lifecycle = require('./pincer-runtime/lifecycle.cjs');
 const migrate = require('./pincer-runtime/migrate.cjs');
+const evidence = require('./pincer-runtime/evidence.cjs');
+const { atomicWrite, nowIso, tryGit } = require('./pincer-runtime/fsutil.cjs');
 const EXIT = { OK: 0, FAILED: 1, USAGE: 2, BUSY: 3, INVALID: 4, TIMED_OUT: 124, INTERRUPTED: 130 };
 
 function repoRoot() {
@@ -47,8 +51,80 @@ function usage(message) {
     '       pincer-runtime.cjs ready [T-NN]\n' +
     '       pincer-runtime.cjs start|verify|done T-NN\n' +
     '       pincer-runtime.cjs bind T-NN .prd/prd-vN.md\n' +
-    '       pincer-runtime.cjs migrate --preview|--apply --prd .prd/prd-vN.md [--change <id>] [--authorization <text>]\n');
+    '       pincer-runtime.cjs migrate --preview|--apply --prd .prd/prd-vN.md [--change <id>] [--authorization <text>]\n' +
+    '       pincer-runtime.cjs check C-NN --candidate <sha> [--timeout <seconds>] -- <command...>\n' +
+    '       pincer-runtime.cjs evidence export --candidate <sha> --base <sha> --prd .prd/prd-vN.md --draft <file>\n');
   process.exit(EXIT.USAGE);
+}
+
+// The clean-view precondition for candidate checks and exports: HEAD is the
+// candidate and nothing is dirty outside NOTES.md and the candidate's evidence
+// directory. Never stashes, resets or commits.
+function requireCandidateView(root, candidate, prd) {
+  const head = identity.head(root);
+  if (!head) fail('pincer', 'not a git repository with commits', EXIT.INVALID);
+  if (head !== candidate) fail('pincer', `HEAD is ${head.slice(0, 7)}, not the candidate ${candidate.slice(0, 7)}; check out the committed candidate first (no stash, reset or commit is made for you)`, EXIT.FAILED);
+  const version = prd.match(parse.PRD_REF)[1];
+  const allowed = p => p === 'NOTES.md' || p.startsWith(`.prd/evidence/prd-v${version}/${candidate}/`);
+  const dirty = tryGit(root, ['status', '--porcelain', '--untracked-files=all']);
+  if (dirty.error) fail('pincer', `git status failed: ${dirty.error}`, EXIT.INVALID);
+  const offending = dirty.out.split('\n').filter(Boolean).map(l => l.slice(3).replace(/^"(.*)"$/, '$1')).filter(p => !allowed(p));
+  if (offending.length) fail('pincer', `the working tree is not a clean view of the candidate: ${offending.slice(0, 5).join(', ')}${offending.length > 5 ? ` (+${offending.length - 5})` : ''}; only NOTES.md and .prd/evidence/prd-v${version}/${candidate}/ may differ`, EXIT.FAILED);
+}
+
+async function cmdCheck(root, args) {
+  const o = parseOptions(args, { valued: ['--candidate', '--timeout'] });
+  const [checkId, ...command] = o.positional;
+  if (!checkId || !evidence.CHECK_ID.test(checkId)) usage('check requires a check ID such as C-01');
+  if (!o.candidate || !parse.HEX40.test(o.candidate)) usage('check requires --candidate <full 40-hex commit ID>');
+  if (!command.length) usage('check requires the command after --');
+  const timeout = o.timeout === undefined ? parse.DEFAULT_TIMEOUT : Number(o.timeout);
+  if (!Number.isInteger(timeout) || timeout <= 0) usage('--timeout must be a positive integer number of seconds');
+  const bind = identity.loadBinding(root);
+  if (bind.code) fail('pincer', `${bind.code}: ${bind.problem}`, EXIT.INVALID);
+  const b = bind.binding;
+  requireCandidateView(root, o.candidate, b.prd);
+  const line = command.join(' ');
+  const secretLine = sanitize.inlineSecretLine([line]);
+  if (secretLine) fail('pincer', 'the check command assigns a secret-like literal; reference it from the environment instead', EXIT.INVALID);
+  process.stdout.write(`── ${checkId} candidate ${o.candidate.slice(0, 7)} ──\n  $ ${sanitize.sanitizeText(line).text}\n`);
+  const context = { kind: 'candidate', change: b.change, prd: b.prd, prd_revision: b.prd_revision, base: b.base, candidate: o.candidate, check: checkId };
+  const result = await runner.runAttempt({ root, context, commands: [line], timeoutSeconds: timeout, command: `check ${checkId}` });
+  if (result.code) fail('pincer', `${result.code}: ${result.problem}`, problemExit(result.code));
+  const a = result.attempt;
+  const logs = `${state.RUNTIME_DIR}/attempts/${a.id}/`;
+  if (a.outcome === 'passed') process.stdout.write(`✓ ${checkId} passed — attempt ${a.id} (source ${a.source.after.slice(0, 12)}, logs ${logs})\n`);
+  else process.stderr.write(`✗ ${checkId} ${a.outcome}${a.exit_code !== null ? ` (exit ${a.exit_code})` : ''}${a.error ? `: ${a.error}` : ''} — attempt ${a.id} (logs ${logs})\n`);
+  process.exit(runner.exitFor(a));
+}
+
+function cmdEvidence(root, args) {
+  const [sub, ...rest] = args;
+  if (sub !== 'export') usage('evidence supports: export');
+  const o = parseOptions(rest, { valued: ['--candidate', '--base', '--prd', '--draft'] });
+  if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
+  for (const key of ['candidate', 'base']) if (!o[key] || !parse.HEX40.test(o[key])) usage(`evidence export requires --${key} <full 40-hex commit ID>`);
+  if (!o.prd || !parse.PRD_REF.test(o.prd)) usage('evidence export requires --prd .prd/prd-vN.md');
+  if (!o.draft) usage('evidence export requires --draft <file>');
+  const bind = identity.loadBinding(root, { prd: o.prd });
+  if (bind.code) fail('pincer', `${bind.code}: ${bind.problem}`, EXIT.INVALID);
+  requireCandidateView(root, o.candidate, o.prd);
+  let draft;
+  try { draft = JSON.parse(fs.readFileSync(path.resolve(root, o.draft), 'utf8')); } catch (error) { fail('pincer', `cannot read draft ${o.draft}: ${error.message}`, EXIT.INVALID); }
+  const indexRead = state.exists(root) ? state.readIndex(root) : { index: null };
+  if (indexRead.error) fail('pincer', indexRead.error, EXIT.INVALID);
+  const attemptsFor = checkId => (indexRead.index ? state.latestAttempt(root, state.contextKey({ kind: 'candidate', candidate: o.candidate, check: checkId }), indexRead.index) : null);
+  const os = require('node:os');
+  const result = evidence.exportEvidence(root, {
+    candidate: o.candidate, base: o.base, prd: o.prd, draft, binding: bind.binding, attemptsFor,
+    environment: { os: `${os.platform()} ${os.release()}`, node: process.version }, now: nowIso(), atomicWrite,
+  });
+  if (result.problems.length) {
+    for (const p of result.problems) process.stderr.write(`evidence: ${result.manifest || o.draft}: ${p}\n`);
+    process.exit(EXIT.FAILED);
+  }
+  process.stdout.write(`exported ${result.manifest} (schema 2) — validate: node scripts/pincer-evidence.cjs validate ${result.manifest} --candidate ${o.candidate} --prd ${o.prd}\n`);
+  process.exit(EXIT.OK);
 }
 
 function cmdMigrate(root, args) {
@@ -245,6 +321,8 @@ function main(argv) {
   if (command === 'ready') return cmdReady(root, rest);
   if (['start', 'verify', 'done', 'bind'].includes(command)) return cmdLifecycle(root, command, rest);
   if (command === 'migrate') return cmdMigrate(root, rest);
+  if (command === 'check') return cmdCheck(root, rest);
+  if (command === 'evidence') return cmdEvidence(root, rest);
   usage(command ? `unknown command ${command}` : undefined);
 }
 

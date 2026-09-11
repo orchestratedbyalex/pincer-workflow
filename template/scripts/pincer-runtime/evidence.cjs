@@ -33,6 +33,16 @@ const CHECK_KEYS = ['id', 'kind', 'required', 'result', 'command', 'timestamp', 
 const DISPOSITIONS = ['delivered', 'blocked', 'deferred'];
 const KINDS = ['command', 'visual', 'review'];
 const RESULTS = ['passed', 'failed', 'unverified'];
+// Schema 2 (docs/runtime-contracts.md, "Evidence schema 2"): a change binding,
+// provenance per check, and attempt provenance on runtime command checks.
+const SCHEMAS = [1, 2];
+const TOP_KEYS_2 = [...TOP_KEYS, 'change'];
+const CHECK_KEYS_2 = [...CHECK_KEYS, 'provenance', 'attempt'];
+const PROVENANCE = ['runtime', 'authored'];
+const ATTEMPT_KEYS = ['id', 'sequence', 'outcome', 'exit_code', 'started', 'finished', 'source_before', 'source_after', 'check_digest', 'runner', 'cwd', 'log_sha256', 'truncated'];
+const OUTCOMES = ['passed', 'failed', 'timed_out', 'interrupted', 'error'];
+const CHANGE_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
+const resultFor = outcome => (outcome === 'passed' ? 'passed' : outcome === 'error' ? 'unverified' : 'failed');
 
 const isObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const shortText = v => typeof v === 'string' && v.length <= MAX_TEXT;
@@ -84,12 +94,25 @@ function validate(manifestArg, opts, rootArg) {
   let doc;
   try { doc = JSON.parse(raw); } catch (error) { return [`malformed JSON (${error.message})`]; }
   if (!isObject(doc)) return ['malformed: the manifest must be a JSON object'];
-  if (doc.schema !== SCHEMA) return [`unknown evidence schema ${JSON.stringify(doc.schema)} — this runtime validates schema ${SCHEMA}`];
+  if (!SCHEMAS.includes(doc.schema)) return [`unknown evidence schema ${JSON.stringify(doc.schema)} — this runtime validates schemas ${SCHEMAS.join(' and ')}`];
+  const schema2 = doc.schema === 2;
+  const topKeys = schema2 ? TOP_KEYS_2 : TOP_KEYS;
+  const checkKeys = schema2 ? CHECK_KEYS_2 : CHECK_KEYS;
 
   const problems = [];
   const problem = message => problems.push(message);
-  for (const key of Object.keys(doc)) if (!TOP_KEYS.includes(key)) problem(`unknown top-level key "${key}"`);
-  for (const key of TOP_KEYS) if (!(key in doc)) problem(`missing "${key}"`);
+  for (const key of Object.keys(doc)) if (!topKeys.includes(key)) problem(`unknown top-level key "${key}"`);
+  for (const key of topKeys) if (!(key in doc)) problem(`missing "${key}"`);
+  if (schema2) {
+    const change = doc.change;
+    if (!isObject(change)) problem('change must be an object {id, prd_revision, base}');
+    else {
+      for (const key of Object.keys(change)) if (!['id', 'prd_revision', 'base'].includes(key)) problem(`change.${key} is not allowed`);
+      if (typeof change.id !== 'string' || !CHANGE_ID.test(change.id)) problem('change.id must be a change ID ([a-z0-9][a-z0-9-]{0,63})');
+      if (typeof change.prd_revision !== 'string' || !SHA256.test(change.prd_revision)) problem('change.prd_revision must be a 64-hex SHA-256 digest');
+      if (typeof change.base !== 'string' || !HEX40.test(change.base)) problem('change.base must be a full 40-hex commit ID');
+    }
+  }
 
   const prd = typeof doc.prd === 'string' ? doc.prd.match(PRD_REF) : null;
   if (!prd) problem('prd must be a reference of the form .prd/prd-vN.md');
@@ -162,8 +185,9 @@ function validate(manifestArg, opts, rootArg) {
     else if (checks.has(id)) problem(`duplicate check ID ${id}`);
     else checks.set(id, check);
     const name = id || label;
-    for (const key of Object.keys(check)) if (!CHECK_KEYS.includes(key)) problem(`check ${name}: unknown key "${key}"`);
+    for (const key of Object.keys(check)) if (!checkKeys.includes(key)) problem(`check ${name}: unknown key "${key}"`);
     if (!KINDS.includes(check.kind)) problem(`check ${name}: kind must be one of ${KINDS.join(', ')}`);
+    if (schema2) validateProvenance(check, name, doc, problem);
     if (typeof check.required !== 'boolean') problem(`check ${name}: required must be true or false`);
     if (!RESULTS.includes(check.result)) problem(`check ${name}: result must be one of ${RESULTS.join(', ')}`);
     if (typeof check.timestamp !== 'string' || !ISO_UTC.test(check.timestamp)) problem(`check ${name}: timestamp must be an ISO-8601 UTC timestamp`);
@@ -231,5 +255,119 @@ function validate(manifestArg, opts, rootArg) {
   return problems;
 }
 
+// Schema 2: every check declares its provenance; a passed or failed command
+// result exists only as a runtime attempt whose log digest the manifest carries.
+function validateProvenance(check, name, doc, problem) {
+  if (!PROVENANCE.includes(check.provenance)) { problem(`check ${name}: provenance must be runtime or authored`); return; }
+  const artifactDigest = p => { const entry = Array.isArray(doc.artifacts) ? doc.artifacts.find(a => isObject(a) && a.path === p) : null; return entry ? entry.sha256 : null; };
+  if (check.provenance === 'authored') {
+    if ('attempt' in check) problem(`check ${name}: an authored check carries no attempt`);
+    if (check.kind === 'command' && ['passed', 'failed'].includes(check.result)) problem(`check ${name}: a ${check.result} command check must have runtime provenance (run it through pincer-runtime.cjs check)`);
+    return;
+  }
+  if (check.kind !== 'command') problem(`check ${name}: runtime provenance applies to command checks only`);
+  const a = check.attempt;
+  if (!isObject(a)) { problem(`check ${name}: runtime provenance requires an attempt object`); return; }
+  for (const key of Object.keys(a)) if (!ATTEMPT_KEYS.includes(key)) problem(`check ${name}: attempt.${key} is not allowed`);
+  for (const key of ATTEMPT_KEYS) if (!(key in a)) problem(`check ${name}: attempt.${key} is missing`);
+  if (!nonempty(a.id)) problem(`check ${name}: attempt.id must be a nonempty string`);
+  if (!Number.isInteger(a.sequence) || a.sequence < 1) problem(`check ${name}: attempt.sequence must be a positive integer`);
+  if (!OUTCOMES.includes(a.outcome)) problem(`check ${name}: attempt.outcome must be one of ${OUTCOMES.join(', ')}`);
+  else if (check.result !== resultFor(a.outcome)) problem(`check ${name}: result ${check.result} disagrees with attempt outcome ${a.outcome} (expected ${resultFor(a.outcome)})`);
+  if (a.exit_code !== null && !Number.isInteger(a.exit_code)) problem(`check ${name}: attempt.exit_code must be an integer or null`);
+  for (const key of ['started', 'finished']) if (typeof a[key] !== 'string' || !ISO_UTC.test(a[key])) problem(`check ${name}: attempt.${key} must be an ISO-8601 UTC timestamp`);
+  for (const key of ['source_before', 'source_after']) if (a[key] !== null && (typeof a[key] !== 'string' || !SHA256.test(a[key]))) problem(`check ${name}: attempt.${key} must be a 64-hex digest or null`);
+  if (typeof a.check_digest !== 'string' || !SHA256.test(a.check_digest)) problem(`check ${name}: attempt.check_digest must be a 64-hex digest`);
+  if (!isObject(a.runner) || !nonempty(a.runner.shell) || !Array.isArray(a.runner.args) || !nonempty(a.runner.version)) problem(`check ${name}: attempt.runner must be {shell, args, version}`);
+  if (!shortText(a.cwd)) problem(`check ${name}: attempt.cwd must be a short string`);
+  if (typeof a.truncated !== 'boolean') problem(`check ${name}: attempt.truncated must be true or false`);
+  if (typeof a.log_sha256 !== 'string' || !SHA256.test(a.log_sha256)) problem(`check ${name}: attempt.log_sha256 must be a 64-hex digest`);
+  else if (Array.isArray(check.artifacts)) {
+    const logs = check.artifacts.filter(p => typeof p === 'string' && /\.log$/.test(p));
+    if (logs.length !== 1) problem(`check ${name}: a runtime check references exactly one .log artifact`);
+    else if (artifactDigest(logs[0]) !== a.log_sha256) problem(`check ${name}: log artifact ${logs[0]} digest does not equal attempt.log_sha256`);
+  }
+}
 
-module.exports = { SCHEMA, HEX40, PRD_REF, validate, digestFile, repoRoot, realpathDeep, unsafePath };
+// --- Export (schema 2) ---------------------------------------------------------
+// Build the candidate evidence set from a draft of authored fields and the
+// runtime's attempts for the candidate. Never invents a review transcript and
+// never converts a review judgment into a command result.
+function exportEvidence(root, { candidate, base, prd, draft, binding, attemptsFor, environment, now, atomicWrite }) {
+  const version = prd.match(PRD_REF)[1];
+  const dirRel = `.prd/evidence/prd-v${version}/${candidate}`;
+  const dirAbs = path.join(root, dirRel);
+  const problems = [];
+  if (!isObject(draft)) return { problems: ['draft must be a JSON object'] };
+  const allowed = ['environment', 'coverage_review', 'requirements', 'checks', 'visual_review'];
+  for (const key of Object.keys(draft)) if (!allowed.includes(key)) problems.push(`draft: unknown key "${key}" (allowed: ${allowed.join(', ')})`);
+  if (!Array.isArray(draft.checks)) problems.push('draft.checks must be an array');
+  if (problems.length) return { problems };
+  const env = isObject(draft.environment) ? draft.environment : {};
+  const checks = [];
+  const artifactPaths = new Set();
+  for (const stub of draft.checks) {
+    if (!isObject(stub) || typeof stub.id !== 'string') { problems.push('draft.checks entries must be objects with an id'); continue; }
+    const isStub = stub.kind === 'command' && !('result' in stub);
+    if (!isStub) {
+      if (stub.kind === 'command' && ['passed', 'failed'].includes(stub.result)) { problems.push(`draft check ${stub.id}: a ${stub.result} command result cannot be authored; omit result to populate it from the runtime attempt`); continue; }
+      const authored = { ...stub, provenance: 'authored' };
+      delete authored.attempt;
+      for (const p of authored.artifacts || []) artifactPaths.add(p);
+      checks.push(authored);
+      continue;
+    }
+    const attempt = attemptsFor(stub.id);
+    if (!attempt) { problems.push(`draft check ${stub.id}: no runtime attempt for candidate ${candidate}; run: node scripts/pincer-runtime.cjs check ${stub.id} --candidate ${candidate} -- <command>`); continue; }
+    if (attempt.outcome === 'running') { problems.push(`draft check ${stub.id}: attempt ${attempt.id} is still running`); continue; }
+    const logRel = `${dirRel}/checks/${stub.id}.log`;
+    const pieces = [`$ ${(attempt.check && attempt.check.display) || ''}`.replace(/\n$/, ''), ''];
+    let missing = false;
+    for (const stream of ['stdout', 'stderr']) {
+      const info = attempt.artifacts && attempt.artifacts[stream];
+      const file = info && info.path ? path.join(root, info.path) : null;
+      let text = '';
+      if (file && fs.existsSync(file)) text = fs.readFileSync(file, 'utf8');
+      else { missing = true; text = '[pincer: captured log missing from local state]'; }
+      pieces.push(`--- ${stream}${info && info.truncated ? ' (truncated by the runtime)' : ''}${info && info.redactions ? ` (${info.redactions} redaction(s))` : ''} ---`);
+      pieces.push(text.replace(/\n$/, ''));
+    }
+    if (missing) { problems.push(`draft check ${stub.id}: attempt ${attempt.id} has no captured log; run the check again`); continue; }
+    pieces.push(`--- outcome ${attempt.outcome}${attempt.exit_code !== null && attempt.exit_code !== undefined ? ` (exit ${attempt.exit_code})` : ''} ---`);
+    const content = `${pieces.join('\n')}\n`;
+    atomicWrite(path.join(dirAbs, 'checks', `${stub.id}.log`), content);
+    artifactPaths.add(logRel);
+    checks.push({
+      id: stub.id, kind: 'command', required: Boolean(stub.required), result: resultFor(attempt.outcome),
+      command: (attempt.check && attempt.check.display || '').replace(/\n$/, ''), timestamp: attempt.finished || attempt.started,
+      artifacts: [logRel, ...(stub.artifacts || [])], provenance: 'runtime',
+      attempt: {
+        id: attempt.id, sequence: attempt.sequence, outcome: attempt.outcome, exit_code: attempt.exit_code ?? null,
+        started: attempt.started, finished: attempt.finished, source_before: attempt.source ? attempt.source.before : null, source_after: attempt.source ? attempt.source.after : null,
+        check_digest: attempt.check.digest, runner: attempt.runner, cwd: attempt.cwd || '.', log_sha256: crypto.createHash('sha256').update(content).digest('hex'), truncated: Boolean((attempt.artifacts.stdout && attempt.artifacts.stdout.truncated) || (attempt.artifacts.stderr && attempt.artifacts.stderr.truncated)),
+      },
+      ...(stub.note ? { note: stub.note } : {}), ...(attempt.outcome === 'error' ? { note: `${stub.note ? `${stub.note}; ` : ''}attempt error: ${attempt.error}` } : {}),
+    });
+  }
+  if (problems.length) return { problems };
+  const artifacts = [];
+  for (const p of [...artifactPaths].sort()) {
+    const abs = path.join(root, p);
+    if (!fs.existsSync(abs)) { problems.push(`artifact ${p}: missing (authored artifacts must be saved before export)`); continue; }
+    artifacts.push({ path: p, sha256: digestFile(abs) });
+  }
+  if (problems.length) return { problems };
+  const manifest = {
+    schema: 2, prd, base, candidate, created: now,
+    environment: { os: environment.os, node: environment.node, tools: env.tools || [], limitations: env.limitations || [] },
+    coverage_review: draft.coverage_review, requirements: draft.requirements, checks, visual_review: draft.visual_review, artifacts,
+    change: { id: binding.change, prd_revision: binding.prd_revision, base: binding.base },
+  };
+  const manifestRel = `${dirRel}/manifest.json`;
+  atomicWrite(path.join(root, manifestRel), `${JSON.stringify(manifest, null, 2)}\n`);
+  const validation = validate(path.join(root, manifestRel), { candidate, base, prd }, root);
+  return { manifest: manifestRel, problems: validation };
+}
+
+
+module.exports = { SCHEMA, SCHEMAS, HEX40, PRD_REF, CHECK_ID, validate, exportEvidence, resultFor, digestFile, repoRoot, realpathDeep, unsafePath };

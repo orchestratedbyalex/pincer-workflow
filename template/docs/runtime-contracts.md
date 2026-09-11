@@ -318,8 +318,8 @@ exit 4 on invalid input.
 
 Schema 2 keeps every schema 1 field and rule and adds:
 
-- top-level `change`: `{ id, prd_revision, base }` (`base` must equal the manifest's
-  `base`);
+- top-level `change`: `{ id, prd_revision, base }` copied from the binding; its `base`
+  is HEAD at registration and may precede the evaluation `base` the manifest records;
 - `provenance` on every check: `runtime` for command checks populated from attempts,
   `authored` for review and visual checks and for a command check recorded as
   `unverified` because its tool could not run; a `passed` or `failed` command check
@@ -344,7 +344,9 @@ command result.
 `.prd/evidence/prd-vN/<candidate>/`; it never stashes, resets or commits.
 
 Validation: `node scripts/pincer-evidence.cjs validate <manifest> …` accepts schema 1
-and 2 and prints `ok <candidate> schema <n>`. Status labels schema 1 `provenance:
+and 2 and prints `ok <candidate>` for schema 1 (unchanged) and `ok <candidate>
+schema 2` for schema 2. The draft for `evidence export` should live outside the
+evidence directory and the source view, for example `.pincer/drafts/<candidate>.json`. Status labels schema 1 `provenance:
 legacy (schema 1, authored command results)` and schema 2 `provenance: runtime`. A
 schema 1 manifest cannot satisfy a requirement for runtime evidence. Release
 readiness additionally requires that no newer local attempt for the same candidate and
