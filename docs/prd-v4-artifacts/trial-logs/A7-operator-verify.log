@@ -1,0 +1,8 @@
+T-01 is done — re-running its check and recording the latest outcome
+── T-01 verification ──
+  $ npm test
+
+> notes-cli@1.0.0 test
+> node --test
+
+TAP version 13

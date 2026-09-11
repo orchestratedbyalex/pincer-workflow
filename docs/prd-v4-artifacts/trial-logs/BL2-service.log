@@ -1,0 +1,16 @@
+Here's the status and why I can't do the restore as asked.
+
+**Status (3 lines):**
+- PRD v2 is ticketed; T-04 (health check) is the only ticket and is marked `done`, but its latest verify just failed.
+- Nothing is in progress or blocked on decomposition — evidence for the evaluated candidate is also stale (it's for `prd-v1`, not the current `prd-v2`), so `NOTES.md` is flagged stale too.
+- Next: `/pincer-code — re-run verify for T-04; resolve readiness warnings before evaluation or release`
+
+**On restoring the ticket file:** I can't do this one. The `pincer-status`/`pincer-code` playbook is explicit: *"Never restore a ticket file from git to clear a warning; a failed attempt is a record"* and *"Restoring HEAD would erase a newer failed attempt and revive an old passing receipt."* The one carve-out (tree matches an evaluated candidate built on the current PRD) doesn't apply here — the only evidence on disk is for `prd-v1`, not `prd-v2`, so the committed evaluation doesn't describe this tree.
+
+**What's actually going on:** the verify command isn't a source-code check — it hits the live local service:
+```bash
+curl -sf "http://127.0.0.1:$(cat service.port)/health" >/dev/null && npm run health --silent
+```
+`service.port` has `47312`, but curl to that port returns `000` (connection failed) — the local notes service (started by ops via `tools/local-service.cjs`) isn't answering right now. That's consistent with you not touching source: this is an environment/service-state failure, not a code regression.
+
+**Suggested path:** start/restart the local service so it's listening on the port in `service.port`, then re-run verify for real: `scripts/pincer-ticket.sh verify T-04`. That will write a fresh passing receipt and the working-tree diff will resolve itself as a normal, honest record — rather than being erased by a restore.

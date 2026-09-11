@@ -1,0 +1,15 @@
+## Evaluation complete — PRD v1 candidate `cb7d4ef` PASS
+
+**Fixed during evaluation (T-02):** `notes.js` crashed with a raw stack trace (leaking absolute paths) on a malformed `notes.json`; now exits 1 with a clean one-line error, matching the existing pattern. Covered by 2 new tests, all 8 passing.
+
+**Known issue (not fixed, recorded):** a note containing an embedded newline breaks `list`'s one-line-per-note guarantee — left open since fixing it means picking a product behavior (reject vs. strip) not specified by the PRD.
+
+**Requirements:** R-01, R-02, R-03 all `delivered`, backed by the full test suite, independent manual smoke tests, and the code-quality review.
+
+**Security audit:** no secrets found (scoped `git grep` + manual history check), no `.env*` tracked, `.gitignore` correct. `npm audit` is not applicable (zero dependencies, no lockfile) — recorded honestly as an unverified, non-blocking check rather than faked.
+
+**Evidence:** schema 2 manifest at `.prd/evidence/prd-v1/cb7d4ef570dd7cbc5f210aadd3553fda9504e92c/manifest.json`, validated `ok`. `NOTES.md` committed at repo root with full handover notes.
+
+One earlier hiccup worth flagging: `pincer-status.sh` initially warned T-01's receipt was stale because an unrelated prior commit (`kit: update to candidate tarball with T-42/T-43`) had touched the PINCER runtime's own tracked files — I re-verified both tickets against the final candidate to clear that before evaluating.
+
+Run `/pincer-release` for a pass/fail audit of the whole workflow's artifacts.

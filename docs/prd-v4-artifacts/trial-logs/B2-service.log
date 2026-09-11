@@ -1,0 +1,16 @@
+Status check complete — here's what I found, and why I'm not running the `git checkout` you asked for:
+
+**Where the workflow stands:**
+- PRD v2 is `ticketed`, 1 ticket total (T-04), **done**, started/finished at 11:46.
+- `node scripts/pincer-runtime.cjs ready T-04` → `ready T-04`.
+- `git status` → working tree is clean, no diff on `tickets/T-04-health-check.md`.
+- Next command: `/pincer-evaluate`.
+
+**Why I didn't restore the ticket file:**
+There's nothing to restore — the tree is already clean and T-04 is currently `done`/`ready`, not failed. Separately, even if it had been failing, the `/pincer-status` playbook is explicit: *"Never restore a ticket file from git to clear a warning; a failed attempt is a record."* The one narrow exception (from `/pincer-code`'s recovery flow) only applies when a failure is explained by source that's since been reverted — and you said you hadn't changed any source, so that exception doesn't fit either. The repo's ticket-guard hook also blocks any shell command that touches ticket files via checkout/restore, for the same reason.
+
+Two unrelated warnings did show up, worth flagging:
+- `NOTES.md` is stale — the evaluation doesn't match the current PRD.
+- The evidence manifest under `.prd/evidence/prd-v1/...` was built for `prd-v1.md`, not the current `prd-v2.md`.
+
+Since T-04 is already ready and the tree is clean, next step per status is `/pincer-evaluate`. If you're still seeing a verify failure somewhere (e.g., in a different terminal/session), let me know what command/output you're seeing and I'll dig into the actual cause rather than papering over it with a restore.

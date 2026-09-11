@@ -1,0 +1,4 @@
+T-04 is done — re-running its check and recording the latest outcome
+── T-04 verification ──
+  $ curl -sf "http://127.0.0.1:$(cat service.port)/health" >/dev/null && npm run health --silent
+✗ T-04 verification FAILED (exit 7) — recorded as attempt 000002-20260911T115303Z-75ae73 (logs .pincer/runtime/attempts/000002-20260911T115303Z-75ae73/); any prior passing attempt is superseded. Fix, then re-run verify.

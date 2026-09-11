@@ -7,7 +7,7 @@ that was not made. Rows marked `outstanding` are not passed gates.
 ## 1. Implementation reference
 
 - Branch: `feat/prd-v4`, base `1cb5ab4` (v0.4.1, the commit the PRD names). The PRD was
-  committed as `4369af5` and decomposed into T-29..T-41 (`6604241`).
+  committed as `4369af5` and decomposed into T-29..T-41 (`6604241`), with T-42 and T-43 added from trial findings.
 - Candidate commit: recorded in `NOTES.md` by `/pincer-evaluate` once T-41 is closed and
   the PRD is `built`; this packet is finalized before that candidate is chosen.
 - Changed behavior, in one paragraph: a dependency-free Node runtime
@@ -33,7 +33,7 @@ recorded in `docs/trial-*-prd-v4.md` (T-41).
 
 | Requirement | Scenarios | Implementation | Evidence | Disposition |
 | --- | --- | --- | --- | --- |
-| R-01 correct recovery without erasing failures | S-01, S-02, S-03 | T-29 wording in `pincer-code.md`, `pincer-status.md`, dry-run checklist; T-36/T-39 migrated lifecycle and recovery paragraph | `test/recovery.test.js` (service fixture, remaining-source case, guard), `test/runtime-lifecycle.test.js` (S-01 after migration), `test/workflow.test.js` wording | delivered (deterministic); live negative case per T-41 |
+| R-01 correct recovery without erasing failures | S-01, S-02, S-03 | T-29 wording in `pincer-code.md`, `pincer-status.md`, dry-run checklist; T-36/T-39 migrated lifecycle and recovery paragraph | `test/recovery.test.js` (service fixture, remaining-source case, guard), `test/runtime-lifecycle.test.js` (S-01 after migration), `test/workflow.test.js` wording; live (c) and (e) on both kits in the trial record | delivered |
 | R-02 one runtime and explicit evidence identity | S-04, S-05, S-06 | `identity.cjs`, `register`, wrappers (T-32, T-36) | `test/runtime-identity.test.js`, `test/runtime-lifecycle.test.js` (legacy parity) | delivered |
 | R-03 record attempts from actual execution | S-07, S-08, S-09, S-10 | `runner.cjs`, `sanitize.cjs` (T-35) | `test/runtime-runner.test.js` | delivered |
 | R-04 bind readiness to reproducible inputs | S-11, S-12, S-13, S-14 | `source.cjs`, `parse.cjs` normalizations, runner before/after snapshots (T-31, T-32, T-35) | `test/runtime-parse.test.js`, `test/runtime-identity.test.js`, `test/runtime-runner.test.js` | delivered |
@@ -42,14 +42,14 @@ recorded in `docs/trial-*-prd-v4.md` (T-41).
 | R-07 export candidate evidence, keep release read-only | S-21, S-22, S-23, S-24 | `evidence.cjs` schema 2 + export, `check`, status provenance and newer-attempt rule, release playbook (T-38, T-39) | `test/runtime-evidence.test.js`, `test/evidence.test.js`, `test/runtime-status.test.js` | delivered |
 | R-08 explain current state without an LLM | S-25, S-26 | `readiness.cjs`, `status.cjs`, `ready` (T-33, T-39) | `test/runtime-status.test.js` (legacy and migrated tables, human/JSON/done/ready agreement) | delivered |
 | R-09 preserve installations, migrate explicitly | S-27, S-28, S-29 | `migrate.cjs`, `bin/pincer.js` doctor, packaging (T-37, T-40) | `test/runtime-migrate.test.js`, `test/installer.test.js`, `test/smoke.test.js`, `test/distribution.test.js` | delivered |
-| R-10 demonstrate behavior, record friction | S-30, S-31 | every runtime suite injects incorrect behavior; T-41 live trials | all suites above; `docs/trial-*-prd-v4.md` | S-30 delivered; S-31 outstanding until T-41 records it |
+| R-10 demonstrate behavior, record friction | S-30, S-31 | every runtime suite injects incorrect behavior; T-41 live trials | all suites above; `docs/trial-2026-09-11-prd-v4.md` | delivered (S-31 observed on Claude Code `-p`, Sonnet; other surfaces untested) |
 
 Scenario table (one row per S-NN):
 
 | Scenario | Where it is exercised | Disposition |
 | --- | --- | --- |
 | S-01 reverted regression: legacy exception before migration, retained failure plus new pass after | `test/recovery.test.js` guard block (legacy), `test/runtime-lifecycle.test.js` "S-01 after migration" | delivered |
-| S-02 required service unavailable, unchanged source | `test/recovery.test.js` local-service block (`test/fixtures/local-service.cjs`) | delivered; live observation per T-41 |
+| S-02 required service unavailable, unchanged source | `test/recovery.test.js` local-service block (`test/fixtures/local-service.cjs`); live scenario (e) in `docs/trial-2026-09-11-prd-v4.md` on both kits | delivered |
 | S-03 remaining source changes are reported, never discarded | `test/recovery.test.js` remaining-source block | delivered |
 | S-04 identical commands in two PRDs do not share readiness | `test/runtime-identity.test.js` | delivered |
 | S-05 PRD content edit invalidates the binding; status change does not; explicit rebind | `test/runtime-identity.test.js`, `test/runtime-status.test.js` | delivered |
@@ -78,7 +78,7 @@ Scenario table (one row per S-NN):
 | S-28 packed layouts and plugin carry the identical runtime and execute the compatibility commands | `test/distribution.test.js` | delivered |
 | S-29 supported syntax passes, malformed forms fail before mutation, installer conflicts stay green | `test/runtime-parse.test.js`, `test/validation.test.js`, `test/installer.test.js` | delivered |
 | S-30 deterministic tests detect each injected false-ready condition | all runtime suites | delivered |
-| S-31 live trials: runtime use, preserved edits, no repeated approval, no manual receipt restoration | `docs/trial-*-prd-v4.md` | outstanding until T-41 |
+| S-31 live trials: runtime use, preserved edits, no repeated approval, no manual receipt restoration | `docs/trial-2026-09-11-prd-v4.md` scenarios (a)–(e), baseline (c) and (e) | delivered on one surface (Claude Code `-p`, Sonnet, macOS); other surfaces untested |
 
 ## 3. Contracts
 
@@ -117,9 +117,15 @@ Copied from a fixture run of the runtime at T-40 into `docs/prd-v4-artifacts/`
 
 ## 6. Live trials
 
-See `docs/trial-<date>-prd-v4.md` once T-41 has run: prompts, platform and model
-versions, package digest, observed outcomes, interventions and the bounded v0.4.1
-baseline comparison. Until then S-31 is outstanding and no live behavior is claimed.
+`docs/trial-2026-09-11-prd-v4.md` records the prompts, Claude Code and model versions,
+tarball digests, the greenfield chain (plan → narrow → code → evaluate → release on the
+runtime, schema 2 evidence, release PASS), the existing-project migration with
+preserved user edits, failure/repair, interruption/resume and the persistent
+service-failure scenario, plus the bounded v0.4.1 baseline comparison for (c) and (e):
+the runtime needed no receipt-refresh commit and left no tracked diff where the
+baseline did. Session outputs are in `docs/prd-v4-artifacts/trial-logs/`. Two tickets
+came out of the trial: T-42 (register/migrate steps in the playbooks) and T-43
+(`register` ignores `.pincer/`).
 
 ## 7. Known limitations
 
@@ -138,6 +144,8 @@ baseline comparison. Until then S-31 is outstanding and no live behavior is clai
   relabels a legacy receipt as runtime evidence.
 - A fresh clone validates the saved candidate record only; done tickets need a local
   `verify` before dependents can start there.
+- A kit update inside an evaluated project is a source change: every done ticket's
+  attempt becomes `SOURCE_CHANGED` until re-verified (trial finding 2).
 - Dogfooding: this repository was not migrated during the work (PRD section 9), so its
   own evaluation of PRD v4 uses the pinned v0.4.1 kit and schema 1 evidence; the
   runtime's behavior is demonstrated in fixtures and in the T-41 trial repositories.

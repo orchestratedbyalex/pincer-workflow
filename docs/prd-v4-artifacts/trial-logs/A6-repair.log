@@ -1,0 +1,3 @@
+T-01 is repaired and verified — the bug was `path.reverse().join(...)` on line 4 of `notes.js` (`path` has no `.reverse()` method); fixed to `path.join(__dirname, 'notes.json')`. `npm test` now passes all 8 assertions, `pincer-ticket.sh verify T-01` recorded a passing attempt, and `pincer-status` no longer shows T-01's `CHECK_FAILED` or T-02's `SOURCE_CHANGED` warnings — both tickets are clean and it points to `/pincer-release` next.
+
+No commit was needed: the fix restored `notes.js` byte-for-byte to what's already committed at HEAD (your edit was uncommitted working-tree drift, never landed), so `git status` is clean and there's nothing new to stage.

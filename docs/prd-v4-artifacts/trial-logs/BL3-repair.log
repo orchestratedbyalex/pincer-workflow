@@ -1,0 +1,8 @@
+Done. Summary:
+
+- **Root cause**: `notes.js`'s `cmdDone` had `note.done = !note.done` instead of `note.done = true`, breaking the idempotency requirement (marking an already-done note done again must stay `done: true`).
+- **Fix**: edited `notes.js` directly (no git restore) back to `note.done = true` — this happened to make it byte-identical to the already-evaluated candidate, so there was no source diff to commit.
+- **Re-verified**: ran `npm test` (15/15 pass), then `scripts/pincer-ticket.sh verify T-02` to stamp a fresh, honest receipt.
+- **Committed**: only `tickets/T-02-done-command.md` (the receipt refresh), as commit `28de95c`, matching the same repair pattern as the prior `cc6f630` commit.
+
+`/pincer-status` now shows all 3 tickets done, T-02's warning cleared, and next step is `/pincer-evaluate`. (Note: it still flags NOTES.md as stale since `.claude/commands/pincer-code.md` changed after the last evaluation — unrelated to this repair, just surfacing it.)

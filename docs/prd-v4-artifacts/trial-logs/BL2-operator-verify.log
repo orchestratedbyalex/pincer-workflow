@@ -1,0 +1,4 @@
+T-04 is done — re-running its check and updating the latest outcome
+── T-04 verification ──
+  $ curl -sf "http://127.0.0.1:$(cat service.port)/health" >/dev/null && npm run health --silent
+✗ T-04 verification FAILED (exit 7) — failure recorded in last_check of tickets/T-04-health-check.md; any prior successful receipt was revoked. Fix, then re-run verify.

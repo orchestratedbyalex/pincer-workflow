@@ -1,0 +1,3 @@
+T-01 is back to ready. What I did, without touching any file with git: `node scripts/pincer-runtime.cjs recover` finalized the dead `running` attempt as `interrupted` (the leftover from your terminal dying mid-verify), then `scripts/pincer-ticket.sh verify T-01` re-ran `npm test`, which passed and stamped a fresh receipt.
+
+Status is now clean — both tickets done, evidence and provenance ok, and `Next` points to `/pincer-release`.

@@ -1,0 +1,7 @@
+Done. Runtime is now on the migrated path: `change prd-v1 · revision bfe2358bf89a · base 980fe3c`, committed as `189ecf6 Migrate PRD v1 to the runtime`, working tree clean.
+
+Post-migration status surfaces two things worth flagging (per your "change nothing else" — I haven't acted on either):
+- **LEGACY_RECEIPT warnings** on T-01/T-02/T-03 — their old receipts are now history only; the runtime wants each re-verified (`scripts/pincer-ticket.sh verify T-{NN}`) before evaluate/release.
+- **NOTES.md staleness** — it still says the candidate changed after evaluation (`.claude/commands/pincer-code.md`), unrelated to this migration.
+
+Next command per status: `/pincer-code` to re-run verify on the three tickets, then resolve the NOTES staleness before `/pincer-evaluate`.

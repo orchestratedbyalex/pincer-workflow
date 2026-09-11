@@ -1,0 +1,46 @@
+Working tree is clean. Here's the audit against `docs/release-checklist.md`.
+
+## Change identity and state
+
+| Item | Result | Evidence |
+|---|---|---|
+| `pincer-status.sh` selects intended PRD, `status: built`, no warnings | PASS | Status output: `PRD .prd/prd-v1.md · status: built`, no warning lines, `Next` line points straight to `/pincer-release` |
+| Every ticket done and ready | PASS | T-01, T-02 both `done`; `node scripts/pincer-runtime.cjs ready` → `ready candidate cb7d4ef...` exit 0 |
+| `NOTES.md` names PRD/base/candidate/evidence; status reports notes current, evidence ok | PASS | NOTES.md frontmatter matches; status line: `Notes NOTES.md: current (cb7d4ef...)`, `Evidence ... · ok` |
+| Provenance line names schema, no newer nonpassing local attempt | PASS | `Provenance runtime (schema 2) · local attempts consistent with the exported checks` — this is a local run (not a fresh clone), so the stronger claim is warranted, not just the "unavailable" fallback |
+| Every manifest file tracked; tree clean before/after | PASS | All 5 artifacts (`manifest.json`, 3 check logs, `review/code-quality.md`) confirmed tracked via `git ls-files --error-unmatch`; `git status --short` empty at session start and after every command run during this audit, including after `npm test` |
+
+## Scope and evidence
+
+| Item | Result | Evidence |
+|---|---|---|
+| Every PRD requirement has a disposition, none blocked | PASS | Manifest: R-01, R-02, R-03 all `"disposition": "delivered"`, tied to checks C-01/C-05 |
+| Tickets/acceptance criteria/verification match implementation | PASS | T-01 and T-02 acceptance criteria map 1:1 to the R-01–R-03 scenarios and the corrupted-JSON fix; both use `npm test` as verification, matching C-01 |
+| Candidate-wide release gate passes when run directly | PASS | `npm test` run directly (not via ticket state writer): 8/8 `node --test` cases pass, exit 0 |
+| Scope cuts explicit | PASS | PRD §7 Out of Scope + NOTES.md "What was cut and why" both explicit (nothing cut from v1 scope; pre-existing exclusions listed) |
+
+## Review
+
+| Item | Result | Evidence |
+|---|---|---|
+| High-confidence findings have file:line and disposition | PASS | `review/code-quality.md`: finding 1 (`notes.js:8`, confidence 75, fixed via T-02) and finding 2 (`notes.js:16`, confidence 70, known issue with reasoned deferral) |
+| Post-evaluation fixes use a new ticket + verification + scoped commit | PASS (judgment) | T-02 was cut *during* the evaluation cycle (review ran against interim candidate `7fb4de4`, found the bug, T-02 fixed it) and the evaluation commit (`045ae95`) is against the resulting candidate `cb7d4ef` — one evaluation of the final state, not a patch applied after sign-off. This is the intended "evaluate iterates before finalizing" pattern, not a post-hoc bypass. |
+| UI changes have visual checks / non-UI states `visual_review.applicable: false` | PASS | `visual_review.applicable: false`, reason: CLI-only, no UI — correct, matches PRD scope |
+| Security review reports locations/remediation, no secret values printed | PASS | PRD "Security & Trust Boundaries" + review's "Non-findings" section cite exact behavior (no shell interpolation, fixed path) with no secret values anywhere |
+| No secret env file tracked; dependency/invalid-input checks run | PASS | `git ls-files \| grep -i env` → none; `.gitignore` excludes `.env`/`.env.*`; C-02 (no env files tracked) and C-03 (no secret-pattern matches) both passed; C-04 (`npm audit`) correctly marked `unverified`/not-required with a stated reason (zero-dependency, no lockfile) rather than faked |
+
+## Handover and verdict
+
+| Item | Result | Evidence |
+|---|---|---|
+| Commit history identifies plan/ticket/evaluation work | PASS (judgment) | `f482c9b plan` → `36fd9fb narrow` → `2137445 Register` → `03efa9c T-01` → `91662b5 built` → `7fb4de4 kit update` → `cb7d4ef T-02` → `045ae95 evaluate` reads as a coherent story. The one non-obvious entry, `7fb4de4 kit: update to candidate tarball with T-42/T-43`, is a PINCER-kit tooling update (adds `.pincer/` to `.gitignore`, updates `identity.cjs`) — its `T-42/T-43` refers to the kit project's own upstream tickets, not this project's, and the code-quality review explicitly scoped it out of the T-01 diff review. Not a defect, but the message is confusing in-repo; noted below. |
+| `NOTES.md` covers shipped/cuts/limitations/next steps/riskiest assumption | PASS | NOTES.md has all of: What was built, Requirement disposition, What was cut, Known issues, What I'd do next, Handover (names the non-atomic-write aging risk explicitly) |
+| Platform/environment limits stated, not claimed as tested | PASS | Manifest `environment.limitations` lists no secret-scanning tool, N/A `npm audit`, no UI to review — each with a reason, none inflated |
+| Audit repaired nothing, changed no state, published nothing | PASS | No `pincer-ticket.sh`, `verify`, `check`, `done`, or evidence/PRD writes were run — only `status`, `ready`, `npm test`, and reads. `git status --short` empty throughout. |
+| Every failed/skipped item named before verdict | PASS | None failed or were skipped — see below |
+
+**No items failed or were skipped.**
+
+One non-blocking observation for workflow hygiene: the `7fb4de4` kit-tooling commit message (`T-42/T-43`) references ticket IDs foreign to this project, which momentarily reads as an anomaly in the ticket story before its scope becomes clear from the diff and the review file's explicit exclusion note. Worth tightening in `.claude/commands/pincer-code.md` (or wherever kit-update commits are authored) to prefix such messages distinctly from ticket work, e.g. `kit(upstream): ...`, so they don't look like missing local tickets on a quick `git log` scan.
+
+**PASS — candidate cb7d4ef570dd7cbc5f210aadd3553fda9504e92c: workflow artifacts complete.**

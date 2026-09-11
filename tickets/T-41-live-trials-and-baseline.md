@@ -1,9 +1,13 @@
 ---
 ticket: T-41
-status: open
+status: done
 size: M
 prd: .prd/prd-v4.md
 depends_on: [T-40]
+started: 2026-09-11T11:38:52Z
+last_check: 2026-09-11T12:21:52Z passed 02917a9d4fe5
+verified: 2026-09-11T12:21:52Z 02917a9d4fe5
+finished: 2026-09-11T12:21:52Z
 ---
 
 ## Objective
@@ -21,9 +25,9 @@ Run the focused live trials from the packed artifact on a new CLI project and on
 - Anything not observed is recorded as `outstanding` in the trial record and the review packet; the packet's S-31 row cites the record.
 
 ## Acceptance Criteria
-- [ ] The trial record exists with sections Brief, Base, Kit, Versions, Artifacts, Results, Interventions, Baseline, Untested and a requirement table, and every scenario is observed or `outstanding`.
-- [ ] The review packet's live-trial section and S-31 row cite the record.
-- [ ] No unobserved behavior is counted as a passed gate.
+- [x] The trial record exists with sections Brief, Base, Kit, Versions, Artifacts, Results, Interventions, Baseline, Untested and a requirement table, and every scenario is observed or `outstanding`.
+- [x] The review packet's live-trial section and S-31 row cite the record.
+- [x] No unobserved behavior is counted as a passed gate.
 
 ## Verification
 Proves: the trial record is present with every required section and honest dispositions, and the packet cites it; regression: a missing section or a scenario without an observation or `outstanding` mark. The record is authored evidence; its content is reviewed, not proven, by this check.

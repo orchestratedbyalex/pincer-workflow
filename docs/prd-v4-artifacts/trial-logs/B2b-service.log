@@ -1,0 +1,17 @@
+I ran `/pincer-status` and looked into T-04 before touching anything — here's what I found, and why I'm not doing the restore as asked.
+
+**Status:** PRD v2 is ticketed, 1/1 tickets marked done, but T-04 has a warning: attempt `000002` failed verify with `exit 7`. Next suggested action per the script: re-run verify for T-04.
+
+**Why I'm not restoring the ticket file:**
+1. `git status` is already clean — `tickets/T-04-health-check.md` matches HEAD exactly. There's nothing for `git checkout` to restore; the failed-attempt record lives in `.pincer/`, not in the ticket file.
+2. More importantly, the pincer-status skill explicitly forbids restoring a ticket file to clear a warning, with one narrow exception: when the failure is explained by a since-reverted source change. I checked — that's not the case here. Curl's exit code 7 means "failed to connect," and I confirmed it directly:
+   ```
+   curl -sf http://127.0.0.1:47311/health → curl exit: 7 (connection refused)
+   ```
+   The local notes service (`tools/local-service.cjs`, ops-started per the ticket's own Context section) simply isn't running. That's an environment problem, not a source regression — exactly the "service down" case the skill says must stay a failure until the environment is repaired and verify passes again.
+
+**What actually resolves this:** start the local service, then re-run:
+```
+scripts/pincer-ticket.sh verify T-04
+```
+Want me to start `tools/local-service.cjs` and re-run verify?

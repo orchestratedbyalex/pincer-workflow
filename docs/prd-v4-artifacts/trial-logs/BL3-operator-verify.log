@@ -1,0 +1,141 @@
+T-02 is done — re-running its check and updating the latest outcome
+── T-02 verification ──
+  $ npm test
+
+> notes-cli@1.0.0 test
+> node --test
+
+TAP version 13
+# Error: note text is required. Usage: node notes.js add <text>
+# Error: note text is required. Usage: node notes.js add <text>
+# Usage: node notes.js <add <text> | list | done <id>>
+# Usage: node notes.js <add <text> | list | done <id>>
+# Error: notes data file is corrupted (invalid JSON).
+# Error: notes data file is corrupted (unexpected structure).
+# Error: notes data file is corrupted (unexpected structure).
+# Error: notes data file is corrupted (unexpected structure).
+# Error: notes data file is corrupted (unexpected structure).
+# Error: notes data file is corrupted (unexpected structure).
+# Error: a numeric note id is required. Usage: node notes.js done <id>
+# Error: a numeric note id is required. Usage: node notes.js done <id>
+# Error: no note with id 999.
+# Subtest: add creates a note and prints its id
+ok 1 - add creates a note and prints its id
+  ---
+  duration_ms: 30.859208
+  type: 'test'
+  ...
+# Subtest: add assigns sequential ids
+ok 2 - add assigns sequential ids
+  ---
+  duration_ms: 57.565916
+  type: 'test'
+  ...
+# Subtest: add rejects missing text and does not write the data file
+ok 3 - add rejects missing text and does not write the data file
+  ---
+  duration_ms: 28.215292
+  type: 'test'
+  ...
+# Subtest: add rejects whitespace-only text and does not write the data file
+ok 4 - add rejects whitespace-only text and does not write the data file
+  ---
+  duration_ms: 27.62225
+  type: 'test'
+  ...
+# Subtest: list prints notes in ascending id order
+ok 5 - list prints notes in ascending id order
+  ---
+  duration_ms: 72.535208
+  type: 'test'
+  ...
+# Subtest: list prints a friendly message when there are no notes
+ok 6 - list prints a friendly message when there are no notes
+  ---
+  duration_ms: 21.800583
+  type: 'test'
+  ...
+# Subtest: missing or unrecognized command prints usage and exits 1
+ok 7 - missing or unrecognized command prints usage and exits 1
+  ---
+  duration_ms: 57.859791
+  type: 'test'
+  ...
+# Subtest: invalid JSON in the data file is rejected with a clear message
+ok 8 - invalid JSON in the data file is rejected with a clear message
+  ---
+  duration_ms: 22.012334
+  type: 'test'
+  ...
+# Subtest: valid JSON that is not an array of notes is rejected clearly, not a stack trace
+ok 9 - valid JSON that is not an array of notes is rejected clearly, not a stack trace
+  ---
+  duration_ms: 83.231917
+  type: 'test'
+  ...
+# Subtest: a non-numeric note id in the data file is rejected instead of silently corrupting it
+ok 10 - a non-numeric note id in the data file is rejected instead of silently corrupting it
+  ---
+  duration_ms: 32.391792
+  type: 'test'
+  ...
+# Subtest: done marks an existing note complete
+ok 11 - done marks an existing note complete
+  ---
+  duration_ms: 86.944417
+  type: 'test'
+  ...
+# Subtest: done is idempotent when the note is already done
+not ok 12 - done is idempotent when the note is already done
+  ---
+  duration_ms: 69.511708
+  type: 'test'
+  location: '/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/baseline-repair/test/notes.test.js:135:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/baseline-repair/test/notes.test.js:142:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: done rejects a missing id argument, leaving the data file unchanged
+ok 13 - done rejects a missing id argument, leaving the data file unchanged
+  ---
+  duration_ms: 51.587375
+  type: 'test'
+  ...
+# Subtest: done rejects a non-numeric id, leaving the data file unchanged
+ok 14 - done rejects a non-numeric id, leaving the data file unchanged
+  ---
+  duration_ms: 50.564875
+  type: 'test'
+  ...
+# Subtest: done rejects a nonexistent id, leaving the data file unchanged
+ok 15 - done rejects a nonexistent id, leaving the data file unchanged
+  ---
+  duration_ms: 54.096625
+  type: 'test'
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 14
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 790.672292
+✗ T-02 verification FAILED (exit 1) — failure recorded in last_check of tickets/T-02-done-command.md; any prior successful receipt was revoked. Fix, then re-run verify.

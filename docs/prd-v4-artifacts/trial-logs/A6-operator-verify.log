@@ -1,0 +1,352 @@
+T-01 is done — re-running its check and recording the latest outcome
+── T-01 verification ──
+  $ npm test
+
+> notes-cli@1.0.0 test
+> node --test
+
+TAP version 13
+# /private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4
+# const NOTES_PATH = path.reverse().join(__dirname, 'notes.json');
+#                         ^
+# TypeError: path.reverse is not a function
+#     at Object.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4:25)
+#     at Module._compile (node:internal/modules/cjs/loader:1781:14)
+#     at Object..js (node:internal/modules/cjs/loader:1913:10)
+#     at Module.load (node:internal/modules/cjs/loader:1505:32)
+#     at Function._load (node:internal/modules/cjs/loader:1309:12)
+#     at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+#     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+#     at node:internal/main/run_main_module:36:49
+# Node.js v22.23.1
+# /private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4
+# const NOTES_PATH = path.reverse().join(__dirname, 'notes.json');
+#                         ^
+# TypeError: path.reverse is not a function
+#     at Object.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4:25)
+#     at Module._compile (node:internal/modules/cjs/loader:1781:14)
+#     at Object..js (node:internal/modules/cjs/loader:1913:10)
+#     at Module.load (node:internal/modules/cjs/loader:1505:32)
+#     at Function._load (node:internal/modules/cjs/loader:1309:12)
+#     at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+#     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+#     at node:internal/main/run_main_module:36:49
+# Node.js v22.23.1
+# /private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4
+# const NOTES_PATH = path.reverse().join(__dirname, 'notes.json');
+#                         ^
+# TypeError: path.reverse is not a function
+#     at Object.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4:25)
+#     at Module._compile (node:internal/modules/cjs/loader:1781:14)
+#     at Object..js (node:internal/modules/cjs/loader:1913:10)
+#     at Module.load (node:internal/modules/cjs/loader:1505:32)
+#     at Function._load (node:internal/modules/cjs/loader:1309:12)
+#     at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+#     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+#     at node:internal/main/run_main_module:36:49
+# Node.js v22.23.1
+# /private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4
+# const NOTES_PATH = path.reverse().join(__dirname, 'notes.json');
+#                         ^
+# TypeError: path.reverse is not a function
+#     at Object.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4:25)
+#     at Module._compile (node:internal/modules/cjs/loader:1781:14)
+#     at Object..js (node:internal/modules/cjs/loader:1913:10)
+#     at Module.load (node:internal/modules/cjs/loader:1505:32)
+#     at Function._load (node:internal/modules/cjs/loader:1309:12)
+#     at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+#     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+#     at node:internal/main/run_main_module:36:49
+# Node.js v22.23.1
+# Subtest: notes CLI
+    # Subtest: add creates notes.json with the first note
+    not ok 1 - add creates notes.json with the first note
+      ---
+      duration_ms: 22.212417
+      type: 'test'
+      location: '/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:22:11'
+      failureType: 'testCodeFailure'
+      error: |-
+        Command failed: node /private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js add buy milk
+        /private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4
+        const NOTES_PATH = path.reverse().join(__dirname, 'notes.json');
+                                ^
+        
+        TypeError: path.reverse is not a function
+            at Object.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4:25)
+            at Module._compile (node:internal/modules/cjs/loader:1781:14)
+            at Object..js (node:internal/modules/cjs/loader:1913:10)
+            at Module.load (node:internal/modules/cjs/loader:1505:32)
+            at Function._load (node:internal/modules/cjs/loader:1309:12)
+            at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+            at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+            at node:internal/main/run_main_module:36:49
+        
+        Node.js v22.23.1
+        
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        Object.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4:25)
+        Module._compile (node:internal/modules/cjs/loader:1781:14)
+        Object..js (node:internal/modules/cjs/loader:1913:10)
+        Module.load (node:internal/modules/cjs/loader:1505:32)
+        Function._load (node:internal/modules/cjs/loader:1309:12)
+        wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+        Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+        node:internal/main/run_main_module:36:49
+        genericNodeError (node:internal/errors:983:15)
+        wrappedFn (node:internal/errors:537:14)
+        checkExecSyncError (node:child_process:916:11)
+        execFileSync (node:child_process:952:15)
+        runCli (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:15:10)
+        TestContext.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:23:5)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async TestContext.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:22:3)
+        async Test.run (node:internal/test_runner/test:1054:7)
+      ...
+    # Subtest: add appends to an existing notes.json
+    not ok 2 - add appends to an existing notes.json
+      ---
+      duration_ms: 21.817167
+      type: 'test'
+      location: '/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:28:11'
+      failureType: 'testCodeFailure'
+      error: |-
+        Command failed: node /private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js add call mom
+        /private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4
+        const NOTES_PATH = path.reverse().join(__dirname, 'notes.json');
+                                ^
+        
+        TypeError: path.reverse is not a function
+            at Object.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4:25)
+            at Module._compile (node:internal/modules/cjs/loader:1781:14)
+            at Object..js (node:internal/modules/cjs/loader:1913:10)
+            at Module.load (node:internal/modules/cjs/loader:1505:32)
+            at Function._load (node:internal/modules/cjs/loader:1309:12)
+            at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+            at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+            at node:internal/main/run_main_module:36:49
+        
+        Node.js v22.23.1
+        
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        Object.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4:25)
+        Module._compile (node:internal/modules/cjs/loader:1781:14)
+        Object..js (node:internal/modules/cjs/loader:1913:10)
+        Module.load (node:internal/modules/cjs/loader:1505:32)
+        Function._load (node:internal/modules/cjs/loader:1309:12)
+        wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+        Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+        node:internal/main/run_main_module:36:49
+        genericNodeError (node:internal/errors:983:15)
+        wrappedFn (node:internal/errors:537:14)
+        checkExecSyncError (node:child_process:916:11)
+        execFileSync (node:child_process:952:15)
+        runCli (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:15:10)
+        TestContext.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:30:5)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async TestContext.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:28:3)
+        async Test.run (node:internal/test_runner/test:1054:7)
+      ...
+    # Subtest: add without text exits 1, prints one stderr line, leaves file untouched
+    not ok 3 - add without text exits 1, prints one stderr line, leaves file untouched
+      ---
+      duration_ms: 22.719291
+      type: 'test'
+      location: '/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:35:11'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        15 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 15
+      operator: 'strictEqual'
+      stack: |-
+        Object.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:42:14)
+        expectedException (node:assert:576:17)
+        expectsError (node:assert:701:21)
+        Function.throws (node:assert:757:3)
+        TestContext.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:37:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async TestContext.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:35:3)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: list prints notes in insertion order
+    not ok 4 - list prints notes in insertion order
+      ---
+      duration_ms: 23.48875
+      type: 'test'
+      location: '/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:50:11'
+      failureType: 'testCodeFailure'
+      error: |-
+        Command failed: node /private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js list
+        /private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4
+        const NOTES_PATH = path.reverse().join(__dirname, 'notes.json');
+                                ^
+        
+        TypeError: path.reverse is not a function
+            at Object.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4:25)
+            at Module._compile (node:internal/modules/cjs/loader:1781:14)
+            at Object..js (node:internal/modules/cjs/loader:1913:10)
+            at Module.load (node:internal/modules/cjs/loader:1505:32)
+            at Function._load (node:internal/modules/cjs/loader:1309:12)
+            at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+            at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+            at node:internal/main/run_main_module:36:49
+        
+        Node.js v22.23.1
+        
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        Object.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4:25)
+        Module._compile (node:internal/modules/cjs/loader:1781:14)
+        Object..js (node:internal/modules/cjs/loader:1913:10)
+        Module.load (node:internal/modules/cjs/loader:1505:32)
+        Function._load (node:internal/modules/cjs/loader:1309:12)
+        wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+        Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+        node:internal/main/run_main_module:36:49
+        genericNodeError (node:internal/errors:983:15)
+        wrappedFn (node:internal/errors:537:14)
+        checkExecSyncError (node:child_process:916:11)
+        execFileSync (node:child_process:952:15)
+        runCli (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:15:10)
+        TestContext.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:52:20)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async TestContext.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:50:3)
+        async Test.run (node:internal/test_runner/test:1054:7)
+      ...
+    # Subtest: list with no notes.json prints nothing and exits 0
+    not ok 5 - list with no notes.json prints nothing and exits 0
+      ---
+      duration_ms: 22.155584
+      type: 'test'
+      location: '/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:56:11'
+      failureType: 'testCodeFailure'
+      error: |-
+        Command failed: node /private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js list
+        /private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4
+        const NOTES_PATH = path.reverse().join(__dirname, 'notes.json');
+                                ^
+        
+        TypeError: path.reverse is not a function
+            at Object.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4:25)
+            at Module._compile (node:internal/modules/cjs/loader:1781:14)
+            at Object..js (node:internal/modules/cjs/loader:1913:10)
+            at Module.load (node:internal/modules/cjs/loader:1505:32)
+            at Function._load (node:internal/modules/cjs/loader:1309:12)
+            at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+            at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+            at node:internal/main/run_main_module:36:49
+        
+        Node.js v22.23.1
+        
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        Object.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.js:4:25)
+        Module._compile (node:internal/modules/cjs/loader:1781:14)
+        Object..js (node:internal/modules/cjs/loader:1913:10)
+        Module.load (node:internal/modules/cjs/loader:1505:32)
+        Function._load (node:internal/modules/cjs/loader:1309:12)
+        wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+        Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+        node:internal/main/run_main_module:36:49
+        genericNodeError (node:internal/errors:983:15)
+        wrappedFn (node:internal/errors:537:14)
+        checkExecSyncError (node:child_process:916:11)
+        execFileSync (node:child_process:952:15)
+        runCli (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:15:10)
+        TestContext.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:57:20)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async TestContext.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:56:3)
+        async Test.run (node:internal/test_runner/test:1054:7)
+      ...
+    # Subtest: list with corrupted notes.json exits 1 with one stderr line, no stack trace
+    not ok 6 - list with corrupted notes.json exits 1 with one stderr line, no stack trace
+      ---
+      duration_ms: 20.411125
+      type: 'test'
+      location: '/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:61:11'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        15 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 15
+      operator: 'strictEqual'
+      stack: |-
+        Object.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:68:14)
+        expectedException (node:assert:576:17)
+        expectsError (node:assert:701:21)
+        Function.throws (node:assert:757:3)
+        TestContext.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:63:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async TestContext.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:61:3)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: add with corrupted notes.json exits 1 with one stderr line, leaves file untouched
+    not ok 7 - add with corrupted notes.json exits 1 with one stderr line, leaves file untouched
+      ---
+      duration_ms: 22.490834
+      type: 'test'
+      location: '/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:74:11'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        15 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 15
+      operator: 'strictEqual'
+      stack: |-
+        Object.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:81:14)
+        expectedException (node:assert:576:17)
+        expectsError (node:assert:701:21)
+        Function.throws (node:assert:757:3)
+        TestContext.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:76:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async TestContext.<anonymous> (/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:74:3)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    1..7
+not ok 1 - notes CLI
+  ---
+  duration_ms: 156.280208
+  type: 'test'
+  location: '/private/tmp/claude-501/-Users-alex-Documents-dev-personal-pincer-workflow/5ca7d892-1624-4487-97f3-5e8f8c312d60/scratchpad/trial/greenfield/notes.test.js:18:1'
+  failureType: 'subtestsFailed'
+  error: '7 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 8
+# suites 0
+# pass 0
+# fail 8
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 194.525417
+✗ T-01 verification FAILED (exit 1) — recorded as attempt 000015-20260911T121341Z-9cc2d3 (logs .pincer/runtime/attempts/000015-20260911T121341Z-9cc2d3/); any prior passing attempt is superseded. Fix, then re-run verify.
