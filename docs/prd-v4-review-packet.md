@@ -30,7 +30,13 @@ that was not made. Rows marked `outstanding` are not passed gates.
   authority for the latest attempt, a partially applied migration is completed rather
   than refused, `timeout` is capped at 2147483 s, and the CI matrix is described as
   the target surface (CI has not run on this branch; the packet cites local runs on
-  macOS and Node 22 only).
+  macOS and Node 22 only). An external review of candidate `77c5205` added a sixth set
+  (T-45): an attempt record is evidence only when it is complete and was written for
+  the context it is read for (`ATTEMPT_ERROR` otherwise; export refuses), a captured
+  log that no longer matches its recorded digest is `EVIDENCE_MISSING` (export
+  refuses), `recover` records the digests of the logs a dead runner captured, and the
+  timeout signals the process group whether or not the shell has exited, with capture
+  abandoned 2 s after SIGKILL and the signals actually sent named in the record.
 
 ## 2. Traceability
 
@@ -69,12 +75,12 @@ Scenario table (one row per S-NN):
 | S-13 zero-exit check that mutates source is not evidence | `test/runtime-runner.test.js` | delivered |
 | S-14 secret, symlink, ignored dependency, unsupported repository | `test/runtime-identity.test.js` | delivered |
 | S-15 overlapping writers | `test/runtime-state.test.js` | delivered |
-| S-16 SIGINT, SIGTERM, timeout, forced termination | `test/runtime-runner.test.js` | delivered |
+| S-16 SIGINT, SIGTERM, timeout, forced termination | `test/runtime-runner.test.js` (T-45: a background child outliving the shell is terminated at the timeout; a SIGTERM-ignoring child is killed after the grace period) | delivered |
 | S-17 grandchild terminated; interrupted writes diagnosable | `test/runtime-runner.test.js`, `test/runtime-state.test.js` | delivered |
 | S-18 two verifies, no tracked diff; done without a duplicate run | `test/runtime-lifecycle.test.js` | delivered |
-| S-19 stale inputs, later failure, missing log, missing state, unticked criteria block closure | `test/runtime-lifecycle.test.js` | delivered |
+| S-19 stale inputs, later failure, missing log, missing state, unticked criteria block closure | `test/runtime-lifecycle.test.js` (T-45: an incomplete record, a record for another ticket and an altered log block closure) | delivered |
 | S-20 deleted state cannot revive a receipt; fresh clone must verify | `test/runtime-lifecycle.test.js` | delivered |
-| S-21 exported evidence matches attempts; tamper, wrong candidate, missing artifact block | `test/runtime-evidence.test.js` | delivered |
+| S-21 exported evidence matches attempts; tamper, wrong candidate, missing artifact block | `test/runtime-evidence.test.js` (T-45: export refuses an altered captured log, an incomplete record and a record for another check) | delivered |
 | S-22 receipt-free verification creates no product diff; evidence-only path keeps the candidate current | `test/runtime-evidence.test.js`, `test/runtime-lifecycle.test.js` | delivered |
 | S-23 schema 1 inspectable with a legacy label, cannot satisfy a runtime requirement | `test/runtime-evidence.test.js`, `test/runtime-status.test.js` | delivered |
 | S-24 newer same-context failure blocks release; fresh clone reports the limit; release creates nothing | `test/runtime-status.test.js` | delivered |

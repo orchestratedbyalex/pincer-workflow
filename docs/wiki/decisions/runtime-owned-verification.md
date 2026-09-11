@@ -49,7 +49,9 @@ runtime needed neither.
 
 ## Limits
 
-Local provenance only (no attestation); POSIX process groups; a kit update inside a
+Local provenance only (no attestation: records and logs are validated against each
+other for mistake detection, T-45, but a rewrite of both is undetectable); POSIX
+process groups; a kit update inside a
 migrated project invalidates every done ticket's attempt; fresh clones validate the
 saved record only. Follow-ups are PRD v4 §10 (lifecycle, coverage impact, platform
 parity).

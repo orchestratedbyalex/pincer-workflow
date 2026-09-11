@@ -137,3 +137,9 @@ Outcome: npm publish still pending (needs the user's OTP); next is `/pincer-narr
 ## [2026-09-11] end | PRD v4 built; candidate 7b561b1 reviewed, T-44 fixes, final candidate
 - What: `PRD v4: built`; two reviewer subagents (runtime code/tests; docs/playbooks/packaging) returned 18 findings; T-44 fixed them (guard leaves `.pincer/drafts/` writable, rename-based lock acquire and stale claim, `recover` waits and escalates to SIGKILL, `index.current` is the attempt authority, sanitizer covers Basic/Token/Digest and quoted values, export validates ids and artifact paths, `timeout` ≤ 2147483, contract/checklist/playbook alignment, plugin transform of `scripts/pincer-runtime/`, doctor names obsolete files).
 - Outcome: the final candidate is this wiki commit on top of T-44; evaluation and release follow in the same session.
+
+## [2026-09-11] end | External review of candidate 77c5205 fixed in T-45; candidate 3
+- What: three reproduced defects (readiness honored a record stripped to `{id, outcome}`; altered captured logs exported as runtime evidence with readiness green; `sleep 9 & exit 0` under a 1 s timeout ran 9 s because `terminate()` skipped an exited shell) fixed in T-45 with failing-before assertions.
+- Why: the runtime's record and log digests existed but were never checked; the timeout logic keyed on the shell's exit rather than the group.
+- Files: `template/scripts/pincer-runtime/{state,readiness,lifecycle,status,evidence,runner}.cjs`, `template/docs/runtime-contracts.md`, three runtime test suites, packet, this wiki.
+- Outcome: T-45 done via the pinned kit (`2ff2b1a`); candidate 3 = this wiki commit; its evaluation commit follows.

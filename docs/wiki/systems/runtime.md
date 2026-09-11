@@ -29,17 +29,22 @@ Decision: [[runtime-owned-verification]]. Extends [[ticket-state-machine]],
 - `state.cjs` — index (`sequence`, `current[key]`, `running[]`), attempt records,
   `mkdir` lock with owner.json (stale reclaim on dead pid, live/foreign never stolen,
   `PINCER_LOCK_WAIT_MS`), journal + rename writes, `recover` (finalizes dead-owner
-  running attempts as `interrupted`, kills orphaned child groups, removes stray
-  journal files; never promotes to passed).
+  running attempts as `interrupted`, records the digests of the logs they captured,
+  kills orphaned child groups, removes stray journal files; never promotes to passed),
+  `validateAttempt(record, key)` (record schema 1 + context identity; T-45) and
+  `inspectArtifacts(root, attempt)` (marks `missing`/`altered` logs by digest; T-45).
 - `runner.cjs` — `runAttempt`: running record first (supersedes readiness), snapshot
   before/after, `bash -eo pipefail -c` in its own process group, bounded (1 MiB)
   sanitized streaming capture echoed to the terminal, timeout SIGTERM→SIGKILL after
-  5 s, SIGINT/SIGTERM → `interrupted` (130), mutation → `error` `SOURCE_CHANGED`.
+  5 s sent to the whole group even after the shell exited, capture abandoned 2 s after
+  SIGKILL (`DRAIN_MS`; T-45), SIGINT/SIGTERM → `interrupted` (130), mutation → `error`
+  `SOURCE_CHANGED`.
 - `sanitize.cjs` — redaction patterns (bearer first, then key/secret/password/token
   assignments with bounded quantifiers, AWS, GitHub, PEM blocks) and
   `inlineSecretLine` (refuses `TOKEN=literal` in a block).
 - `readiness.cjs` — the one readiness computation: legacy rules (exact old messages)
-  and migrated rules with reason codes.
+  and migrated rules with reason codes; validates the attempt record and its context
+  key before honoring any outcome (T-45).
 - `status.cjs` — human report line-for-line as v0.4.1 plus `Runtime`, `Provenance`,
   `Local` lines; `notes_current` port; status JSON schema 1; newer same-source
   nonpassing candidate attempts block until re-export; fresh clone = `local
@@ -74,6 +79,13 @@ Decision: [[runtime-owned-verification]]. Extends [[ticket-state-machine]],
   outside the evidence dir (`.pincer/drafts/<sha>.json`).
 - The sanitizer's first version hung on a 64 KB line (quadratic regex); quantifiers
   are bounded now. Keep them bounded.
+- Readiness guards used to be `attempt.x && …`, so a record stripped to
+  `{id, outcome}` passed (external review of 77c5205). Every new field the runner
+  writes that readiness or export reads must be added to `state.validateAttempt`;
+  a finished record needs `finished` and 64-hex artifact digests, so any path that
+  finalizes a record (runner, `recover`) must set them.
+- A check that exits 0 leaving a background child holding the pipes is `timed_out`,
+  not `passed`; daemons started by a check must be detached from the group's pipes.
 - Tests: `test/runtime-{parse,identity,state,status,runner,lifecycle,migrate,evidence}
   .test.js`, `test/contracts.test.js`; `test/distribution.test.js` compares runtime
   digests across layouts and the plugin and exercises the installed copies.
