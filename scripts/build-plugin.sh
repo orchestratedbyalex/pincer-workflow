@@ -38,7 +38,8 @@ for f in template/.claude/references/*.md; do xform "$f" > "plugin/references/$(
 for f in template/docs/*.md; do xform "$f" > "plugin/docs/$(basename "$f")"; done
 
 cp template/.claude/hooks/block-dangerous.sh template/.claude/hooks/ticket-guard.sh template/.claude/hooks/hook-policy.cjs plugin/hooks/
-cp template/scripts/pincer-ticket.sh template/scripts/pincer-ticket-lib.sh template/scripts/pincer-status.sh template/scripts/pincer-evidence.cjs plugin/scripts/
+cp template/scripts/pincer-ticket.sh template/scripts/pincer-ticket-lib.sh template/scripts/pincer-status.sh template/scripts/pincer-evidence.cjs template/scripts/pincer-runtime.cjs plugin/scripts/
+mkdir -p plugin/scripts/pincer-runtime && cp template/scripts/pincer-runtime/*.cjs plugin/scripts/pincer-runtime/
 chmod +x plugin/hooks/*.sh plugin/scripts/*.sh
 
 cat > plugin/hooks/hooks.json <<EOF

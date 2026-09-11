@@ -1,9 +1,13 @@
 ---
 ticket: T-33
-status: open
+status: done
 size: M
 prd: .prd/prd-v4.md
 depends_on: [T-32]
+started: 2026-09-11T10:13:15Z
+last_check: 2026-09-11T10:21:38Z passed 052ee4a43812
+verified: 2026-09-11T10:21:38Z 052ee4a43812
+finished: 2026-09-11T10:21:38Z
 ---
 
 ## Objective
@@ -23,9 +27,9 @@ Implement the pure readiness computation and the human and JSON status report in
 - `test/runtime-status.test.js` (added to `npm test`): the JSON object parses, contains no progress text, and agrees with the human `Next`/`WARN` lines on the same fixtures; every failure fixture yields a stable reason code and a concrete next action; the status exit codes match the contract; `ready` exits 1 for a failed, running, stale and unticked ticket and 0 for a current one (legacy fixtures).
 
 ## Acceptance Criteria
-- [ ] All existing status assertions pass unchanged through the wrapper; the human output keeps its format and gains the `Runtime` line.
-- [ ] JSON and human output agree because both consume the same readiness computation; `ready` gates read-only.
-- [ ] `npm test` passes with the new suite.
+- [x] All existing status assertions pass unchanged through the wrapper; the human output keeps its format and gains the `Runtime` line.
+- [x] JSON and human output agree because both consume the same readiness computation; `ready` gates read-only.
+- [x] `npm test` passes with the new suite.
 
 ## Verification
 Proves: the Node status reproduces every pinned legacy verdict and adds machine-readable reasons; regression: any existing status assertion failing, JSON disagreeing with the human next action, or status writing to the tree.
