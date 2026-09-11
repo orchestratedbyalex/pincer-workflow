@@ -127,3 +127,9 @@ Outcome: npm publish still pending (needs the user's OTP); next is `/pincer-narr
 - Why: the user requested detailed logical next steps after the roadmap assessment. The next increment corrects recovery and moves verification execution, source identity, attempts, and evidence capture into a shared runtime.
 - Scope: minimal explicit change identity now; full lifecycle/authorization enforcement, mechanical coverage-impact analysis, and comparative platform trials remain follow-up PRDs.
 - Outcome: draft only; no implementation, tickets, runtime migration, release action, or test-pass claim. Documentation links, identifier uniqueness, and whitespace checked. Wiki briefing points to the draft.
+
+## [2026-09-11] end | PRD v4 implemented on feat/prd-v4: the runtime (T-29..T-43), trials, review packet
+- What: `template/scripts/pincer-runtime.cjs` + `pincer-runtime/` (parse, identity, source, state, runner, sanitize, readiness, status, lifecycle, migrate, evidence); wrappers delegate; Bash lib removed; guard covers `.pincer/` and `.prd/changes/`; evidence schema 2; migration; playbooks, templates, rules, checklists, README, site; `docs/runtime-contracts.md`; nine new suites; `docs/prd-v4-review-packet.md`, `docs/prd-v4-artifacts/`, `docs/trial-2026-09-11-prd-v4.md`.
+- Why: PRD v4 (verification slice of M1): runtime-owned, source-bound attempts instead of agent-authored receipts and logs.
+- How: this repo's own tickets ran on a pinned v0.4.1 kit (dogfooding rule); T-42/T-43 came out of the live trial (register/migrate steps in playbooks; register ignores `.pincer/`).
+- Outcome: all 15 tickets done; greenfield chain on the runtime passed release with schema 2 evidence; baseline comparison recorded. Next: `PRD v4: built`, evaluate (schema 1 via the pinned kit), merge, bump 0.5.0, publish.

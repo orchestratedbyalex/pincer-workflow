@@ -8,79 +8,56 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 
 ## Current state
 
-**v0.4.1 is bumped and tagged locally (2026-09-11) on top of the PRD v3
-evaluation; `npm publish` and `git push --follow-tags` are pending, so the
-registry still serves 0.4.0.** PRD v3 (`.prd/prd-v3.md`, `profile: small`,
-T-24..T-28) shipped three wording fixes from the interactive trial: the code
-playbook's recovery exception (tree back at the evaluated candidate, ticket
-file excepted, check passes directly → the user restores the ticket, nothing
-is verified or committed; [[revocable-receipts]] addendum), evaluate's one
-check per command with the command line as run, and plan asking only the open
-part of a partly answered question. The first candidate `7c19e42` was rejected
-on four wording findings (the exception's second condition was literally
-unsatisfiable); T-28 fixed them; candidate `a10358e` evaluated (`8cc6299`,
-manifest `ok`) and passed release. `docs/trial-2026-09-10-prd-v3.md` records
-the live eligible case (Sonnet `-p`, packed kit in a fixture copy) and the
-negative case as outstanding: the injected `npm` shim was found and bypassed.
-Because the bump commit follows the evaluation, `pincer-status` reports
-`stale: candidate changed after evaluation: package.json` by design.
+**PRD v4 ("Record verification automatically and invalidate stale evidence",
+`.prd/prd-v4.md`, `profile: standard`) is fully implemented on `feat/prd-v4`
+(2026-09-11, T-29..T-43) and awaits `PRD v4: built`, evaluation, merge, the 0.5.0
+bump and publish; v0.4.1 is still unpublished.** The kit now has a Node runtime
+([[runtime]], decision [[runtime-owned-verification]]): `scripts/pincer-runtime.cjs`
++ `scripts/pincer-runtime/` own the ticket lifecycle, readiness, status (`--json`),
+change registration (`.prd/changes/<id>.json`), the SHA-256 source manifest,
+verification attempts with sanitized captured logs under the ignored
+`.pincer/runtime/`, locking and `recover`, explicit `migrate --preview|--apply` with
+backups, candidate `check`s and evidence schema 2 export. `pincer-ticket.sh` and
+`pincer-status.sh` are wrappers; `pincer-ticket-lib.sh` is gone. Unmigrated projects
+keep the v0.4.1 receipt contract. The contract is `template/docs/runtime-contracts.md`;
+the review packet for the user's later check is `docs/prd-v4-review-packet.md` with
+`docs/prd-v4-artifacts/`; the live trial is `docs/trial-2026-09-11-prd-v4.md`
+(greenfield chain on the runtime passed release with schema 2 evidence; migration,
+repair, interruption and service-failure scenarios observed; v0.4.1 baseline for two
+scenarios). Two trial findings became T-42 (register/migrate steps in the playbooks)
+and T-43 (`register` ignores `.pincer/`).
 
-Before v0.4.1: PRD v2 ("Make requirements and release evidence reviewable", `.prd/prd-v2.md`,
-`profile: standard`) shipped as T-11..T-23: stable `R-NN` requirement IDs from
-plan to evaluation, `Proves:` behavioral checks, `profile: small|standard`, one
-shared authorization rule ([[requirements-through-delivery]]); evidence schema 1
-under `.prd/evidence/prd-vN/<candidate>/` validated by
-`template/scripts/pincer-evidence.cjs` ([[evidence-validator]]) and enforced by
-`notes_current`; a read-only release audit ([[candidate-evidence]]); recovery
-and status fixes plus a normalized whole-tree restore guard in
-`hook-policy.cjs` (233 payloads under test). The first candidate (2952e62) was
-rejected on review; T-21..T-23 fixed the findings from two saved review
-artifacts. Candidate `72d2d8b` was evaluated (`6518cfb`, manifest `ok`) and
-passed the release audit; the v0.4.0 bump commit sits on top of it, so
-`pincer-status` now reports `stale: candidate changed after evaluation:
-package.json` by design. Two live Sonnet trials plus two focused follow-ups
-passed (`docs/trial-2026-09-08-*.md`). The first interactive trial on the
-published 0.4.0 package (2026-09-10, `docs/trial-2026-09-10-interactive.md`)
-passed release: plan asked three real questions, narrow did not re-ask, the
-reviewer's two bugs went through a fix ticket to a new candidate, and the
-R-06 failed recheck and the evidence digest check were observed live. Its one
-finding: after a hand repair the assistant committed a receipt refresh on its
-own, which made a second evaluation necessary. `docs/index.html` no longer
-claims a two-hour timebox and lists the evidence validator.
+Before PRD v4: v0.4.1 (`1cb5ab4`, tagged locally, unpublished) shipped PRD v3's wording
+fixes; PRD v2 (v0.4.0) shipped requirement IDs, behavioral checks, candidate evidence
+schema 1 and the read-only release audit ([[requirements-through-delivery]],
+[[candidate-evidence]], [[revocable-receipts]]).
 
 ## Active / next task
 
-PRD v4 is now drafted at `.prd/prd-v4.md` (2026-09-11): recovery correction plus
-runtime-owned, source-bound verification, with ten requirements, 31 scenarios,
-seven implementation steps, and a later-review packet. The user requested a plan
-to implement themselves and bring back for review; implementation has not started.
-Full lifecycle, coverage-impact analysis, and platform benchmarking are explicit
-follow-up PRDs. Existing release notes below are historical session state, not a
-new registry or remote-status check.
-
-1. Publish v0.4.1 (`npm publish --otp=<code>`, user-run) and `git push
-   --follow-tags`; confirm CI. Then next PRD candidates
-   (`docs/pincer-improvement-plan.md`): M1 runtime that absorbs `notes_current`,
-   captures command logs itself and writes the reviewer transcript; a small
-   follow-up tightening the recovery exception ("run directly" in which
-   environment; the recorded failure must be explained by a since-reverted tree
-   change) plus a fixture with an external dependency so the negative scenario
-   can be observed; a Codex run of the full chain.
-2. Still untested: interrupt-and-resume, a new decision during narrow, R-03
-   live, the R-01 negative and remaining-source-changes scenarios, Copilot
-   prompt chain in VS Code, public plugin install.
+1. Commit `PRD v4: built`, then `/pincer-evaluate` with the pinned v0.4.1 kit (this
+   repo is deliberately not migrated, PRD v4 §9): code-quality review of
+   `6771fbc..<candidate>`, schema 1 manifest, NOTES.md, evidence commit; then
+   `/pincer-release`.
+2. Merge `feat/prd-v4` into main, bump 0.5.0 (`--no-git-tag-version`, rebuild plugin,
+   commit, annotated tag), publish (user runs `npm publish --otp`), push
+   `--follow-tags`, confirm CI on ubuntu/macOS × Node 18/22.
+3. Follow-ups (PRD v4 §10): lifecycle/resume, coverage impact, platform parity; trial the
+   runtime on Codex, Copilot and the plugin.
 
 ## Recent decisions
 
+- [[runtime-owned-verification]] — Node runtime records source-bound attempts; `done` consumes the current pass; evidence schema 2 exported from attempts; explicit migration
 - [[candidate-evidence]] — schema 1 manifest + artifacts per candidate; only NOTES.md and listed files may change after the candidate; legacy notes never release-ready
 - [[requirements-through-delivery]] — `R-NN` IDs plan→narrow→evaluate; `Proves:` checks that fail on wrong behavior; `profile`; identical authorization block in four playbooks
 - [[revocable-receipts]] — every verify attempt recorded; `done` re-runs the check; tickets and NOTES bound to a PRD revision
 
 ## Landmines
 
+- The repo's own tickets (T-29..T-43) were verified with a pinned v0.4.1 kit copied from `1cb5ab4` into the session scratchpad; recreate it with `git show 1cb5ab4:template/scripts/<file>`. Never export `CLAUDE_PROJECT_DIR` in the shell (`test/ticket.test.js` inherits it) and never pipe `verify`/`done` through `tail` before a `git commit` (the pipe masks the exit code).
+- A check that writes untracked non-ignored files ends `error` (`SOURCE_CHANGED`); a kit update inside a migrated project makes every done ticket `SOURCE_CHANGED` until re-verified.
 - After editing `template/`, run BOTH generators (`scripts/sync-prompts.sh`,
   `scripts/build-plugin.sh`); `test/distribution.test.js` fails on stale output.
-  `build-plugin.sh` must copy any new script explicitly, and `bin/pincer.js`
+  `build-plugin.sh` copies `pincer-runtime.cjs` and `pincer-runtime/*.cjs`; a new module elsewhere must be added explicitly, and `bin/pincer.js`
   `common` must list it. `npm version` alone leaves `plugin/.claude-plugin/
   plugin.json` stale — bump with `--no-git-tag-version`, rebuild, then commit
   and tag by hand (`v0.N.0: …`, annotated tag), as v0.3.0 and v0.4.0 did.
