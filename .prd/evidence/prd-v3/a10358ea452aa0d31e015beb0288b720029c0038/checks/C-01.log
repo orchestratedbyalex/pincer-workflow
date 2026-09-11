@@ -1,0 +1,19 @@
+$ npm test
+
+> pincer-workflow@0.4.0 test
+> node test/smoke.test.js && node test/installer.test.js && node test/ticket.test.js && node test/validation.test.js && node test/verification.test.js && node test/behavioral-verification.test.js && node test/evidence.test.js && node test/candidate.test.js && node test/recovery.test.js && node test/hooks.test.js && node test/workflow.test.js && node test/distribution.test.js
+
+pincer: this repo already has PINCER installed (.pincer.json exists) — use `pincer update`.
+smoke test passed
+installer preservation tests passed
+ticket lifecycle test passed
+ticket validation tests passed
+verification freshness tests passed
+behavioral verification acceptance set passed (3 controlled faults)
+evidence validator tests passed
+candidate identity and evidence integration tests passed
+PRD recovery tests passed
+hook regression tests passed (233 payloads)
+workflow contract tests passed
+distribution parity and packed-install tests passed
+exit 0

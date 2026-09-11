@@ -1,0 +1,6 @@
+$ bash template/scripts/sync-prompts.sh && bash scripts/build-plugin.sh && git status --short -- template plugin
+Synced 6 playbooks -> .agents/skills/ and .github/prompts/
+Built plugin/ v0.4.0 (21 files)
+--- git status --short -- template plugin (must be empty) ---
+
+exit 0

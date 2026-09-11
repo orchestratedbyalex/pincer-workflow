@@ -1,0 +1,6 @@
+$ git ls-files | grep -i env; grep -n -E '\.env' .gitignore
+ls-files grep exit 1 (1 = no tracked env files)
+4:.env
+5:.env.*
+6:!.env.example
+exit 0

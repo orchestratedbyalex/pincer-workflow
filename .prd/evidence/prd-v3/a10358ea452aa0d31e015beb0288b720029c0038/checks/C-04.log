@@ -1,0 +1,2 @@
+$ git diff d15933d4ade60bc283aaef0ed846dee5085dbbae..a10358ea452aa0d31e015beb0288b720029c0038 | grep -nE "^\+.*(api[_-]?key|secret|password|token)\s*[:=]\s*['\"][A-Za-z0-9_-]{8,}" | cut -d: -f1,2
+grep exit 1 (1 = no secret-like assignments in the diff; any match is reported as diff line number only)

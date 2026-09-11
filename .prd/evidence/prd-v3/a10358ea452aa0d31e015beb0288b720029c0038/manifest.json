@@ -1,0 +1,187 @@
+{
+  "schema": 1,
+  "prd": ".prd/prd-v3.md",
+  "base": "d15933d4ade60bc283aaef0ed846dee5085dbbae",
+  "candidate": "a10358ea452aa0d31e015beb0288b720029c0038",
+  "created": "2026-09-11T07:11:43Z",
+  "environment": {
+    "os": "macOS 26.6.2 (darwin 25.6.0)",
+    "node": "v22.23.1",
+    "tools": [
+      "npm 10",
+      "git",
+      "Claude Code 2.1.267 print mode (trial sessions, Sonnet)",
+      "general-purpose subagent applying the code-quality-reviewer rubric"
+    ],
+    "limitations": [
+      "npm audit cannot run: no dependencies and no lockfile (C-05 unverified, non-required)",
+      "no UI in this repository; visual review not applicable",
+      "live observations on one agent surface only (Claude Code -p, Sonnet, macOS); R-01 negative scenario and R-03 not observed live",
+      "the second candidate (T-28 wording fixes) was reviewed by the evaluator against the findings, not re-sent to the subagent"
+    ]
+  },
+  "coverage_review": "R-01 maps to T-24 (wording, C-01 assertions), T-27 (live eligible case, C-06 record) and T-28 (evaluation fix); R-02 to T-25 (C-01) with a by-product live observation in the T-27 record; R-03 to T-26 (C-01). Wording assertions prove contract presence, not agent compliance. The R-01 negative scenario was attempted with a bypassable environment fault and is recorded as outstanding in the PRD Out of Scope; the remaining-source-changes scenario and R-03 were not observed live. The map is complete for the requirements as written; adequacy of static assertions for playbook text is the evaluator judgment, as in PRD v2.",
+  "requirements": [
+    {
+      "id": "R-01",
+      "disposition": "delivered",
+      "tickets": [
+        "T-24",
+        "T-27",
+        "T-28"
+      ],
+      "checks": [
+        "C-01",
+        "C-02",
+        "C-06",
+        "C-07"
+      ],
+      "note": "Exception wording present and asserted; eligible case observed live (named command, no verify, no commit, current status). Negative-scenario live observation outstanding (PRD Out of Scope, agent-recorded cut awaiting user confirmation at release)."
+    },
+    {
+      "id": "R-02",
+      "disposition": "delivered",
+      "tickets": [
+        "T-25"
+      ],
+      "checks": [
+        "C-01",
+        "C-02",
+        "C-06",
+        "C-07"
+      ],
+      "note": "Step 9 wording present and asserted; the trial re-evaluation manifest showed six checks with the security pass as three entries and only npm audit unverified."
+    },
+    {
+      "id": "R-03",
+      "disposition": "delivered",
+      "tickets": [
+        "T-26"
+      ],
+      "checks": [
+        "C-01",
+        "C-02",
+        "C-07"
+      ],
+      "note": "Wording present and asserted; live observation outstanding until the next full trial."
+    }
+  ],
+  "checks": [
+    {
+      "id": "C-01",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "npm test",
+      "timestamp": "2026-09-11T07:10:25Z",
+      "artifacts": [
+        ".prd/evidence/prd-v3/a10358ea452aa0d31e015beb0288b720029c0038/checks/C-01.log"
+      ]
+    },
+    {
+      "id": "C-02",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "bash template/scripts/sync-prompts.sh && bash scripts/build-plugin.sh && git status --short -- template plugin",
+      "timestamp": "2026-09-11T07:10:25Z",
+      "artifacts": [
+        ".prd/evidence/prd-v3/a10358ea452aa0d31e015beb0288b720029c0038/checks/C-02.log"
+      ],
+      "note": "generated adapters and plugin are current; empty status after regeneration"
+    },
+    {
+      "id": "C-03",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "git ls-files | grep -i env; grep -n -E '\\.env' .gitignore",
+      "timestamp": "2026-09-11T07:11:43Z",
+      "artifacts": [
+        ".prd/evidence/prd-v3/a10358ea452aa0d31e015beb0288b720029c0038/checks/C-03.log"
+      ],
+      "note": "no tracked env files; .gitignore covers .env and .env.* except .env.example"
+    },
+    {
+      "id": "C-04",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "git diff d15933d4ade60bc283aaef0ed846dee5085dbbae..a10358ea452aa0d31e015beb0288b720029c0038 | grep -nE \"^\\+.*(api[_-]?key|secret|password|token)\\s*[:=]\\s*['\\\"][A-Za-z0-9_-]{8,}\" | cut -d: -f1,2",
+      "timestamp": "2026-09-11T07:10:25Z",
+      "artifacts": [
+        ".prd/evidence/prd-v3/a10358ea452aa0d31e015beb0288b720029c0038/checks/C-04.log"
+      ],
+      "note": "no secret-like assignments in the candidate diff; matches would be reported as diff line numbers only"
+    },
+    {
+      "id": "C-05",
+      "kind": "command",
+      "required": false,
+      "result": "unverified",
+      "command": "npm audit --omit=dev",
+      "timestamp": "2026-09-11T07:10:25Z",
+      "artifacts": [
+        ".prd/evidence/prd-v3/a10358ea452aa0d31e015beb0288b720029c0038/checks/C-05.log"
+      ],
+      "note": "cannot run: no lockfile and no dependencies (ENOLOCK)"
+    },
+    {
+      "id": "C-06",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "f=$(ls docs/trial-*-prd-v3.md | tail -1); for s in Brief Base Versions Artifacts Results Interventions Untested R-01 R-02 R-03 commit last_check; do grep -q \"$s\" \"$f\" || exit 1; done; grep -q outstanding \"$f\"",
+      "timestamp": "2026-09-11T07:10:25Z",
+      "artifacts": [
+        ".prd/evidence/prd-v3/a10358ea452aa0d31e015beb0288b720029c0038/checks/C-06.log"
+      ],
+      "note": "T-27 Verification block re-run: the trial record docs/trial-2026-09-10-prd-v3.md is present with its sections and requirement rows"
+    },
+    {
+      "id": "C-07",
+      "kind": "review",
+      "required": true,
+      "result": "passed",
+      "timestamp": "2026-09-11T07:11:17Z",
+      "artifacts": [
+        ".prd/evidence/prd-v3/a10358ea452aa0d31e015beb0288b720029c0038/review/code-quality.md"
+      ],
+      "note": "code-quality review of d15933d..7c19e42 with dispositions; findings 1-4 fixed in T-28, 5 recorded as a known issue"
+    }
+  ],
+  "visual_review": {
+    "applicable": false,
+    "reason": "The kit is Bash, Node and Markdown; nothing renders. docs/index.html was not changed by this PRD."
+  },
+  "artifacts": [
+    {
+      "path": ".prd/evidence/prd-v3/a10358ea452aa0d31e015beb0288b720029c0038/checks/C-01.log",
+      "sha256": "0a156da88fb42a31ee6171170592223fb0d71f953a255e00cdfd6c0e6c1c5011"
+    },
+    {
+      "path": ".prd/evidence/prd-v3/a10358ea452aa0d31e015beb0288b720029c0038/checks/C-02.log",
+      "sha256": "bda0b32f8d368b4babb4a58ca456bb15200ff41ff709e5434b885d8a04e7f293"
+    },
+    {
+      "path": ".prd/evidence/prd-v3/a10358ea452aa0d31e015beb0288b720029c0038/checks/C-03.log",
+      "sha256": "866d5a450f4b103ec39a83bd9d40069418704982abbd86040dce41feacf87287"
+    },
+    {
+      "path": ".prd/evidence/prd-v3/a10358ea452aa0d31e015beb0288b720029c0038/checks/C-04.log",
+      "sha256": "2c901c72f944afface77703e72592128e4b8a503cba95b4ff0f1ef6d8c348451"
+    },
+    {
+      "path": ".prd/evidence/prd-v3/a10358ea452aa0d31e015beb0288b720029c0038/checks/C-05.log",
+      "sha256": "3f34f7af326ce67d1d3fddef804a370cc6a9510175a59cf78ed1ad23f1ecd4d4"
+    },
+    {
+      "path": ".prd/evidence/prd-v3/a10358ea452aa0d31e015beb0288b720029c0038/checks/C-06.log",
+      "sha256": "6e703762fb1a9163e3dde70ea5c139720ba3558fb998e6b21ec968bad8c7a6b5"
+    },
+    {
+      "path": ".prd/evidence/prd-v3/a10358ea452aa0d31e015beb0288b720029c0038/review/code-quality.md",
+      "sha256": "c3143d50a69eea8d74b04b968aafbf788647ba7bcdecda295d7fb80b92e86088"
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+$ f=$(ls docs/trial-*-prd-v3.md | tail -1); for s in Brief Base Versions Artifacts Results Interventions Untested R-01 R-02 R-03 commit last_check; do grep -q "$s" "$f" || exit 1; done; grep -q outstanding "$f"
+record: docs/trial-2026-09-10-prd-v3.md
+exit 0
