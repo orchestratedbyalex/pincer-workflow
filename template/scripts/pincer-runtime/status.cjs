@@ -18,6 +18,7 @@ const changes = require('./changes.cjs');
 const transaction = require('./transaction.cjs');
 const agreement = require('./agreement.cjs');
 const authorization = require('./authorization.cjs');
+const locator = require('./locator.cjs');
 const { tryGit } = require('./fsutil.cjs');
 
 const RUNTIME = 1;
@@ -294,10 +295,15 @@ function gatherBody(root, out, ctx) {
     }
   }
 
-  // Candidate.
-  const notes = prd ? notesCurrent(root, prd) : { text: 'missing', state: 'missing' };
-  line(`Notes    NOTES.md: ${notes.text}`);
-  const ev = evidenceLine(root, prd);
+  // Candidate: NOTES.md in legacy and migrated mode; the change's evaluation
+  // locator in changes mode (NOTES.md is then a compatibility summary).
+  const notes = ctx.notes ? ctx.notes() : prd ? notesCurrent(root, prd) : { text: 'missing', state: 'missing' };
+  if (ctx.notes) {
+    const compat = prd && fs.existsSync(path.join(root, 'NOTES.md')) ? notesCurrent(root, prd).text : 'missing';
+    line(`Notes    NOTES.md: ${compat} (compatibility summary; the evaluation locator decides)`);
+    line(`Evaluation ${ctx.locatorFile}: ${notes.text}`);
+  } else line(`Notes    NOTES.md: ${notes.text}`);
+  const ev = ctx.evidence ? ctx.evidence() : evidenceLine(root, prd);
   if (ev) line(`Evidence ${ev.manifest} · ${ev.ok ? 'ok' : ev.reason}`);
   j.candidate = {
     notes: notes.state, reason: notes.state === 'current' ? null : notes.text,
@@ -306,6 +312,7 @@ function gatherBody(root, out, ctx) {
     local_attempts: runtimeMode ? (state.exists(root) ? 'available' : 'unavailable') : 'not applicable (legacy mode)',
     newer_attempts: [],
     reasons: notes.state === 'current' ? [] : [{ code: notes.state === 'missing' ? 'EVIDENCE_MISSING' : 'CANDIDATE_STALE', detail: notes.text }],
+    ...(ctx.notes ? { locator: ctx.locatorFile, evaluation: notes.entry ? { candidate: notes.entry.candidate, base: notes.entry.base, manifest: notes.entry.manifest, recorded: notes.entry.recorded, agreement: notes.entry.agreement } : null } : {}),
   };
   // Provenance and newer local attempts (contract "Evidence schema 2"): a newer
   // nonpassing attempt for the same check and candidate on the same source inputs
@@ -451,7 +458,7 @@ function gatherChanges(root, out, { budget, now, change }) {
     if (st === 'active' && computed.allReady && computed.prdStatus !== 'draft') return `${cmd('complete')} — every ticket is done and ready; complete the change before choosing the candidate`;
     return computed.defaultNext;
   };
-  gatherBody(root, out, { mode: 'changes', binding, prd, prdResult, bindingResult: null, budget, now, decideNext });
+  gatherBody(root, out, { mode: 'changes', binding, prd, prdResult, bindingResult: null, budget, now, decideNext, notes: () => locator.current(root, record), evidence: () => locator.evidenceLine(root, record), locatorFile: locator.file(id) });
   // Reasons in gate order: repository view first, then the authorization verdict, then the rest.
   const front = [...v.problems, ...(auth.verdict !== 'current' && !agreed.code ? [{ code: auth.verdict, detail: auth.detail }] : [])];
   j.reasons = [...front, ...j.reasons.filter(r => !front.includes(r))];

@@ -38,6 +38,7 @@ const agreement = require('./pincer-runtime/agreement.cjs');
 const authorization = require('./pincer-runtime/authorization.cjs');
 const transitions = require('./pincer-runtime/transitions.cjs');
 const gates = require('./pincer-runtime/gates.cjs');
+const locator = require('./pincer-runtime/locator.cjs');
 const { atomicWrite, nowIso, tryGit } = require('./pincer-runtime/fsutil.cjs');
 const EXIT = { OK: 0, FAILED: 1, USAGE: 2, BUSY: 3, INVALID: 4, TIMED_OUT: 124, INTERRUPTED: 130 };
 
@@ -168,6 +169,14 @@ function cmdEvidence(root, args) {
     process.exit(EXIT.FAILED);
   }
   process.stdout.write(`exported ${result.manifest} (schema 2) — validate: node scripts/pincer-evidence.cjs validate ${result.manifest} --candidate ${o.candidate} --prd ${o.prd}\n`);
+  if (b.mode === 'changes') {
+    // The per-change evaluation locator is the identity of this evaluation;
+    // root NOTES.md stays the human summary (docs/runtime-contracts.md).
+    const entry = { candidate: o.candidate, base: o.base, prd: o.prd, prd_revision: b.prd_revision, agreement: b.agreement, manifest: result.manifest, recorded: nowIso() };
+    const appended = locator.append(root, b.change, entry);
+    if (appended.code) fail('pincer', `${appended.code}: the manifest was written but the evaluation locator could not be updated: ${appended.problem}`, exitForCode(appended.code));
+    process.stdout.write(`${appended.action === 'recorded' ? 'recorded' : 'already recorded'} evaluation of change ${b.change} in ${locator.file(b.change)} (candidate ${o.candidate.slice(0, 7)}); commit it with the evidence\n`);
+  }
   process.exit(EXIT.OK);
 }
 
@@ -395,8 +404,10 @@ function cmdChange(root, args) {
     const sel = changes.readSelection(root);
     const now = agreementNow(root, result.record);
     const v = authorization.verdict(root, result.record);
-    if (o.json) process.stdout.write(`${JSON.stringify({ schema: 1, runtime: changes.RUNTIME, generated: nowIso(), root, file: result.file, selected: !sel.code && sel.change === o.positional[0], record: result.record, agreement: now.code ? { current: null, problem: { code: now.code, detail: now.problem } } : { current: now.digest, recorded: now.entry ? now.entry.id : null, latest: now.latest ? now.latest.id : null, difference: now.difference }, authorization: { verdict: v.verdict, detail: v.detail, authorized: v.authorized ? v.authorized.id : null, open_decisions: v.open }, evaluations: [] }, null, 2)}\n`);
-    else process.stdout.write(changes.renderShow(o.positional[0], result, { agreement: now, verdict: v }));
+    const loc = locator.read(root, o.positional[0]);
+    const evaluations = loc.code ? [] : loc.locator.evaluations;
+    if (o.json) process.stdout.write(`${JSON.stringify({ schema: 1, runtime: changes.RUNTIME, generated: nowIso(), root, file: result.file, selected: !sel.code && sel.change === o.positional[0], record: result.record, agreement: now.code ? { current: null, problem: { code: now.code, detail: now.problem } } : { current: now.digest, recorded: now.entry ? now.entry.id : null, latest: now.latest ? now.latest.id : null, difference: now.difference }, authorization: { verdict: v.verdict, detail: v.detail, authorized: v.authorized ? v.authorized.id : null, open_decisions: v.open }, evaluations, locator: loc.code ? { code: loc.code, detail: loc.problem } : null }, null, 2)}\n`);
+    else process.stdout.write(changes.renderShow(o.positional[0], result, { agreement: now, verdict: v, evaluations: loc.code ? [] : evaluations, locatorProblem: loc.code ? loc.problem : null }));
     process.exit(EXIT.OK);
   }
   if (transitions.OPS.includes(sub)) {

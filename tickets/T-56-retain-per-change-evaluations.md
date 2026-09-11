@@ -1,9 +1,13 @@
 ---
 ticket: T-56
-status: open
+status: done
 size: M
 prd: .prd/prd-v5.md
 depends_on: [T-55]
+started: 2026-09-11T21:43:19Z
+last_check: 2026-09-11T21:49:16Z passed 20a43d2ec53d
+verified: 2026-09-11T21:49:16Z 20a43d2ec53d
+finished: 2026-09-11T21:49:16Z
 ---
 
 ## Objective
@@ -24,9 +28,9 @@ Retain per-change evaluation references and release verdicts so PRD v5 can be im
 - Reject malformed/dangling/cross-change references and unknown schemas before updating the locator; coordinate reference writes through T-48.
 
 ## Acceptance Criteria
-- [ ] Evaluate A then B; each remains addressable despite root NOTES naming only one, with historical/current provenance accurately distinguished.
-- [ ] Complete then evaluate then audit succeeds without a follow-up lifecycle commit; release preserves files, selection and attempt count.
-- [ ] Later source/agreement changes or a newer applicable failure block current readiness; missing/cross-change/corrupt references cannot revive a pass.
+- [x] Evaluate A then B; each remains addressable despite root NOTES naming only one, with historical/current provenance accurately distinguished.
+- [x] Complete then evaluate then audit succeeds without a follow-up lifecycle commit; release preserves files, selection and attempt count.
+- [x] Later source/agreement changes or a newer applicable failure block current readiness; missing/cross-change/corrupt references cannot revive a pass.
 
 ## Verification
 Proves: Exercises retained evaluations, candidate ordering and read-only release, including corruption and newer-failure checks.

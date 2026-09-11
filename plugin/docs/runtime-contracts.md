@@ -809,8 +809,9 @@ the selected change (a schema 1 record or another change's record is refused), a
 manifest's `change.prd_revision` is the PRD revision the attempts recorded.
 
 `check` refuses unless HEAD is `--candidate` (or a descendant that differs from it
-only in `NOTES.md`, `.prd/evidence/prd-vN/<candidate>/` and, in changes mode, the
-change's evaluation locator, such as the evaluate commit), the record is current, and
+only in `NOTES.md`, evidence directories of that candidate commit
+(`.prd/evidence/prd-v*/<candidate>/`) and evaluation locators, such as the evaluate
+commit of this or another change of the same candidate), the record is current, and
 `git status --porcelain --untracked-files=all` lists nothing outside those same paths;
 it never stashes, resets or commits.
 
@@ -838,11 +839,14 @@ In changes mode the evaluations of a change are located by
 
 The latest entry is the change's evaluation. The locator lives under the fixed source
 exclusion `.prd/evidence/`, is not listed in any manifest (so no digest refers to
-itself), and is one of the three paths allowed to differ from the candidate. The
+itself), and is one of the paths allowed to differ from the candidate. The
 candidate of a change is "current" when the latest entry's manifest validates for its
-candidate, base and PRD, the candidate is an ancestor of HEAD, and the diff from the
-candidate to HEAD plus the dirty tree contain nothing but `NOTES.md`, that manifest's
-listed files and the locator; otherwise `CANDIDATE_STALE` with the reason quoted. An
+candidate, base and PRD and records this change, the candidate is an ancestor of HEAD,
+and the diff from the candidate to HEAD plus the dirty tree contain nothing but
+`NOTES.md`, evidence directories of that same candidate commit
+(`.prd/evidence/prd-v*/<candidate>/`, so two changes can evaluate one candidate in
+turn) and evaluation locators; otherwise `CANDIDATE_STALE` with the reason quoted.
+Directories of other candidates and every other path are candidate changes. An
 entry whose manifest is missing, whose `change` differs from the locator's, or that
 names another change's candidate is `MALFORMED` and never revives readiness. Root
 `NOTES.md` remains the human summary of whichever change was evaluated last;
