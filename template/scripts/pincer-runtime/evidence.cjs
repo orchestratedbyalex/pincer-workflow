@@ -330,8 +330,11 @@ function exportEvidence(root, { candidate, base, prd, draft, binding, attemptsFo
     if (!attempt) { problems.push(`draft check ${stub.id}: no runtime attempt for candidate ${candidate}; run: node scripts/pincer-runtime.cjs check ${stub.id} --candidate ${candidate} -- <command>`); continue; }
     // The record must be complete, written for this check, and its captured
     // logs must still match the digests it recorded; anything else is refused.
-    const invalid = validateAttempt(attempt, contextKey({ kind: 'candidate', candidate, check: stub.id }), pointed || null);
+    const changesMode = binding.mode === 'changes';
+    const invalid = validateAttempt(attempt, contextKey({ kind: 'candidate', change: binding.change, candidate, check: stub.id, mode: binding.mode }), pointed || null);
     if (invalid) { problems.push(`draft check ${stub.id}: attempt ${typeof attempt.id === 'string' ? attempt.id : '?'} ${invalid}; run the check again`); continue; }
+    if (changesMode && attempt.schema !== 2) { problems.push(`draft check ${stub.id}: attempt ${attempt.id} was recorded under schema ${attempt.schema} (before this project used change records) and is history; run the check again`); continue; }
+    if (changesMode && attempt.context.change !== binding.change) { problems.push(`draft check ${stub.id}: attempt ${attempt.id} belongs to change ${attempt.context.change}, not ${binding.change}; run the check again`); continue; }
     if (attempt.outcome === 'running') { problems.push(`draft check ${stub.id}: attempt ${attempt.id} is still running`); continue; }
     const logRel = `${dirRel}/checks/${stub.id}.log`;
     const pieces = [`$ ${(attempt.check && attempt.check.display) || ''}`.replace(/\n$/, ''), ''];

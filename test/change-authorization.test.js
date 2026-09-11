@@ -156,11 +156,11 @@ const EXCERPT = 'looks good, go ahead with both tickets as written';
   const dir = fixture();
   const a = digestOf(dir);
   passes(rt(dir, 'change', 'authorize', 'prd-v1', '--agreement', a, '--reference', REF, '--excerpt', 'approved; you may add regression checks for already-approved behavior', '--constraints', 'delegated: extra regression checks'));
-  // A prior passing attempt for T-01 under the old check digest (the v0.5.0 record shape readiness accepts).
+  // A prior passing attempt for T-01 under the old check digest (a schema 2 record of this change).
   const ticketText = read(dir, 'tickets/T-01-example.md');
   const attempt = {
-    schema: 1, runtime: 1, id: '000001-20260911T000000Z-aaaaaa', sequence: 1,
-    context: { kind: 'ticket', change: 'prd-v1', prd: '.prd/prd-v1.md', prd_revision: parse.prdDigest(read(dir, '.prd/prd-v1.md')), base: record(dir).base, ticket: 'T-01', ticket_digest: parse.ticketDigest(ticketText) },
+    schema: 2, runtime: 2, id: '000001-20260911T000000Z-aaaaaa', sequence: 1,
+    context: { kind: 'ticket', change: 'prd-v1', prd: '.prd/prd-v1.md', prd_revision: parse.prdDigest(read(dir, '.prd/prd-v1.md')), base: record(dir).base, ticket: 'T-01', ticket_digest: parse.ticketDigest(ticketText), agreement: digestOf(dir) },
     check: { digest: parse.checkDigest(ticketText, 600), display: 'test -f value.txt\n', timeout_seconds: 600 },
     outcome: 'passed', exit_code: 0, signal: null, runner: { shell: '/bin/bash', args: ['-eo', 'pipefail', '-c'], version: 'x' }, cwd: '.', environment: { os: 'x', node: 'x', declared: {} },
     started: '2026-09-11T00:00:00Z', finished: '2026-09-11T00:00:01Z', source: { before: 'a'.repeat(64), after: 'a'.repeat(64), files: 1, limitations: [] },

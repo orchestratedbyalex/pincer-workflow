@@ -88,6 +88,10 @@ async function runAttempt({ root, context, commands, timeoutSeconds, command = '
   if (before.problems.length) return { code: before.problems[0].code, problem: before.problems.map(p => `${p.code}: ${p.detail}`).join('\n'), problems: before.problems };
 
   const key = state.contextKey(context);
+  // Changes mode records (schema 2) carry the agreement digest; `mode` only
+  // selects the key format and is not part of the record.
+  const { mode, ...persisted } = context;
+  const schema = persisted.agreement ? 2 : 1;
   let attempt, logDir, relLogDir;
   try {
     state.withLock(root, () => {
@@ -101,7 +105,7 @@ async function runAttempt({ root, context, commands, timeoutSeconds, command = '
       logDir = path.join(root, relLogDir);
       fs.mkdirSync(logDir, { recursive: true });
       attempt = {
-        schema: 1, runtime: 1, id, sequence, context,
+        schema, runtime: schema, id, sequence, context: persisted,
         check: { digest: checkDigest, display, timeout_seconds: timeoutSeconds },
         outcome: 'running', exit_code: null, signal: null,
         runner: runnerInfo(), cwd: '.',

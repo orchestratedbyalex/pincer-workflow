@@ -1,9 +1,13 @@
 ---
 ticket: T-55
-status: open
+status: done
 size: M
 prd: .prd/prd-v5.md
 depends_on: [T-54]
+started: 2026-09-11T21:34:43Z
+last_check: 2026-09-11T21:42:44Z passed 263d71580859
+verified: 2026-09-11T21:42:44Z 263d71580859
+finished: 2026-09-11T21:42:44Z
 ---
 
 ## Objective
@@ -24,9 +28,9 @@ Isolate attempts and candidate checks by change and revision so PRD v5 can be im
 - Keep old attempts inspectable with their historical identity; never relabel them as new-schema current evidence.
 
 ## Acceptance Criteria
-- [ ] Same-candidate C-01 attempts for two changes yield separate verdicts; wrong-change/revision pointers refuse.
-- [ ] B's source change invalidates A's verification without revoking otherwise matching authorization.
-- [ ] Incomplete/corrupt attempt, altered stdout/stderr, failed recheck and background-child timeout regressions remain blocked/bounded.
+- [x] Same-candidate C-01 attempts for two changes yield separate verdicts; wrong-change/revision pointers refuse.
+- [x] B's source change invalidates A's verification without revoking otherwise matching authorization.
+- [x] Incomplete/corrupt attempt, altered stdout/stderr, failed recheck and background-child timeout regressions remain blocked/bounded.
 
 ## Verification
 Proves: Creates colliding check/candidate identifiers through the runtime and injects stale/malformed evidence; prevents cross-change success and reintroduction of v4 review defects.

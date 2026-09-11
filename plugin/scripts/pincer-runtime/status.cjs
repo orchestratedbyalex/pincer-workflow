@@ -219,7 +219,7 @@ function gatherBody(root, out, ctx) {
         if (before) changedPaths = source.diffManifests(before, manifestNow);
       }
       const legacyReceipt = (binding.legacy_receipts && binding.legacy_receipts[t.fields.ticket]) || (t.fields.verified || t.fields.last_check ? { verified: t.fields.verified, last_check: t.fields.last_check } : null);
-      r = readiness.migratedTicketReadiness({ text: t.text, fields: t.fields, timeout: t.timeout, attempt, legacyReceipt, current, sourceProblems, changedPaths, contextKey: key, pointedId: indexRead.index ? indexRead.index.current[key] || null : null });
+      r = readiness.migratedTicketReadiness({ text: t.text, fields: t.fields, timeout: t.timeout, attempt, legacyReceipt, current, sourceProblems, changedPaths, contextKey: key, pointedId: indexRead.index ? indexRead.index.current[key] || null : null, mode });
       r.attempt = attempt;
     }
     readinessOf.set(t.file, r);

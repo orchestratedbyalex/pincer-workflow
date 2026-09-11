@@ -145,13 +145,16 @@ function validateAttempt(a, key, pointedId) {
   const digestOrNull = v => v === null || (typeof v === 'string' && SHA256.test(v));
   if (!obj(a)) return 'record is not a JSON object';
   const bad = [];
-  if (a.schema !== 1) bad.push('schema');
-  if (a.runtime !== 1) bad.push('runtime');
+  // Schema 1 (migrated mode) and schema 2 (changes mode: the agreement digest is
+  // part of the context) share every other field.
+  if (a.schema !== 1 && a.schema !== 2) bad.push('schema');
+  if (a.runtime !== a.schema) bad.push('runtime');
   if (!str(a.id)) bad.push('id');
   if (!Number.isInteger(a.sequence) || a.sequence < 1) bad.push('sequence');
   const c = a.context;
   if (!obj(c) || !['ticket', 'candidate'].includes(c.kind) || !str(c.change) || !str(c.prd) || !str(c.prd_revision) || !str(c.base)
-    || (c.kind === 'ticket' ? !str(c.ticket) || !str(c.ticket_digest) : !str(c.candidate) || !str(c.check))) bad.push('context');
+    || (c.kind === 'ticket' ? !str(c.ticket) || !str(c.ticket_digest) : !str(c.candidate) || !str(c.check))
+    || (a.schema === 2 ? !(typeof c.agreement === 'string' && SHA256.test(c.agreement)) : 'agreement' in c)) bad.push('context');
   if (!obj(a.check) || typeof a.check.digest !== 'string' || !SHA256.test(a.check.digest) || typeof a.check.display !== 'string'
     || !Number.isInteger(a.check.timeout_seconds) || a.check.timeout_seconds <= 0) bad.push('check');
   if (!OUTCOMES.includes(a.outcome)) bad.push('outcome');

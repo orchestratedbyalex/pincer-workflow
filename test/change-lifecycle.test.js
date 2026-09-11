@@ -81,8 +81,7 @@ function fixture({ authorizeB = true } = {}) {
   commit(dir, 'registered and authorized');
   return dir;
 }
-// A complete, current, passing attempt record for a ticket of a change (the
-// record shape readiness accepts today; T-55 adds the schema 2 identity).
+// A complete, current, passing schema 2 attempt record for a ticket of a change.
 function passingAttempt(dir, { change = 'prd-v1', ticket = 'T-01', file = 'tickets/T-01-example.md', sequence = 1, outcome = 'passed' } = {}) {
   const text = read(dir, file);
   const id = `${String(sequence).padStart(6, '0')}-20260911T000000Z-${change.slice(0, 3)}${String(sequence).padStart(3, '0')}`;
@@ -90,8 +89,8 @@ function passingAttempt(dir, { change = 'prd-v1', ticket = 'T-01', file = 'ticke
   const digest = manifest.digest;
   source.storeManifest(dir, manifest);
   const a = {
-    schema: 1, runtime: 1, id, sequence,
-    context: { kind: 'ticket', change, prd: record(dir, change).prd, prd_revision: parse.prdDigest(read(dir, record(dir, change).prd)), base: record(dir, change).base, ticket, ticket_digest: parse.ticketDigest(text) },
+    schema: 2, runtime: 2, id, sequence,
+    context: { kind: 'ticket', change, prd: record(dir, change).prd, prd_revision: parse.prdDigest(read(dir, record(dir, change).prd)), base: record(dir, change).base, ticket, ticket_digest: parse.ticketDigest(text), agreement: agreement.compute(dir, record(dir, change)).digest },
     check: { digest: parse.checkDigest(text, 600), display: `${parse.blockText(text)}`, timeout_seconds: 600 },
     outcome, exit_code: outcome === 'passed' ? 0 : 1, signal: null, runner: { shell: '/bin/bash', args: ['-eo', 'pipefail', '-c'], version: 'x' }, cwd: '.', environment: { os: 'x', node: 'x', declared: {} },
     started: '2026-09-11T00:00:00Z', finished: '2026-09-11T00:00:01Z', source: { before: digest, after: digest, files: 1, limitations: [] },

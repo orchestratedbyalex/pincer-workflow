@@ -39,7 +39,7 @@ function legacyTicketReadiness(text, fields) {
 // `contextKey` is the key the attempt was read for and `pointedId` the id the
 // index names for it (the record must match both); the attempt's artifacts
 // carry `missing`/`altered` from state.inspectArtifacts.
-function migratedTicketReadiness({ text, fields, timeout, attempt, legacyReceipt, current, sourceProblems = [], changedPaths = [], contextKey = null, pointedId = null }) {
+function migratedTicketReadiness({ text, fields, timeout, attempt, legacyReceipt, current, sourceProblems = [], changedPaths = [], contextKey = null, pointedId = null, mode = 'migrated' }) {
   const reasons = [];
   for (const p of sourceProblems) reasons.push(reason(p.code, p.detail, p.code === 'SECRET_PATH' ? 'remove or ignore the secret file' : 'remove the input or change the configuration'));
   if (reasons.length) return { ready: false, reasons };
@@ -52,6 +52,10 @@ function migratedTicketReadiness({ text, fields, timeout, attempt, legacyReceipt
   // outcome is honored: a stripped or foreign record is never a pass.
   const invalid = validateAttempt(attempt, contextKey, pointedId);
   if (invalid) return { ready: false, reasons: [reason('ATTEMPT_ERROR', `attempt ${id} ${invalid}`, 'verify')] };
+  // A record written before the migration to change records keeps its identity
+  // as history; it never becomes current evidence for the new change context.
+  if (mode === 'changes' && attempt.schema !== 2) return { ready: false, reasons: [reason('HISTORICAL_EVIDENCE', `attempt ${id} was recorded under schema ${attempt.schema} (before this project used change records) and is history, not current evidence`, 'verify')] };
+  if (mode !== 'changes' && attempt.schema === 2) return { ready: false, reasons: [reason('ATTEMPT_ERROR', `attempt ${id} is a change-record (schema 2) attempt; this project is not in changes mode`, 'verify')] };
   switch (attempt.outcome) {
     case 'running': return { ready: false, reasons: [reason('ATTEMPT_RUNNING', `attempt ${id} is running`, 'wait, or run recover if its owner died')] };
     case 'interrupted': return { ready: false, reasons: [reason('ATTEMPT_INTERRUPTED', `attempt ${id} was interrupted`, 'verify')] };

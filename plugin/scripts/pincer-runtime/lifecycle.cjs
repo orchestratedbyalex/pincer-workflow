@@ -115,7 +115,7 @@ function migratedReadiness(root, t, binding, inputs) {
     if (before) changedPaths = source.diffManifests(before, inputs.manifest);
   }
   const legacyReceipt = (binding.legacy_receipts && binding.legacy_receipts[t.id]) || (t.fields.verified || t.fields.last_check ? { verified: t.fields.verified, last_check: t.fields.last_check } : null);
-  const r = readiness.migratedTicketReadiness({ text: t.text, fields: t.fields, timeout: t.timeout, attempt, legacyReceipt, current: inputs.current, sourceProblems: inputs.manifest.problems, changedPaths, contextKey: key, pointedId: inputs.index ? inputs.index.current[key] || null : null });
+  const r = readiness.migratedTicketReadiness({ text: t.text, fields: t.fields, timeout: t.timeout, attempt, legacyReceipt, current: inputs.current, sourceProblems: inputs.manifest.problems, changedPaths, contextKey: key, pointedId: inputs.index ? inputs.index.current[key] || null : null, mode: binding.mode || 'migrated' });
   r.attempt = attempt;
   return r;
 }
