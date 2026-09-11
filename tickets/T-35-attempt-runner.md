@@ -1,9 +1,13 @@
 ---
 ticket: T-35
-status: open
+status: done
 size: L
 prd: .prd/prd-v4.md
 depends_on: [T-32, T-34]
+started: 2026-09-11T10:23:56Z
+last_check: 2026-09-11T10:42:26Z passed 55b1eac2d419
+verified: 2026-09-11T10:42:26Z 55b1eac2d419
+finished: 2026-09-11T10:42:26Z
 ---
 
 ## Objective
@@ -21,9 +25,9 @@ Implement the verification runner: persist a `running` attempt before launch, sn
 - Tests (`test/runtime-runner.test.js`, added to `npm test`, each in a fresh registered fixture): S-07 a command printing distinct stdout and stderr markers then exiting 3 yields captured markers in the right logs and `failed` with `exit_code: 3`; S-08 green → running → red: after a pass, a second verify that fails leaves `current` pointing at the failed attempt and the passing record retained in history; while an attempt is running (fixture sleeps), `status --json` reports `ATTEMPT_RUNNING` and `ready` exits 1; S-09 a missing executable is `failed` with exit 127 and a log; an unwritable `.pincer/runtime` yields `error` with no fabricated log; output over the cap is truncated with the marker and `truncated: true`; S-10 `status`, `ready` and `snapshot` create no attempt and rewrite no timestamp, and a repeated `verify` always creates a new attempt with a higher sequence; S-11 dynamic: a source edit after a pass makes `status` report `SOURCE_CHANGED` naming the path and the check; S-13 a zero-exit block that writes to a tracked file is `error` with `SOURCE_CHANGED`; S-16 SIGINT and SIGTERM sent to the runtime during a sleeping check finalize `interrupted` and kill the child; a timeout of 1 s on a 30 s sleep yields `timed_out` within a few seconds; a forced kill of the runtime (SIGKILL) leaves `running`, `status` reports `ATTEMPT_INTERRUPTED`-pending as non-ready, and `recover` finalizes it as `interrupted`; S-17 a check that spawns a detached grandchild writing a heartbeat file stops writing after cancellation or timeout; a secret marker in output is redacted in the stored log and counted.
 
 ## Acceptance Criteria
-- [ ] Every attempt outcome is derived from actual execution; no pass survives a newer nonpassing attempt, a source mutation, or a launch or persistence failure.
-- [ ] Timeout, signals and forced termination leave no reusable prior success and are recoverable deterministically; process groups are terminated.
-- [ ] `npm test` passes with the new suite.
+- [x] Every attempt outcome is derived from actual execution; no pass survives a newer nonpassing attempt, a source mutation, or a launch or persistence failure.
+- [x] Timeout, signals and forced termination leave no reusable prior success and are recoverable deterministically; process groups are terminated.
+- [x] `npm test` passes with the new suite.
 
 ## Verification
 Proves: the runner records what ran, against which inputs, and what happened, including failure injection for capture, mutation, timeout, signals and crashes; regression: a fabricated log, a pass after mutation, a running record promoted, or a surviving grandchild.

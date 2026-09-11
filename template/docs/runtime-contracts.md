@@ -217,7 +217,8 @@ Attempt record schema 1:
 | `started`, `finished` | ISO UTC; `finished` is `null` while running |
 | `source` | `{ before: <digest>, after: <digest or null>, files: <count>, limitations: [] }` |
 | `artifacts` | `{ stdout: { path, sha256, bytes, truncated, redactions }, stderr: { ... } }` |
-| `owner` | `{ pid, ppid, host }` |
+| `owner` | `{ pid, ppid, host }` (the runtime process) |
+| `child` | `{ pid }` of the launched process group, else `null` |
 | `limitations` | strings |
 | `error` | message when `outcome` is `error`, else absent |
 
@@ -230,7 +231,8 @@ timeout is `timed_out` (exit 124); SIGINT/SIGTERM to the runtime is `interrupted
 source mutation during the run is `error` (a mutation names the first changed path in
 `error`). An attempt is never left `running` on an exit path the runtime controls; a
 forced kill leaves `running`, which status reports as non-ready and `recover`
-finalizes as `interrupted` after verifying the owner pid is dead on this host.
+finalizes as `interrupted` after verifying the owner pid is dead on this host,
+terminating the orphaned child process group when it is still alive.
 
 Lock: acquired by `mkdir lock/` (atomic); waiters poll every 100 ms for up to 10 s
 (`PINCER_LOCK_WAIT_MS` overrides the bound), then fail with exit 3 naming the owner. A lock whose owner pid is on this host and no

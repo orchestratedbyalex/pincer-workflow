@@ -163,6 +163,12 @@ function recover(root, options = {}) {
       attempt.outcome = 'interrupted';
       attempt.finished = nowIso();
       attempt.limitations = [...(attempt.limitations || []), `finalized as interrupted by recover: owner pid ${owner.pid} was no longer running`];
+      const childPid = attempt.child && attempt.child.pid;
+      if (childPid && isAlive(childPid)) {
+        try { process.kill(-childPid, 'SIGTERM'); } catch { try { process.kill(childPid, 'SIGTERM'); } catch { /* gone */ } }
+        setTimeout(() => { try { process.kill(-childPid, 'SIGKILL'); } catch { /* gone */ } }, 5000).unref();
+        attempt.limitations.push(`orphaned child process group ${childPid} was sent SIGTERM (SIGKILL after 5 s)`);
+      }
       writeAttempt(root, attempt);
       report.finalized.push(id);
     }
