@@ -195,6 +195,20 @@ function draftFor(dir, candidate, { required = true, extra = [] } = {}) {
   write(dir, '.pincer/drafts/candidate.json', JSON.stringify(authored));
   const refused = rt(dir, 'evidence', 'export', '--candidate', migrated, '--base', JSON.parse(read(dir, '.prd/changes/prd-v1.json')).base, '--prd', '.prd/prd-v1.md', '--draft', '.pincer/drafts/candidate.json');
   assert.equal(refused.status, 1); assert.match(refused.stderr, /a passed command result cannot be authored/);
+  // T-44: draft check ids and artifact paths are validated before any write.
+  for (const [label, mutate, pattern] of [
+    ['bad check id', d => { d.checks[0] = { id: 'check-1', kind: 'command', required: true }; }, /check ID such as C-01/],
+    ['traversal artifact', d => { d.checks[2].artifacts = [`${evidenceDir(migrated)}/../../../outside.md`]; }, /normalized and repository-relative/],
+    ['artifact outside the evidence directory', d => { d.checks[2].artifacts = ['README.md']; }, /outside the evidence directory/],
+  ]) {
+    const bad = JSON.parse(read(dir, '.pincer/drafts/candidate.json'));
+    bad.checks[0] = { id: 'C-01', kind: 'command', required: true };
+    mutate(bad);
+    write(dir, '.pincer/drafts/candidate.json', JSON.stringify(bad));
+    const r = rt(dir, 'evidence', 'export', '--candidate', migrated, '--base', JSON.parse(read(dir, '.prd/changes/prd-v1.json')).base, '--prd', '.prd/prd-v1.md', '--draft', '.pincer/drafts/candidate.json');
+    assert.equal(r.status, 1, label); assert.match(r.stderr, pattern, label);
+    assert.ok(!fs.existsSync(path.join(dir, `${evidenceDir(migrated)}/manifest.json`)) && !fs.existsSync(path.join(dir, `${evidenceDir(migrated)}/checks`)), `${label}: nothing written`);
+  }
   // A schema-1 manifest cannot pose as schema 2 by relabelling.
   const relabelled = JSON.parse(read(dir, ev.manifest)); relabelled.schema = 2;
   write(dir, ev.manifest, JSON.stringify(relabelled));

@@ -262,6 +262,12 @@ function cmdDoctor() {
     const missingRuntime = runtimeFiles.filter((rel) => !fs.existsSync(path.join(dir, rel)));
     check(missingRuntime.length === 0, 'runtime files present', `missing: ${missingRuntime.join(', ')} — run: pincer update`);
   }
+  // Files an earlier kit installed that this version no longer ships stay on disk
+  // (the installer never deletes); name them so they can be removed by hand.
+  const OBSOLETE = ['scripts/pincer-ticket-lib.sh'];
+  const obsolete = OBSOLETE.filter((rel) => fs.existsSync(path.join(dir, rel)) && !(rel in manifest.files));
+  if (obsolete.length) console.log(`  note  obsolete kit file(s) from an earlier version, safe to delete: ${obsolete.join(', ')}`);
+
   const ticketsDir = path.join(dir, 'tickets');
   const legacyReceipts = fs.existsSync(ticketsDir)
     ? fs.readdirSync(ticketsDir).filter((n) => /^T-\d+.*\.md$/.test(n)).filter((n) => /^(verified|last_check):/m.test(fs.readFileSync(path.join(ticketsDir, n), 'utf8')))

@@ -93,6 +93,9 @@ const front = (dir, file, key) => (read(dir, file).match(new RegExp(`^${key}: *(
   const latest = state.latestAttempt(dir, 'ticket:prd-v1:T-01');
   fs.rmSync(path.join(dir, latest.artifacts.stdout.path));
   refuses(sh(dir, 'done', 'T-01'), /EVIDENCE_MISSING: the attempt's captured log is missing[\s\S]*next: verify/, 'missing log');
+  passes(sh(dir, 'verify', 'T-01'));
+  fs.rmSync(path.join(dir, `.pincer/runtime/attempts/${state.latestAttempt(dir, 'ticket:prd-v1:T-01').id}.json`));
+  refuses(sh(dir, 'done', 'T-01'), /EVIDENCE_MISSING: no runtime attempt recorded[\s\S]*next: verify/, 'a missing pointed-at record is not replaced by an older pass');
   fs.rmSync(path.join(dir, '.pincer/runtime'), { recursive: true });
   refuses(sh(dir, 'done', 'T-01'), /EVIDENCE_MISSING: no runtime attempt recorded[\s\S]*next: verify/, 'missing local state');
   passes(sh(dir, 'verify', 'T-01'));

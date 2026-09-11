@@ -16,6 +16,7 @@ const holder = path.join(repo, 'test/fixtures/hold-lock.cjs');
 const state = createRequire(import.meta.url)(path.join(repo, 'template/scripts/pincer-runtime/state.cjs'));
 const rt = (dir, ...args) => run(dir, process.execPath, [runtime, ...args]);
 const RUNTIME = '.pincer/runtime';
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 function holdLock(dir, ms) {
   return new Promise((resolve, reject) => {
@@ -142,6 +143,54 @@ const attempt = (id, sequence, outcome, owner = { pid: process.pid, host: os.hos
   await waitExit(child);
 }
 
+// T-44: a stale lock is claimed by rename (no leftover claim directories, no
+// owner-less lock ever visible); a lock without owner.json is treated as held;
+// the index pointer is the authority for the latest attempt; recover waits for
+// an orphan that ignores SIGTERM and escalates to SIGKILL before returning.
+{
+  const dir = tempDir();
+  const p = state.paths(dir);
+  fs.mkdirSync(p.lock, { recursive: true });
+  write(dir, `${RUNTIME}/lock/owner.json`, JSON.stringify({ pid: 999999, host: os.hostname(), started: '2026-09-11T00:00:00Z', command: 'crashed' }));
+  state.withLock(dir, () => { assert.ok(fs.existsSync(path.join(p.lock, 'owner.json')), 'a held lock always carries its owner file'); }, { waitMs: 500, log: () => {} });
+  assert.deepEqual(fs.readdirSync(p.dir).filter(n => n.startsWith('lock.')), [], 'no claim or staging directories are left behind');
+  fs.mkdirSync(p.lock, { recursive: true }); // an empty, owner-less directory cannot be a held lock: acquisition renames over it
+  state.withLock(dir, () => { assert.equal(JSON.parse(read(dir, `${RUNTIME}/lock/owner.json`)).pid, process.pid, 'the acquirer owns the lock'); }, { waitMs: 300 });
+  fs.mkdirSync(p.lock, { recursive: true }); write(dir, `${RUNTIME}/lock/stray.txt`, 'x'); // non-empty without owner.json: unknown holder, never reclaimed
+  assert.throws(() => state.withLock(dir, () => {}, { waitMs: 300 }), /unknown owner/, 'a non-empty owner-less lock is treated as held');
+  fs.rmSync(p.lock, { recursive: true });
+  // Pointer authority.
+  const passed = attempt('000001-20260911T000000Z-aaaaaa', 1, 'passed');
+  const failed = attempt('000002-20260911T000001Z-bbbbbb', 2, 'failed');
+  state.writeAttempt(dir, passed); state.writeAttempt(dir, failed);
+  state.writeIndex(dir, { schema: 1, sequence: 2, current: { 'ticket:prd-v1:T-01': failed.id }, running: [] });
+  fs.rmSync(path.join(p.attempts, `${failed.id}.json`));
+  assert.equal(state.latestAttempt(dir, 'ticket:prd-v1:T-01'), null, 'a missing pointed-at record never falls back to an older pass');
+  state.writeIndex(dir, { schema: 1, sequence: 2, current: {}, running: [] });
+  assert.equal(state.latestAttempt(dir, 'ticket:prd-v1:T-01').id, passed.id, 'without a pointer the highest sequence on disk is used');
+}
+{
+  const dir = tempDir();
+  const stubborn = spawn('bash', ['-c', 'trap "" TERM; sleep 60'], { detached: true, stdio: 'ignore' });
+  stubborn.unref();
+  await sleep(300);
+  const orphan = attempt('000001-20260911T000000Z-cccccc', 1, 'running', { pid: 999999, host: os.hostname() });
+  orphan.child = { pid: stubborn.pid };
+  state.writeAttempt(dir, orphan);
+  state.writeIndex(dir, { schema: 1, sequence: 1, current: { 'ticket:prd-v1:T-01': orphan.id }, running: [orphan.id] });
+  const started = Date.now();
+  const out = rt(dir, 'recover');
+  const took = Date.now() - started;
+  assert.equal(out.status, 0, out.stderr);
+  assert.ok(took >= 4500 && took < 12000, `recover waited the grace period before escalating (${took} ms)`);
+  // The killed child is our own; reap it before checking (a zombie still answers signal 0).
+  const exited = await Promise.race([new Promise(resolve => stubborn.once('exit', () => resolve(true))), sleep(2000).then(() => false)]);
+  assert.equal(exited || stubborn.exitCode !== null || stubborn.signalCode !== null, true, 'an orphan that ignores SIGTERM is killed before recover returns');
+  assert.equal(stubborn.signalCode, 'SIGKILL');
+  const finalized = state.readAttempt(dir, orphan.id).attempt;
+  assert.equal(finalized.outcome, 'interrupted');
+  assert.ok(finalized.limitations.some(l => /ignored SIGTERM for 5 s and was sent SIGKILL/.test(l)), finalized.limitations.join('|'));
+}
 // Without local state there is nothing to recover and nothing is created.
 {
   const dir = tempDir();

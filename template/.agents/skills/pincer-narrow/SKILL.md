@@ -88,7 +88,8 @@ existing authorization for the same scope and order.
    choice or a scope change the PRD does not cover. Then register the change when the
    `Runtime` status line says `legacy` and no ticket of this PRD carries legacy
    receipts: `node scripts/pincer-runtime.cjs register --prd .prd/prd-vN.md --authorization "<the user's approval, quoted>"`,
-   then stage `.prd/changes/` and commit it as `Register PRD vN`. The authorization
+   then stage `.prd/changes/` and `.gitignore` (registration adds `.pincer/` to it) and
+   commit them as `Register PRD vN`. The authorization
    text records the user's own words; running the command proves nothing by itself. A
    project whose tickets carry legacy receipts is migrated from `$pincer-code` after a
    preview, never here. Finish with:

@@ -208,7 +208,7 @@ function cmdReady(root, args) {
   const blockers = [];
   const localUnavailable = j.candidate && j.candidate.local_attempts === 'unavailable';
   for (const t of j.tickets) {
-    if (t.status !== 'done') blockers.push({ code: t.status === 'in_progress' ? 'ATTEMPT_RUNNING' : 'DEPENDENCY_BLOCKED', detail: `${t.id} is ${t.status}` });
+    if (t.status !== 'done') blockers.push({ code: 'EVIDENCE_MISSING', detail: `${t.id} is ${t.status}, not done` });
     else for (const r of t.readiness.reasons) {
       // A fresh clone validates the saved candidate record only; missing local attempts are its stated limit, not a blocker.
       if (localUnavailable && r.code === 'EVIDENCE_MISSING') continue;

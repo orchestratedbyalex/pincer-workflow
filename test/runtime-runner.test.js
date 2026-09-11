@@ -283,6 +283,22 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
   assert.equal(rt(ok, 'verify', 'T-01').status, 0, 'environment references are allowed');
 }
 
+// T-44: sanitizer coverage for non-Bearer schemes, quoted values and prefixed
+// inline assignments.
+{
+  const sanitize = createRequire(import.meta.url)(path.join(repo, 'template/scripts/pincer-runtime/sanitize.cjs'));
+  assert.equal(sanitize.sanitizeLine('Authorization: Basic dXNlcjpwYXNz').text, 'Authorization: [redacted] [redacted]');
+  assert.equal(sanitize.sanitizeLine('x-api-key: Token abc.def').text, 'x-api-key: [redacted] [redacted]');
+  assert.equal(sanitize.sanitizeLine('secret="a b c" tail').text, 'secret="[redacted]" tail');
+  assert.equal(sanitize.sanitizeLine("password='p w' x").text, "password='[redacted]' x");
+  assert.doesNotMatch(sanitize.sanitizeLine('{"apiKey": "sk live 1"}').text, /sk live/);
+  for (const line of ['env TOKEN=abc cmd', 'FOO=1 TOKEN=abc cmd', 'true; TOKEN=abc cmd', 'export API_KEY=zzz', 'cmd && SECRET=x cmd2']) assert.equal(sanitize.inlineSecretLine([line]), 1, `refused: ${line}`);
+  for (const line of ['TOKEN=$(cat t) cmd', 'TOKEN=`cat t` cmd', 'TOKEN="$X" cmd', 'TOKEN= cmd', 'npm test', 'echo "TOKEN=x"']) assert.equal(sanitize.inlineSecretLine([line]), null, `allowed: ${line}`);
+  const { dir: prefixed } = migrated('env TOKEN=abc123 true');
+  const r = rt(prefixed, 'verify', 'T-01');
+  assert.equal(r.status, 4); assert.match(r.stderr, /assigns a secret-like literal/);
+}
+
 // Mode boundaries: an unregistered PRD keeps the legacy receipt contract (no local
 // state), an open migrated ticket is started by verify, and a changed revision
 // refuses before any child process starts.

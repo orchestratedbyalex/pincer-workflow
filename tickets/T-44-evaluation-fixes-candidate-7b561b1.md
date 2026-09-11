@@ -1,9 +1,13 @@
 ---
 ticket: T-44
-status: open
+status: done
 size: M
 prd: .prd/prd-v4.md
 depends_on: [T-43]
+started: 2026-09-11T12:32:29Z
+last_check: 2026-09-11T12:46:57Z passed 2fdece756bf7
+verified: 2026-09-11T12:46:57Z 2fdece756bf7
+finished: 2026-09-11T12:46:57Z
 ---
 
 ## Objective
@@ -27,9 +31,9 @@ Fix the eighteen findings of the code-quality review of candidate `7b561b1` (run
 - Assertions for every runtime fix; wording assertions for the playbook and checklist changes; generated outputs regenerated.
 
 ## Acceptance Criteria
-- [ ] Every runtime finding has a failing-before, passing-after assertion.
-- [ ] Contract, playbooks, checklist, README, packet and trial record agree with the code.
-- [ ] `npm test` passes and generators produce no diff.
+- [x] Every runtime finding has a failing-before, passing-after assertion.
+- [x] Contract, playbooks, checklist, README, packet and trial record agree with the code.
+- [x] `npm test` passes and generators produce no diff.
 
 ## Verification
 Proves: the review findings are fixed and pinned; regression: a draft write blocked by the guard, a stolen lock in the reclaim race, a missing pointed-at record reported as a pass, a Basic credential leaking, or stale generated output.

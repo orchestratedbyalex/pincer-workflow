@@ -1,7 +1,7 @@
 # PINCER Runtime Contracts
 
 The runtime is `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs` with its modules under
-`scripts/pincer-runtime/`. It is dependency-free CommonJS for Node.js 18+ and is the
+`${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime/`. It is dependency-free CommonJS for Node.js 18+ and is the
 only writer of ticket lifecycle state, verification attempts, change bindings and
 exported candidate evidence. The shell entry points `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-ticket.sh` and
 `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-status.sh` are compatibility wrappers that delegate to it. This
@@ -75,7 +75,7 @@ code. Both print a Node.js 18+ requirement message and exit 4 when `node` is abs
 ## Supported grammar
 
 The grammar is deliberately restricted; unsupported syntax is rejected before any
-mutation, with the diagnostics listed in `scripts/pincer-runtime/parse.cjs`.
+mutation, with the diagnostics listed in `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime/parse.cjs`.
 
 - **Frontmatter:** the file begins with `---`; each field is an unindented
   `key: value` line (`[a-z_][a-z0-9_]*`), unique, optionally followed by a `#` comment;
@@ -87,7 +87,7 @@ mutation, with the diagnostics listed in `scripts/pincer-runtime/parse.cjs`.
   `prd` (`.prd/prd-vN.md`), `started`/`finished` (ISO UTC `YYYY-MM-DDTHH:MM:SSZ`),
   legacy `verified` (`<timestamp> <12 hex>`), legacy `last_check`
   (`<timestamp> running|passed|failed|interrupted <12 hex>`), and `timeout` (a positive
-  integer number of seconds; default 600). Exactly one `## Acceptance Criteria` section
+  integer number of seconds, at most 2147483; default 600). Exactly one `## Acceptance Criteria` section
   with at least one checkbox (`- [ ] text`, `- [x] text`, `- [X] text`; `-`, `+`, `*`
   or numbered markers, indentation allowed; no fences inside). Exactly one
   `## Verification` section containing exactly one closed fenced `bash` block with at
@@ -201,7 +201,9 @@ hand.
 
 Context keys: `ticket:<change>:<T-NN>` and `candidate:<40 hex>:<C-NN>`. Attempt IDs
 are `<sequence, 6 digits>-<UTC compact timestamp>-<6 hex>`; the `sequence` in
-`index.json` is the authority for ordering (timestamps alone never order attempts).
+`index.json` is the authority for ordering (timestamps alone never order attempts), and
+`index.current[key]` is the authority for the latest attempt: when the record it names
+is missing or unreadable, readiness is `EVIDENCE_MISSING`, never an older record.
 
 Attempt record schema 1:
 
@@ -234,12 +236,18 @@ source mutation during the run is `error` (a mutation names the first changed pa
 `error`). An attempt is never left `running` on an exit path the runtime controls; a
 forced kill leaves `running`, which status reports as non-ready and `recover`
 finalizes as `interrupted` after verifying the owner pid is dead on this host,
-terminating the orphaned child process group when it is still alive.
+terminating the orphaned child process group when it is still alive (SIGTERM, then
+SIGKILL when it is still running after the 5 s grace period; `recover` waits for that
+before returning and records what it sent).
 
-Lock: acquired by `mkdir lock/` (atomic); waiters poll every 100 ms for up to 10 s
-(`PINCER_LOCK_WAIT_MS` overrides the bound), then fail with exit 3 naming the owner. A lock whose owner pid is on this host and no
-longer alive is reclaimed with a diagnostic; a live owner is never stolen; a foreign
-host is never reclaimed automatically. The lock is held while records are written and
+Lock: acquired by building `lock/` with its `owner.json` in a staging directory and
+renaming it into place (atomic; a waiter never sees an owner-less lock); waiters poll
+every 100 ms for up to 10 s (`PINCER_LOCK_WAIT_MS` overrides the bound), then fail with
+exit 3 naming the owner. A lock whose owner pid is on this host and no longer alive is
+reclaimed with a diagnostic: the waiter renames the stale directory to a private name
+first, re-reads its owner, and only the process that won the rename removes it, so two
+waiters cannot both acquire; a live owner is never stolen; a foreign host is never
+reclaimed automatically. The lock is held while records are written and
 released while the child runs. Every write goes to `journal/` on the same filesystem
 and is renamed into place; a stray journal file is ignored on read and reported by
 `recover`. A malformed `index.json` is exit 4 and is never overwritten by inspection.
@@ -267,7 +275,7 @@ never a pass claiming complete output.
 
 ## Readiness and reason codes
 
-Readiness is one pure computation (`scripts/pincer-runtime/readiness.cjs`) consumed
+Readiness is one pure computation (`${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime/readiness.cjs`) consumed
 by the human status, the JSON status, `ready`, `done`, `start` (for dependencies) and
 release. Lifecycle `done` and verification readiness are distinct: an old done ticket
 can be stale or failed without its `finished` date changing.
@@ -366,8 +374,9 @@ would be removed and recorded as `legacy_receipts`, the `.gitignore` line it wou
 add, and every conflict. It exits 0 when apply would proceed and 1 when a conflict
 would stop it. Conflicts (all fail closed, before the first write): a binding for
 another PRD, malformed tickets, an unsupported binding schema, a ticket of another PRD
-with the same ID, and a partially applied earlier migration (binding present but
-receipts remaining, or receipts removed without a binding).
+with the same ID. A partially applied earlier migration (binding present, receipts
+remaining) is not a conflict: preview names it and apply completes it, extending the
+existing binding's `legacy_receipts`.
 
 `migrate --apply` backs up every authored file it changes under
 `.pincer/backups/<UTC timestamp>/<original path>`, rewrites the tickets, adds
@@ -395,6 +404,7 @@ migrated worktree is migrated; it cannot be half in each mode.
 
 The check runner is a POSIX contract: `bash` in `PATH`, process groups
 (`detached: true`, `kill(-pid)`), `SIGTERM`/`SIGKILL`. Native Windows is not
-supported and not claimed. Tested platforms are the CI matrix (ubuntu and macOS ×
-Node 18 and 22); other platforms are untested. Sandbox and approval controls of the
+supported and not claimed. The CI matrix (`.github/workflows/ci.yml`: ubuntu and macOS
+× Node 18 and 22) is the target surface; a release claims only the runs it can cite,
+and any platform outside the matrix is untested. Sandbox and approval controls of the
 host stay in force; the runtime never bypasses them.

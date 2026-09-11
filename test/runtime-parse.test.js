@@ -47,6 +47,7 @@ const malformed = [
   ['zero timeout', s => s.replace('status: open', 'status: open\ntimeout: 0'), /timeout must be a positive integer/],
   ['fractional timeout', s => s.replace('status: open', 'status: open\ntimeout: 1.5'), /timeout must be a positive integer/],
   ['word timeout', s => s.replace('status: open', 'status: open\ntimeout: soon'), /timeout must be a positive integer/],
+  ['timeout beyond the setTimeout limit', s => s.replace('status: open', 'status: open\ntimeout: 3000000'), /at most 2147483/],
 ];
 for (const [name, change, diagnostic] of malformed) {
   const dir = tempDir(); createPrd(dir);

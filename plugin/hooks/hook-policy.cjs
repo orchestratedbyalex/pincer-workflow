@@ -162,7 +162,9 @@ function dangerousReason(source, depth = 0) {
 const TICKET_PATH = /(^|[\\/])tickets[\\/]T-[0-9]+[^\\/]*\.md$/;
 // Runtime-owned state: local attempts under .pincer/ and change bindings under
 // .prd/changes/ are written only by pincer-runtime.cjs.
-const RUNTIME_PATH = /(^|[\\/])\.pincer([\\/]|$)/;
+// The runtime owns .pincer/runtime/ and .pincer/backups/ (and the directory as a
+// whole); .pincer/drafts/ is the agent's own scratch space for evidence drafts.
+const RUNTIME_PATH = /(^|[\\/])\.pincer(?:[\\/](?:runtime|backups)(?:[\\/]|$)|[\\/]?$)/;
 const BINDING_PATH = /(^|[\\/])\.prd[\\/]changes([\\/]|$)/;
 const PROTECTED = ['status', 'started', 'last_check', 'verified', 'finished'];
 
@@ -333,7 +335,7 @@ function ticketShellMutation(source, depth = 0) {
       if (viaXargs && ['checkout', 'restore', 'clean'].includes(sub.name) && stdinPathspec) return true;
     }
     const hasTicket = words.some(ticketPath) || /(^|[\s'"`])tickets[\\/]T-[0-9]+[^\s'"`]*/.test(source) ||
-      words.some(runtimePath) || /(^|[\s'"`=])\.pincer([\\/]|[\s'"`]|$)/.test(source) || /(^|[\s'"`=])\.prd[\\/]changes([\\/]|[\s'"`]|$)/.test(source);
+      words.some(runtimePath) || /(^|[\s'"`=])\.pincer(?:[\\/](?:runtime|backups)(?:[\\/]|[\s'"`]|$)|[\\/]?(?:[\s'"`]|$))/.test(source) || /(^|[\s'"`=])\.prd[\\/]changes([\\/]|[\s'"`]|$)/.test(source);
     if (!hasTicket) continue;
     if (command.operators.some(op => op === '>' || op === '>>')) return true;
     if (['rm', 'mv', 'cp', 'install', 'truncate', 'touch', 'tee', 'ed', 'ex'].includes(executable)) return true;

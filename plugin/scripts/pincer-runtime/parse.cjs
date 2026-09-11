@@ -12,6 +12,7 @@ const TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 const PRD_REF = /^\.prd\/prd-v([1-9][0-9]{0,8})\.md$/;
 const HEX40 = /^[0-9a-f]{40}$/;
 const DEFAULT_TIMEOUT = 600;
+const MAX_TIMEOUT = 2147483; // setTimeout's 32-bit millisecond limit, in seconds
 const LIFECYCLE_FIELDS = ['status', 'started', 'finished', 'verified', 'last_check'];
 const CHECKBOX_LINE = /^([ \t]*(?:[-+*]|[0-9]+[.)])[ \t]+)\[([ xX])\]/;
 
@@ -161,7 +162,7 @@ function validateTicket(file, text) {
     if (parts.length !== expected || !TIMESTAMP.test(parts[0]) || !/^[0-9a-f]{12}$/.test(parts[parts.length - 1])) problems.push(`malformed ${key} timestamp/hash`);
     else if (key === 'last_check' && !['running', 'passed', 'failed', 'interrupted'].includes(parts[1])) problems.push('invalid last_check outcome');
   }
-  if ('timeout' in fields && !/^[1-9][0-9]{0,8}$/.test(fields.timeout)) problems.push('timeout must be a positive integer number of seconds');
+  if ('timeout' in fields && (!/^[1-9][0-9]{0,8}$/.test(fields.timeout) || Number(fields.timeout) > MAX_TIMEOUT)) problems.push(`timeout must be a positive integer number of seconds (at most ${MAX_TIMEOUT})`);
   const deps = fields.depends_on;
   if (!('depends_on' in fields) || !/^\[[ \t]*(T-[0-9]+([ \t]*,[ \t]*T-[0-9]+)*)?[ \t]*\]$/.test(deps)) problems.push('depends_on must be an inline list such as [T-01, T-02]');
   else {
@@ -287,7 +288,7 @@ function validateTicketSet(root) {
 }
 
 module.exports = {
-  TIMESTAMP, PRD_REF, HEX40, DEFAULT_TIMEOUT, LIFECYCLE_FIELDS,
+  TIMESTAMP, PRD_REF, HEX40, DEFAULT_TIMEOUT, MAX_TIMEOUT, LIFECYCLE_FIELDS,
   sha256, lines, normalizeId, canonicalId, parseFrontmatter, frontmatterField,
   verificationCommands, blockText, legacyBlockHash, unticked, effectiveTimeout,
   validateTicket, dependencies, validateMetadata, validatePrd,

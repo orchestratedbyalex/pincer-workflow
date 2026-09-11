@@ -307,7 +307,15 @@ function exportEvidence(root, { candidate, base, prd, draft, binding, attemptsFo
   const checks = [];
   const artifactPaths = new Set();
   for (const stub of draft.checks) {
-    if (!isObject(stub) || typeof stub.id !== 'string') { problems.push('draft.checks entries must be objects with an id'); continue; }
+    if (!isObject(stub) || typeof stub.id !== 'string' || !CHECK_ID.test(stub.id)) { problems.push(`draft.checks entries must be objects with a check ID such as C-01 (got ${JSON.stringify(isObject(stub) ? stub.id : stub)})`); continue; }
+    // Authored artifact paths are validated before anything is written: no
+    // traversal, no absolute paths, and inside this candidate's evidence directory.
+    for (const p of Array.isArray(stub.artifacts) ? stub.artifacts : []) {
+      if (typeof p !== 'string') { problems.push(`draft check ${stub.id}: artifact references must be strings`); continue; }
+      const why = unsafePath(p);
+      if (why) problems.push(`draft check ${stub.id}: artifact ${p}: ${why}`);
+      else if (!p.startsWith(`${dirRel}/`)) problems.push(`draft check ${stub.id}: artifact ${p}: outside the evidence directory ${dirRel}/`);
+    }
     const isStub = stub.kind === 'command' && !('result' in stub);
     if (!isStub) {
       if (stub.kind === 'command' && ['passed', 'failed'].includes(stub.result)) { problems.push(`draft check ${stub.id}: a ${stub.result} command result cannot be authored; omit result to populate it from the runtime attempt`); continue; }

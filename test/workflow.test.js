@@ -168,7 +168,7 @@ assert.match(statusPlaybook, /the user restores the ticket file, and nothing is 
 assert.match(statusPlaybook, /explained by a since-reverted source\s+change and the block passes in the same execution context as `verify`/);
 assert.match(read('template/docs/dry-run-checklist.md'), /keeps the failed `last_check`, names no restore command, does not\s+switch binaries or repair the environment itself/);
 assert.match(read('template/docs/dry-run-checklist.md'), /same execution context as `verify`/);
-assert.match(read('template/docs/dry-run-checklist.md'), /runs no `verify`, and\s+commits nothing/);
+assert.match(read('template/docs/dry-run-checklist.md'), /runs no\s+`verify`, and\s+commits nothing/);
 assert.match(read('template/scripts/pincer-status.sh'), /wall-clock elapsed/);
 const releaseChecklist = read('template/docs/release-checklist.md');
 assert.match(releaseChecklist, /`evidence:` manifest/);
@@ -203,13 +203,23 @@ for (const phrase of ['SOURCE_CHANGED', 'recover', 'already migrated', 'evidence
 
 // PRD v4 (T-42): registration and migration are explicit steps in the workflow.
 assert.match(narrow, /register --prd \.prd\/prd-vN\.md --authorization "<the user's approval, quoted>"/);
-assert.match(narrow, /commit it as `Register PRD vN`/);
+assert.match(narrow, /commit them as `Register PRD vN`/);
 assert.match(narrow, /running the command proves nothing by itself/);
 assert.match(code, /migrate --preview --prd \.prd\/prd-vN\.md/);
 assert.match(code, /ask once whether to\s+apply\. Apply only on a yes/);
 assert.match(code, /Never migrate silently/);
 assert.match(statusPlaybook, /fresh project → `register`, legacy receipts → `migrate --preview`/);
 assert.match(dryRun, /Register PRD vN/);
+// T-44: the checklist labels legacy-only boxes; registration commits .gitignore too.
+assert.match(dryRun, /legacy project only\s+\(no change binding\): `verified` receipts too/);
+assert.match(dryRun, /Legacy project only, cheat: revert the source/);
+assert.match(dryRun, /Legacy project only, cheat: with the tree at the candidate/);
+assert.match(narrow, /stage `\.prd\/changes\/` and `\.gitignore`/);
+assert.match(code, /commit `\.prd\/changes\/` and `\.gitignore` as `Register PRD vN`/);
+assert.match(read('template/docs/runtime-contracts.md'), /at most 2147483/);
+assert.match(read('template/docs/runtime-contracts.md'), /is the target surface/);
+assert.doesNotMatch(read('template/docs/runtime-contracts.md'), /Tested platforms are the CI matrix/);
+assert.match(read('plugin/docs/runtime-contracts.md'), /\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/pincer-runtime\//, 'plugin transform rewrites the module directory');
 assert.match(dryRun, /nothing was\s+migrated silently/);
 
 for (const source of [rootReadme, codex]) {

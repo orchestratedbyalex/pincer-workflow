@@ -208,6 +208,15 @@ check('ticket', 'Write blocks change binding writes', replace('{}', path.join(di
 check('ticket', 'Write blocks runtime state writes', replace('{}', path.join(dir, '.pincer/runtime/index.json')), 2);
 check('ticket', 'Edit blocks attempt record edits', edit('failed', 'passed', path.join(dir, '.pincer/runtime/attempts/000001.json')), 2);
 check('ticket', 'Edit allows the exclude file', edit('a', 'b', path.join(dir, '.prd/source-exclude')), 0);
+// T-44: the evidence draft lives in .pincer/drafts/, which the agent may write; the
+// runtime's own directories and the directory as a whole stay protected.
+for (const command of ['printf "{}" > .pincer/drafts/c.json', 'cat > .pincer/drafts/abc.json <<EOF\n{}\nEOF', 'mkdir -p .pincer/drafts', 'rm .pincer/drafts/old.json'])
+  check('ticket', `allow draft write ${command.split('\n')[0]}`, bash(command), 0);
+check('ticket', 'Write allows an evidence draft', replace('{}', path.join(dir, '.pincer/drafts/c.json')), 0);
+check('ticket', 'Edit allows an evidence draft', edit('{', '{ ', path.join(dir, '.pincer/drafts/c.json')), 0);
+for (const command of ['rm -rf .pincer/backups', 'echo x > .pincer/backups/20260911/tickets/T-01.md', 'rm -rf ./.pincer', 'rm -rf .pincer/'])
+  check('ticket', `block runtime directory write ${command}`, bash(command), 2);
+check('ticket', 'Write blocks backup edits', replace('x', path.join(dir, '.pincer/backups/20260911/tickets/T-01-example.md')), 2);
 assert.equal(read(dir, file), completed, 'hooks are read-only and never execute tested command strings');
 assert.equal(failures.length, 0, `${failures.length}/${checked} hook regressions failed:\n${failures.join('\n')}`);
 console.log(`hook regression tests passed (${checked} payloads)`);

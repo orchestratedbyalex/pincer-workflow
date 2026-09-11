@@ -33,7 +33,7 @@ from wherever the receipt says you are. Do not ask the user to reconfirm unchang
 previously authorized work. Read the `Runtime` line before the first ticket: a change
 binding present → continue; `legacy` and no ticket of this PRD carries legacy
 receipts → register now (`node scripts/pincer-runtime.cjs register --prd .prd/prd-vN.md --authorization "<the user's approval, quoted>"`,
-commit `.prd/changes/` as `Register PRD vN`); `legacy` with legacy receipts → run
+commit `.prd/changes/` and `.gitignore` as `Register PRD vN`); `legacy` with legacy receipts → run
 `node scripts/pincer-runtime.cjs migrate --preview --prd .prd/prd-vN.md`, show the plan
 (backups, receipts imported as history, `.gitignore` line) and ask once whether to
 apply. Apply only on a yes, then commit the rewritten tickets, `.gitignore` and the

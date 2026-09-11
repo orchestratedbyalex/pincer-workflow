@@ -19,12 +19,18 @@ that was not made. Rows marked `outstanding` are not passed gates.
   the Bash policy library is gone. Unmigrated projects keep the v0.4.1 receipt contract
   byte for byte where tests pinned it. The legacy recovery exception is tightened
   (since-reverted source change, same execution context, unexplained failures stay).
-- PRD revisions during implementation: none. Two contract clarifications were made in
+- PRD revisions during implementation: none. Four contract clarifications were made in
   `template/docs/runtime-contracts.md` in the same commits as the code: the lock wait
   bound is overridable (`PINCER_LOCK_WAIT_MS`), a `check` accepts an evidence-only
   descendant of the candidate as a clean view, `change.base` in a schema 2 manifest is
   the registration base and may precede the evaluation base, and the validator keeps
   printing `ok <candidate>` for schema 1 (appending `schema 2` only for schema 2).
+  The evaluation of candidate `7b561b1` added a fifth set (T-44): the lock is acquired
+  by rename, a stale lock is claimed by rename before removal, `index.current` is the
+  authority for the latest attempt, a partially applied migration is completed rather
+  than refused, `timeout` is capped at 2147483 s, and the CI matrix is described as
+  the target surface (CI has not run on this branch; the packet cites local runs on
+  macOS and Node 22 only).
 
 ## 2. Traceability
 

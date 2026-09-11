@@ -14,6 +14,7 @@ const RUNTIME_DIR = '.pincer/runtime';
 const INDEX_SCHEMA = 1;
 const LOCK_WAIT_MS = 10000;
 const LOCK_POLL_MS = 100;
+const GRACE_MS = 5000;
 
 function paths(root) {
   const dir = path.join(root, RUNTIME_DIR);
@@ -76,19 +77,37 @@ function acquireLock(root, { waitMs, command = 'runtime', log = message => proce
   const p = ensureLayout(root);
   const bound = waitMs ?? (Number(process.env.PINCER_LOCK_WAIT_MS) > 0 ? Number(process.env.PINCER_LOCK_WAIT_MS) : LOCK_WAIT_MS);
   const deadline = Date.now() + bound;
+  const ownerJson = () => `${JSON.stringify({ pid: process.pid, ppid: process.ppid, host: os.hostname(), started: nowIso(), command }, null, 2)}\n`;
   for (;;) {
+    // Build the lock directory with its owner file in a private location and
+    // rename it into place: a directory rename onto an existing lock fails, so
+    // acquisition is atomic and a waiter never sees an owner-less lock.
+    const staging = `${p.lock}.new.${process.pid}.${crypto.randomBytes(3).toString('hex')}`;
     try {
-      fs.mkdirSync(p.lock);
-      fs.writeFileSync(p.owner, `${JSON.stringify({ pid: process.pid, ppid: process.ppid, host: os.hostname(), started: nowIso(), command }, null, 2)}\n`);
+      fs.mkdirSync(staging);
+      fs.writeFileSync(path.join(staging, 'owner.json'), ownerJson());
+      fs.renameSync(staging, p.lock);
       let released = false;
       return () => { if (released) return; released = true; try { fs.rmSync(p.lock, { recursive: true, force: true }); } catch { /* already gone */ } };
     } catch (error) {
-      if (error.code !== 'EEXIST') throw error;
+      try { fs.rmSync(staging, { recursive: true, force: true }); } catch { /* nothing staged */ }
+      if (!['EEXIST', 'ENOTEMPTY', 'EISDIR', 'EPERM'].includes(error.code)) throw error;
     }
     const owner = readJson(p.owner).data || null;
     if (owner && owner.host === os.hostname() && !isAlive(owner.pid)) {
-      log(`pincer: reclaiming stale lock left by pid ${owner.pid} (${owner.command || 'unknown command'}, started ${owner.started || '?'}); the process is no longer running`);
-      try { fs.rmSync(p.lock, { recursive: true, force: true }); } catch { /* raced with another reclaim */ }
+      // Claim the stale directory by renaming it first; only the process that
+      // won the rename removes it, after confirming the owner is still the
+      // dead one it read (another waiter may have replaced the lock meanwhile).
+      const claim = `${p.lock}.stale.${process.pid}.${crypto.randomBytes(3).toString('hex')}`;
+      try { fs.renameSync(p.lock, claim); } catch { sleep(LOCK_POLL_MS); continue; }
+      const claimed = readJson(path.join(claim, 'owner.json')).data || null;
+      if (claimed && claimed.host === os.hostname() && !isAlive(claimed.pid)) {
+        log(`pincer: reclaiming stale lock left by pid ${claimed.pid} (${claimed.command || 'unknown command'}, started ${claimed.started || '?'}); the process is no longer running`);
+        try { fs.rmSync(claim, { recursive: true, force: true }); } catch { /* best effort */ }
+      } else {
+        // A live holder's lock was renamed by mistake: give it back.
+        try { fs.renameSync(claim, p.lock); } catch { try { fs.rmSync(claim, { recursive: true, force: true }); } catch { /* gone */ } }
+      }
       continue;
     }
     if (Date.now() >= deadline) {
@@ -129,14 +148,16 @@ function listAttempts(root, key) {
   }
   return out.sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
 }
-// The attempt the index points at for a context, falling back to the highest
-// sequence on disk when the pointer is missing.
+// The attempt the index points at for a context. The pointer is the authority:
+// a pointed-at record that is missing or unreadable yields null (readiness then
+// reports EVIDENCE_MISSING) rather than an older record that may have passed.
+// Only when the index carries no pointer at all is the highest sequence used.
 function latestAttempt(root, key, index) {
   const idx = index || readIndex(root).index;
   const pointed = idx && idx.current && idx.current[key];
   if (pointed) {
     const read = readAttempt(root, pointed);
-    if (read.attempt) return read.attempt;
+    return read.attempt || null;
   }
   const all = listAttempts(root, key);
   return all.length ? all[all.length - 1] : null;
@@ -165,9 +186,18 @@ function recover(root, options = {}) {
       attempt.limitations = [...(attempt.limitations || []), `finalized as interrupted by recover: owner pid ${owner.pid} was no longer running`];
       const childPid = attempt.child && attempt.child.pid;
       if (childPid && isAlive(childPid)) {
-        try { process.kill(-childPid, 'SIGTERM'); } catch { try { process.kill(childPid, 'SIGTERM'); } catch { /* gone */ } }
-        setTimeout(() => { try { process.kill(-childPid, 'SIGKILL'); } catch { /* gone */ } }, 5000).unref();
-        attempt.limitations.push(`orphaned child process group ${childPid} was sent SIGTERM (SIGKILL after 5 s)`);
+        // Terminate the orphaned group and wait for it here: an unref'd timer
+        // would never fire before the command exits.
+        const signalGroup = signal => { try { process.kill(-childPid, signal); } catch { try { process.kill(childPid, signal); } catch { /* gone */ } } };
+        signalGroup('SIGTERM');
+        const deadline = Date.now() + GRACE_MS;
+        while (isAlive(childPid) && Date.now() < deadline) sleep(LOCK_POLL_MS);
+        if (isAlive(childPid)) {
+          signalGroup('SIGKILL');
+          const hardDeadline = Date.now() + 2000;
+          while (isAlive(childPid) && Date.now() < hardDeadline) sleep(LOCK_POLL_MS);
+          attempt.limitations.push(`orphaned child process group ${childPid} ignored SIGTERM for ${GRACE_MS / 1000} s and was sent SIGKILL${isAlive(childPid) ? ' (still alive when recover returned)' : ''}`);
+        } else attempt.limitations.push(`orphaned child process group ${childPid} was sent SIGTERM and exited`);
       }
       writeAttempt(root, attempt);
       report.finalized.push(id);
