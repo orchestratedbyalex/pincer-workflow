@@ -18,6 +18,7 @@
 //   node scripts/pincer-runtime.cjs change activate|pause|resume|complete|reopen|cancel|supersede <id> [--reason <text>] [--note <text>] [--decision D-NN] [--with <id>]
 //   node scripts/pincer-runtime.cjs resume [--change <id>] [--json]
 //   node scripts/pincer-runtime.cjs coverage adopt --preview|--apply --change <id> [--agreement <digest>]
+//   node scripts/pincer-runtime.cjs impact [--change <id>] [--from G-NN|A-NN] [--json]
 //
 // Exit codes: 0 ok · 1 failed/not ready/refused · 2 usage · 3 state busy ·
 // 4 invalid input or state · 124 timed out · 130 interrupted.
@@ -43,6 +44,7 @@ const gates = require('./pincer-runtime/gates.cjs');
 const locator = require('./pincer-runtime/locator.cjs');
 const resume = require('./pincer-runtime/resume.cjs');
 const adopt = require('./pincer-runtime/adopt.cjs');
+const impact = require('./pincer-runtime/impact.cjs');
 const { atomicWrite, nowIso, tryGit } = require('./pincer-runtime/fsutil.cjs');
 const EXIT = { OK: 0, FAILED: 1, USAGE: 2, BUSY: 3, INVALID: 4, TIMED_OUT: 124, INTERRUPTED: 130 };
 
@@ -74,7 +76,8 @@ function usage(message) {
     '       pincer-runtime.cjs change activate|resume|complete <id> · change pause <id> --reason <text> [--note <text>] · change reopen <id> --reason <text>\n' +
     '       pincer-runtime.cjs change cancel <id> --decision D-NN --reason <text> · change supersede <id> --with <id> --decision D-NN\n' +
     '       pincer-runtime.cjs resume [--change <id>] [--json]   (the read-only report; `change resume` is the lifecycle operation)\n' +
-    '       pincer-runtime.cjs coverage adopt --preview|--apply --change <id> [--agreement <digest>]\n');
+    '       pincer-runtime.cjs coverage adopt --preview|--apply --change <id> [--agreement <digest>]\n' +
+    '       pincer-runtime.cjs impact [--change <id>] [--from G-NN|A-NN] [--json]\n');
   process.exit(EXIT.USAGE);
 }
 
@@ -395,6 +398,20 @@ function cmdCoverage(root, args) {
   process.exit(EXIT.OK);
 }
 
+// impact [--change <id>] [--from G-NN|A-NN] [--json] — read-only structural differences
+// against a retained agreement (docs/runtime-contracts.md, "Coverage and impact commands").
+function cmdImpact(root, args) {
+  const o = parseOptions(args, { switches: ['--json'], valued: ['--change', '--from'] });
+  if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
+  const resolved = changes.resolveSelected(root, { change: o.change || null });
+  if (resolved.code) fail('pincer', `${resolved.code}: ${resolved.problem}`, exitForCode(resolved.code));
+  const result = impact.compute(root, resolved.record, { from: o.from || null });
+  if (result.code) fail('pincer', `${result.code}: ${result.problem}`, exitForCode(result.code));
+  if (o.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  else process.stdout.write(impact.render(result));
+  process.exit(EXIT.OK);
+}
+
 // resume [--change <id>] [--json] — the read-only resume report (never the lifecycle operation).
 function cmdResume(root, args) {
   const o = parseOptions(args, { switches: ['--json'], valued: ['--change'] });
@@ -572,6 +589,7 @@ function main(argv) {
   if (command === 'change') return cmdChange(root, rest);
   if (command === 'resume') return cmdResume(root, rest);
   if (command === 'coverage') return cmdCoverage(root, rest);
+  if (command === 'impact') return cmdImpact(root, rest);
   usage(command ? `unknown command ${command}` : undefined);
 }
 

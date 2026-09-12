@@ -1,9 +1,13 @@
 ---
 ticket: T-71
-status: open
+status: done
 size: M
 prd: .prd/prd-v6.md
 depends_on: [T-69]
+started: 2026-09-12T09:11:59Z
+last_check: 2026-09-12T09:17:41Z passed aaf5a971c7ae
+verified: 2026-09-12T09:17:41Z aaf5a971c7ae
+finished: 2026-09-12T09:17:41Z
 ---
 
 ## Objective
@@ -22,9 +26,9 @@ Explain structural requirement and verification impact, as specified in PRD v6, 
 - Keep impact read-only and separate from conservative whole-source evidence freshness; never auto-approve, rewrite or launch checks.
 
 ## Acceptance Criteria
-- [ ] S-10..S-12 include a one-scenario change, graph-only change, removed definition, unscoped prose and unavailable history.
-- [ ] An A/B/A fixture retains unchanged agreement while source-changed evidence stays stale.
-- [ ] Repeated human/JSON input computation leaves tracked and runtime files unchanged.
+- [x] S-10..S-12 include a one-scenario change, graph-only change, removed definition, unscoped prose and unavailable history.
+- [x] An A/B/A fixture retains unchanged agreement while source-changed evidence stays stale.
+- [x] Repeated human/JSON input computation leaves tracked and runtime files unchanged.
 
 ## Verification
 Proves: impact names the correct direct/dependent links without reviving stale evidence or hiding unscoped changes.

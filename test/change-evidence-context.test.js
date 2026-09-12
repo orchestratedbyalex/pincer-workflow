@@ -192,3 +192,18 @@ function draftFor(dir, prd, candidate, { required = true } = {}) {
   assert.equal(run(dir, process.execPath, [validator, 'validate', 'nothing.json']).status, 1, 'validator binary still runs');
 }
 console.log('change evidence context tests passed');
+
+// PRD v6 T-71: `impact` on a change without strict coverage reports `unavailable`
+// (never "no impact"), exits 0 and writes nothing; whole-source freshness is untouched.
+{
+  const dir = tempDir(); git(dir, 'init', '-q');
+  write(dir, '.gitignore', '.pincer/\n'); createPrd(dir, 1); createTicket(dir, { id: 'T-01', prd: '.prd/prd-v1.md' }); commit(dir, 'base');
+  passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md')); passes(rt(dir, 'change', 'select', 'prd-v1'));
+  const listing = () => fs.readdirSync(path.join(dir, '.pincer/runtime')).sort().join(',') + JSON.stringify(fs.statSync(path.join(dir, '.prd/changes/prd-v1.json')).mtimeMs);
+  const before = listing();
+  const out = JSON.parse(passes(rt(dir, 'impact', '--json')));
+  assert.equal(out.verdict, 'unavailable'); assert.match(out.reason, /strict coverage not adopted/);
+  assert.match(passes(rt(dir, 'impact')), /^Verdict    unavailable — strict coverage not adopted/m);
+  assert.equal(listing(), before, 'inspection wrote nothing');
+}
+console.log('change evidence context tests passed (impact unavailable without strict coverage)');
