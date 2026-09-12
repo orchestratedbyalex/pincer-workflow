@@ -391,3 +391,18 @@ for (const point of ['validated', 'staged', 'manifest', 'rename:0', 'cleanup']) 
   valid(dir);
 }
 console.log('change lifecycle tests passed');
+
+// PRD v6 T-70: a change without strict coverage completes exactly as before — an
+// authored map beside it is never consulted; the strict gate applies to schema 3
+// records only (test/coverage-readiness.test.js).
+{
+  const dir = fixture();
+  write(dir, '.prd/coverage/prd-v1.json', '{ "schema": 1, "change": "prd-v1", "prd": ".prd/prd-v1.md", "scenarios": {}, "scope": {}, "tickets": {}, "checks": {} }\n');
+  passes(rt(dir, 'change', 'activate', 'prd-v1'));
+  passes(rt(dir, 'verify', 'T-01'), 'verify');
+  write(dir, 'tickets/T-01-example.md', read(dir, 'tickets/T-01-example.md').replace('- [ ] expected behavior', '- [x] expected behavior'));
+  passes(rt(dir, 'done', 'T-01'), 'done');
+  assert.match(passes(rt(dir, 'change', 'complete', 'prd-v1')), /^completed change prd-v1: active → completed/m, 'a schema 2 change completes without coverage gates');
+  assert.equal(record(dir).schema, 2);
+}
+console.log('change lifecycle tests passed (schema 2 completion ignores coverage maps)');

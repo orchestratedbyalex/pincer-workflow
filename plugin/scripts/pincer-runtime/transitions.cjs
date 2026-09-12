@@ -78,13 +78,13 @@ function transition(root, id, op, opts = {}) {
         replacement = w;
       }
       if (NEEDS_IDLE.includes(op)) ctx.idle(id);
-      let authorized = null, agreementId = null;
+      let authorized = null, agreementId = null, verdict = null;
       if (ACTIVATION.includes(op) || op === 'complete') {
         const v = changes.view(root, record);
         if (v.problems.length) ctx.refuse(v.problems[0].code, v.problems[0].detail);
         const computed = agreement.compute(root, record);
         if (computed.code) ctx.refuse(computed.code, computed.problem);
-        const verdict = authorization.verdict(root, record, computed);
+        verdict = authorization.verdict(root, record, computed);
         if (verdict.verdict !== 'current') ctx.refuse(verdict.verdict, verdict.detail);
         authorized = verdict.authorized.id; agreementId = verdict.authorized.agreement;
         if (ACTIVATION.includes(op)) {
@@ -99,6 +99,15 @@ function transition(root, id, op, opts = {}) {
         if (!g || !g.tickets) ctx.refuse('INPUT_INVALID', st.text.trim().split('\n').find(l => l.startsWith('WARN')) || 'the change cannot be inspected');
         if (g.unresolved > 0) ctx.refuse('INPUT_INVALID', 'a ticket has an unresolved PRD association; repair it before completing');
         if (!g.tickets.length) ctx.refuse('LIFECYCLE_BLOCKED', `change ${id} has no tickets; a change completes only with a verified breakdown`);
+        // Strict coverage (docs/runtime-contracts.md, "Phase-specific coverage"): structural
+        // completeness — every scenario linked or authorized as not delivered, nothing
+        // missing from the baseline — precedes the ticket readiness gate below; a
+        // candidate is never demanded here.
+        if (changes.isStrict(record)) {
+          const report = require('./phases.cjs').compute(root, record, { gathered: g, verdict });
+          const blocker = require('./phases.cjs').firstBlocker(report, 'structure');
+          if (blocker) ctx.refuse(blocker.code, `${blocker.detail} — complete needs structural coverage: every scenario linked or dispositioned, every ticket classified, every disposition authorized`);
+        }
         for (const t of g.tickets) {
           const tid = t.fields.ticket;
           if (t.fields.status !== 'done') ctx.refuse('LIFECYCLE_BLOCKED', `${tid} is ${t.fields.status}, not done; finish every ticket before completing ${id}`);

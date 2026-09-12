@@ -1,9 +1,13 @@
 ---
 ticket: T-70
-status: open
+status: done
 size: M
 prd: .prd/prd-v6.md
 depends_on: [T-69]
+started: 2026-09-12T09:02:08Z
+last_check: 2026-09-12T09:11:52Z passed f01c54dded03
+verified: 2026-09-12T09:11:52Z f01c54dded03
+finished: 2026-09-12T09:11:52Z
 ---
 
 ## Objective
@@ -22,9 +26,9 @@ Compute structural and implementation coverage, as specified in PRD v6, so cover
 - Allow implementation completion before candidate evidence exists; never turn a linked check, passing syntax check or a done ticket into a candidate delivery/adequacy verdict.
 
 ## Acceptance Criteria
-- [ ] S-13..S-15 cover missing/open/stale/red/interrupted work, a missing row, and valid pre-evaluation completion.
-- [ ] Coverage output retains explicit non-delivery dispositions and labels absent adequacy/candidate evidence.
-- [ ] Completion refuses without writes on structural/readiness failures, and v5 lifecycle regressions stay green.
+- [x] S-13..S-15 cover missing/open/stale/red/interrupted work, a missing row, and valid pre-evaluation completion.
+- [x] Coverage output retains explicit non-delivery dispositions and labels absent adequacy/candidate evidence.
+- [x] Completion refuses without writes on structural/readiness failures, and v5 lifecycle regressions stay green.
 
 ## Verification
 Proves: the completion gate consumes real ticket readiness without confusing planned links with candidate delivery.
