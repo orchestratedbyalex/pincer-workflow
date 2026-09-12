@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "change": "prd-v1",
+  "agreement": "G-03",
+  "digest": "ae707f99bbba5cec9fb1bb8b9a03f022bc2d64f996594549b96fe69ccd84c1b6",
+  "projection": "pincer agreement 1\nchange prd-v1\nprd .prd/prd-v1.md 5c8043031e18ff69aee14c90bb3ef28e9218c2a45325cd24a3746d53cd7b5791\nticket T-01 9a350721793b9c1076b167e3564e7421ffb6f424e8269159c7aa2faf63851423\nticket T-02 00d1548fd4374ad0346888d5ffe6f5f068424e18235848f1ee179facd47ad83b\nticket T-04 2f6a19fd734f7b27a0149c0597a8809b8a98d4951cf998c90a0a806c5c1c64d0\ndecision D-01 a887052e984bab273c8126d500f19446a5f0c050bafc0500bc4daceb35989bb8\n",
+  "prd": {
+    "path": ".prd/prd-v1.md",
+    "revision": "5c8043031e18ff69aee14c90bb3ef28e9218c2a45325cd24a3746d53cd7b5791",
+    "text": "---\nversion: 1\ndate: 2026-09-12\nprofile: small\n---\n\n# Notes CLI: add and list\n\n## 1. Problem\nA dependency-free `notes` CLI is needed; nothing works yet.\n\n## 2. Solution\n`node src/notes.js add <text>` appends a note to `notes.json` in the current directory; `node src/notes.js list` prints notes one per line in insertion order.\n\n## 3. Scope\n| In | Out |\n| --- | --- |\n| add, list, `list --json`, README usage | search, edit, clear (a later change) |\n\n## 4. Requirements\n#### R-01 \u2014 add and list\n- Scenario: `add first`, `add second`, `list` prints `first\\nsecond\\n`.\n- Failure path: `add` without text exits 1 with a one-line message.\n- Preserve: nothing existing.\n#### R-02 \u2014 documented usage\n- Scenario: README shows both commands.\n#### R-03 \u2014 machine-readable list\n- Scenario: `list --json` prints the notes as a JSON array of strings.\n- Failure path: `list --xml` exits 1 with a one-line message.\n- Preserve: plain `list` output is unchanged.\n\n## 5. Architecture\nOne file `src/notes.js`, JSON storage in the working directory, tests with `node:test` (`npm test`).\n\n## 6. Success criteria\n`npm test` passes; README documents add and list.\n\n## 7. Out of scope\nclear (PRD v2), any other command.\n\n## Authorization\nProfile small: the brief settles every decision; no questions.\n"
+  },
+  "tickets": {
+    "T-01": {
+      "file": "tickets/T-01-add-and-list.md",
+      "digest": "9a350721793b9c1076b167e3564e7421ffb6f424e8269159c7aa2faf63851423",
+      "text": "---\nticket: T-01\nsize: S\nprd: .prd/prd-v1.md\ndepends_on: []\n---\n\n## Objective\nImplement `add <text>` and `list` in `src/notes.js` so `test/notes.test.js` passes.\n\n## Context\n- Relevant files: src/notes.js, test/notes.test.js\n- Implements: R-01\n\n## Requirements\n- Notes are stored in `notes.json` in the current working directory (create it on first add).\n- `add` without text exits 1 with exactly one line on stderr.\n\n## Acceptance Criteria\n- [ ] `add` then `list` prints notes in insertion order\n- [ ] `add` without text exits 1 with a one-line message\n\n## Verification\nProves: the CLI behaves as specified; the tests fail when add/list are wrong or missing.\n```bash\nnpm test\n```\n"
+    },
+    "T-02": {
+      "file": "tickets/T-02-document-usage.md",
+      "digest": "00d1548fd4374ad0346888d5ffe6f5f068424e18235848f1ee179facd47ad83b",
+      "text": "---\nticket: T-02\nsize: S\nprd: .prd/prd-v1.md\ndepends_on: [T-01]\n---\n\n## Objective\nDocument `add` and `list` in README.md.\n\n## Context\n- Relevant files: README.md\n- Implements: R-02\n\n## Acceptance Criteria\n- [ ] README shows `node src/notes.js add <text>` and `node src/notes.js list`\n\n## Verification\nProves: the usage section exists (a static contract: documentation).\n```bash\ngrep -q 'node src/notes.js add' README.md && grep -q 'node src/notes.js list' README.md && npm test\n```\n"
+    },
+    "T-04": {
+      "file": "tickets/T-04-json-output.md",
+      "digest": "2f6a19fd734f7b27a0149c0597a8809b8a98d4951cf998c90a0a806c5c1c64d0",
+      "text": "---\nticket: T-04\nsize: S\nprd: .prd/prd-v1.md\ndepends_on: [T-01]\n---\n\n## Objective\nAdd `list --json` to `src/notes.js` so `test/json.test.js` passes.\n\n## Context\n- Relevant files: src/notes.js, test/json.test.js\n- Implements: R-03\n\n## Acceptance Criteria\n- [ ] `list --json` prints a JSON array of the notes\n- [ ] `list --xml` exits 1 with a one-line message\n\n## Verification\nProves: the JSON output and the rejection path behave as specified (the sleep keeps the run long enough to interrupt in the trial).\n```bash\nsleep 6 && npm test\n```\n"
+    }
+  },
+  "decisions": {
+    "D-01": {
+      "summary": "AGREEMENT_CHANGED found on resume (not made this session): PRD v1 revised to add R-03 'list --json' and ticket T-04. Per AGENTS.md/pincer-code, this needs explicit confirmation naming the content, not a general 'don't re-ask' instruction.",
+      "reference": "user message 2026-09-12",
+      "excerpt": "Approved: the revised PRD v1 with R-03 (list --json) and ticket T-04 as written is in scope."
+    }
+  },
+  "recorded": "2026-09-12T01:05:57Z"
+}

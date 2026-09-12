@@ -1,9 +1,13 @@
 ---
 ticket: T-61
-status: open
+status: done
 size: M
 prd: .prd/prd-v5.md
 depends_on: [T-60]
+started: 2026-09-12T01:17:00Z
+last_check: 2026-09-12T01:39:01Z passed b420a8d1cff8
+verified: 2026-09-12T01:39:01Z b420a8d1cff8
+finished: 2026-09-12T01:39:01Z
 ---
 
 ## Objective
@@ -24,10 +28,10 @@ Assemble the implementation review packet and final gates so PRD v5 can be imple
 - Provide independent replay instructions for A/B/A, same-filename scope revision, delegated check change, wrong-change execution, shared C-01/candidate, transition process death, no-selection clone, and conflicting history.
 
 ## Acceptance Criteria
-- [ ] Packet has complete requirement/scenario mapping with valid references and honest dispositions; each required acceptance claim has inspectable evidence.
-- [ ] Full local suite and distribution parity pass; supported CI matrix results are recorded or explicitly outstanding, with release readiness blocked until required checks pass.
-- [ ] Representative artifacts are sanitized and documented, and all eight independent replay cases have concrete fixture/command instructions.
-- [ ] No merge, bump, publish, implementation-complete or release-PASS claim is made merely by preparing this packet.
+- [x] Packet has complete requirement/scenario mapping with valid references and honest dispositions; each required acceptance claim has inspectable evidence.
+- [x] Full local suite and distribution parity pass; supported CI matrix results are recorded or explicitly outstanding, with release readiness blocked until required checks pass.
+- [x] Representative artifacts are sanitized and documented, and all eight independent replay cases have concrete fixture/command instructions.
+- [x] No merge, bump, publish, implementation-complete or release-PASS claim is made merely by preparing this packet.
 
 ## Verification
 Proves: Checks review-packet completeness/references and runs the full regression/distribution suite. It does not replace independent code review, live-observation judgment, or remote CI.

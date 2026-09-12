@@ -1,0 +1,254 @@
+{
+  "schema": 2,
+  "runtime": 2,
+  "change": "prd-v1",
+  "prd": ".prd/prd-v1.md",
+  "base": "47fa7ca0584bf387338bed6f3e909d1fd84d93ae",
+  "registered": "2026-09-12T00:26:39Z",
+  "sequence": 10,
+  "lifecycle": {
+    "state": "completed",
+    "since": "2026-09-12T01:09:35Z",
+    "reason": null,
+    "note": null,
+    "superseded_by": null
+  },
+  "agreements": [
+    {
+      "id": "G-01",
+      "digest": "a90a889a85dcfe8c71189cfdee897aa9cf4d40e123ee497318fcee10deb50ef9",
+      "prd_revision": "13439981d194d529fac904c86bd7adc69037fbbed9d33cb9d59693e1ec5b941b",
+      "breakdown": "94b805a1d8d5c3aeb75127b2319b2116976c7dd35f9fcf0d7efc86cfdbaa48c1",
+      "tickets": [
+        "T-01",
+        "T-02"
+      ],
+      "decisions": [],
+      "snapshot": ".prd/changes/prd-v1/agreements/G-01.json",
+      "recorded": "2026-09-12T00:27:17Z"
+    },
+    {
+      "id": "G-02",
+      "digest": "e22544d31a7a1ef38358b2ef6bea391fa94cef7daee9658041ea1ceb1bba9488",
+      "prd_revision": "5c8043031e18ff69aee14c90bb3ef28e9218c2a45325cd24a3746d53cd7b5791",
+      "breakdown": "99da1dd0123b79563ac7f3763f761582e0c119e2e5e4e8641bd9d149787c2097",
+      "tickets": [
+        "T-01",
+        "T-02",
+        "T-04"
+      ],
+      "decisions": [],
+      "snapshot": ".prd/changes/prd-v1/agreements/G-02.json",
+      "recorded": "2026-09-12T01:01:44Z"
+    },
+    {
+      "id": "G-03",
+      "digest": "ae707f99bbba5cec9fb1bb8b9a03f022bc2d64f996594549b96fe69ccd84c1b6",
+      "prd_revision": "5c8043031e18ff69aee14c90bb3ef28e9218c2a45325cd24a3746d53cd7b5791",
+      "breakdown": "99da1dd0123b79563ac7f3763f761582e0c119e2e5e4e8641bd9d149787c2097",
+      "tickets": [
+        "T-01",
+        "T-02",
+        "T-04"
+      ],
+      "decisions": [
+        "D-01"
+      ],
+      "snapshot": ".prd/changes/prd-v1/agreements/G-03.json",
+      "recorded": "2026-09-12T01:05:57Z"
+    }
+  ],
+  "authorizations": [
+    {
+      "id": "A-01",
+      "agreement": "G-01",
+      "digest": "a90a889a85dcfe8c71189cfdee897aa9cf4d40e123ee497318fcee10deb50ef9",
+      "disposition": "user",
+      "reference": "user message in this conversation",
+      "excerpt": "go ahead with both tickets as written",
+      "constraints": null,
+      "basis": null,
+      "explanation": null,
+      "decisions": [],
+      "recorded": "2026-09-12T00:27:17Z"
+    },
+    {
+      "id": "A-02",
+      "agreement": "G-02",
+      "digest": "e22544d31a7a1ef38358b2ef6bea391fa94cef7daee9658041ea1ceb1bba9488",
+      "disposition": "user",
+      "reference": "user message in this conversation",
+      "excerpt": "Do not ask me to re-approve scope I already approved.",
+      "constraints": null,
+      "basis": null,
+      "explanation": null,
+      "decisions": [],
+      "recorded": "2026-09-12T01:01:44Z"
+    },
+    {
+      "id": "A-03",
+      "agreement": "G-03",
+      "digest": "ae707f99bbba5cec9fb1bb8b9a03f022bc2d64f996594549b96fe69ccd84c1b6",
+      "disposition": "user",
+      "reference": "user message 2026-09-12",
+      "excerpt": "Approved: the revised PRD v1 with R-03 (list --json) and ticket T-04 as written is in scope.",
+      "constraints": null,
+      "basis": null,
+      "explanation": null,
+      "decisions": [
+        "D-01"
+      ],
+      "recorded": "2026-09-12T01:05:57Z"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D-01",
+      "status": "resolved",
+      "summary": "AGREEMENT_CHANGED found on resume (not made this session): PRD v1 revised to add R-03 'list --json' and ticket T-04. Per AGENTS.md/pincer-code, this needs explicit confirmation naming the content, not a general 'don't re-ask' instruction.",
+      "reference": "user message 2026-09-12",
+      "excerpt": "Approved: the revised PRD v1 with R-03 (list --json) and ticket T-04 as written is in scope.",
+      "raised": "2026-09-12T01:02:44Z",
+      "resolved": "2026-09-12T01:05:53Z"
+    }
+  ],
+  "events": [
+    {
+      "sequence": 1,
+      "kind": "register",
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-12T00:26:39Z",
+      "reason": null,
+      "agreement": null,
+      "authorization": null,
+      "decision": null,
+      "replacement": null,
+      "note": null
+    },
+    {
+      "sequence": 2,
+      "kind": "authorize",
+      "from": "planned",
+      "to": "planned",
+      "at": "2026-09-12T00:27:17Z",
+      "reason": null,
+      "agreement": "G-01",
+      "authorization": "A-01",
+      "decision": null,
+      "replacement": null,
+      "note": null
+    },
+    {
+      "sequence": 3,
+      "kind": "activate",
+      "from": "planned",
+      "to": "active",
+      "at": "2026-09-12T00:27:22Z",
+      "reason": null,
+      "agreement": "G-01",
+      "authorization": "A-01",
+      "decision": null,
+      "replacement": null,
+      "note": null
+    },
+    {
+      "sequence": 4,
+      "kind": "pause",
+      "from": "active",
+      "to": "paused",
+      "at": "2026-09-12T00:29:21Z",
+      "reason": "Switching to feature-b (PRD v2, T-03) at user request",
+      "agreement": null,
+      "authorization": null,
+      "decision": null,
+      "replacement": null,
+      "note": "prd-v1 paused mid-build: T-01 done, T-02 open (no attempt recorded yet). Resume with 'node scripts/pincer-runtime.cjs change resume prd-v1' then continue /pincer-code from T-02."
+    },
+    {
+      "sequence": 5,
+      "kind": "authorize",
+      "from": "paused",
+      "to": "paused",
+      "at": "2026-09-12T01:01:44Z",
+      "reason": null,
+      "agreement": "G-02",
+      "authorization": "A-02",
+      "decision": null,
+      "replacement": null,
+      "note": null
+    },
+    {
+      "sequence": 6,
+      "kind": "resume",
+      "from": "paused",
+      "to": "active",
+      "at": "2026-09-12T01:01:47Z",
+      "reason": null,
+      "agreement": "G-02",
+      "authorization": "A-02",
+      "decision": null,
+      "replacement": null,
+      "note": null
+    },
+    {
+      "sequence": 7,
+      "kind": "decide",
+      "from": "active",
+      "to": "active",
+      "at": "2026-09-12T01:02:44Z",
+      "reason": null,
+      "agreement": null,
+      "authorization": null,
+      "decision": "D-01",
+      "replacement": null,
+      "note": null
+    },
+    {
+      "sequence": 8,
+      "kind": "resolve",
+      "from": "active",
+      "to": "active",
+      "at": "2026-09-12T01:05:53Z",
+      "reason": null,
+      "agreement": null,
+      "authorization": null,
+      "decision": "D-01",
+      "replacement": null,
+      "note": null
+    },
+    {
+      "sequence": 9,
+      "kind": "authorize",
+      "from": "active",
+      "to": "active",
+      "at": "2026-09-12T01:05:57Z",
+      "reason": null,
+      "agreement": "G-03",
+      "authorization": "A-03",
+      "decision": "D-01",
+      "replacement": null,
+      "note": null
+    },
+    {
+      "sequence": 10,
+      "kind": "complete",
+      "from": "active",
+      "to": "completed",
+      "at": "2026-09-12T01:09:35Z",
+      "reason": null,
+      "agreement": "G-03",
+      "authorization": "A-03",
+      "decision": null,
+      "replacement": null,
+      "note": null
+    }
+  ],
+  "evaluations": [],
+  "legacy": {
+    "receipts": {},
+    "authorization_text": null,
+    "migrated_from": null,
+    "migrated": null
+  }
+}
