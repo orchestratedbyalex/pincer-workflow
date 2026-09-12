@@ -179,3 +179,9 @@ What: contract freeze + released fixtures (T-47), transactions (T-48), schema 2 
 Why: PRD v5 (preserve changes, authorization, resume context); each ticket verified with the pinned v0.5.0 kit and committed as `T-NN: …`.
 Files: template/scripts/pincer-runtime/{transaction,changes,agreement,authorization,transitions,gates,locator}.cjs, status/lifecycle/runner/state/readiness/evidence edits, template/docs/runtime-contracts.md, test/fixtures/prd-v5/, test/helpers.js (bindV050).
 Outcome: T-57..T-61 remain (resume report, migration, adapters, live trials, review packet). Mid-implementation checkpoint; the branch is not evaluated.
+
+## [2026-09-12] end | PRD v5 implemented on feat/prd-v5: T-57..T-62 done, trials, review packet, PRD built
+- What: resume report (T-57), migration to changes mode (T-58), playbooks/guards/installer/adapters (T-59), live handoff trials with a v0.5.0 baseline (T-60, `docs/trial-prd-v5.md`, `docs/prd-v5-artifacts/`), review packet with eight executable replay cases (T-61, `docs/prd-v5-review-packet.md`, `replay.sh`), playbook fix from trial finding 1 (T-62). PRD set to `built`.
+- Why: PRD v5 (retained change records, explicit selection, agreement-bound authorization, lifecycle transactions, resume) is complete and ready for the user's evaluation; nothing merged, bumped or published.
+- Files: template/scripts/pincer-runtime/{resume,migrate}.cjs, template/.claude/commands/*, template/AGENTS.md, template/docs/*, bin/pincer.js, test/change-*.test.js, docs/trial-prd-v5.md, docs/prd-v5-review-packet.md, docs/prd-v5-artifacts/, tickets/T-57..T-62.
+- Outcome: full `npm test` green through the pinned v0.5.0 kit; generators in parity; CI outstanding for the branch. Trials: S-30 both project types pass; S-31 changed-scope block held (agent residual disclosed), interruption recovered; S-32 baseline needed 2 binding deletions and 2 re-typed approvals where the runtime needed none.

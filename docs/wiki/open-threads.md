@@ -12,6 +12,9 @@
 - [2026-09-02] Codex supports hooks now; port `hook-policy.cjs` as a Codex hook adapter (README wording already corrected) ([[distribution-channels]])
 - [2026-09-02] Codex: the `$pincer-plan` → `$pincer-release` chain is untested on Codex ([[cli-installer]])
 - [2026-09-04] Copilot: `/pincer-*` prompt-file chain in VS Code untested end to end ([[distribution-channels]])
-- [2026-09-11] PRD v5 T-57..T-61 outstanding on `feat/prd-v5`: resume report, migration to changes mode (legacy and schema 1 binding; the ticket map's `migrate` still writes schema 1 until T-58), playbooks/guards/installer/adapters for the change commands, live handoff trials, review packet ([[runtime]])
 - [2026-09-11] Sandbox limit observed: `node <file> <long argv>` SIGKILLed in the Claude Code Bash tool; feedback drafted; CI is unaffected ([[runtime]])
-
+- [2026-09-12] PRD v5 is built on `feat/prd-v5` but not evaluated, merged or released: `/pincer-evaluate` (pinned v0.5.0 kit, schema 2 manifest under `.prd/evidence/prd-v5/`), then release, are the user's calls; CI has not run on the branch (not pushed), so Node 18/Linux are unverified for v5 ([[explicit-change-lifecycle]])
+- [2026-09-12] Trial residual (finding 1): with the T-62 playbook, Sonnet still recorded a `user` authorization from a generic "continue" instruction before raising the decision; the runtime held on `DECISION_REQUIRED`. Consider a runtime-side guard (e.g. refuse a `user` authorization whose excerpt matches no revised content) or stronger playbook wording ([[explicit-change-lifecycle]])
+- [2026-09-12] Review packet deviation 6 needs a reviewer's confirmation: execution against an unreadable selected record is refused as `SELECTION_INVALID` (exit 1) naming `HISTORY_INVALID`, while inspection exits 4 ([[runtime]])
+- [2026-09-12] Claude Code ticket guard false positive: a compound `git add .prd/changes/… && git commit -m "$(cat <<'EOF' … <noreply@…> EOF)"` is refused (the lexer reads `<…>` in the heredoc as a redirect next to a protected path); split add and commit, or fix the lexer ([[ticket-state-machine]])
+- [2026-09-12] Trial-fixture lesson: `"test": "node --test test/"` fails on Node 22.23 (bare directory arg); use `node --test`. Pre-authoring a later ticket's test file makes an earlier ticket's `npm test` check unpassable ([[runtime]])

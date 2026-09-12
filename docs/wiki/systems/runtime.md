@@ -99,7 +99,7 @@ Decision: [[runtime-owned-verification]]. Extends [[ticket-state-machine]],
 - The repo itself is NOT migrated (PRD v4 §9 dogfooding); its own tickets used the
   pinned v0.4.1 kit from `1cb5ab4` in the session scratchpad.
 
-## PRD v5 additions (feat/prd-v5, 2026-09-11, T-47..T-56)
+## PRD v5 additions (feat/prd-v5, 2026-09-11/12, T-47..T-62)
 
 Changes mode (schema 2 records under `.prd/changes/`) sits next to legacy and migrated
 (v0.5.0 schema 1 binding) modes; `identity.loadBinding` returns `CHANGES_MODE` and
@@ -137,3 +137,32 @@ records" … "Worktrees", pinned by `test/change-contracts.test.js`.
   view`, `candidate.locator/evaluation`).
 - Test fixtures: `test/fixtures/txn-writer.cjs`, `change-op.cjs` (crash/hold seams via
   `hooks`), `test/fixtures/prd-v5/` (released v0.5.0 records).
+- `resume.cjs` — `resume [--change] [--json]`: the fresh-session report (change, view,
+  agreement, references, tickets, attempts, candidate, authored handoff labeled
+  `authored: true`, blockers, one `next` with `rule` 1–8). The handoff reason/note are
+  shown while paused and cleared by `change resume`.
+- `migrate.cjs` (rewritten) — sources: legacy tickets, v0.5.0 binding, an existing
+  record; one transaction; backups under `.pincer/backups/<ts>/` include the binding
+  and `index.json`; pointer rewrite `candidate:<sha>:C-NN` → `candidate:<id>:<sha>:C-NN`;
+  the migrated change is `planned`/unauthorized; the binding's free text becomes
+  `legacy.authorization_text` (unvalidated). `bin/pincer.js doctor` reports
+  "migration to change records available".
+- Gate order pinned by `gates.ORDER`: `INPUT_INVALID … STATE_INCOMPLETE →
+  SELECTION_REQUIRED/INVALID → WRONG_CHANGE → LIFECYCLE_BLOCKED → BASE_MISMATCH →
+  DECISION_REQUIRED → AUTHORIZATION_REQUIRED → AGREEMENT_CHANGED`. An unreadable
+  *selected* record refuses execution as `SELECTION_INVALID` (exit 1) naming
+  `HISTORY_INVALID`; inspection of it exits 4 (review packet deviation 6).
+- Crash semantics (`change-op.cjs --crash <point>`): before `manifest` the old state is
+  intact and status is normal (the journal is discarded by the next transaction or
+  `recover`); at `manifest`/`rename:0` status exits 4 `STATE_INCOMPLETE` and `recover`
+  completes the transition; at `cleanup` nothing is pending.
+- Review material: `docs/prd-v5-review-packet.md` (traceability R-01..R-10 / S-01..S-32
+  with `S-NN` tags in the test sources), `docs/prd-v5-artifacts/replay.sh <case>`
+  (eight executable review cases on a scratch project built from `template/`; run by
+  `test/change-review-packet.test.js`), `docs/prd-v5-artifacts/records/` (sanitized
+  change record, agreement snapshots, blocked/current resume JSON), `docs/trial-prd-v5.md`
+  + `docs/prd-v5-artifacts/trial-logs/` (validated by `test/change-trial-record.test.js`).
+- Playbook rule from the trial (T-62): an `AGREEMENT_CHANGED` the session did not cause
+  is raised with `change decide` and the agent stops; a generic "continue" never
+  authorizes new scope. Residual: Sonnet still recorded an A-02 from the generic
+  instruction before raising the decision (runtime blocked on the open decision).

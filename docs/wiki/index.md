@@ -1,6 +1,7 @@
 # Wiki index
 
 ## Decisions
+- [[explicit-change-lifecycle]] — PRD v5 (2026-09-12): retained change records, explicit per-worktree selection, agreement digests with user/delegated authorization, journaled lifecycle transitions, change-scoped evidence, `resume`
 - [[runtime-owned-verification]] — PRD v4 (2026-09-11): a Node runtime records source-bound attempts, exports evidence schema 2, migrates explicitly; done consumes the attempt
 
 - [[single-source-template]] — template/ is canonical; adapters and plugin are generated, committed, never hand-edited
