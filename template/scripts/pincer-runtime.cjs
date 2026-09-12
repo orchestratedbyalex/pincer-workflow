@@ -197,15 +197,31 @@ function cmdEvidence(root, args) {
     return { attempt: state.latestAttempt(root, key, indexRead.index), pointed: indexRead.index.current[key] || null };
   };
   const os = require('node:os');
+  // Strict coverage: export needs structural coverage and derives every row from the
+  // map, the inventory and the outcomes (docs/runtime-contracts.md, "Evidence schema 3").
+  let strict = null;
+  if (b.strict) {
+    const phases = require('./pincer-runtime/phases.cjs');
+    const coverageModule = require('./pincer-runtime/coverage.cjs');
+    const resolved = changes.resolveSelected(root, {});
+    if (resolved.code) fail('pincer', `${resolved.code}: ${resolved.problem}`, exitForCode(resolved.code));
+    const report = phases.compute(root, resolved.record);
+    const blocker = phases.firstBlocker(report, 'structure');
+    if (blocker) fail('pincer', `${blocker.code}: evidence export refused: ${blocker.detail} — export needs structural coverage`, exitForCode(blocker.code));
+    const cov = coverageModule.load(root, resolved.record, { priorInventory: gid => agreement.inventoryOf(root, resolved.record, resolved.record.agreements.find(g => g.id === gid) || null) });
+    const v = authorization.verdict(root, resolved.record);
+    strict = { inventory: cov.inventory, map: cov.map.map, mapDigest: cov.map.digest, graph: cov.graph, scope: report.scope, agreement: b.agreement, authorization: v.authorized ? v.authorized.id : null };
+  }
   const result = evidence.exportEvidence(root, {
     candidate: o.candidate, base: o.base, prd: o.prd, draft, binding: bind.binding, attemptsFor,
-    environment: { os: `${os.platform()} ${os.release()}`, node: process.version }, now: nowIso(), atomicWrite,
+    environment: { os: `${os.platform()} ${os.release()}`, node: process.version }, now: nowIso(), atomicWrite, strict,
   });
   if (result.problems.length) {
     for (const p of result.problems) process.stderr.write(`evidence: ${result.manifest || o.draft}: ${p}\n`);
     process.exit(EXIT.FAILED);
   }
-  process.stdout.write(`exported ${result.manifest} (schema 2) — validate: node scripts/pincer-evidence.cjs validate ${result.manifest} --candidate ${o.candidate} --prd ${o.prd}\n`);
+  process.stdout.write(`exported ${result.manifest} (schema ${result.schema})${result.delivery ? ` — delivery: original ${result.delivery.original}, agreed ${result.delivery.agreed}` : ''} — validate: node scripts/pincer-evidence.cjs validate ${result.manifest} --candidate ${o.candidate} --prd ${o.prd}\n`);
+  for (const l of result.limitations || []) process.stderr.write(`pincer: limitation: ${l}\n`);
   if (b.mode === 'changes') {
     // The per-change evaluation locator is the identity of this evaluation;
     // root NOTES.md stays the human summary (docs/runtime-contracts.md).
@@ -307,6 +323,12 @@ function cmdReady(root, args) {
   else if (j.prd.status !== 'built') blockers.push({ code: 'CANDIDATE_STALE', detail: `PRD status is '${j.prd.status}', expected 'built'` });
   if (j.candidate) blockers.push(...j.candidate.reasons);
   if (j.mode === 'changes' && !j.change) blockers.push({ code: 'SELECTION_REQUIRED', detail: 'no change is selected' });
+  // Strict coverage (docs/runtime-contracts.md, "Phase-specific coverage"): release needs
+  // structural coverage and every in-scope scenario delivered by the reconciled evidence.
+  if (j.mode === 'changes' && j.change && result.gathered && result.gathered.record && changes.isStrict(result.gathered.record)) {
+    const report = require('./pincer-runtime/phases.cjs').compute(root, result.gathered.record, { gathered: result.gathered });
+    for (const p of [...report.structure.problems, ...report.candidate.problems]) if (!blockers.some(b => b.code === p.code && b.detail === p.detail) && !(p.code === 'CANDIDATE_STALE' && blockers.some(b => b.code === 'CANDIDATE_STALE'))) blockers.push({ code: p.code, detail: p.detail });
+  }
   if (!blockers.length) { process.stdout.write(`ready candidate ${j.candidate.candidate}\n`); process.exit(EXIT.OK); }
   for (const b of blockers) process.stdout.write(`not ready: ${b.code} ${b.detail}\n`);
   process.stdout.write(`next: ${j.next}\n`);

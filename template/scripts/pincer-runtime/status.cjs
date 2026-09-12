@@ -244,7 +244,7 @@ function gatherBody(root, out, ctx) {
   let nOpen = 0, nProg = 0, nDone = 0, firstStart = null, localMissing = 0;
   // Without local runtime state (a fresh clone) done tickets rely on the saved
   // candidate evidence; they are not re-verify work until verified here.
-  const localUnavailable = runtimeMode && !state.exists(root);
+  const localUnavailable = runtimeMode && !state.hasIndex(root);
   const inProg = [], reverify = [];
   let nextOpen = null;
   const rows = [];
@@ -322,8 +322,8 @@ function gatherBody(root, out, ctx) {
   j.candidate = {
     notes: notes.state, reason: notes.state === 'current' ? null : notes.text,
     candidate: notes.candidate || (notes.fields && notes.fields.candidate) || null, base: notes.base || (notes.fields && notes.fields.base) || null,
-    evidence: ev ? { manifest: ev.manifest, schema: ev.schema, provenance: ev.schema === 2 ? 'runtime' : ev.schema === 1 ? 'legacy' : null, verdict: ev.ok ? 'ok' : ev.reason } : null,
-    local_attempts: runtimeMode ? (state.exists(root) ? 'available' : 'unavailable') : 'not applicable (legacy mode)',
+    evidence: ev ? { manifest: ev.manifest, schema: ev.schema, provenance: ev.schema >= 2 ? 'runtime' : ev.schema === 1 ? 'legacy' : null, verdict: ev.ok ? 'ok' : ev.reason } : null,
+    local_attempts: runtimeMode ? (state.hasIndex(root) ? 'available' : 'unavailable') : 'not applicable (legacy mode)',
     newer_attempts: [],
     reasons: notes.state === 'current' ? [] : [{ code: notes.state === 'missing' ? 'EVIDENCE_MISSING' : 'CANDIDATE_STALE', detail: notes.text }],
     ...(ctx.notes ? { locator: ctx.locatorFile, evaluation: notes.entry ? { candidate: notes.entry.candidate, base: notes.entry.base, manifest: notes.entry.manifest, recorded: notes.entry.recorded, agreement: notes.entry.agreement } : null } : {}),
@@ -334,9 +334,9 @@ function gatherBody(root, out, ctx) {
   // state only the saved record can be validated.
   const newerBlockers = [];
   if (ev && ev.ok) {
-    if (ev.schema !== 2) line('Provenance legacy (schema 1, authored command results)');
-    else if (!state.exists(root)) {
-      line('Provenance runtime (schema 2) · local verification history unavailable; saved candidate evidence validated only');
+    if (ev.schema < 2) line('Provenance legacy (schema 1, authored command results)');
+    else if (!state.hasIndex(root)) {
+      line(`Provenance runtime (schema ${ev.schema}) · local verification history unavailable; saved candidate evidence validated only`);
     } else {
       let manifestDoc = null;
       try { manifestDoc = JSON.parse(fs.readFileSync(path.resolve(root, ev.manifest), 'utf8')); } catch { manifestDoc = null; }
@@ -360,7 +360,7 @@ function gatherBody(root, out, ctx) {
           } else details.push(`${check.id} ${latest.outcome} (${latest.id}, different source: historical)`);
         }
       }
-      line(`Provenance runtime (schema 2) · local attempts ${details.length ? details.join('; ') : 'consistent with the exported checks'}`);
+      line(`Provenance runtime (schema ${ev.schema}) · local attempts ${details.length ? details.join('; ') : 'consistent with the exported checks'}`);
       j.candidate.reasons.push(...newerBlockers);
     }
   }
@@ -473,6 +473,7 @@ function gatherChanges(root, out, { budget, now, change }) {
     return computed.defaultNext;
   };
   gatherBody(root, out, { mode: 'changes', binding, prd, prdResult, bindingResult: null, budget, now, decideNext, notes: () => locator.current(root, record), evidence: () => locator.evidenceLine(root, record), locatorFile: locator.file(id) });
+  if (out.gathered) out.gathered.record = record;
   // Reasons in gate order: repository view first, then the authorization verdict, then the rest.
   const front = [...v.problems, ...(auth.verdict !== 'current' && !agreed.code ? [{ code: auth.verdict, detail: auth.detail }] : [])];
   j.reasons = [...front, ...j.reasons.filter(r => !front.includes(r))];

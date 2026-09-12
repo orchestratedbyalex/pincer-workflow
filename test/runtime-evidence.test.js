@@ -259,3 +259,16 @@ function draftFor(dir, candidate, { required = true, extra = [] } = {}) {
   assert.match(read(dir, `${evidenceDir(candidate)}/checks/C-01.log`), /--- stdout ---\nsecond-run\n/);
 }
 console.log('runtime evidence tests passed');
+
+// PRD v6 T-73: the validator names schema 3 as such and refuses it outside strict
+// coverage semantics only through the reconciliation rules (test/coverage-evidence.test.js);
+// a schema 1 or 2 manifest keeps validating exactly as before, and an unknown schema is refused.
+{
+  const dir = tempDir();
+  const candidate = 'a'.repeat(40);
+  write(dir, '.prd/prd-v1.md', '---\nversion: 1\nstatus: built\n---\n# p\n');
+  write(dir, `.prd/evidence/prd-v1/${candidate}/manifest.json`, JSON.stringify({ schema: 4 }));
+  const r = run(dir, process.execPath, [validator, 'validate', `.prd/evidence/prd-v1/${candidate}/manifest.json`]);
+  assert.equal(r.status, 1); assert.match(r.stderr, /unknown evidence schema 4 — this runtime validates schemas 1, 2 and 3/);
+}
+console.log('runtime evidence tests passed (schema 4 refused)');

@@ -34,6 +34,9 @@ function ensureLayout(root) {
   return p;
 }
 const exists = root => fs.existsSync(paths(root).dir);
+// Local attempt history exists once an index was written; a selection alone (a fresh
+// clone that ran `change select`) is not attempt history.
+const hasIndex = root => fs.existsSync(paths(root).index);
 
 const emptyIndex = () => ({ schema: INDEX_SCHEMA, sequence: 0, current: {}, running: [] });
 function validateIndex(doc) {
@@ -305,6 +308,6 @@ function recover(root, options = {}) {
 
 module.exports = {
   RUNTIME_DIR, INDEX_SCHEMA, LOCK_WAIT_MS, StateBusy,
-  paths, ensureLayout, exists, emptyIndex, readIndex, writeIndex, isAlive,
+  paths, ensureLayout, exists, hasIndex, emptyIndex, readIndex, writeIndex, isAlive,
   acquireLock, withLock, attemptId, contextKey, validateAttempt, inspectArtifacts, writeAttempt, readAttempt, listAttempts, latestAttempt, recover,
 };

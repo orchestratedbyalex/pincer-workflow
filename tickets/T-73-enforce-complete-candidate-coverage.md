@@ -1,9 +1,13 @@
 ---
 ticket: T-73
-status: open
+status: done
 size: L
 prd: .prd/prd-v6.md
 depends_on: [T-70, T-71, T-72]
+started: 2026-09-12T09:27:47Z
+last_check: 2026-09-12T11:25:48Z passed 14bd7ae4faac
+verified: 2026-09-12T11:25:48Z 14bd7ae4faac
+finished: 2026-09-12T11:25:48Z
 ---
 
 ## Objective
@@ -23,9 +27,9 @@ Reconcile full candidate coverage at export and release, as specified in PRD v6,
 - Add adversarial mutations for omitted rows, invented IDs, swapped map/inventory, false delivered rows, corrupt artifacts and same-candidate cross-change evidence.
 
 ## Acceptance Criteria
-- [ ] S-19..S-21 demonstrate both export and independent release reject tampered/incomplete evidence.
-- [ ] An honest complete evaluation works after implementation completion with no post-candidate authored lifecycle edits; authorized non-delivery stays visible.
-- [ ] Saved evidence validates without local attempts, while tampered logs/unlisted files/newer failures block and release writes nothing.
+- [x] S-19..S-21 demonstrate both export and independent release reject tampered/incomplete evidence.
+- [x] An honest complete evaluation works after implementation completion with no post-candidate authored lifecycle edits; authorized non-delivery stays visible.
+- [x] Saved evidence validates without local attempts, while tampered logs/unlisted files/newer failures block and release writes nothing.
 
 ## Verification
 Proves: the manifest cannot choose its own obligations or claim delivery from missing, substituted or failed evidence.

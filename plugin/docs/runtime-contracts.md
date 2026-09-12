@@ -851,7 +851,8 @@ legacy (schema 1, authored command results)` and schema 2 `provenance: runtime`.
 schema 1 manifest cannot satisfy a requirement for runtime evidence. Release
 readiness additionally requires that no newer local attempt for the same candidate and
 check with the same source digest is nonpassing; a fresh clone without
-`.pincer/runtime/` reports `local verification history unavailable; saved candidate
+local attempt history (no `.pincer/runtime/index.json`; a selection alone is not
+history) reports `local verification history unavailable; saved candidate
 evidence validated only`. Local capture establishes provenance and mistake detection,
 not tamper-proof attestation.
 

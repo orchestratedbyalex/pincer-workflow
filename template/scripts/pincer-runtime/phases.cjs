@@ -15,6 +15,9 @@ const authorization = require('./authorization.cjs');
 const coverage = require('./coverage.cjs');
 const dispositions = require('./dispositions.cjs');
 const requirements = require('./requirements.cjs');
+const locator = require('./locator.cjs');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const STRUCTURE_ORDER = ['INPUT_INVALID', 'INVENTORY_INVALID', 'COVERAGE_INVALID', 'COVERAGE_INCOMPLETE', 'SCOPE_UNAUTHORIZED', 'OBLIGATION_MISSING'];
 const byOrder = (a, b) => STRUCTURE_ORDER.indexOf(a.code) - STRUCTURE_ORDER.indexOf(b.code);
@@ -75,11 +78,35 @@ function compute(root, record, { gathered = null, verdict = null } = {}) {
   }
   out.implementation.problems = implProblems;
   out.implementation.complete = out.structure.complete && implProblems.length === 0;
-  out.candidate.problems = [{ code: 'EVIDENCE_MISSING', detail: 'candidate: not evaluated', ids: [] }];
-  out.candidate.adequacy = null;
+  candidateCoverage(root, record, out.candidate);
   // A missing or stale evaluation blocks only a completed change: before completion no candidate is expected.
   out.blockers = [...out.structure.problems, ...implProblems, ...(record.lifecycle.state === 'completed' ? out.candidate.problems : [])].map(p => ({ code: p.code, detail: p.detail }));
   return out;
+}
+
+// Candidate coverage: the change's latest evaluation (schema 3) reconciled by the
+// locator, with per-scenario dispositions and the codes that block release.
+function candidateCoverage(root, record, out) {
+  const loc = locator.current(root, record);
+  if (loc.state === 'missing') { out.problems = [{ code: 'EVIDENCE_MISSING', detail: 'candidate: not evaluated', ids: [] }]; return; }
+  out.evaluated = true; out.candidate = loc.candidate || null; out.manifest = loc.manifest || null;
+  let m = null;
+  try { m = JSON.parse(fs.readFileSync(path.join(root, loc.manifest), 'utf8')); } catch { m = null; }
+  const problems = [];
+  if (loc.state === 'stale') problems.push({ code: 'CANDIDATE_STALE', detail: loc.text, ids: [] });
+  if (!m || m.schema !== 3) { problems.push({ code: 'EVIDENCE_MISSING', detail: `candidate evidence is ${m && m.schema ? `schema ${m.schema}` : 'unreadable'}, not the strict schema 3; evaluate again`, ids: [] }); out.problems = problems; return; }
+  const checkOf = Object.fromEntries((m.checks || []).filter(c => c && c.id).map(c => [c.id, c]));
+  for (const row of m.scenarios || []) {
+    if (!row || !row.id) continue;
+    const checks = (row.checks || []).map(id => { const c = checkOf[id] || {}; return { id, kind: c.kind || null, required: c.required ?? null, result: c.result || null }; });
+    const failing = checks.filter(c => c.required && c.result !== 'passed');
+    out.scenarios[row.id] = { disposition: row.disposition, checks, detail: row.disposition === 'blocked' ? `blocked by ${failing.map(c => `${c.id} (${c.kind} ${c.result || 'missing'})`).join(', ') || 'a missing check'}` : row.disposition === 'delivered' ? 'every required check passed' : `${row.disposition} by decision ${row.decision} (${row.authorization || 'unauthorized'})` };
+    for (const c of failing) problems.push({ code: c.kind === 'command' ? ({ failed: 'CHECK_FAILED', unverified: 'ATTEMPT_ERROR' }[c.result] || 'CHECK_FAILED') : 'REVIEW_MISSING', detail: `${row.id}: ${c.id} (${c.kind}) is ${c.result || 'missing'}`, ids: [row.id, c.id] });
+  }
+  out.delivery = m.delivery || null;
+  out.adequacy = m.adequacy || null;
+  if (!m.adequacy || m.adequacy.verdict !== 'adequate') problems.push({ code: 'ADEQUACY_REQUIRED', detail: m.adequacy ? `the reviewer judged the checks inadequate: ${m.adequacy.note}` : 'no adequacy judgment recorded', ids: [] });
+  out.problems = problems;
 }
 
 // The first blocking problem for a phase, in the contract's order, or null.

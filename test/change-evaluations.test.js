@@ -279,3 +279,15 @@ function evaluate(dir, id, prd, candidate, base, command) {
   refuses(rt(dir, 'evidence', 'export', '--candidate', candidate, '--base', base, '--prd', '.prd/prd-v2.md', '--draft', '.pincer/drafts/a.json'), 1, /WRONG_CHANGE/);
 }
 console.log('change evaluation tests passed');
+
+// PRD v6 T-73: a change without strict coverage keeps exporting schema 2; the strict
+// format (schema 3) is written only for adopted changes (test/coverage-evidence.test.js).
+{
+  const dir = fixture();
+  workThrough(dir, 'a', 'T-01');
+  const candidate = commit(dir, 'candidate a');
+  const manifest = evaluate(dir, 'a', '.prd/prd-v1.md', candidate, git(dir, 'rev-parse', 'HEAD~1'), 'test "$(cat value.txt)" = good');
+  assert.equal(JSON.parse(read(dir, manifest)).schema, 2, 'a schema 2 change exports schema 2');
+  assert.ok(!('coverage' in JSON.parse(read(dir, `.prd/evidence/prd-v1/${candidate}/manifest.json`))));
+}
+console.log('change evaluation tests passed (schema 2 export unchanged)');
