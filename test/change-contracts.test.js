@@ -161,7 +161,10 @@ has(/Local state \(`\.pincer\/runtime\/`,\nincluding the selection, attempts and
 has(/does not\nclaim to prevent two developers from working on the same change independently/, 'no distributed ownership');
 has(/`legacy\.authorization_text`[\s\S]*unvalidated/, 'old free text is unvalidated');
 has(/`migrate --apply` is one transaction/, 'migration is atomic');
-has(/Rollback: restore the files from the backup directory/, 'rollback documented');
+has(/Rollback is one procedure per migration source; the backups are byte-identical\noriginals, and neither procedure deletes a file it has just restored/, 'rollback split by source (review finding 3, T-65)');
+has(/- Rollback from legacy: restore the backed-up tickets and `\.gitignore` from\n  `\.pincer\/backups\/<timestamp>\/`; delete the schema 2 record `\.prd\/changes\/<id>\.json`\n  and, if present, its snapshot directory `\.prd\/changes\/<id>\/`; remove `\.pincer\/`/, 'legacy rollback steps');
+has(/- Rollback from a v0\.5\.0 binding: restore the backed-up binding to\n  `\.prd\/changes\/<id>\.json` — it overwrites the schema 2 record, which lives at the same\n  path, so nothing under `\.prd\/changes\/` is deleted except, if present, the snapshot\n  directory `\.prd\/changes\/<id>\/`; restore the backed-up `\.pincer\/runtime\/index\.json`/, 'binding rollback steps');
+has(/remove\n  `\.pincer\/runtime\/selection\.json`; keep the rest of `\.pincer\/runtime\/` so the old\n  attempts and stored manifests remain/, 'binding rollback keeps attempts');
 has(/`register --replace` \(delete the other PRD's binding\)\nis refused in migrated mode with `MIGRATION_REQUIRED`/, 'destructive replace refused');
 
 // --- Released v0.5.0 fixtures: provenance and format ---------------------------

@@ -173,12 +173,22 @@ is byte-identical to `test/fixtures/prd-v5/legacy/tickets/T-01-example.md` (pinn
 `.prd/changes/<id>.json` (schema 1) and `.pincer/runtime/index.json` under the same
 timestamp (`test/change-migration.test.js` S-27).
 
-Rollback (contract section "Migration and rollback"): restore the files from
-`.pincer/backups/<timestamp>/` (binding, tickets, `.gitignore`), delete
-`.prd/changes/<id>.json` and `.prd/changes/<id>/`, and remove `.pincer/` (or only
-`selection.json` and the rewritten `index.json` to keep old attempts). The project is
-then legacy or migrated again with its original receipts or binding;
-`test/change-migration.test.js` S-27 performs and checks this sequence.
+Rollback (contract section "Migration and rollback") is one procedure per source, and
+neither deletes a file it has just restored (the packet as built at `1a5cbc5` quoted a
+single procedure that restored the binding and then deleted the same path; review
+finding 3, fixed in T-65):
+
+- from legacy: restore the backed-up tickets and `.gitignore`; delete the schema 2
+  record `.prd/changes/<id>.json` and, if present, `.prd/changes/<id>/`; remove
+  `.pincer/`. Legacy again with the original receipts
+  (`test/runtime-migrate.test.js` follows these steps).
+- from a v0.5.0 binding: restore the backed-up binding to `.prd/changes/<id>.json`
+  (it overwrites the schema 2 record at the same path; nothing else under
+  `.prd/changes/` is deleted except a snapshot directory, if present); restore the
+  backed-up `.pincer/runtime/index.json`; remove `.pincer/runtime/selection.json`; keep
+  the rest of `.pincer/runtime/` so the old attempts remain. Migrated (v0.5.0) again
+  with the original binding and history (`test/change-migration.test.js` S-27 follows
+  these steps).
 
 ## 7. Agreement, decision and lifecycle examples
 

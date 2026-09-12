@@ -195,14 +195,21 @@ function legacy() {
   assert.equal(JSON.parse(passes(rt(dir, 'status', '--json'))).change.agreement.verdict, 'AUTHORIZATION_REQUIRED', 'the text never authorizes');
 }
 
-// Rollback: restoring the backups and removing the record returns to legacy mode with receipts.
+// Rollback from legacy, following the contract's steps literally (docs/runtime-contracts.md,
+// "Migration and rollback"): restore the backed-up tickets and .gitignore, delete the
+// schema 2 record and its snapshot directory if present, remove .pincer/; the project
+// is legacy again with its receipts.
 {
   const dir = legacy();
   const before = snapshot(dir);
   passes(applyIt(dir));
+  authorizeAndActivate(dir);
+  assert.ok(fs.existsSync(path.join(dir, '.prd/changes/prd-v1/agreements/G-01.json')), 'snapshot directory present after an authorization');
   const backupDir = fs.readdirSync(path.join(dir, '.pincer/backups'))[0];
+  assert.deepEqual(fs.readdirSync(path.join(dir, `.pincer/backups/${backupDir}`)).sort(), ['.gitignore', 'tickets'], 'a legacy migration backs up tickets and .gitignore only');
   for (const rel of ['tickets/T-01-example.md', 'tickets/T-02-example.md', '.gitignore']) fs.copyFileSync(path.join(dir, `.pincer/backups/${backupDir}/${rel}`), path.join(dir, rel));
   fs.rmSync(path.join(dir, '.prd/changes/prd-v1.json'));
+  fs.rmSync(path.join(dir, '.prd/changes/prd-v1'), { recursive: true, force: true });
   fs.rmSync(path.join(dir, '.pincer'), { recursive: true });
   assert.deepEqual(snapshot(dir), before, 'rollback restores the originals');
   assert.match(passes(run(dir, 'bash', [statusScript])), /^Runtime  legacy/m);

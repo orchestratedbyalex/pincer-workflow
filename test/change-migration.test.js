@@ -189,17 +189,30 @@ for (const point of ['validated', 'staged', 'manifest', 'rename:0', 'rename:2', 
   assert.equal(statusJson(dir).json.mode, 'changes');
 }
 
-// Rollback of a converted binding: restore the binding and index from the backups,
-// remove the selection; the project is migrated (v0.5.0) again with its history.
+// S-27 rollback of a converted binding, following the contract's "Rollback from a
+// v0.5.0 binding" steps literally (docs/runtime-contracts.md, "Migration and
+// rollback"): restore the backed-up binding to .prd/changes/<id>.json (it overwrites
+// the schema 2 record at the same path; nothing there is deleted except a snapshot
+// directory, if present), restore the backed-up index, remove the selection, keep the
+// rest of .pincer/runtime/; the project is migrated (v0.5.0) again with its history.
 {
   const dir = released();
   const before = snapshot(dir);
   passes(applyIt(dir));
+  // An authorization after the migration writes a snapshot directory, which the rollback removes.
+  const shown = JSON.parse(passes(rt(dir, 'change', 'show', 'prd-v1', '--json')));
+  passes(rt(dir, 'change', 'authorize', 'prd-v1', '--agreement', shown.agreement.current, '--reference', 'planning session', '--excerpt', 'approved'));
+  assert.ok(fs.existsSync(path.join(dir, '.prd/changes/prd-v1/agreements/G-01.json')), 'snapshot directory present');
   const backupDir = fs.readdirSync(path.join(dir, '.pincer/backups')).filter(n => n !== '20260911T202504Z')[0];
-  fs.copyFileSync(path.join(dir, `.pincer/backups/${backupDir}/.prd/changes/prd-v1.json`), path.join(dir, '.prd/changes/prd-v1.json'));
-  fs.copyFileSync(path.join(dir, `.pincer/backups/${backupDir}/.pincer/runtime/index.json`), path.join(dir, '.pincer/runtime/index.json'));
+  const backup = rel => path.join(dir, `.pincer/backups/${backupDir}/${rel}`);
+  assert.deepEqual(fs.readdirSync(backup('.prd/changes')), ['prd-v1.json'], 'the binding is the backed-up file under .prd/changes/');
+  fs.copyFileSync(backup('.prd/changes/prd-v1.json'), path.join(dir, '.prd/changes/prd-v1.json'));
+  assert.equal(JSON.parse(read(dir, '.prd/changes/prd-v1.json')).schema, 1, 'the restored file is the schema 1 binding; it is not deleted');
+  fs.rmSync(path.join(dir, '.prd/changes/prd-v1'), { recursive: true });
+  fs.copyFileSync(backup('.pincer/runtime/index.json'), path.join(dir, '.pincer/runtime/index.json'));
   fs.rmSync(path.join(dir, '.pincer/runtime/selection.json'));
-  fs.rmSync(path.join(dir, `.pincer/backups/${backupDir}`), { recursive: true });
+  assert.ok(fs.existsSync(path.join(dir, '.pincer/runtime/attempts')) && fs.existsSync(path.join(dir, '.pincer/runtime/manifests')), 'attempts and manifests kept');
+  fs.rmSync(backup(''), { recursive: true });
   assert.deepEqual(snapshot(dir), before, 'rollback restores the originals byte for byte');
   const s = statusJson(dir);
   assert.equal(s.json.mode, 'migrated'); assert.equal(s.json.change.id, 'prd-v1');

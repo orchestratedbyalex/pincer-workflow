@@ -956,11 +956,24 @@ reports `HISTORICAL_EVIDENCE` or `LEGACY_RECEIPT` until a runtime attempt exists
 without changing `finished`. Installation and update deploy the runtime files and
 `doctor` reports when a migration is available; neither migrates.
 
-Rollback: restore the files from the backup directory (they are byte-identical
-originals: the binding, tickets and `.gitignore`), delete `.prd/changes/<id>.json` and
-`.prd/changes/<id>/`, and remove `.pincer/` (or only `selection.json` and the rewritten
-`index.json` to keep old attempts). The project is then legacy or migrated with its
-original receipts or binding. An older runtime does not enforce the
+Rollback is one procedure per migration source; the backups are byte-identical
+originals, and neither procedure deletes a file it has just restored.
+
+- Rollback from legacy: restore the backed-up tickets and `.gitignore` from
+  `.pincer/backups/<timestamp>/`; delete the schema 2 record `.prd/changes/<id>.json`
+  and, if present, its snapshot directory `.prd/changes/<id>/`; remove `.pincer/` (a
+  legacy project has no runtime state to keep). The project is legacy again with its
+  original receipts.
+- Rollback from a v0.5.0 binding: restore the backed-up binding to
+  `.prd/changes/<id>.json` — it overwrites the schema 2 record, which lives at the same
+  path, so nothing under `.prd/changes/` is deleted except, if present, the snapshot
+  directory `.prd/changes/<id>/`; restore the backed-up `.pincer/runtime/index.json`
+  (the migration rewrote its candidate pointers) and remove
+  `.pincer/runtime/selection.json`; keep the rest of `.pincer/runtime/` so the old
+  attempts and stored manifests remain. The project is migrated (v0.5.0) again with
+  its original binding and history.
+
+The backup directory can be removed afterwards. An older runtime does not enforce the
 runtime guarantees: it will accept the restored receipts as it did before.
 
 ## Legacy compatibility
