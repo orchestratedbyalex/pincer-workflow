@@ -1,9 +1,13 @@
 ---
 ticket: T-76
-status: open
+status: done
 size: M
 prd: .prd/prd-v6.md
 depends_on: [T-66]
+started: 2026-09-12T12:37:55Z
+last_check: 2026-09-12T12:40:25Z passed c497b411f95c
+verified: 2026-09-12T12:40:25Z c497b411f95c
+finished: 2026-09-12T12:40:25Z
 ---
 
 ## Objective
@@ -23,9 +27,9 @@ Build independent delivery benchmark fixtures and harness, as specified in PRD v
 - Exercise good controls and intentionally faulty candidates for missing behavior, false success and stale/wrong-change evidence. Missing tools/evaluator errors are unverified/errors, never successful acceptance.
 
 ## Acceptance Criteria
-- [ ] S-28 proves evaluator sensitivity to the specified controlled faults and acceptance of correct controls.
-- [ ] The documented harness recreates inputs and validates run records with captured real outcomes; it does not expose held-out acceptance to the implementation workspace.
-- [ ] Metric definitions and live protocol are frozen before T-77, and methodology makes no unsupported parity/superiority claim.
+- [x] S-28 proves evaluator sensitivity to the specified controlled faults and acceptance of correct controls.
+- [x] The documented harness recreates inputs and validates run records with captured real outcomes; it does not expose held-out acceptance to the implementation workspace.
+- [x] Metric definitions and live protocol are frozen before T-77, and methodology makes no unsupported parity/superiority claim.
 
 ## Verification
 Proves: the independent evaluator detects faulty output and the harness cannot manufacture a pass from absent execution.

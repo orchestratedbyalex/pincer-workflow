@@ -1,0 +1,10 @@
+'use strict';
+const test = require('node:test'); const assert = require('node:assert/strict');
+const { validate } = require('./markup.cjs');
+test('valid input returns {}', () => assert.deepEqual(validate({ email: 'a@example.com', password: 'longenough' }), {}));
+test('missing email', () => assert.equal(validate({ password: 'longenough' }).email, 'Enter your email address'));
+test('blank email', () => assert.equal(validate({ email: '   ', password: 'longenough' }).email, 'Enter your email address'));
+test('email without @', () => assert.equal(validate({ email: 'nope', password: 'longenough' }).email, 'Enter a valid email address'));
+test('missing password', () => assert.equal(validate({ email: 'a@b.c' }).password, 'Enter a password'));
+test('short password', () => assert.equal(validate({ email: 'a@b.c', password: 'short' }).password, 'Use at least 8 characters'));
+test('both invalid', () => assert.deepEqual(validate({}), { email: 'Enter your email address', password: 'Enter a password' }));

@@ -1,0 +1,103 @@
+{
+  "schema": 1,
+  "frozen": "2026-09-12T12:22:52.785Z",
+  "protocol": "052634c93a021a7155b4be62e5ce9988cc36abda8aba0a1af0374e2d8235159d",
+  "harness": "d26be674306911d53d997bd8092c266419451b4c2c5e897ce5eb24999169a8d1",
+  "briefs": {
+    "bugfix-brownfield": {
+      "digest": "2305fc3f78901efca8c099be9eb60963061ea5be1f2d5abf5e07c42a13f47486",
+      "evaluator": "733613ae2e3e669ad9c7999ba1d3b034d5f91c5ce97b3d9f3f59ba8af74702aa",
+      "sessions": 1,
+      "files": {
+        "base.cjs": "27754ce3eabc72172a5cc096b02218d363a1f5ce3486180c386bcc710820ace9",
+        "brief.md": "3b35e791222c3a6967341264170742f08220356d3d2eb6e5eb5070e0d309232c",
+        "controls.cjs": "9ab4280bbc85257b3238d0cf8cf76f997c1c0e86f77742e515165aea0d4983e5",
+        "evaluator/changelog.test.cjs": "ab669c68c5810e7d784e4a5646b7e4d3e1723fda5ce9961e91a28fd6961bc164",
+        "evaluator/evaluate.cjs": "71600ff18fcd723fbe671fd772100828e5abbba81b306d3c112c6a999c9e77ec",
+        "evaluator/slugify.test.cjs": "a4f333b3018859f209b4e09c767efca1e40cb3d889c14f80bc895018870c0615",
+        "evaluator/truncate.test.cjs": "070f691c87805f57c627639b0e13f6deeb3ed489c6cafe502eddef8a60fa496b"
+      }
+    },
+    "cli-greenfield": {
+      "digest": "5b2ae11a2d3d3b49fcc654ad20b1f2fc72aba5dc30c46cafc1800afce8601737",
+      "evaluator": "054dbd0f0728adc725c9d8fdd4997c4ef9ca9b0330d7bb6b1f109b8a582ad042",
+      "sessions": 1,
+      "files": {
+        "base.cjs": "a86c62f82500bb6a2df643850f1dfafc4ed8b681039b6cfa4312ad7e60e775a3",
+        "brief.md": "41922b54d2dc0a2ead0373f3ba09706e738cda78e6faa4ff39278ed518cb1ece",
+        "controls.cjs": "e5924f7b9d20cb09b8b4130131ab63b6dbe4d3c7bff569ffebd3379a82f9362f",
+        "evaluator/add-list.test.cjs": "10e76edaeb78c16ad371b56c00d21d6719effac806110c577b94bda290200704",
+        "evaluator/common.cjs": "a0dce2d7ff501e693726a76159e4fb2804665391178ca03227a8bd52fd9d2e36",
+        "evaluator/done.test.cjs": "91837601517b9e026987dbc446daac81b77585cad98c8530b771c7f115d1c614",
+        "evaluator/errors.test.cjs": "1f09f8632d661db19798d4054523329a128ee0ec0360784a135ae3fa68bd6ddb",
+        "evaluator/evaluate.cjs": "bf23362106feed8f377d71d38cd4a9277303f5eff6bf6922a772eb69558273cc"
+      }
+    },
+    "handoff-two-changes": {
+      "digest": "9e44158399258ef5377630c80e8fa7cf1217e5cc64fed253f14284262ffebf19",
+      "evaluator": "4e12933f479779d5fec57c05e0f39a3ec9936e9d98bc3ed22ce85c57d244d74e",
+      "sessions": 2,
+      "files": {
+        "base.cjs": "29d247701207735f071f9abb5e2f9fd1960bbf7cc1b53aa1874945dbff5b08d7",
+        "brief.md": "4a6192047d4e21c4827ce42c8c626e89a29f950da4ab06983c972cf2a5d11cd1",
+        "controls.cjs": "5b562aa290d752cb7d4e29f8b05ee73fe2ee5f98fab3c7f856da9f7e0de79910",
+        "evaluator/a1.test.cjs": "a7dafeb7308a0cbe56c04e851b43aa9545b0ab578500b930b5e1fca0be4f0609",
+        "evaluator/a2.test.cjs": "be5994b662760f8151d33a2b7d97871e461dc36bd4cc167537f7b741c2f6a573",
+        "evaluator/b1.test.cjs": "963c037e93ee44dae3a43cecfdd22ddf6e170afcf1036b2738abd6b803164fc4",
+        "evaluator/common.cjs": "bf70d754320d1cd32d7b6881049e0f8cb83e5fafca0eb39684a0dcf5ade7157b",
+        "evaluator/evaluate.cjs": "a740a3195558b3d2bcbdc3b3913d246f49c535c3e4ab5e36803e5319e4adeb4c",
+        "evaluator/session-boundary.cjs": "0312503af1dbd0b4b9a9d8bc0f1bcdcbeca42362317af363b2b2ff8c3487035b"
+      }
+    },
+    "integration-untested": {
+      "digest": "649083de53dbbd314e81bac0e4a2e90b9181286ec9cd090a74e7198973baa99a",
+      "evaluator": "29d8c3bee5d7958ffc1ef98fa214d71b2d70e85d5c93efc3341cc55cae1e0b7c",
+      "sessions": 1,
+      "files": {
+        "base.cjs": "c99c06071c79dc3be52845f5ef8c47101997ea1b13675990853a5ba396bf259d",
+        "brief.md": "e54f91e9ce294830653ee0996dd9d82f26fe1117f2127d4e3d5898654edbb012",
+        "controls.cjs": "1ba2f7e27121f952bd4bb0312b78768cebbaef782beb6d7c13b659145ee87283",
+        "evaluator/common.cjs": "669e2aaa633c4d256e8dcf186cfeafad8543b5bc306899b06428dd4c9ff1a043",
+        "evaluator/evaluate.cjs": "e32de4c040f910cb11e61860430132bf7cb24cbaeb4c485039e9055e6ac84604",
+        "evaluator/exhausted.test.cjs": "1bd655f1c07c55126313779a8a09f73eb607385f4fd3910a1cfc2d7230dbf3a9",
+        "evaluator/reject.test.cjs": "0d8e46f53cef447c3b66f53d2bbfdb9e921af95e250f6f110d147df23a990670",
+        "evaluator/retry.test.cjs": "a44545126252e4a805984d1680029de0201e136705d84a1218ed7531c19ea9ee",
+        "evaluator/success.test.cjs": "b1258debf5b0ee5033d08591c4e3a9b0fc6a30a0450f6ccdaef09b5c0a9cc2c4",
+        "evaluator/timeout.test.cjs": "02e3b272bac65052b727fe256a39c924e0379d71633cb8508a41bc3eee27e520"
+      }
+    },
+    "scope-revision": {
+      "digest": "99e65aec594e5896df3319261a8cff1167b141fe2200d0f92b8a007db882ceec",
+      "evaluator": "a3987128d59dced8dafcd89e6288742efcd0570333dc91978d74ed3d5eceffe2",
+      "sessions": 3,
+      "files": {
+        "base.cjs": "97f1068773b507437417d4e169890e2fc2005cc317801d7b7a5b8d3dfe163394",
+        "brief.md": "bba4ad47d354d20226b0809e3a6f10e9f1c73edf718a841fb62fc4871172a862",
+        "controls.cjs": "717854849561fbe6142a116c30563d314203d4dec7823eacc0cafe910af629f1",
+        "evaluator/common.cjs": "bf70d754320d1cd32d7b6881049e0f8cb83e5fafca0eb39684a0dcf5ade7157b",
+        "evaluator/evaluate.cjs": "6ae41c04388c47f7ea77a141874e4c55edcb6ab25a360e146d4b47d9f3979dab",
+        "evaluator/r01.test.cjs": "ed94dafaa3998473fa148d685a5383cb3d6b3ed86663d236bad83762dcdd63b1",
+        "evaluator/r02.test.cjs": "28bf0b0d219a40a33a5c34610aba21b2e4078342e10da42693825e328357dff5",
+        "evaluator/r03.test.cjs": "7c98270f83b9a8eead503c48c68b2b6f3f2572c6b6525fb61120baa376663e78",
+        "evaluator/scope-approval.cjs": "4fe6def272d53b617ce963519727e1fdc9e11223288e30249d1bdedf69227d1d"
+      }
+    },
+    "ui-states": {
+      "digest": "d5370e8a3ff4176ff6afa2436f696073ad5fba13cd21fff025ba60bb787af43b",
+      "evaluator": "c8778373954188f27dbed487ac80ae9a2d89d426f1e322d6b8cdd79ece6a306e",
+      "sessions": 1,
+      "files": {
+        "base.cjs": "b74a85cd4bdab2dfc63b426340dfc021462873ff2ecee91feb93181e47a025a2",
+        "brief.md": "9d21e1e50bfecb52dd4977fcb4612b37594c1ccf96ff31f5241e5a61e92d5725",
+        "controls.cjs": "5cc54bdc9530eb3ff865f237d3c097bc874c05879e175d528793b8f6db566e27",
+        "evaluator/empty.test.cjs": "10db35b62f95334bcd8344cf4efc12de4537e9dea64b9341009c036d420d957e",
+        "evaluator/errors.test.cjs": "2111a5e6fed22964bc7e8533fa9514f1a0ef58b1b7482d7dc50e77a560021100",
+        "evaluator/escaping.test.cjs": "f683f5cc66525206f35f3580b527abf4ef613cea8d73df68072ddd2d6ad783c0",
+        "evaluator/evaluate.cjs": "8f7aa9520a3fed20eaef6f5d6d5ff36604bc750196b3d458c80a5bcb5805d952",
+        "evaluator/markup.cjs": "51232c4384dc11e8071873c6c2753833a66d5ce5e95c8c091c6190e3dad9b3bb",
+        "evaluator/submitting.test.cjs": "9f4bc477c9403685dba123f05fc16e7b6332f26c6334b7370a9dda818e634731",
+        "evaluator/validate.test.cjs": "14f9ec5fc4a1699270a46b657b40f1a64c67af4038f24b1cf9841fbd891db291"
+      }
+    }
+  }
+}
