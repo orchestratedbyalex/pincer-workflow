@@ -1,9 +1,13 @@
 ---
 ticket: T-67
-status: open
+status: done
 size: M
 prd: .prd/prd-v6.md
 depends_on: [T-66]
+started: 2026-09-12T08:28:14Z
+last_check: 2026-09-12T08:32:09Z passed bb382d6ad107
+verified: 2026-09-12T08:32:09Z bb382d6ad107
+finished: 2026-09-12T08:32:09Z
 ---
 
 ## Objective
@@ -22,9 +26,9 @@ Parse the complete PRD requirement and scenario inventory, as specified in PRD v
 - Keep old PRD parsing available and labelled unverified for strict coverage. Do not silently renumber supplied IDs or infer requirements from arbitrary prose.
 
 ## Acceptance Criteria
-- [ ] S-01..S-03 execute against real Markdown files, with exact inventory membership and source spans.
-- [ ] Malformed inputs have actionable locations/codes and no mutation; lifecycle/checkbox-only changes normalize while behavior changes do not.
-- [ ] Legacy parser fixtures and existing PRD files remain readable.
+- [x] S-01..S-03 execute against real Markdown files, with exact inventory membership and source spans.
+- [x] Malformed inputs have actionable locations/codes and no mutation; lifecycle/checkbox-only changes normalize while behavior changes do not.
+- [x] Legacy parser fixtures and existing PRD files remain readable.
 
 ## Verification
 Proves: definitions cannot silently vanish or be invented by examples, and malformed inventories never count as complete.

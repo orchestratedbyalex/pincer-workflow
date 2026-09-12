@@ -336,22 +336,23 @@ function structuralInventory(text) {
         if (current && !requirements[current].length) problems.push(`requirement ${current} at line ${currentLine} has no scenario`);
         current = null;
         if (define('requirement', def[1], n)) { current = def[1]; currentLevel = level; currentLine = n; requirements[current] = []; }
-      } else if (looksLike) { problems.push(`unsupported requirement definition syntax at line ${n}`); }
+      } else if (looksLike) { problems.push(`unsupported requirement definition syntax at line ${n}; use "### R-NN — Title"`); }
       else if (current && level <= currentLevel) { if (!requirements[current].length) problems.push(`requirement ${current} at line ${currentLine} has no scenario`); current = null; }
       continue;
     }
-    const item = line.match(/^[ \t]*(?:[-+*]|[0-9]+[.)])[ \t]+(.*)$/);
+    const item = line.match(/^[ \t]*([-+*]|[0-9]+[.)])[ \t]+(.*)$/);
     if (item) {
       lastScenario = null;
-      const body = item[1].replace(/^\[[ xX]\][ \t]+/, '');
+      const body = item[2].replace(/^\[[ xX]\][ \t]+/, '');
+      const numbered = /^[0-9]/.test(item[1]);
       const def = body.match(new RegExp(`^\\*\\*(${ID})(:?)\\*\\*(:?)(?:[ \\t]+(?:—|–|-)[ \\t]+|[ \\t]+|$)(.*)$`));
-      if (def) {
+      if (def && !numbered) {
         if (!def[4].trim()) { problems.push(`empty definition ${def[1]} at line ${n}`); continue; }
         if (!current) { problems.push(`orphan scenario ${def[1]} at line ${n}`); continue; }
         if (define('scenario', def[1], n)) { requirements[current].push(def[1]); lastScenario = def[1]; }
         continue;
       }
-      if (new RegExp(`^(\\*\\*)?${ID}[:.]`).test(body) || new RegExp(`^\\*\\*${ID}\\*\\*[ \\t]*$`).test(body)) problems.push(`unsupported scenario definition syntax at line ${n}`);
+      if (new RegExp(`^(\\*\\*)?${ID}[:.]`).test(body) || new RegExp(`^\\*\\*${ID}\\*\\*[ \\t]*$`).test(body) || (def && numbered)) problems.push(`unsupported scenario definition syntax at line ${n}; use "- **S-NN:** text"`);
       continue;
     }
     if (line.trim() === '' || !/^([ ]{2,}|\t)/.test(line)) lastScenario = null;
