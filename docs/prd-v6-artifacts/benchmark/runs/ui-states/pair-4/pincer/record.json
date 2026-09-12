@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "run": "ui-states/pair-4/pincer",
+  "brief": "ui-states",
+  "arm": "pincer",
+  "pair": 4,
+  "order": null,
+  "created": "2026-09-12T19:23:59.744Z",
+  "status": "valid",
+  "reason": null,
+  "environment": {
+    "model": "sonnet",
+    "tool": "claude-code",
+    "tool_version": "2.1.267",
+    "node": "v22.23.1",
+    "os": "darwin 25.6.0",
+    "kit": {
+      "source": "tarball pincer-workflow-0.5.0.tgz",
+      "digest": "b7d6e7894ae4093e69d24b74ab80b693aa6c2e587218388ec8b6b93e35bc0cee"
+    },
+    "caps": {
+      "turns_per_session": 150,
+      "wall_clock_minutes": 30
+    }
+  },
+  "workspace": {
+    "base": "aea0d6d7905b92ab8387181fc2cb662804e18f3e",
+    "project_base": "a3070c20da21b9a5885331311b7e158d54c973de",
+    "candidate": "0db66b159577d424dff8c5ad9e62b482e0a8f98e",
+    "unrelated_edits": {}
+  },
+  "sessions": [
+    {
+      "name": "S1",
+      "prompt": "Read BRIEF.md in this repository and implement what it asks for, committing your work as you go. Work autonomously; when you are done, stop and summarize what you built and how you verified it.",
+      "started": "2026-09-12T19:23:59.867Z",
+      "ended": "2026-09-12T19:34:35.909Z",
+      "exit": 0,
+      "transcript": "logs/S1.json"
+    }
+  ],
+  "interventions": [
+    {
+      "type": "operator",
+      "session": "S1",
+      "at": "2026-09-12T19:23:59.744Z",
+      "note": "rerun outside the schedule, replacing the invalid run ui-states/pair-1/pincer"
+    }
+  ],
+  "effort": {
+    "setup_minutes": 0,
+    "review_minutes": null,
+    "active_minutes": 10.6,
+    "elapsed_minutes": 10.6,
+    "tokens": {
+      "input": 11398183,
+      "output": 51655
+    },
+    "cost_usd": 3.5109,
+    "unavailable": {
+      "tokens": null,
+      "cost_usd": null
+    }
+  },
+  "evaluation": {
+    "evaluator": {
+      "brief": "ui-states",
+      "digest": "c8778373954188f27dbed487ac80ae9a2d89d426f1e322d6b8cdd79ece6a306e"
+    },
+    "at": "2026-09-12T19:34:36.900Z",
+    "candidate": "0db66b159577d424dff8c5ad9e62b482e0a8f98e",
+    "outcome": "rejected",
+    "checks": [
+      {
+        "id": "validator",
+        "title": "validate returns the specified messages",
+        "kind": "acceptance",
+        "result": "failed",
+        "exit": 1,
+        "detail": "TAP version 13\n# Subtest: valid input returns {}\nok 1 - valid input returns {}\n  ---\n  duration_ms: 0.433792\n  type: 'test'\n  ...\n# Subtest: missing email\nok 2 - missing email\n  ---\n  duration_ms: 0.094667\n  type: 'test'\n  ...\n# Subtest: blank email\nnot ok 3 - blank email\n  ---\n  duration_ms: 0.346959\n  type: 'test'\n  location: '~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs/ui-states/evaluator/validate.test.cjs:6:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    + actual - expected\n    \n    + 'Enter a valid email address'\n    - 'Enter your email address'\n             ^\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 'Enter your email address'\n  actual: 'Enter a valid email address'\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs/ui-states/evaluator/validate.test.cjs:6:34)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:744:18)\n    Test.postRun (node:internal/test_runner/test:1173:19)\n    Test.run (node:internal/test_runner/test:1101:12)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ...\n# Subtest: email without @\nok 4 - email without @\n  ---\n  duration_ms: 0.037209\n  type: 'test'\n  ...\n# Subtest: missing password\nok 5 - missing password\n  ---\n  duration_ms: 0.39975\n  type: 'test'\n  ...\n# Subtest: short password\nok 6 - short password\n  ---\n  duration_ms: 0.060667\n  type: 'test'\n  ...\n# Subtest: both invalid\nok 7 - both invalid\n  ---\n  duration_ms: 0.077958\n  type: 'test'\n  ...\n1..7\n# tests 7\n# suites 0\n# pass 6\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 42.700917"
+      },
+      {
+        "id": "empty-state",
+        "title": "labels, ids, names, no summary, Sign up button",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: empty state\nok 1 - empty state\n  ---\n  duration_ms: 0.60175\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 38.371208"
+      },
+      {
+        "id": "error-state",
+        "title": "aria-invalid, aria-describedby, error elements and the alert summary",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: error state\nok 1 - error state\n  ---\n  duration_ms: 0.712208\n  type: 'test'\n  ...\n# Subtest: one error leaves the other field clean\nok 2 - one error leaves the other field clean\n  ---\n  duration_ms: 0.12\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 40.450917"
+      },
+      {
+        "id": "submitting-state",
+        "title": "aria-busy, disabled button, Signing up…",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: submitting state\nok 1 - submitting state\n  ---\n  duration_ms: 0.6285\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 38.629583"
+      },
+      {
+        "id": "escaping",
+        "title": "values are HTML-escaped",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: values are escaped\nok 1 - values are escaped\n  ---\n  duration_ms: 0.570542\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 40.276042"
+      },
+      {
+        "id": "own-tests",
+        "title": "the candidate's own npm test passes",
+        "kind": "regression",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: renders a form\nok 1 - renders a form\n  ---\n  duration_ms: 0.421542\n  type: 'test'\n  ...\n# Subtest: render() with no state does not throw and renders both fields\nok 2 - render() with no state does not throw and renders both fields\n  ---\n  duration_ms: 0.087958\n  type: 'test'\n  ...\n# Subtest: render({}) does not throw and renders both fields\nok 3 - render({}) does not throw and renders both fields\n  ---\n  duration_ms: 0.065583\n  type: 'test'\n  ...\n# Subtest: values render into value=\"...\" attributes\nok 4 - values render into value=\"...\" attributes\n  ---\n  duration_ms: 0.03875\n  type: 'test'\n  ...\n# Subtest: values are HTML-escaped\nok 5 - values are HTML-escaped\n  ---\n  duration_ms: 0.411125\n  type: 'test'\n  ...\n# Subtest: a field with an error gets aria-invalid, aria-describedby, and an error message\nok 6 - a field with an error gets aria-invalid, aria-describedby, and an error message\n  ---\n  duration_ms: 0.10625\n  type: 'test'\n  ...\n# Subtest: a field without an error has no aria-invalid and no error element\nok 7 - a field without an error has no aria-invalid and no error element\n  ---\n  duration_ms: 0.136167\n  type: 'test'\n  ...\n# Subtest: an error summary precedes the fields and lists every message with links\nok 8 - an error summary precedes the fields and lists every message with links\n  ---\n  duration_ms: 0.048666\n  type: 'test'\n  ...\n# Subtest: no error summary when there are no errors\nok 9 - no error summary when there are no errors\n  ---\n  duration_ms: 0.220917\n  type: 'test'\n  ...\n# Subtest: submitting: true sets aria-busy, disables the button, and changes its text\nok 10 - submitting: true sets aria-busy, disables the button, and changes its text\n  ---\n  duration_ms: 0.226\n  type: 'test'\n  ...\n# Subtest: submitting: false (or omitted) leaves the form and button in their default state\nok 11 - submitting: false (or omitted) leaves the form and button in their default state\n  ---\n  duration_ms: 0.077791\n  type: 'test'\n  ...\n# Subtest: blank email -> Enter your email address\nok 12 - blank email -> Enter your email address\n  ---\n  duration_ms: 0.553541\n  type: 'test'\n  ...\n# Subtest: missing email -> Enter your email address\nok 13 - missing email -> Enter your email address\n  ---\n  duration_ms: 0.082542\n  type: 'test'\n  ...\n# Subtest: email without @ -> Enter a valid email address\nok 14 - email without @ -> Enter a valid email address\n  ---\n  duration_ms: 0.036375\n  type: 'test'\n  ...\n# Subtest: missing password -> Enter a password\nok 15 - missing password -> Enter a password\n  ---\n  duration_ms: 0.039208\n  type: 'test'\n  ...\n# Subtest: short password -> Use at least 8 characters\nok 16 - short password -> Use at least 8 characters\n  ---\n  duration_ms: 0.03425\n  type: 'test'\n  ...\n# Subtest: valid email and password -> no errors\nok 17 - valid email and password -> no errors\n  ---\n  duration_ms: 0.030334\n  type: 'test'\n  ...\n# Subtest: all fields missing -> both messages, no extra keys\nok 18 - all fields missing -> both messages, no extra keys\n  ---\n  duration_ms: 0.028875\n  type: 'test'\n  ...\n1..18\n# tests 18\n# suites 0\n# pass 18\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 43.015042"
+      },
+      {
+        "id": "evidence-binding",
+        "title": "evidence in the candidate names this candidate (or the candidate its evaluation commit sits on)",
+        "kind": "evidence",
+        "result": "passed",
+        "exit": 0,
+        "detail": "NOTES.md: 0db66b1 is the evaluation commit of b4a77dd (6 evaluation file(s))\n.prd/evidence/prd-v1/b4a77dd280f975d49fbd768f1eef6a4cfc6442ce/manifest.json: 0db66b1 is the evaluation commit of b4a77dd (6 evaluation file(s))\n.prd/evidence/changes/prd-v1.json (latest evaluation): 0db66b1 is the evaluation commit of b4a77dd (6 evaluation file(s))"
+      }
+    ],
+    "regressions": 0,
+    "log": "evaluation.log"
+  }
+}

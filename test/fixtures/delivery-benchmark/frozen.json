@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "frozen": "2026-09-12T12:22:52.785Z",
+  "frozen": "2026-09-12T13:26:14.931Z",
   "protocol": "052634c93a021a7155b4be62e5ce9988cc36abda8aba0a1af0374e2d8235159d",
-  "harness": "d26be674306911d53d997bd8092c266419451b4c2c5e897ce5eb24999169a8d1",
+  "harness": "f95758a618b6b0a6d0d7bbe7fea971fc18cb83b0233def52adec40f20521148a",
   "briefs": {
     "bugfix-brownfield": {
       "digest": "2305fc3f78901efca8c099be9eb60963061ea5be1f2d5abf5e07c42a13f47486",
@@ -19,13 +19,13 @@
       }
     },
     "cli-greenfield": {
-      "digest": "5b2ae11a2d3d3b49fcc654ad20b1f2fc72aba5dc30c46cafc1800afce8601737",
+      "digest": "0ff1be1da3c7c91bbc9bf9e012be65caded2750598846361ec7b52a7ec2d2f66",
       "evaluator": "054dbd0f0728adc725c9d8fdd4997c4ef9ca9b0330d7bb6b1f109b8a582ad042",
       "sessions": 1,
       "files": {
         "base.cjs": "a86c62f82500bb6a2df643850f1dfafc4ed8b681039b6cfa4312ad7e60e775a3",
         "brief.md": "41922b54d2dc0a2ead0373f3ba09706e738cda78e6faa4ff39278ed518cb1ece",
-        "controls.cjs": "e5924f7b9d20cb09b8b4130131ab63b6dbe4d3c7bff569ffebd3379a82f9362f",
+        "controls.cjs": "f5c3fd2eb6fffb5e5fa46a43eec07f957f3d59be5d9388846f9ecffbb2ea5b40",
         "evaluator/add-list.test.cjs": "10e76edaeb78c16ad371b56c00d21d6719effac806110c577b94bda290200704",
         "evaluator/common.cjs": "a0dce2d7ff501e693726a76159e4fb2804665391178ca03227a8bd52fd9d2e36",
         "evaluator/done.test.cjs": "91837601517b9e026987dbc446daac81b77585cad98c8530b771c7f115d1c614",
@@ -99,5 +99,20 @@
         "evaluator/validate.test.cjs": "14f9ec5fc4a1699270a46b657b40f1a64c67af4038f24b1cf9841fbd891db291"
       }
     }
-  }
+  },
+  "history": [
+    {
+      "frozen": "2026-09-12T12:22:52.785Z",
+      "protocol": "052634c93a021a7155b4be62e5ce9988cc36abda8aba0a1af0374e2d8235159d",
+      "harness": "d26be674306911d53d997bd8092c266419451b4c2c5e897ce5eb24999169a8d1",
+      "briefs": {
+        "bugfix-brownfield": "2305fc3f78901efca8c099be9eb60963061ea5be1f2d5abf5e07c42a13f47486",
+        "cli-greenfield": "5b2ae11a2d3d3b49fcc654ad20b1f2fc72aba5dc30c46cafc1800afce8601737",
+        "handoff-two-changes": "9e44158399258ef5377630c80e8fa7cf1217e5cc64fed253f14284262ffebf19",
+        "integration-untested": "649083de53dbbd314e81bac0e4a2e90b9181286ec9cd090a74e7198973baa99a",
+        "scope-revision": "99e65aec594e5896df3319261a8cff1167b141fe2200d0f92b8a007db882ceec",
+        "ui-states": "d5370e8a3ff4176ff6afa2436f696073ad5fba13cd21fff025ba60bb787af43b"
+      }
+    }
+  ]
 }

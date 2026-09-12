@@ -1,0 +1,43 @@
+{
+  "session_id": "71b76cee-49b0-4b70-804c-3adeac30e6ad",
+  "num_turns": 115,
+  "duration_ms": 949651,
+  "duration_api_ms": 920618,
+  "total_cost_usd": 4.516280300000003,
+  "usage": {
+    "input_tokens": 218,
+    "cache_creation_input_tokens": 196013,
+    "cache_read_input_tokens": 14227342,
+    "output_tokens": 70240,
+    "output_tokens_details": {
+      "thinking_tokens": 29425
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 196013,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 2731,
+        "cache_read_input_tokens": 213303,
+        "cache_creation_input_tokens": 1241,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 1241
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "is_error": false,
+  "subtype": "success",
+  "result": "## `/pincer-release` audit — candidate `173c096123c7aa458f007c600ddf1fabb8077d9d`\n\n| Stage | Checklist item | Verdict | Evidence |\n|---|---|---|---|\n| Change identity | PRD selected with `status: built`, no warnings | PASS | `status`: `.prd/prd-v1.md · status: built · profile: small`; no `Warning` lines |\n| Change identity | Every ticket done and ready | PASS | `Tickets 2 total · 2 done`; project-wide `ready` exits 0 (`ready candidate 173c096...`). Per-ticket `ready T-01`/`T-02` report `LIFECYCLE_BLOCKED` — expected: ticket execution gates require an `active` change, and this change is (correctly) `completed`; readiness is established via the evaluated candidate's runtime attempts instead. |\n| Change identity | `NOTES.md` names PRD/base/candidate/evidence; status reports notes current, evidence ok | PASS, with a caveat | Evidence line: `ok`. Evaluation line (the authoritative one per the runtime's own docs — \"compatibility summary; the evaluation locator decides\"): `current (173c096...)`. The `Notes` compatibility line itself reads `stale: candidate changed after evaluation: .prd/evidence/changes/prd-v1.json` — this is a known gap in that summary's own diff logic: it doesn't recognize the change-record locator file as a valid follower of the candidate, even though the evaluate command's own instructions require committing NOTES.md and the locator together. The `Next` line confirms readiness: \"evaluation matches the current PRD and candidate; audit the artifacts.\" |\n| Change identity | `Provenance` line, no newer nonpassing local attempt | PASS | `Provenance runtime (schema 2) · local attempts consistent with the exported checks` |\n| Change identity | Change records: change `completed`, authorization `current`, locator names evaluated candidate | PASS | `Runtime changes · selected prd-v1 · completed · agreement 7468c54bb17b (G-02) · authorization current (A-02)`; `Evaluation .prd/evidence/changes/prd-v1.json: current (173c096...)` |\n| Change identity | Every manifest-listed file tracked; tree clean before/after | PASS | `git status --short` empty before and after every command run in this audit, including `npm test` |\n| Change identity | Strict coverage | SKIPPED | `Coverage unverified · strict coverage not adopted` — not adopted for this PRD; audited under the non-strict rules above per the checklist's own instruction |\n| Scope & evidence | Every requirement dispositioned, none blocked | PASS | `requirements` in the manifest: R-01..R-06 all `delivered`, each with `checks: [\"C-01\"]` or `[\"C-01\",\"C-02\"]` |\n| Scope & evidence | Ticket dependencies/acceptance/verification match implementation | PASS | T-01/T-02 acceptance criteria all ticked, match the diff (retry/timeout/classification logic, tests); T-02 correctly `depends_on: [T-01]` |\n| Scope & evidence | Candidate-wide release gate passes directly | PASS | `npm test` run directly (not via `pincer-ticket.sh`): 9/9 passing; tree stayed clean |\n| Scope & evidence | Scope cuts/limitations explicit | PASS | PRD \"Out of Scope\" lists the brief's own deliberate exclusions (backoff/jitter, 4xx retry, telemetry, real-upstream testing); nothing was cut beyond that. `NOTES.md` \"Known issues\" documents one interpretation judgment call (mixed timeout/5xx classification ordering, not specified by the brief) |\n| Review | Findings have file:line evidence and disposition | PASS | `.prd/evidence/.../review/code-quality.md`: 3 findings with confidence scores, each disposed as \"fixed in T-02\" |\n| Review | Post-evaluation fixes use a new ticket, fresh verification, scoped commit | PASS | T-02 ticket, `verify` re-run (attempt `000003-...`), commit `T-02: fix error classification and coverage gaps` touches only `lib/client.js`, `test/client.test.js`, its own ticket file |\n| Review | UI changes have visual checks / non-UI records `visual_review.applicable: false` | PASS | `visual_review: {applicable: false, reason: \"no UI or HTTP-facing surface...\"}` |\n| Review | Security review reports locations/remediation, no secret values printed | PASS | No secrets found in the diff; nothing printed beyond file:line-style findings (none applicable — no secrets present) |\n| Review | No secret env file tracked; dependency/invalid-input checks run when applicable | PASS, with a stated limit | `git ls-files \\| grep -i env` → none tracked; `.gitignore` covers `.env*` except `.env.example`. `npm audit` not applicable (no dependencies, no lockfile) — stated as a limitation in the evidence manifest, not silently skipped. No HTTP-facing endpoint exists in this change, so no invalid-input/4xx check applies (this is an outbound client library) |\n| Handover | Commit history tells the story | PASS | plan → narrow → register → authorize → T-01 → complete → built → (review found issues) → add T-02 → T-02 → complete (post-fix) → evaluate, one commit per step |\n| Handover | `NOTES.md` covers shipped/cuts/limitations/next steps/dependencies/riskiest aging assumption | PASS | All present, including the port-reuse-race note on the ECONNREFUSED test and the unresolved mixed-outcome classification ambiguity |\n| Handover | Platform/environment limits stated, not overclaimed | PASS | `npm audit` and visual-review limits both stated explicitly rather than silently passed |\n| Handover | Audit repaired nothing, rewrote nothing, published nothing | PASS | Only read-only commands run (`status`, `ready`, `npm test`); tree clean throughout |\n\n**PASS — candidate 173c096123c7aa458f007c600ddf1fabb8077d9d: workflow artifacts complete.** One non-blocking note: the `Notes` compatibility line's own staleness check has a gap around change-record locator files (it flags the evaluate commit as \"stale\" even though the authoritative `Evaluation` line reports `current`) — worth tightening in `scripts/pincer-runtime/status.cjs`'s `notesCurrent`, not a command playbook issue.\n\n---\n\n## Summary\n\nBuilt per `BRIEF.md`: `lib/client.js`'s `fetchStatus` now bounds every attempt with an abortable timeout (default 1000ms), retries 5xx/network-error/timeout up to `options.retries` (default 2) extra attempts with a ~100ms delay, never retries 4xx, and rejects everything through the newly exported `ClientError` (`TIMEOUT`/`UPSTREAM`/`REJECTED`, `attempts`, `message`) — public export shape unchanged. `test/client.test.js` covers all 5 scenarios from the brief plus 4 more found during review (mixed-outcome classification in both orderings, a real `ECONNREFUSED` retry, and a non-positive-`retries` edge case), 9/9 passing.\n\nI followed the repo's PINCER workflow end-to-end (plan → narrow → code → evaluate → release) since `AGENTS.md` requires it: PRD at `.prd/prd-v1.md`, tickets T-01/T-02, a code-quality review that caught a real classification bug (fixed in T-02), evidence under `.prd/evidence/prd-v1/173c096.../`, and a passing `/pincer-release` audit. Verification throughout was `npm test` run directly and through the ticket lifecycle (`scripts/pincer-ticket.sh verify`), never assumed. Full story and handover notes are in `NOTES.md` at the repo root."
+}

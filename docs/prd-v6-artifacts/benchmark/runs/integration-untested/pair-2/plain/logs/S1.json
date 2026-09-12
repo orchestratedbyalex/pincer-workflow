@@ -1,0 +1,43 @@
+{
+  "session_id": "c1ed346c-05d1-4b4c-89d1-0d2ce5733293",
+  "num_turns": 18,
+  "duration_ms": 143352,
+  "duration_api_ms": 110610,
+  "total_cost_usd": 0.39769,
+  "usage": {
+    "input_tokens": 32,
+    "cache_creation_input_tokens": 37390,
+    "cache_read_input_tokens": 759430,
+    "output_tokens": 9618,
+    "output_tokens_details": {
+      "thinking_tokens": 3348
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 37390,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 525,
+        "cache_read_input_tokens": 55287,
+        "cache_creation_input_tokens": 634,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 634
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "is_error": false,
+  "subtype": "success",
+  "result": "Done. Summary:\n\n**What I built** (`lib/client.js`, same `fetchStatus(baseUrl, options)` export):\n- `options.timeout` (default 1000ms): each attempt is aborted via `req.destroy()` if it doesn't finish in time.\n- `options.retries` (default 2): retries on 5xx, network errors, or timeouts, with a 100ms delay between attempts (max `retries + 1` total requests).\n- 4xx responses reject immediately as `REJECTED`, no retry.\n- Exported `ClientError` class with `.code` (`TIMEOUT` only if *every* attempt timed out, `UPSTREAM` for 5xx/network-error exhaustion, `REJECTED` for 4xx), `.attempts`, and a descriptive `.message`.\n- 2xx resolves with the parsed JSON body, same as before.\n\n**How I verified it**: followed TDD — wrote `test/client.test.js` (spins up a real local `http` server per scenario, no dependencies) covering success, retry-then-success, exhausted retries (`UPSTREAM`), no-retry-on-4xx (`REJECTED`), and timeout (`TIMEOUT`). Confirmed RED first: running the suite against the original client hung indefinitely (matching the brief's \"callers currently hang\" description), which I stopped manually. After implementing, all 5 tests pass cleanly (`npm test`). I also did a manual sanity check against an unreachable port to confirm network errors map to `UPSTREAM`. Work is committed as `ed1a3a3`."
+}

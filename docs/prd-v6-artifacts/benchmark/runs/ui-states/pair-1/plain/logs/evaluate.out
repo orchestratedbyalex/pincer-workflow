@@ -1,0 +1,9 @@
+ui-states/pair-1/plain: rejected (candidate bda6148, evaluator c87783739541 frozen)
+  failed     validator exit 1 — not ok 5 - missing password
+  passed     empty-state exit 0 — TAP version 13
+  failed     error-state exit 1 — not ok 1 - error state
+  failed     submitting-state exit 1 — not ok 1 - submitting state
+  failed     escaping exit 1 — not ok 1 - values are escaped
+  passed     own-tests exit 0 — TAP version 13
+  passed     evidence-binding exit 0 — no evidence names another candidate
+  log <runs>/ui-states/pair-1/plain/evaluation.log · status valid

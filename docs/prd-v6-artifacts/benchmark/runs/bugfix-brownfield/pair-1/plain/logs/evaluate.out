@@ -1,0 +1,8 @@
+bugfix-brownfield/pair-1/plain: accepted (candidate a428773, evaluator 733613ae2e3e frozen)
+  passed     slugify exit 0 — TAP version 13
+  passed     truncate exit 0 — TAP version 13
+  passed     changelog exit 0 — TAP version 13
+  passed     unrelated-edits exit 0 — 2 unrelated edit(s) intact
+  passed     own-tests exit 0 — TAP version 13
+  passed     evidence-binding exit 0 — no evidence names another candidate
+  log <runs>/bugfix-brownfield/pair-1/plain/evaluation.log · status valid

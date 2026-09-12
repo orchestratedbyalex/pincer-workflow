@@ -1,0 +1,9 @@
+ui-states/pair-2/pincer: accepted (candidate f32350e, evaluator c87783739541 frozen)
+  passed     validator exit 0 — TAP version 13
+  passed     empty-state exit 0 — TAP version 13
+  passed     error-state exit 0 — TAP version 13
+  passed     submitting-state exit 0 — TAP version 13
+  passed     escaping exit 0 — TAP version 13
+  passed     own-tests exit 0 — TAP version 13
+  passed     evidence-binding exit 0 — NOTES.md: f32350e is the evaluation commit of 7bf2cbc (5 evaluation file(s))
+  log <runs>/ui-states/pair-2/pincer/evaluation.log · status valid

@@ -1,0 +1,42 @@
+<runs>/bugfix-brownfield/pair-1/pincer/record.json: ok bugfix-brownfield/pair-1/pincer · status valid · counted, accepted
+<runs>/bugfix-brownfield/pair-1/plain/record.json: ok bugfix-brownfield/pair-1/plain · status valid · counted, accepted
+<runs>/bugfix-brownfield/pair-2/pincer/record.json: ok bugfix-brownfield/pair-2/pincer · status invalid · not counted (status invalid (account usage limit reached during S1 (Claude Code reported a session limit); the session produced no usable work))
+<runs>/bugfix-brownfield/pair-2/plain/record.json: ok bugfix-brownfield/pair-2/plain · status invalid · not counted (status invalid (account usage limit reached during S1 (Claude Code reported a session limit); the session produced no usable work))
+<runs>/bugfix-brownfield/pair-3/pincer/record.json: ok bugfix-brownfield/pair-3/pincer · status valid · counted, accepted
+<runs>/bugfix-brownfield/pair-3/plain/record.json: ok bugfix-brownfield/pair-3/plain · status valid · counted, accepted
+<runs>/bugfix-brownfield/pair-4/pincer/record.json: ok bugfix-brownfield/pair-4/pincer · status valid · counted, accepted
+<runs>/bugfix-brownfield/pair-4/plain/record.json: ok bugfix-brownfield/pair-4/plain · status valid · counted, accepted
+<runs>/cli-greenfield/pair-1/pincer/record.json: ok cli-greenfield/pair-1/pincer · status valid · counted, accepted
+<runs>/cli-greenfield/pair-1/plain/record.json: ok cli-greenfield/pair-1/plain · status valid · counted, accepted
+<runs>/cli-greenfield/pair-2/pincer/record.json: ok cli-greenfield/pair-2/pincer · status invalid · not counted (status invalid (account usage limit reached; the operator terminated the session (SIGTERM, exit 143) while stopping the driver))
+<runs>/cli-greenfield/pair-2/plain/record.json: ok cli-greenfield/pair-2/plain · status invalid · not counted (status invalid (account usage limit reached during S1 (Claude Code reported a session limit); the session produced no usable work))
+<runs>/cli-greenfield/pair-3/pincer/record.json: ok cli-greenfield/pair-3/pincer · status valid · counted, accepted
+<runs>/cli-greenfield/pair-3/plain/record.json: ok cli-greenfield/pair-3/plain · status valid · counted, accepted
+<runs>/cli-greenfield/pair-4/pincer/record.json: ok cli-greenfield/pair-4/pincer · status valid · counted, accepted
+<runs>/cli-greenfield/pair-4/plain/record.json: ok cli-greenfield/pair-4/plain · status valid · counted, accepted
+<runs>/handoff-two-changes/pair-1/pincer/record.json: ok handoff-two-changes/pair-1/pincer · status valid · counted, accepted
+<runs>/handoff-two-changes/pair-1/plain/record.json: ok handoff-two-changes/pair-1/plain · status valid · counted, accepted
+<runs>/handoff-two-changes/pair-2/pincer/record.json: ok handoff-two-changes/pair-2/pincer · status valid · counted, accepted
+<runs>/handoff-two-changes/pair-2/plain/record.json: ok handoff-two-changes/pair-2/plain · status valid · counted, accepted
+<runs>/handoff-two-changes/pair-3/pincer/record.json: ok handoff-two-changes/pair-3/pincer · status valid · counted, accepted
+<runs>/handoff-two-changes/pair-3/plain/record.json: ok handoff-two-changes/pair-3/plain · status valid · counted, accepted
+<runs>/integration-untested/pair-1/pincer/record.json: ok integration-untested/pair-1/pincer · status valid · counted, accepted
+<runs>/integration-untested/pair-1/plain/record.json: ok integration-untested/pair-1/plain · status valid · counted, accepted
+<runs>/integration-untested/pair-2/pincer/record.json: ok integration-untested/pair-2/pincer · status valid · counted, accepted
+<runs>/integration-untested/pair-2/plain/record.json: ok integration-untested/pair-2/plain · status valid · counted, accepted
+<runs>/integration-untested/pair-3/pincer/record.json: ok integration-untested/pair-3/pincer · status valid · counted, accepted
+<runs>/integration-untested/pair-3/plain/record.json: ok integration-untested/pair-3/plain · status valid · counted, accepted
+<runs>/scope-revision/pair-1/pincer/record.json: ok scope-revision/pair-1/pincer · status valid · counted, accepted
+<runs>/scope-revision/pair-1/plain/record.json: ok scope-revision/pair-1/plain · status valid · counted, rejected
+<runs>/scope-revision/pair-2/pincer/record.json: ok scope-revision/pair-2/pincer · status valid · counted, accepted
+<runs>/scope-revision/pair-2/plain/record.json: ok scope-revision/pair-2/plain · status valid · counted, accepted
+<runs>/scope-revision/pair-3/pincer/record.json: ok scope-revision/pair-3/pincer · status valid · counted, accepted
+<runs>/scope-revision/pair-3/plain/record.json: ok scope-revision/pair-3/plain · status valid · counted, accepted
+<runs>/ui-states/pair-1/pincer/record.json: ok ui-states/pair-1/pincer · status invalid · not counted (status invalid (account usage limit reached during S1 (Claude Code reported a session limit); the session produced no usable work))
+<runs>/ui-states/pair-1/plain/record.json: ok ui-states/pair-1/plain · status invalid · not counted (status invalid (account usage limit reached during S1 (Claude Code reported a session limit); the session produced no usable work))
+<runs>/ui-states/pair-2/pincer/record.json: ok ui-states/pair-2/pincer · status valid · counted, accepted
+<runs>/ui-states/pair-2/plain/record.json: ok ui-states/pair-2/plain · status valid · counted, accepted
+<runs>/ui-states/pair-3/pincer/record.json: ok ui-states/pair-3/pincer · status valid · counted, accepted
+<runs>/ui-states/pair-3/plain/record.json: ok ui-states/pair-3/plain · status valid · counted, accepted
+<runs>/ui-states/pair-4/pincer/record.json: ok ui-states/pair-4/pincer · status valid · counted, rejected
+<runs>/ui-states/pair-4/plain/record.json: ok ui-states/pair-4/plain · status valid · counted, accepted

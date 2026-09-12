@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "run": "ui-states/pair-1/plain",
+  "brief": "ui-states",
+  "arm": "plain",
+  "pair": 1,
+  "order": 12,
+  "created": "2026-09-12T13:48:23.474Z",
+  "status": "invalid",
+  "reason": "account usage limit reached during S1 (Claude Code reported a session limit); the session produced no usable work",
+  "environment": {
+    "model": "sonnet",
+    "tool": "claude-code",
+    "tool_version": "2.1.267",
+    "node": "v22.23.1",
+    "os": "darwin 25.6.0",
+    "kit": null,
+    "caps": {
+      "turns_per_session": 150,
+      "wall_clock_minutes": 30
+    }
+  },
+  "workspace": {
+    "base": "bda6148d53dfec9d9cfbc3678f2eadf96cff94e0",
+    "project_base": "bda6148d53dfec9d9cfbc3678f2eadf96cff94e0",
+    "candidate": "bda6148d53dfec9d9cfbc3678f2eadf96cff94e0",
+    "unrelated_edits": {}
+  },
+  "sessions": [
+    {
+      "name": "S1",
+      "prompt": "Read BRIEF.md in this repository and implement what it asks for, committing your work as you go. Work autonomously; when you are done, stop and summarize what you built and how you verified it.",
+      "started": "2026-09-12T13:48:23.583Z",
+      "ended": "2026-09-12T13:48:26.133Z",
+      "exit": 1,
+      "transcript": "logs/S1.json"
+    }
+  ],
+  "interventions": [],
+  "effort": {
+    "setup_minutes": 0,
+    "review_minutes": null,
+    "active_minutes": 0.04,
+    "elapsed_minutes": 0.04,
+    "tokens": {
+      "input": 0,
+      "output": 0
+    },
+    "cost_usd": 0,
+    "unavailable": {
+      "tokens": null,
+      "cost_usd": null
+    }
+  },
+  "evaluation": {
+    "evaluator": {
+      "brief": "ui-states",
+      "digest": "c8778373954188f27dbed487ac80ae9a2d89d426f1e322d6b8cdd79ece6a306e"
+    },
+    "at": "2026-09-12T13:48:26.844Z",
+    "candidate": "bda6148d53dfec9d9cfbc3678f2eadf96cff94e0",
+    "outcome": "rejected",
+    "checks": [
+      {
+        "id": "validator",
+        "title": "validate returns the specified messages",
+        "kind": "acceptance",
+        "result": "failed",
+        "exit": 1,
+        "detail": " 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs/ui-states/evaluator/validate.test.cjs:7:38)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:744:18)\n    Test.postRun (node:internal/test_runner/test:1173:19)\n    Test.run (node:internal/test_runner/test:1101:12)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ...\n# Subtest: missing password\nnot ok 5 - missing password\n  ---\n  duration_ms: 0.319083\n  type: 'test'\n  location: '~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs/ui-states/evaluator/validate.test.cjs:8:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    + actual - expected\n    \n    + undefined\n    - 'Enter a password'\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 'Enter a password'\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs/ui-states/evaluator/validate.test.cjs:8:39)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:744:18)\n    Test.postRun (node:internal/test_runner/test:1173:19)\n    Test.run (node:internal/test_runner/test:1101:12)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ...\n# Subtest: short password\nnot ok 6 - short password\n  ---\n  duration_ms: 0.098417\n  type: 'test'\n  location: '~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs/ui-states/evaluator/validate.test.cjs:9:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    + actual - expected\n    \n    + undefined\n    - 'Use at least 8 characters'\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 'Use at least 8 characters'\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs/ui-states/evaluator/validate.test.cjs:9:37)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:744:18)\n    Test.postRun (node:internal/test_runner/test:1173:19)\n    Test.run (node:internal/test_runner/test:1101:12)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ...\n# Subtest: both invalid\nnot ok 7 - both invalid\n  ---\n  duration_ms: 0.187458\n  type: 'test'\n  location: '~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs/ui-states/evaluator/validate.test.cjs:10:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    \n    + {}\n    - {\n    -   email: 'Enter your email address',\n    -   password: 'Enter a password'\n    - }\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected:\n    email: 'Enter your email address'\n    password: 'Enter a password'\n  actual:\n  operator: 'deepStrictEqual'\n  stack: |-\n    TestContext.<anonymous> (~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs/ui-states/evaluator/validate.test.cjs:10:35)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:744:18)\n    Test.postRun (node:internal/test_runner/test:1173:19)\n    Test.run (node:internal/test_runner/test:1101:12)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ...\n1..7\n# tests 7\n# suites 0\n# pass 1\n# fail 6\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 35.866042"
+      },
+      {
+        "id": "empty-state",
+        "title": "labels, ids, names, no summary, Sign up button",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: empty state\nok 1 - empty state\n  ---\n  duration_ms: 0.645041\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 33.482458"
+      },
+      {
+        "id": "error-state",
+        "title": "aria-invalid, aria-describedby, error elements and the alert summary",
+        "kind": "acceptance",
+        "result": "failed",
+        "exit": 1,
+        "detail": "TAP version 13\n# Subtest: error state\nnot ok 1 - error state\n  ---\n  duration_ms: 0.774584\n  type: 'test'\n  location: '~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs/ui-states/evaluator/errors.test.cjs:4:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    email aria-invalid\n    + actual - expected\n    \n    + undefined\n    - 'true'\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 'true'\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs/ui-states/evaluator/errors.test.cjs:8:12)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n# Subtest: one error leaves the other field clean\nnot ok 2 - one error leaves the other field clean\n  ---\n  duration_ms: 0.157833\n  type: 'test'\n  location: '~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs/ui-states/evaluator/errors.test.cjs:21:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    + actual - expected\n    \n    + undefined\n    - 'true'\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 'true'\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs/ui-states/evaluator/errors.test.cjs:24:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:744:18)\n    Test.postRun (node:internal/test_runner/test:1173:19)\n    Test.run (node:internal/test_runner/test:1101:12)\n    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 0\n# fail 2\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 32.660542"
+      },
+      {
+        "id": "submitting-state",
+        "title": "aria-busy, disabled button, Signing up…",
+        "kind": "acceptance",
+        "result": "failed",
+        "exit": 1,
+        "detail": "TAP version 13\n# Subtest: submitting state\nnot ok 1 - submitting state\n  ---\n  duration_ms: 0.724708\n  type: 'test'\n  location: '~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs/ui-states/evaluator/submitting.test.cjs:4:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    + actual - expected\n    \n    + undefined\n    - 'true'\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 'true'\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs/ui-states/evaluator/submitting.test.cjs:6:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 34.384583"
+      },
+      {
+        "id": "escaping",
+        "title": "values are HTML-escaped",
+        "kind": "acceptance",
+        "result": "failed",
+        "exit": 1,
+        "detail": "TAP version 13\n# Subtest: values are escaped\nnot ok 1 - values are escaped\n  ---\n  duration_ms: 0.51225\n  type: 'test'\n  location: '~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs/ui-states/evaluator/escaping.test.cjs:4:1'\n  failureType: 'testCodeFailure'\n  error: 'no raw script tag'\n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected:\n  actual: |-\n    <form method=\"post\" action=\"/signup\">\n      <label for=\"email\">Email</label>\n      <input id=\"email\" name=\"email\" type=\"email\" value=\"\"><script>alert(1)</script>&x\">\n      <label for=\"password\">Password</label>\n      <input id=\"password\" name=\"password\" type=\"password\" value=\"\">\n      <button type=\"submit\">Sign up</button>\n    </form>\n  operator: 'doesNotMatch'\n  stack: |-\n    TestContext.<anonymous> (~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs/ui-states/evaluator/escaping.test.cjs:6:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 31.544584"
+      },
+      {
+        "id": "own-tests",
+        "title": "the candidate's own npm test passes",
+        "kind": "regression",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: renders a form\nok 1 - renders a form\n  ---\n  duration_ms: 0.307416\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 36.593583"
+      },
+      {
+        "id": "evidence-binding",
+        "title": "evidence in the candidate names this candidate (or the candidate its evaluation commit sits on)",
+        "kind": "evidence",
+        "result": "passed",
+        "exit": 0,
+        "detail": "no evidence names another candidate"
+      }
+    ],
+    "regressions": 0,
+    "log": "evaluation.log"
+  }
+}

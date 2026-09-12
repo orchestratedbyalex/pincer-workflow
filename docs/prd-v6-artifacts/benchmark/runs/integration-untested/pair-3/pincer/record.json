@@ -1,0 +1,127 @@
+{
+  "schema": 1,
+  "run": "integration-untested/pair-3/pincer",
+  "brief": "integration-untested",
+  "arm": "pincer",
+  "pair": 3,
+  "order": 31,
+  "created": "2026-09-12T21:11:23.848Z",
+  "status": "valid",
+  "reason": null,
+  "environment": {
+    "model": "sonnet",
+    "tool": "claude-code",
+    "tool_version": "2.1.267",
+    "node": "v22.23.1",
+    "os": "darwin 25.6.0",
+    "kit": {
+      "source": "tarball pincer-workflow-0.5.0.tgz",
+      "digest": "b7d6e7894ae4093e69d24b74ab80b693aa6c2e587218388ec8b6b93e35bc0cee"
+    },
+    "caps": {
+      "turns_per_session": 150,
+      "wall_clock_minutes": 30
+    }
+  },
+  "workspace": {
+    "base": "260a4a630c9fe38b14458e2c1cbad7a30b860775",
+    "project_base": "c714cbcd94c1bceeb1fdb84feb5fa97f87b1a9a0",
+    "candidate": "219d1bca154a28466dd2775ab4cc13a99099d897",
+    "unrelated_edits": {}
+  },
+  "sessions": [
+    {
+      "name": "S1",
+      "prompt": "Read BRIEF.md in this repository and implement what it asks for, committing your work as you go. Work autonomously; when you are done, stop and summarize what you built and how you verified it.",
+      "started": "2026-09-12T21:11:23.976Z",
+      "ended": "2026-09-12T21:15:52.887Z",
+      "exit": 0,
+      "transcript": "logs/S1.json"
+    }
+  ],
+  "interventions": [],
+  "effort": {
+    "setup_minutes": 0,
+    "review_minutes": null,
+    "active_minutes": 4.48,
+    "elapsed_minutes": 4.48,
+    "tokens": {
+      "input": 3012502,
+      "output": 18573
+    },
+    "cost_usd": 1.0552,
+    "unavailable": {
+      "tokens": null,
+      "cost_usd": null
+    }
+  },
+  "evaluation": {
+    "evaluator": {
+      "brief": "integration-untested",
+      "digest": "29d8c3bee5d7958ffc1ef98fa214d71b2d70e85d5c93efc3341cc55cae1e0b7c"
+    },
+    "at": "2026-09-12T21:15:55.547Z",
+    "candidate": "219d1bca154a28466dd2775ab4cc13a99099d897",
+    "outcome": "accepted",
+    "checks": [
+      {
+        "id": "success",
+        "title": "a 200 resolves the body with one request",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: 200 resolves with one request\nok 1 - 200 resolves with one request\n  ---\n  duration_ms: 7.632708\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 44.9925"
+      },
+      {
+        "id": "retry",
+        "title": "two 503s then 200 resolves after three requests",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: 503, 503, 200 resolves after three requests\nok 1 - 503, 503, 200 resolves after three requests\n  ---\n  duration_ms: 213.1015\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 255.138375"
+      },
+      {
+        "id": "exhausted",
+        "title": "three 503s reject UPSTREAM with attempts 3",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: three 503s reject UPSTREAM with attempts 3 and exactly three requests\nok 1 - three 503s reject UPSTREAM with attempts 3 and exactly three requests\n  ---\n  duration_ms: 212.600834\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 259.861875"
+      },
+      {
+        "id": "no-retry-4xx",
+        "title": "a 404 rejects REJECTED after one request",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: 404 rejects REJECTED after one request\nok 1 - 404 rejects REJECTED after one request\n  ---\n  duration_ms: 8.258958\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 53.498375"
+      },
+      {
+        "id": "timeout",
+        "title": "a hanging server rejects TIMEOUT within the budget",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: a hanging server rejects TIMEOUT within (retries + 1) × timeout plus a margin\nok 1 - a hanging server rejects TIMEOUT within (retries + 1) × timeout plus a margin\n  ---\n  duration_ms: 713.35675\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 760.772584"
+      },
+      {
+        "id": "own-tests",
+        "title": "the candidate's own npm test passes",
+        "kind": "regression",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: resolves with the parsed JSON body on a first-attempt 200\nok 1 - resolves with the parsed JSON body on a first-attempt 200\n  ---\n  duration_ms: 8.206792\n  type: 'test'\n  ...\n# Subtest: retries a 503 and resolves with the next successful response\nok 2 - retries a 503 and resolves with the next successful response\n  ---\n  duration_ms: 103.084042\n  type: 'test'\n  ...\n# Subtest: rejects with a ClientError UPSTREAM after retries are exhausted on persistent 5xx\nok 3 - rejects with a ClientError UPSTREAM after retries are exhausted on persistent 5xx\n  ---\n  duration_ms: 206.125375\n  type: 'test'\n  ...\n# Subtest: rejects immediately with a ClientError REJECTED on a 4xx, no retry\nok 4 - rejects immediately with a ClientError REJECTED on a 4xx, no retry\n  ---\n  duration_ms: 2.355792\n  type: 'test'\n  ...\n# Subtest: rejects with a ClientError TIMEOUT when every attempt hangs\nok 5 - rejects with a ClientError TIMEOUT when every attempt hangs\n  ---\n  duration_ms: 208.029541\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 570.77625"
+      },
+      {
+        "id": "evidence-binding",
+        "title": "evidence in the candidate names this candidate (or the candidate its evaluation commit sits on)",
+        "kind": "evidence",
+        "result": "passed",
+        "exit": 0,
+        "detail": "no evidence names another candidate"
+      }
+    ],
+    "regressions": 0,
+    "log": "evaluation.log"
+  }
+}

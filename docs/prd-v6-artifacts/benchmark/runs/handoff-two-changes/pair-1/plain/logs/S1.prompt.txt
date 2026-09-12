@@ -1,0 +1,1 @@
+Read BRIEF.md in this repository. Implement A1 only, commit it, then set change A aside and implement change B completely (B1, with tests), committing it. Leave A2 for a later session; do not implement it now. Stop when B is done and summarize where each change stands so that a later session can pick up from the repository alone.

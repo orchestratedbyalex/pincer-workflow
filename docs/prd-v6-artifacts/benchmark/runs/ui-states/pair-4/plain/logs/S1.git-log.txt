@@ -1,0 +1,3 @@
+e54a8e820e43e7bffdf5c42becfd1e1cc7323e78 2026-09-12 21:36:28 +0200 Implement sign-up form validation and accessible rendering
+f5d248d2ab91b6e6dbecb5cb562427c28e97913f 2026-09-12 21:34:37 +0200 Task brief
+b6b5151ee4df6fabf7ab38803a48d9adc5cede3a 2026-09-12 21:34:37 +0200 signup-form 0.1.0

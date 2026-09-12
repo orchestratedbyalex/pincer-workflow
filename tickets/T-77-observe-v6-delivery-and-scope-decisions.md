@@ -1,9 +1,13 @@
 ---
 ticket: T-77
-status: open
+status: done
 size: L
 prd: .prd/prd-v6.md
 depends_on: [T-75, T-76]
+started: 2026-09-12T12:41:18Z
+last_check: 2026-09-12T21:49:30Z passed f6e91cd111e4
+verified: 2026-09-12T21:49:30Z f6e91cd111e4
+finished: 2026-09-12T21:49:30Z
 ---
 
 ## Objective
@@ -23,9 +27,9 @@ Observe paired delivery trials and revised-scope decisions, as specified in PRD 
 - If a required trial fails, create a follow-up ticket and valid rerun while retaining original evidence; a record-shape validator cannot establish agent compliance or close missing live work.
 
 ## Acceptance Criteria
-- [ ] S-27/S-29/S-30 have inspectable per-run prompts, provenance, real evaluator outputs and denominators, including the changed-scope approval transcript review.
-- [ ] The paired comparison uses independent acceptance and reports quality/overhead honestly even when Pincer shows no advantage.
-- [ ] Required unavailable/failed behavior is explicitly blocked or fixed and rerun; no missing run is counted passed.
+- [x] S-27/S-29/S-30 have inspectable per-run prompts, provenance, real evaluator outputs and denominators, including the changed-scope approval transcript review.
+- [x] The paired comparison uses independent acceptance and reports quality/overhead honestly even when Pincer shows no advantage.
+- [x] Required unavailable/failed behavior is explicitly blocked or fixed and rerun; no missing run is counted passed.
 
 ## Verification
 Proves: the trial record is complete/resolvable and its evaluator executable; actual agent compliance and observation truth require transcript/evaluator review.

@@ -1,0 +1,9 @@
+evaluating cli-greenfield/pair-1/plain candidate 3df295d718d85db349e0554c0c988605c8e59a80 with evaluator 054dbd0f0728adc725c9d8fdd4997c4ef9ca9b0330d7bb6b1f109b8a582ad042 from ~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs
+workspace status:
+(clean)
+check add-list: passed (exit 0) — TAP version 13
+check done-marks: passed (exit 0) — TAP version 13
+check errors: passed (exit 0) — TAP version 13
+check own-tests: passed (exit 0) — TAP version 13
+check evidence-binding: passed (exit 0) — no evidence names another candidate
+outcome: accepted

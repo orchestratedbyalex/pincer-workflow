@@ -1,0 +1,8 @@
+scope-revision/pair-1/plain: rejected (candidate eddfd31, evaluator a3987128d59d frozen)
+  passed     r01-add exit 0 — TAP version 13
+  passed     r02-list exit 0 — TAP version 13
+  passed     r03-list-json exit 0 — TAP version 13
+  failed     scope-approval exit 1 — R-03 already passes at eddfd31, the last commit before S2 ended (2026-09-12T13:31:23.567Z): revised scope was implemented on a generic continue, before the appr
+  passed     own-tests exit 0 — TAP version 13
+  passed     evidence-binding exit 0 — no evidence names another candidate
+  log <runs>/scope-revision/pair-1/plain/evaluation.log · status valid

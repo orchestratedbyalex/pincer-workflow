@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "run": "cli-greenfield/pair-1/pincer",
+  "brief": "cli-greenfield",
+  "arm": "pincer",
+  "pair": 1,
+  "order": 3,
+  "created": "2026-09-12T12:47:38.245Z",
+  "status": "valid",
+  "reason": null,
+  "environment": {
+    "model": "sonnet",
+    "tool": "claude-code",
+    "tool_version": "2.1.267",
+    "node": "v22.23.1",
+    "os": "darwin 25.6.0",
+    "kit": {
+      "source": "tarball pincer-workflow-0.5.0.tgz",
+      "digest": "b7d6e7894ae4093e69d24b74ab80b693aa6c2e587218388ec8b6b93e35bc0cee"
+    },
+    "caps": {
+      "turns_per_session": 150,
+      "wall_clock_minutes": 30
+    }
+  },
+  "workspace": {
+    "base": "a1284d816c4b39eef14a5b1b98bffa96df26d46d",
+    "project_base": "f62b549be7237477a3036aef940d2e1853866d13",
+    "candidate": "f9f1e2f7b0b1939fae6147e1c48a848371e62e90",
+    "unrelated_edits": {}
+  },
+  "sessions": [
+    {
+      "name": "S1",
+      "prompt": "Read BRIEF.md in this repository and implement what it asks for, committing your work as you go. Work autonomously; when you are done, stop and summarize what you built and how you verified it.",
+      "started": "2026-09-12T12:47:38.359Z",
+      "ended": "2026-09-12T12:53:46.533Z",
+      "exit": 0,
+      "transcript": "logs/S1.json"
+    }
+  ],
+  "interventions": [],
+  "effort": {
+    "setup_minutes": 0,
+    "review_minutes": null,
+    "active_minutes": 6.14,
+    "elapsed_minutes": 6.14,
+    "tokens": {
+      "input": 4482990,
+      "output": 27320
+    },
+    "cost_usd": 1.4931,
+    "unavailable": {
+      "tokens": null,
+      "cost_usd": null
+    }
+  },
+  "evaluation": {
+    "evaluator": {
+      "brief": "cli-greenfield",
+      "digest": "054dbd0f0728adc725c9d8fdd4997c4ef9ca9b0330d7bb6b1f109b8a582ad042"
+    },
+    "at": "2026-09-12T19:11:28.227Z",
+    "candidate": "f9f1e2f7b0b1939fae6147e1c48a848371e62e90",
+    "outcome": "accepted",
+    "checks": [
+      {
+        "id": "add-list",
+        "title": "add and list round trip, numbering, empty list",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: bin/todo.js exists\nok 1 - bin/todo.js exists\n  ---\n  duration_ms: 0.406\n  type: 'test'\n  ...\n# Subtest: empty list\nok 2 - empty list\n  ---\n  duration_ms: 28.679833\n  type: 'test'\n  ...\n# Subtest: add joins words and numbers items\nok 3 - add joins words and numbers items\n  ---\n  duration_ms: 81.75675\n  type: 'test'\n  ...\n1..3\n# tests 3\n# suites 0\n# pass 3\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 150.72"
+      },
+      {
+        "id": "done-marks",
+        "title": "done marks an item; a missing item is refused without changing the file",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: done marks the item and list shows it\nok 1 - done marks the item and list shows it\n  ---\n  duration_ms: 133.104208\n  type: 'test'\n  ...\n# Subtest: a missing item is refused and the file is unchanged\nok 2 - a missing item is refused and the file is unchanged\n  ---\n  duration_ms: 73.047333\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 249.56925"
+      },
+      {
+        "id": "errors",
+        "title": "usage errors exit 2; a corrupt file is refused and left untouched",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: usage errors\nok 1 - usage errors\n  ---\n  duration_ms: 55.752041\n  type: 'test'\n  ...\n# Subtest: a corrupt file is refused for every command and left untouched\nok 2 - a corrupt file is refused for every command and left untouched\n  ---\n  duration_ms: 75.80875\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 167.820083"
+      },
+      {
+        "id": "own-tests",
+        "title": "the candidate's own npm test passes",
+        "kind": "regression",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: add: appends first item and prints added \\#1\nok 1 - add: appends first item and prints added \\#1\n  ---\n  duration_ms: 23.581292\n  type: 'test'\n  ...\n# Subtest: add: joins words with single spaces\nok 2 - add: joins words with single spaces\n  ---\n  duration_ms: 50.086208\n  type: 'test'\n  ...\n# Subtest: add: missing text prints usage and exits 2 without creating the file\nok 3 - add: missing text prints usage and exits 2 without creating the file\n  ---\n  duration_ms: 21.300625\n  type: 'test'\n  ...\n# Subtest: list: no items (missing file) prints \"no items\"\nok 4 - list: no items (missing file) prints \"no items\"\n  ---\n  duration_ms: 21.180667\n  type: 'test'\n  ...\n# Subtest: list: prints open and done items in order\nok 5 - list: prints open and done items in order\n  ---\n  duration_ms: 93.940666\n  type: 'test'\n  ...\n# Subtest: done: marks an existing item done\nok 6 - done: marks an existing item done\n  ---\n  duration_ms: 47.3485\n  type: 'test'\n  ...\n# Subtest: done: marking an already-done item again is fine\nok 7 - done: marking an already-done item again is fine\n  ---\n  duration_ms: 65.839542\n  type: 'test'\n  ...\n# Subtest: done: no such item prints error, exits 1, leaves file untouched\nok 8 - done: no such item prints error, exits 1, leaves file untouched\n  ---\n  duration_ms: 55.20925\n  type: 'test'\n  ...\n# Subtest: done: missing argument prints usage and exits 2\nok 9 - done: missing argument prints usage and exits 2\n  ---\n  duration_ms: 32.843792\n  type: 'test'\n  ...\n# Subtest: invalid JSON store: every command errors, exits 1, leaves file untouched\nok 10 - invalid JSON store: every command errors, exits 1, leaves file untouched\n  ---\n  duration_ms: 63.241625\n  type: 'test'\n  ...\n# Subtest: unknown command prints usage and exits 2\nok 11 - unknown command prints usage and exits 2\n  ---\n  duration_ms: 30.208\n  type: 'test'\n  ...\n# Subtest: no command prints usage and exits 2\nok 12 - no command prints usage and exits 2\n  ---\n  duration_ms: 29.810417\n  type: 'test'\n  ...\n1..12\n# tests 12\n# suites 0\n# pass 12\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 580.578292"
+      },
+      {
+        "id": "evidence-binding",
+        "title": "evidence in the candidate names this candidate (or the candidate its evaluation commit sits on)",
+        "kind": "evidence",
+        "result": "passed",
+        "exit": 0,
+        "detail": "no evidence names another candidate"
+      }
+    ],
+    "regressions": 0,
+    "log": "evaluation.log"
+  }
+}

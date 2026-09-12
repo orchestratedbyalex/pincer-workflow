@@ -2,7 +2,9 @@
 // Control implementations for cli-greenfield: `control` is correct; `omitted` lacks the
 // `done` command; `false-success` reports `done #n` without changing anything while its
 // own tests pass; `stale-evidence` is correct code whose NOTES.md and evidence name a
-// different commit as the evaluated candidate.
+// different commit as the evaluated candidate; `evaluated` is correct code with a PINCER-style
+// evaluation commit on top (NOTES.md and evidence naming the implementation commit), which
+// the evaluator accepts as the post-candidate convention.
 const path = require('node:path');
 const fs = require('node:fs');
 
@@ -73,6 +75,11 @@ function apply(ws, variant, lib, { date } = {}) {
   lib.write(ws, 'test/todo.test.js', variant === 'omitted' ? TEST_OMITTED : variant === 'false-success' ? TEST_FALSE : TEST_OK);
   fs.appendFileSync(path.join(ws, 'README.md'), README);
   const sha = lib.commitAll(ws, 'Implement the todo CLI', date);
+  if (variant === 'evaluated') {
+    lib.write(ws, 'NOTES.md', `---\nprd: .prd/prd-v1.md\nbase: ${lib.git(ws, 'rev-parse', 'HEAD~1')}\ncandidate: ${sha}\nevidence: .prd/evidence/prd-v1/${sha}/manifest.json\n---\n# Evaluation\nAll checks passed on ${sha.slice(0, 7)}.\n`);
+    lib.write(ws, `.prd/evidence/prd-v1/${sha}/manifest.json`, `${JSON.stringify({ schema: 1, prd: '.prd/prd-v1.md', base: lib.git(ws, 'rev-parse', 'HEAD~1'), candidate: sha, created: '2026-09-12T00:00:00Z', checks: [{ id: 'C-01', kind: 'command', required: true, result: 'passed', command: 'npm test' }] }, null, 2)}\n`);
+    return lib.commitAll(ws, 'evaluate: PRD v1 candidate ' + sha.slice(0, 7), date);
+  }
   if (variant === 'stale-evidence') {
     const other = lib.git(ws, 'rev-parse', 'HEAD~1');
     lib.write(ws, 'NOTES.md', `---\nprd: .prd/prd-v1.md\nbase: ${other}\ncandidate: ${other}\nevidence: .prd/evidence/prd-v1/${other}/manifest.json\n---\n# Evaluation\nAll checks passed.\n`);
@@ -81,4 +88,4 @@ function apply(ws, variant, lib, { date } = {}) {
   }
   return sha;
 }
-module.exports = { variants: ['control', 'omitted', 'false-success', 'stale-evidence'], faults: { omitted: 'done-marks', 'false-success': 'done-marks', 'stale-evidence': 'evidence-binding' }, apply };
+module.exports = { variants: ['control', 'evaluated', 'omitted', 'false-success', 'stale-evidence'], accepted: ['control', 'evaluated'], faults: { omitted: 'done-marks', 'false-success': 'done-marks', 'stale-evidence': 'evidence-binding' }, apply };

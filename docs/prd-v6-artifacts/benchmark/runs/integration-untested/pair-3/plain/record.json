@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "run": "integration-untested/pair-3/plain",
+  "brief": "integration-untested",
+  "arm": "plain",
+  "pair": 3,
+  "order": 32,
+  "created": "2026-09-12T21:15:55.770Z",
+  "status": "valid",
+  "reason": null,
+  "environment": {
+    "model": "sonnet",
+    "tool": "claude-code",
+    "tool_version": "2.1.267",
+    "node": "v22.23.1",
+    "os": "darwin 25.6.0",
+    "kit": null,
+    "caps": {
+      "turns_per_session": 150,
+      "wall_clock_minutes": 30
+    }
+  },
+  "workspace": {
+    "base": "44811889662f3cea2c39155d55dce901c5d76666",
+    "project_base": "44811889662f3cea2c39155d55dce901c5d76666",
+    "candidate": "2e505a25b52a8997653f7fd99fa980ac2a97dfa0",
+    "unrelated_edits": {}
+  },
+  "sessions": [
+    {
+      "name": "S1",
+      "prompt": "Read BRIEF.md in this repository and implement what it asks for, committing your work as you go. Work autonomously; when you are done, stop and summarize what you built and how you verified it.",
+      "started": "2026-09-12T21:15:55.896Z",
+      "ended": "2026-09-12T21:20:25.391Z",
+      "exit": 0,
+      "transcript": "logs/S1.json"
+    }
+  ],
+  "interventions": [],
+  "effort": {
+    "setup_minutes": 0,
+    "review_minutes": null,
+    "active_minutes": 4.49,
+    "elapsed_minutes": 4.49,
+    "tokens": {
+      "input": 1151838,
+      "output": 12345
+    },
+    "cost_usd": 0.5179,
+    "unavailable": {
+      "tokens": null,
+      "cost_usd": null
+    }
+  },
+  "evaluation": {
+    "evaluator": {
+      "brief": "integration-untested",
+      "digest": "29d8c3bee5d7958ffc1ef98fa214d71b2d70e85d5c93efc3341cc55cae1e0b7c"
+    },
+    "at": "2026-09-12T21:20:27.994Z",
+    "candidate": "2e505a25b52a8997653f7fd99fa980ac2a97dfa0",
+    "outcome": "accepted",
+    "checks": [
+      {
+        "id": "success",
+        "title": "a 200 resolves the body with one request",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: 200 resolves with one request\nok 1 - 200 resolves with one request\n  ---\n  duration_ms: 7.57775\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 41.004083"
+      },
+      {
+        "id": "retry",
+        "title": "two 503s then 200 resolves after three requests",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: 503, 503, 200 resolves after three requests\nok 1 - 503, 503, 200 resolves after three requests\n  ---\n  duration_ms: 213.404084\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 246.410375"
+      },
+      {
+        "id": "exhausted",
+        "title": "three 503s reject UPSTREAM with attempts 3",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: three 503s reject UPSTREAM with attempts 3 and exactly three requests\nok 1 - three 503s reject UPSTREAM with attempts 3 and exactly three requests\n  ---\n  duration_ms: 215.9875\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 251.435459"
+      },
+      {
+        "id": "no-retry-4xx",
+        "title": "a 404 rejects REJECTED after one request",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: 404 rejects REJECTED after one request\nok 1 - 404 rejects REJECTED after one request\n  ---\n  duration_ms: 7.718417\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 40.630333"
+      },
+      {
+        "id": "timeout",
+        "title": "a hanging server rejects TIMEOUT within the budget",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: a hanging server rejects TIMEOUT within (retries + 1) × timeout plus a margin\nok 1 - a hanging server rejects TIMEOUT within (retries + 1) × timeout plus a margin\n  ---\n  duration_ms: 709.325333\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 743.241625"
+      },
+      {
+        "id": "own-tests",
+        "title": "the candidate's own npm test passes",
+        "kind": "regression",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: resolves with the parsed JSON body on a 2xx response\nok 1 - resolves with the parsed JSON body on a 2xx response\n  ---\n  duration_ms: 8.728041\n  type: 'test'\n  ...\n# Subtest: retries after a 503 and resolves once the service recovers\nok 2 - retries after a 503 and resolves once the service recovers\n  ---\n  duration_ms: 103.219792\n  type: 'test'\n  ...\n# Subtest: rejects with an UPSTREAM ClientError after exhausting retries on repeated 5xx\nok 3 - rejects with an UPSTREAM ClientError after exhausting retries on repeated 5xx\n  ---\n  duration_ms: 205.45275\n  type: 'test'\n  ...\n# Subtest: rejects immediately with a REJECTED ClientError on a 4xx, without retrying\nok 4 - rejects immediately with a REJECTED ClientError on a 4xx, without retrying\n  ---\n  duration_ms: 3.458625\n  type: 'test'\n  ...\n# Subtest: rejects with a TIMEOUT ClientError when every attempt hangs\nok 5 - rejects with a TIMEOUT ClientError when every attempt hangs\n  ---\n  duration_ms: 204.948625\n  type: 'test'\n  ...\n# Subtest: retries after a network error and eventually rejects with UPSTREAM\nok 6 - retries after a network error and eventually rejects with UPSTREAM\n  ---\n  duration_ms: 104.351167\n  type: 'test'\n  ...\n1..6\n# tests 6\n# suites 0\n# pass 6\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 667.325125"
+      },
+      {
+        "id": "evidence-binding",
+        "title": "evidence in the candidate names this candidate (or the candidate its evaluation commit sits on)",
+        "kind": "evidence",
+        "result": "passed",
+        "exit": 0,
+        "detail": "no evidence names another candidate"
+      }
+    ],
+    "regressions": 0,
+    "log": "evaluation.log"
+  }
+}

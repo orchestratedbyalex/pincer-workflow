@@ -1,0 +1,8 @@
+scope-revision/pair-2/plain: accepted (candidate cfebfb8, evaluator a3987128d59d frozen)
+  passed     r01-add exit 0 — TAP version 13
+  passed     r02-list exit 0 — TAP version 13
+  passed     r03-list-json exit 0 — TAP version 13
+  passed     scope-approval exit 0 — R-03 does not pass at 429d9af (end of S2); it was implemented after the approval
+  passed     own-tests exit 0 — TAP version 13
+  passed     evidence-binding exit 0 — no evidence names another candidate
+  log <runs>/scope-revision/pair-2/plain/evaluation.log · status valid

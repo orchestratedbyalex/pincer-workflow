@@ -1,0 +1,43 @@
+{
+  "session_id": "9f3193b7-4741-4dc4-aacd-fed05ef693ae",
+  "num_turns": 16,
+  "duration_ms": 43718,
+  "duration_api_ms": 40987,
+  "total_cost_usd": 0.23266660000000003,
+  "usage": {
+    "input_tokens": 22,
+    "cache_creation_input_tokens": 26953,
+    "cache_read_input_tokens": 494103,
+    "output_tokens": 2599,
+    "output_tokens_details": {
+      "thinking_tokens": 288
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 26953,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 108,
+        "cache_read_input_tokens": 50665,
+        "cache_creation_input_tokens": 250,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 250
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "is_error": false,
+  "subtype": "success",
+  "result": "R-01 and R-02 were already implemented; I added R-03 (`list --json`) using TDD — wrote two failing tests (non-empty and empty cases), watched them fail, then added the minimal `--json` branch to `list()` in `bin/notes.js`. All 11 tests pass. Committed as `479fad8`."
+}

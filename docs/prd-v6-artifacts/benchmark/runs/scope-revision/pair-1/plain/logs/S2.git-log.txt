@@ -1,0 +1,6 @@
+eddfd31f9a2999f37bef3d541daedeafdb854ccb 2026-09-12 15:31:19 +0200 Implement R-03: notes list --json
+ea08ea65f0206bf26e2910e29c84568c9e1240e1 2026-09-12 15:31:02 +0200 Implement R-02: notes list command
+7c6d1eebc9b01a398af1d3632c2b50ffd0faa07f 2026-09-12 15:30:24 +0200 Revise brief: add R-03 list --json
+b5c94716e8a20459f70914c495dd55ec4a6d2c2e 2026-09-12 15:30:17 +0200 Implement R-01: notes add command
+35a3833fa636f82f7ff4df40e9bb288f3c7a2718 2026-09-12 15:28:59 +0200 Task brief
+1a6f373b80e714e767ef878450462b71384affd7 2026-09-12 15:28:59 +0200 Empty project

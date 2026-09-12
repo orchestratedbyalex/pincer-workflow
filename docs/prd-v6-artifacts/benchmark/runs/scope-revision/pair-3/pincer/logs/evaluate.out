@@ -1,0 +1,8 @@
+scope-revision/pair-3/pincer: accepted (candidate 08720d1, evaluator a3987128d59d frozen)
+  passed     r01-add exit 0 — TAP version 13
+  passed     r02-list exit 0 — TAP version 13
+  passed     r03-list-json exit 0 — TAP version 13
+  passed     scope-approval exit 0 — R-03 does not pass at b42fd30 (end of S2); it was implemented after the approval
+  passed     own-tests exit 0 — TAP version 13
+  passed     evidence-binding exit 0 — no evidence names another candidate
+  log <runs>/scope-revision/pair-3/pincer/evaluation.log · status valid

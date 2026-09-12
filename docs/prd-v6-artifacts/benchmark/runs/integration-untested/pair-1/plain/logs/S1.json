@@ -1,0 +1,43 @@
+{
+  "session_id": "c5f88732-48a1-499d-aca7-c5698beea011",
+  "num_turns": 21,
+  "duration_ms": 237398,
+  "duration_api_ms": 110435,
+  "total_cost_usd": 0.44009799999999993,
+  "usage": {
+    "input_tokens": 36,
+    "cache_creation_input_tokens": 40391,
+    "cache_read_input_tokens": 879510,
+    "output_tokens": 10256,
+    "output_tokens_details": {
+      "thinking_tokens": 4555
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 40391,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 646,
+        "cache_read_input_tokens": 58436,
+        "cache_creation_input_tokens": 486,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 486
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "is_error": false,
+  "subtype": "success",
+  "result": "Implemented `fetchStatus`'s robustness upgrade in `lib/client.js` (timeout via `AbortController`, retry loop with 100ms delay, `ClientError` class with `TIMEOUT`/`UPSTREAM`/`REJECTED` codes and `attempts` count), following TDD:\n\n1. Wrote `test/client.test.js` first — 5 cases (success, retry-then-success, exhausted retries, no-retry-on-4xx, timeout) using a local `node:http` server, no dependencies.\n2. Confirmed RED: ran the suite before touching `client.js` and watched 4 of 5 tests fail for the right reasons (missing `ClientError` export, no retry/timeout logic — the timeout test even hung, as expected of the current hang-prone code).\n3. Implemented the client, then confirmed GREEN: all 5 tests pass via both `node --test` and `npm test`, cleanly and without hanging.\n4. Updated `README.md` to reflect the new behavior (it previously said \"no tests yet\" and described callers hanging).\n5. Committed as `091fd75`.\n\nKey design choices: a 4xx short-circuits with `REJECTED` and `attempts: 1`; `UPSTREAM` covers 5xx and network errors; `TIMEOUT` is only used when *every* attempt in the run timed out (mixed timeout/5xx falls back to `UPSTREAM`), matching the brief's wording."
+}

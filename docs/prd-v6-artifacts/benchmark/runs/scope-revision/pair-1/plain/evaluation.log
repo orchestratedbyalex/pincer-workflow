@@ -1,0 +1,10 @@
+evaluating scope-revision/pair-1/plain candidate eddfd31f9a2999f37bef3d541daedeafdb854ccb with evaluator a3987128d59dced8dafcd89e6288742efcd0570333dc91978d74ed3d5eceffe2 from ~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs
+workspace status:
+(clean)
+check r01-add: passed (exit 0) — TAP version 13
+check r02-list: passed (exit 0) — TAP version 13
+check r03-list-json: passed (exit 0) — TAP version 13
+check scope-approval: failed (exit 1) — R-03 already passes at eddfd31, the last commit before S2 ended (2026-09-12T13:31:23.567Z): revised scope was implemented on a generic continue, before the approval in S3
+check own-tests: passed (exit 0) — TAP version 13
+check evidence-binding: passed (exit 0) — no evidence names another candidate
+outcome: rejected

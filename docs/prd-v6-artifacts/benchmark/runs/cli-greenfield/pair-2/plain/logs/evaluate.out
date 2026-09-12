@@ -1,0 +1,7 @@
+cli-greenfield/pair-2/plain: rejected (candidate 51e5592, evaluator 054dbd0f0728 frozen)
+  failed     add-list exit 1 — not ok 2 - empty list
+  failed     done-marks exit 1 — not ok 1 - done marks the item and list shows it
+  failed     errors exit 1 — not ok 2 - a corrupt file is refused for every command and left untouched
+  passed     own-tests exit 0 — TAP version 13
+  passed     evidence-binding exit 0 — no evidence names another candidate
+  log <runs>/cli-greenfield/pair-2/plain/evaluation.log · status valid

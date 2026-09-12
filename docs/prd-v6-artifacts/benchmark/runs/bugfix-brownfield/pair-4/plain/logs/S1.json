@@ -1,0 +1,43 @@
+{
+  "session_id": "43559cf4-6a0f-4d64-a0d5-626df6bb0fbd",
+  "num_turns": 22,
+  "duration_ms": 77790,
+  "duration_api_ms": 75593,
+  "total_cost_usd": 0.36567120000000003,
+  "usage": {
+    "input_tokens": 36,
+    "cache_creation_input_tokens": 34630,
+    "cache_read_input_tokens": 826046,
+    "output_tokens": 6187,
+    "output_tokens_details": {
+      "thinking_tokens": 1556
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 34630,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 505,
+        "cache_read_input_tokens": 52508,
+        "cache_creation_input_tokens": 653,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 653
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "is_error": false,
+  "subtype": "success",
+  "result": "Everything checks out: the working tree matches the original uncommitted state exactly (CHANGELOG's \"Ideas\" line and `scratch/todo.txt` untouched, still uncommitted), `lib/truncate.js` was never touched, and all 8 tests pass.\n\nSummary:\n- **Root cause**: `lib/slugify.js` used `/[^a-z0-9]/g` which replaces every non-alphanumeric character individually with a dash, so runs of separators produced multiple dashes and trailing/leading punctuation left a dash at the edge.\n- **Fix**: changed the regex to `/[^a-z0-9]+/g` to collapse whole runs into a single dash, then added `.replace(/^-+|-+$/g, '')` to trim leading/trailing dashes (`lib/slugify.js:4-6`).\n- **Tests added** (`test/strutil.test.js`): the reported case (`'Hello,  World!'` → `'hello-world'`), leading/trailing separators, empty string, and separators-only string. Verified they failed before the fix and pass after (`node --test`: 8/8 passing).\n- **Changelog**: added an \"Unreleased\" entry describing the fix, without disturbing the pre-existing uncommitted \"Ideas\" section.\n- **Committed** only `lib/slugify.js`, `test/strutil.test.js`, and the changelog fix line as `f395f07`; the unrelated CHANGELOG.md edit and `scratch/` remain uncommitted exactly as before."
+}

@@ -108,6 +108,11 @@ for (const brief of lib.briefIds()) {
   assert.match(fs.readFileSync(path.join(c.dir, 'evaluation.log'), 'utf8'), /outcome: accepted$/m);
   assert.match(ok(cli(['validate', '--runs', runs]), 'validate'), /ok .* status valid · counted, accepted/);
   accepted[brief] = c.rec;
+  for (const variant of (controls.accepted || ['control']).filter(v => v !== 'control')) {
+    const a = drive(tempDir(`runs-${brief}-${variant}`), brief, variant);
+    assert.equal(a.rec.evaluation.outcome, 'accepted', `${brief}/${variant} is accepted: ${a.ev.stdout}`);
+    assert.match(a.rec.evaluation.checks.find(x => x.id === 'evidence-binding').detail, /is the evaluation commit of/, `${brief}/${variant}: the evaluation commit convention is recognised`);
+  }
   const faults = Object.entries(controls.faults);
   assert.ok(faults.some(([v]) => v === 'omitted') && faults.some(([v]) => v === 'false-success') && faults.some(([v]) => v === 'stale-evidence'), `${brief}: the three S-28 faults`);
   for (const [variant, check] of faults) {

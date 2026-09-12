@@ -1,0 +1,127 @@
+{
+  "schema": 1,
+  "run": "integration-untested/pair-1/pincer",
+  "brief": "integration-untested",
+  "arm": "pincer",
+  "pair": 1,
+  "order": 7,
+  "created": "2026-09-12T13:09:02.328Z",
+  "status": "valid",
+  "reason": null,
+  "environment": {
+    "model": "sonnet",
+    "tool": "claude-code",
+    "tool_version": "2.1.267",
+    "node": "v22.23.1",
+    "os": "darwin 25.6.0",
+    "kit": {
+      "source": "tarball pincer-workflow-0.5.0.tgz",
+      "digest": "b7d6e7894ae4093e69d24b74ab80b693aa6c2e587218388ec8b6b93e35bc0cee"
+    },
+    "caps": {
+      "turns_per_session": 150,
+      "wall_clock_minutes": 30
+    }
+  },
+  "workspace": {
+    "base": "7f39f03919d64eb0f81d3916c9cd2339fe660b25",
+    "project_base": "df838f593b31b4f539722abae6ec16223d18b114",
+    "candidate": "60f1c780d675e99eba28bd71ba5eae7aa2acaf12",
+    "unrelated_edits": {}
+  },
+  "sessions": [
+    {
+      "name": "S1",
+      "prompt": "Read BRIEF.md in this repository and implement what it asks for, committing your work as you go. Work autonomously; when you are done, stop and summarize what you built and how you verified it.",
+      "started": "2026-09-12T13:09:02.449Z",
+      "ended": "2026-09-12T13:24:54.237Z",
+      "exit": 0,
+      "transcript": "logs/S1.json"
+    }
+  ],
+  "interventions": [],
+  "effort": {
+    "setup_minutes": 0,
+    "review_minutes": null,
+    "active_minutes": 15.86,
+    "elapsed_minutes": 15.86,
+    "tokens": {
+      "input": 14423573,
+      "output": 70240
+    },
+    "cost_usd": 4.5163,
+    "unavailable": {
+      "tokens": null,
+      "cost_usd": null
+    }
+  },
+  "evaluation": {
+    "evaluator": {
+      "brief": "integration-untested",
+      "digest": "29d8c3bee5d7958ffc1ef98fa214d71b2d70e85d5c93efc3341cc55cae1e0b7c"
+    },
+    "at": "2026-09-12T13:27:38.505Z",
+    "candidate": "60f1c780d675e99eba28bd71ba5eae7aa2acaf12",
+    "outcome": "accepted",
+    "checks": [
+      {
+        "id": "success",
+        "title": "a 200 resolves the body with one request",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: 200 resolves with one request\nok 1 - 200 resolves with one request\n  ---\n  duration_ms: 7.739333\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 39.770875"
+      },
+      {
+        "id": "retry",
+        "title": "two 503s then 200 resolves after three requests",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: 503, 503, 200 resolves after three requests\nok 1 - 503, 503, 200 resolves after three requests\n  ---\n  duration_ms: 211.480083\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 241.745959"
+      },
+      {
+        "id": "exhausted",
+        "title": "three 503s reject UPSTREAM with attempts 3",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: three 503s reject UPSTREAM with attempts 3 and exactly three requests\nok 1 - three 503s reject UPSTREAM with attempts 3 and exactly three requests\n  ---\n  duration_ms: 212.633917\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 245.672541"
+      },
+      {
+        "id": "no-retry-4xx",
+        "title": "a 404 rejects REJECTED after one request",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: 404 rejects REJECTED after one request\nok 1 - 404 rejects REJECTED after one request\n  ---\n  duration_ms: 7.500791\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 38.626084"
+      },
+      {
+        "id": "timeout",
+        "title": "a hanging server rejects TIMEOUT within the budget",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: a hanging server rejects TIMEOUT within (retries + 1) × timeout plus a margin\nok 1 - a hanging server rejects TIMEOUT within (retries + 1) × timeout plus a margin\n  ---\n  duration_ms: 709.241834\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 745.586209"
+      },
+      {
+        "id": "own-tests",
+        "title": "the candidate's own npm test passes",
+        "kind": "regression",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: resolves with the parsed JSON body on an immediate 2xx response\nok 1 - resolves with the parsed JSON body on an immediate 2xx response\n  ---\n  duration_ms: 8.278291\n  type: 'test'\n  ...\n# Subtest: retries after a 503 and resolves once a later attempt succeeds\nok 2 - retries after a 503 and resolves once a later attempt succeeds\n  ---\n  duration_ms: 102.952334\n  type: 'test'\n  ...\n# Subtest: rejects with ClientError UPSTREAM once retries are exhausted\nok 3 - rejects with ClientError UPSTREAM once retries are exhausted\n  ---\n  duration_ms: 102.785667\n  type: 'test'\n  ...\n# Subtest: never retries a 4xx response\nok 4 - never retries a 4xx response\n  ---\n  duration_ms: 1.773084\n  type: 'test'\n  ...\n# Subtest: aborts an attempt that does not respond within the timeout\nok 5 - aborts an attempt that does not respond within the timeout\n  ---\n  duration_ms: 54.005542\n  type: 'test'\n  ...\n# Subtest: classifies an exhausted retry sequence by its last attempt: 5xx then timeout is TIMEOUT\nok 6 - classifies an exhausted retry sequence by its last attempt: 5xx then timeout is TIMEOUT\n  ---\n  duration_ms: 205.428208\n  type: 'test'\n  ...\n# Subtest: classifies an exhausted retry sequence by its last attempt: timeout then 5xx is UPSTREAM\nok 7 - classifies an exhausted retry sequence by its last attempt: timeout then 5xx is UPSTREAM\n  ---\n  duration_ms: 205.104083\n  type: 'test'\n  ...\n# Subtest: retries after a connection error (ECONNREFUSED) and resolves once a listener starts\nok 8 - retries after a connection error (ECONNREFUSED) and resolves once a listener starts\n  ---\n  duration_ms: 105.013125\n  type: 'test'\n  ...\n# Subtest: a non-positive retries value still makes exactly one request\nok 9 - a non-positive retries value still makes exactly one request\n  ---\n  duration_ms: 1.688959\n  type: 'test'\n  ...\n1..9\n# tests 9\n# suites 0\n# pass 9\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 826.689667"
+      },
+      {
+        "id": "evidence-binding",
+        "title": "evidence in the candidate names this candidate (or the candidate its evaluation commit sits on)",
+        "kind": "evidence",
+        "result": "passed",
+        "exit": 0,
+        "detail": "NOTES.md: 60f1c78 is the evaluation commit of 173c096 (5 evaluation file(s))\n.prd/evidence/prd-v1/173c096123c7aa458f007c600ddf1fabb8077d9d/manifest.json: 60f1c78 is the evaluation commit of 173c096 (5 evaluation file(s))\n.prd/evidence/changes/prd-v1.json (latest evaluation): 60f1c78 is the evaluation commit of 173c096 (5 evaluation file(s))"
+      }
+    ],
+    "regressions": 0,
+    "log": "evaluation.log"
+  }
+}
