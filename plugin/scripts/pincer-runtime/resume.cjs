@@ -16,8 +16,13 @@ const state = require('./state.cjs');
 const transaction = require('./transaction.cjs');
 const gates = require('./gates.cjs');
 
-const SCHEMA = 1;
+// Resume JSON schema 2 (PRD v6): schema 1 plus the strict coverage summary; the
+// coverage codes join rule 4 of the next-action precedence.
+const SCHEMA = 2;
 const STATE_CODES = ['INPUT_INVALID', 'MALFORMED', 'UNSUPPORTED_SCHEMA', 'HISTORY_INVALID', 'STATE_INCOMPLETE'];
+const COVERAGE_CODES = ['INVENTORY_INVALID', 'COVERAGE_INVALID', 'COVERAGE_INCOMPLETE', 'OBLIGATION_MISSING', 'SCOPE_UNAUTHORIZED'];
+const CANDIDATE_COVERAGE_CODES = ['REVIEW_MISSING', 'ADEQUACY_REQUIRED'];
+const phases = require('./phases.cjs');
 const SELECTION_CODES = ['SELECTION_REQUIRED', 'SELECTION_INVALID'];
 const AGREEMENT_CODES = ['DECISION_REQUIRED', 'AUTHORIZATION_REQUIRED', 'AGREEMENT_CHANGED'];
 const RUNTIME = 'node scripts/pincer-runtime.cjs';
@@ -36,7 +41,7 @@ function build(root, { change = null } = {}) {
   const st = status.render(root, { change });
   const j = st.json;
   const generated = j.generated;
-  const report = { schema: SCHEMA, runtime: changes.RUNTIME, generated, root, mode: j.mode, selection: null, change: null, agreement: null, references: null, tickets: [], attempts: [], candidate: null, handoff: null, blockers: [], next: null };
+  const report = { schema: SCHEMA, runtime: changes.RUNTIME_STRICT, generated, root, mode: j.mode, selection: null, change: null, agreement: null, references: null, tickets: [], attempts: [], candidate: null, coverage: j.coverage || { strict: false, label: 'unverified', reason: null, structure: null, implementation: null, candidate: null, next: null }, handoff: null, blockers: [], next: null };
   const blockers = [];
   const push = (code, detail) => { if (!blockers.some(b => b.code === code && b.detail === detail)) blockers.push({ code, detail }); };
   if (j.mode !== 'changes') {
@@ -105,16 +110,20 @@ function build(root, { change = null } = {}) {
   if (running.length) push('ATTEMPT_RUNNING', `attempt ${running[0].id} of change ${id} is running${running[0].alive === false ? ' (its owner is no longer running)' : ''}`);
   if (changes.TERMINAL.includes(lc.state)) push('LIFECYCLE_BLOCKED', `change ${id} is ${lc.state}${lc.superseded_by ? ` by ${lc.superseded_by}` : ''}; it cannot execute`);
   if (ag.verdict && ag.verdict !== 'current') push(ag.verdict, ag.verdict_detail || ag.verdict);
+  // Rule 4 also covers the structural coverage gaps of a strict change.
+  const cov = changes.isStrict(record) ? phases.report(root, record, { gathered: st.gathered, generated }) : null;
+  if (cov) for (const p of cov.structure.problems) push(p.code, p.detail);
   for (const t of j.tickets) for (const r of t.readiness.reasons) if (t.status === 'done' || t.status === 'in_progress') push(r.code, `${t.id}: ${r.detail}`);
   // A missing or stale evaluation blocks only a completed change: before completion no candidate is expected.
   if (j.candidate && lc.state === 'completed') for (const r of j.candidate.reasons) push(r.code, r.detail);
+  if (cov && lc.state === 'completed') for (const p of cov.candidate.problems) if (p.code !== 'EVIDENCE_MISSING' || !cov.candidate.evaluated) push(p.code, p.detail);
   report.blockers = blockers;
-  report.next = decide({ id, lc, ag, j, running, viewProblems, gathered: st.gathered, record });
+  report.next = decide({ id, lc, ag, j, running, viewProblems, gathered: st.gathered, record, cov });
   return { json: report, text: render(report), exit: st.exit };
 }
 
 // The documented next-action precedence (rules 1..8); rule 1 is handled by the caller.
-function decide({ id, lc, ag, j, running, viewProblems, gathered, record }) {
+function decide({ id, lc, ag, j, running, viewProblems, gathered, record, cov = null }) {
   const cmd = (action, command, extra = {}) => ({ action, command, ticket: null, check: null, ...extra });
   const change = sub => `${RUNTIME} change ${sub} ${id}`;
   if (running.length) return cmd(running[0].alive === false ? 'recover the interrupted attempt' : 'wait for the running attempt', running[0].alive === false ? `${RUNTIME} recover` : `wait for attempt ${running[0].id}, or ${RUNTIME} recover if its owner died`, { rule: 2 });
@@ -127,11 +136,16 @@ function decide({ id, lc, ag, j, running, viewProblems, gathered, record }) {
     if (ag.verdict === 'AGREEMENT_CHANGED') return cmd('record the disposition of the changed agreement', `${change('authorize')} --agreement ${ag.current} --reference <text> --excerpt <text> (user) or --delegated --basis ${ag.authorized ? ag.authorized.id : (record.authorizations.at(-1) || {}).id || 'A-NN'} --explanation <text>`, { rule: 4 });
     return cmd('repair the agreement inputs', `${ag.verdict}: ${ag.verdict_detail}`, { rule: 4 });
   }
+  // Rule 4 (strict coverage): a structural coverage gap precedes any verification work.
+  if (cov && cov.structure.problems.length) return { ...cov.next, rule: 4 };
   if (lc.state === 'planned') return cmd('activate the change', change('activate'), { rule: 3 });
   if (lc.state === 'paused') return cmd('resume the change', change('resume'), { rule: 3 });
   const tickets = j.tickets;
   const inProgress = tickets.find(t => t.status === 'in_progress');
-  const stale = tickets.find(t => t.status === 'done' && !t.readiness.ready);
+  // A fresh clone without local attempt history relies on the saved candidate record (as `ready` does): a done
+  // ticket whose only reason is EVIDENCE_MISSING is that stated limit, not stale work.
+  const localUnavailable = Boolean(j.candidate && j.candidate.local_attempts === 'unavailable');
+  const stale = tickets.find(t => t.status === 'done' && !t.readiness.ready && !(localUnavailable && t.readiness.reasons.every(r => r.code === 'EVIDENCE_MISSING')));
   const open = tickets.filter(t => t.status === 'open');
   const blocked = t => t.readiness.reasons.some(x => x.code === 'DEPENDENCY_BLOCKED');
   const nextOpen = open.find(t => !blocked(t)) || null;
@@ -147,7 +161,9 @@ function decide({ id, lc, ag, j, running, viewProblems, gathered, record }) {
   if (stale) return cmd(`re-verify ${stale.id} (${stale.readiness.reasons[0].code})`, `${change('reopen')} --reason <text>, then scripts/pincer-ticket.sh verify ${stale.id}`, { ticket: stale.id, rule: 5 });
   const cand = j.candidate || {};
   const newer = (cand.reasons || []).find(r => ['CHECK_FAILED', 'ATTEMPT_RUNNING', 'ATTEMPT_TIMED_OUT', 'ATTEMPT_INTERRUPTED', 'ATTEMPT_ERROR'].includes(r.code));
-  if (newer) return cmd(`re-run ${newer.detail.split(':')[0]} and re-evaluate`, `${RUNTIME} check ${newer.detail.split(':')[0]} --candidate ${cand.candidate} -- <command>, then /pincer-evaluate`, { check: newer.detail.split(':')[0], rule: 5 });
+  if (newer) return cmd(`re-run ${newer.detail.split(':')[0]} and re-evaluate`, `${RUNTIME} check ${newer.detail.split(':')[0]} --candidate ${cand.candidate}${cov ? '' : ' -- <command>'}, then /pincer-evaluate`, { check: newer.detail.split(':')[0], rule: 5 });
+  // Rules 7 and 8 (strict coverage): the candidate coverage decides what the evaluation still lacks.
+  if (cov && cov.candidate.problems.some(p => CANDIDATE_COVERAGE_CODES.includes(p.code) || (cov.candidate.evaluated && ['CHECK_FAILED', 'ATTEMPT_ERROR'].includes(p.code)))) return { ...cov.next, rule: 7 };
   if (cand.notes !== 'current' || (j.prd && j.prd.status !== 'built')) return cmd('evaluate the candidate', `/pincer-evaluate${j.prd && j.prd.status !== 'built' ? ` (PRD status is '${j.prd.status}', expected 'built')` : cand.reason ? ` (${cand.reason})` : ''}`, { rule: 7 });
   return cmd('read-only release audit', '/pincer-release', { rule: 8 });
 }
@@ -174,6 +190,8 @@ function render(r) {
     lines.push(`Attempts   ${r.attempts.length ? r.attempts.map(x => `${x.ticket || x.check} ${x.id} ${x.outcome}${x.current ? ' (current)' : ''}`).join('; ') : 'none'}`);
     const cand = r.candidate;
     lines.push(`Candidate  ${cand ? `${cand.locator || 'NOTES.md'}: ${cand.notes === 'current' ? `current (${cand.candidate})` : cand.reason}${cand.evidence ? ` · evidence ${cand.evidence.verdict}` : ''}` : 'none'}`);
+    const cv = r.coverage;
+    lines.push(`Coverage   ${cv.label}${cv.strict ? ` · structure ${cv.structure.complete ? 'complete' : `incomplete (${cv.structure.problems[0].code})`} · implementation ${cv.implementation.scenarios.complete}/${cv.implementation.scenarios.total - cv.implementation.scenarios.dispositioned} scenarios · candidate ${cv.candidate.evaluated ? `delivery original ${cv.candidate.delivery.original}, agreed ${cv.candidate.delivery.agreed}, adequacy ${cv.candidate.adequacy}` : 'not evaluated'}` : cv.reason ? ` · ${cv.reason}` : ''}`);
     lines.push(`Handoff (authored) ${r.handoff ? `${r.handoff.kind || 'note'} since ${r.handoff.since}${r.handoff.reason ? ` · reason: ${r.handoff.reason}` : ''}${r.handoff.note ? ` · note: ${r.handoff.note}` : ''}` : 'none'}`);
   }
   lines.push(`Blockers   ${r.blockers.length ? r.blockers.map(b => `${b.code} ${b.detail}`).join('\n           ') : 'none'}`);

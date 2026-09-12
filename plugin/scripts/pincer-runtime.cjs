@@ -17,7 +17,7 @@
 //   node scripts/pincer-runtime.cjs change decide <id> --summary <text> [--id D-NN] | --resolve D-NN --reference <text> --excerpt <text>
 //   node scripts/pincer-runtime.cjs change activate|pause|resume|complete|reopen|cancel|supersede <id> [--reason <text>] [--note <text>] [--decision D-NN] [--with <id>]
 //   node scripts/pincer-runtime.cjs resume [--change <id>] [--json]
-//   node scripts/pincer-runtime.cjs coverage adopt --preview|--apply --change <id> [--agreement <digest>]
+//   node scripts/pincer-runtime.cjs coverage [--change <id>] [--json] · coverage adopt --preview|--apply --change <id> [--agreement <digest>]
 //   node scripts/pincer-runtime.cjs impact [--change <id>] [--from G-NN|A-NN] [--json]
 //
 // Exit codes: 0 ok · 1 failed/not ready/refused · 2 usage · 3 state busy ·
@@ -77,7 +77,7 @@ function usage(message) {
     '       pincer-runtime.cjs change activate|resume|complete <id> · change pause <id> --reason <text> [--note <text>] · change reopen <id> --reason <text>\n' +
     '       pincer-runtime.cjs change cancel <id> --decision D-NN --reason <text> · change supersede <id> --with <id> --decision D-NN\n' +
     '       pincer-runtime.cjs resume [--change <id>] [--json]   (the read-only report; `change resume` is the lifecycle operation)\n' +
-    '       pincer-runtime.cjs coverage adopt --preview|--apply --change <id> [--agreement <digest>]\n' +
+    '       pincer-runtime.cjs coverage [--change <id>] [--json] · coverage adopt --preview|--apply --change <id> [--agreement <digest>]\n' +
     '       pincer-runtime.cjs impact [--change <id>] [--from G-NN|A-NN] [--json]\n');
   process.exit(EXIT.USAGE);
 }
@@ -421,7 +421,20 @@ function cmdRegister(root, args) {
 // entry into strict coverage (docs/runtime-contracts.md, "Adoption and rollback").
 function cmdCoverage(root, args) {
   const [sub, ...rest] = args;
-  if (sub !== 'adopt') usage(sub ? `unknown coverage subcommand ${sub} (coverage supports: adopt)` : 'coverage requires a subcommand: adopt --preview|--apply --change <id> [--agreement <digest>]');
+  if (sub !== 'adopt') {
+    // The read-only coverage report (docs/runtime-contracts.md, "Coverage and impact commands").
+    const o = parseOptions(args, { switches: ['--json'], valued: ['--change'] });
+    if (o.positional.length) usage(`unexpected argument ${o.positional[0]} (coverage takes [--change <id>] [--json], or the adopt subcommand)`);
+    const phases = require('./pincer-runtime/phases.cjs');
+    const resolved = changes.resolveSelected(root, { change: o.change || null });
+    if (resolved.code) fail('pincer', `${resolved.code}: ${resolved.problem}`, exitForCode(resolved.code));
+    const st = status.render(root, { change: o.change || null });
+    if (st.exit === 4) { process.stderr.write(st.text); process.exit(EXIT.INVALID); }
+    const result = phases.report(root, resolved.record, { gathered: st.gathered, generated: st.json.generated });
+    if (o.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    else process.stdout.write(phases.render(result));
+    process.exit(EXIT.OK);
+  }
   const o = parseOptions(rest, { valued: ['--change', '--agreement'], switches: ['--preview', '--apply'] });
   if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
   if (!o.change) usage('coverage adopt requires --change <id>');

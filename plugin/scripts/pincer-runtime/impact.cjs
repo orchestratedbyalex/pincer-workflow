@@ -67,7 +67,8 @@ function compute(root, record, { from = null } = {}) {
   const scenarios = { added: inv.scenarios.added, removed: inv.scenarios.removed.map(id => ({ id, tombstone: Boolean(curMap.scope[id] && curMap.scope[id].disposition === 'removed') })), changed: inv.scenarios.changed, unchanged: inv.scenarios.unchanged };
   const reqs = inv.requirements;
   // Links: scenarios present in both maps whose tickets or checks changed.
-  const links = { changed: [] };
+  // Links: rows added or removed for a scenario, and scenarios present in both maps whose tickets or checks changed.
+  const links = { added: sortIds(Object.keys(curMap.scenarios).filter(id => !baseMap.map.scenarios[id])), removed: sortIds(Object.keys(baseMap.map.scenarios).filter(id => !curMap.scenarios[id])), changed: [] };
   for (const id of sortIds(Object.keys(curMap.scenarios))) {
     const b = baseMap.map.scenarios[id];
     if (!b) continue;
@@ -101,6 +102,8 @@ function compute(root, record, { from = null } = {}) {
   for (const c of scenarios.changed) because(c.id, `scenario ${c.parts.join(' and ')} changed`);
   for (const id of scenarios.added) because(id, 'scenario added');
   for (const l of links.changed) because(l.id, 'links changed');
+  for (const id of links.added) if (!scenarios.added.includes(id)) because(id, 'links added (a row the baseline lacked)');
+  for (const id of links.removed) if (curMap.scenarios[id] || inv.scenarios.unchanged.includes(id) || inv.scenarios.changed.some(c => c.id === id)) because(id, 'links removed (the row is gone)');
   for (const e of [...scope.added, ...scope.changed]) because(e.id, `scope disposition ${e.to ? `changed to ${e.to}` : e.disposition}`);
   for (const id of scope.removed) if (curMap.scenarios[id]) because(id, 'scope disposition removed (back in scope)');
   for (const [id, row] of Object.entries(curMap.scenarios)) {
@@ -156,6 +159,7 @@ function render(r) {
   list('Requirements changed', r.requirements.changed, c => `${c.id} (${c.parts.join(', ')})`);
   list('Scenarios added', r.scenarios.added); list('Scenarios removed', r.scenarios.removed, s => `${s.id}${s.tombstone ? ' (tombstone)' : ' (no tombstone)'}`);
   list('Scenarios changed', r.scenarios.changed, c => `${c.id} (${c.parts.join(', ')})`);
+  list('Links added', r.links.added); list('Links removed', r.links.removed);
   list('Links changed', r.links.changed, l => `${l.id} (tickets +${l.tickets.added.join(' ') || '—'} -${l.tickets.removed.join(' ') || '—'}; checks +${l.checks.added.join(' ') || '—'} -${l.checks.removed.join(' ') || '—'})`);
   list('Scope added', r.scope.added, s => `${s.id} (${s.disposition})`); list('Scope removed', r.scope.removed); list('Scope changed', r.scope.changed, s => `${s.id} (${s.from} → ${s.to})`);
   list('Checks added', r.checks.added); list('Checks removed', r.checks.removed); list('Checks changed', r.checks.changed, c => `${c.id} (${c.parts.join(', ')})`);

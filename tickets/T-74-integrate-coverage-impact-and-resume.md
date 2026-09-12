@@ -1,9 +1,13 @@
 ---
 ticket: T-74
-status: open
+status: done
 size: M
 prd: .prd/prd-v6.md
 depends_on: [T-71, T-73]
+started: 2026-09-12T11:25:49Z
+last_check: 2026-09-12T11:41:57Z passed 442606ba2b76
+verified: 2026-09-12T11:41:57Z 442606ba2b76
+finished: 2026-09-12T11:41:57Z
 ---
 
 ## Objective
@@ -22,9 +26,9 @@ Expose coverage, impact and actionable resume reports, as specified in PRD v6, s
 - Support compact small-fix inputs and normal resumed work without duplicate authorization, check launches or report writes. Keep old-mode coverage honestly unverified.
 
 ## Acceptance Criteria
-- [ ] S-25/S-26 verify human/JSON parity, concrete next ticket/check/decision, malformed-state diagnostics and read-only snapshots.
-- [ ] A fresh-session fixture locates its next action from report/references; small fixes do not need redundant authored tables.
-- [ ] Existing resume and status contracts still pass.
+- [x] S-25/S-26 verify human/JSON parity, concrete next ticket/check/decision, malformed-state diagnostics and read-only snapshots.
+- [x] A fresh-session fixture locates its next action from report/references; small fixes do not need redundant authored tables.
+- [x] Existing resume and status contracts still pass.
 
 ## Verification
 Proves: sessions get a consistent next action and coverage report without hidden execution or inferred approval.

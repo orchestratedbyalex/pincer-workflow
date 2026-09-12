@@ -129,7 +129,7 @@ function gather(root, { budget, change = null } = {}) {
     const t = pendingTxn.committed[0];
     const detail = `a committed transaction (${t.command || t.id}) was not fully applied; run: node scripts/pincer-runtime.cjs recover`;
     j.mode = changes.scan(root).mode;
-    if (j.mode === 'changes') { j.schema = 2; j.runtime = changes.RUNTIME; j.selection = { change: null, problem: null }; j.changes = []; }
+    if (j.mode === 'changes') { j.schema = 3; j.runtime = changes.RUNTIME_STRICT; j.selection = { change: null, problem: null }; j.changes = []; }
     line(`WARN     STATE_INCOMPLETE: ${detail}`);
     j.reasons.push({ code: 'STATE_INCOMPLETE', detail });
     j.next = 'node scripts/pincer-runtime.cjs recover';
@@ -161,6 +161,7 @@ function gather(root, { budget, change = null } = {}) {
     prd = latest.prd; prdResult = latest.prdResult;
   }
   j.mode = mode;
+  j.coverage = { strict: false, label: 'unverified', reason: mode === 'legacy' ? 'legacy project (no change record); strict coverage needs change records' : 'v0.5.0 binding (migrated mode); migrate to change records, then adopt' };
   const prdStatus = prdResult ? prdResult.fields.status : '';
   if (!prd) line('PRD      none');
   else {
@@ -177,7 +178,11 @@ function gather(root, { budget, change = null } = {}) {
   } else {
     line(`Runtime  legacy · no change binding${prd ? ` · migrate with node scripts/pincer-runtime.cjs migrate --preview --prd ${prd}` : ''}`);
   }
-  return gatherBody(root, out, { mode, binding, prd, prdResult, bindingResult, budget, now });
+  const result = gatherBody(root, out, { mode, binding, prd, prdResult, bindingResult, budget, now });
+  // Old modes label their coverage unverified in the human report too.
+  const at = result.lines.findIndex(l => l.startsWith('Notes    '));
+  if (at !== -1) result.lines.splice(at, 0, `Coverage unverified · ${j.coverage.reason}`);
+  return result;
 }
 
 // Tickets, candidate and next action for the selected PRD. `ctx.decideNext`, when
@@ -383,6 +388,8 @@ function gatherBody(root, out, ctx) {
     next = `/pincer-code — a newer local attempt is not passing for ${newerBlockers.map(b => b.detail.split(':')[0]).join(', ')}; repair, re-run the check and /pincer-evaluate before release`;
   } else next = '/pincer-release — evaluation matches the current PRD and candidate; audit the artifacts';
   const computed = { defaultNext: next, inProg, nOpen, nextOpen, reverify, notes, prdStatus, newerBlockers, unresolved, sourceProblems, nDone, tickets: tickets.length, allReady: tickets.length > 0 && nOpen === 0 && nProg === 0 && reverify.length === 0 && unresolved === 0 };
+  // The gathered view is available to the next-action rule (strict coverage reads it).
+  out.gathered = { mode, binding, prd, prdResult, tickets, computeReadiness, notes, unresolved, inProg, nOpen, reverify, computed };
   if (ctx.decideNext) next = ctx.decideNext(computed);
   line(`Next     ${next}`);
   j.next = next;
@@ -399,7 +406,7 @@ function gatherBody(root, out, ctx) {
 function gatherChanges(root, out, { budget, now, change }) {
   const j = out.json;
   const line = s => out.lines.push(s);
-  j.schema = 2; j.runtime = changes.RUNTIME; j.mode = 'changes';
+  j.schema = 3; j.runtime = changes.RUNTIME_STRICT; j.mode = 'changes';
   const resolved = changes.resolveSelected(root, { change });
   const loaded = resolved.loaded;
   const selection = resolved.selection;
@@ -459,6 +466,12 @@ function gatherChanges(root, out, { budget, now, change }) {
   for (const p of v.problems) { line(`WARN     ${p.code}: ${p.detail}`); j.reasons.push(p); }
   if (!prdResult.ok) { line('Next     repair the PRD input before continuing'); j.next = 'repair the PRD input before continuing'; out.exit = 4; return out; }
   const running = transaction.runningAttempts(root, id);
+  // Strict coverage summary (docs/runtime-contracts.md, "Coverage and impact commands"):
+  // computed once the tickets are gathered (below), consumed by the Coverage line,
+  // the JSON and the next action. A change without the capability is labeled unverified.
+  const phases = require('./phases.cjs');
+  let coverageReport = null;
+  const coverageOf = gathered => { if (!coverageReport) coverageReport = phases.compute(root, record, { gathered, verdict: auth }); return coverageReport; };
   const decideNext = computed => {
     const cmd = sub => `node scripts/pincer-runtime.cjs change ${sub} ${id}`;
     const st = record.lifecycle.state;
@@ -467,13 +480,26 @@ function gatherChanges(root, out, { budget, now, change }) {
     if (v.problems.length) return `${v.problems[0].code}: ${v.problems[0].detail}`;
     if (computed.unresolved > 0 || computed.sourceProblems.length) return computed.defaultNext;
     if (auth.verdict !== 'current' && !agreed.code) return `${auth.verdict}: ${auth.detail}`;
+    if (changes.isStrict(record) && out.gathered) {
+      const cov = coverageOf(out.gathered);
+      const gap = cov.structure.problems[0];
+      if (gap) return `${gap.code}: ${gap.detail} — see: node scripts/pincer-runtime.cjs coverage`;
+    }
     if (st === 'planned') return `${cmd('activate')} — activate the change before executing tickets`;
     if (st === 'paused') return `${cmd('resume')} — the change is paused${record.lifecycle.reason ? ` (${record.lifecycle.reason})` : ''}; resume it before executing tickets`;
     if (st === 'active' && computed.allReady && computed.prdStatus !== 'draft') return `${cmd('complete')} — every ticket is done and ready; complete the change before choosing the candidate`;
     return computed.defaultNext;
   };
   gatherBody(root, out, { mode: 'changes', binding, prd, prdResult, bindingResult: null, budget, now, decideNext, notes: () => locator.current(root, record), evidence: () => locator.evidenceLine(root, record), locatorFile: locator.file(id) });
-  if (out.gathered) out.gathered.record = record;
+  if (out.gathered) {
+    out.gathered.record = record;
+    const cov = coverageOf(out.gathered);
+    j.coverage = { ...phases.summary(cov), next: cov.blockers[0] ? `${cov.blockers[0].code}: ${cov.blockers[0].detail}` : null };
+    const coverageLine = phases.summaryLine(cov, record);
+    const at = out.lines.findIndex(l => l.startsWith('Notes    '));
+    out.lines.splice(at === -1 ? out.lines.length : at, 0, coverageLine);
+    if (changes.isStrict(record)) for (const p of cov.structure.problems) if (!j.reasons.some(r => r.code === p.code && r.detail === p.detail)) j.reasons.push({ code: p.code, detail: p.detail });
+  } else j.coverage = { strict: changes.isStrict(record), label: changes.isStrict(record) ? 'strict' : 'unverified', reason: changes.isStrict(record) ? null : 'strict coverage not adopted', structure: null, implementation: null, candidate: null, next: null };
   // Reasons in gate order: repository view first, then the authorization verdict, then the rest.
   const front = [...v.problems, ...(auth.verdict !== 'current' && !agreed.code ? [{ code: auth.verdict, detail: auth.detail }] : [])];
   j.reasons = [...front, ...j.reasons.filter(r => !front.includes(r))];

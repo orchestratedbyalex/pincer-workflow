@@ -1584,7 +1584,7 @@ agreement, else the latest retained agreement with an inventory snapshot):
   verdict: "unchanged" | "changed" | "unavailable", reason: <text> | null,
   requirements: { added: [ids], removed: [ids], changed: [ { id, parts: ["title" | "text" | "scenarios"] } ], unchanged: [ids] },
   scenarios: { added: [ids], removed: [ { id, tombstone: boolean } ], changed: [ { id, parts: ["text" | "requirement"] } ], unchanged: [ids] },
-  links: { changed: [ { id, tickets: { added, removed }, checks: { added, removed } } ] },
+  links: { added: [ids], removed: [ids], changed: [ { id, tickets: { added, removed }, checks: { added, removed } } ] },
   scope: { added: [ { id, disposition } ], removed: [ids], changed: [ { id, from, to } ] },
   checks: { added: [ids], removed: [ids], changed: [ { id, parts: ["kind" | "command" | "timeout" | "cwd" | "obligation" | "required"] } ] },
   tickets: { added, removed, changed: [ { id, parts } ] },

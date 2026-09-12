@@ -292,3 +292,16 @@ const snapshot = dir => JSON.stringify(fs.readdirSync(dir, { recursive: true }).
   }
 }
 console.log('runtime status tests passed');
+
+// PRD v6 T-74: status JSON is schema 3 in changes mode with a coverage summary; the
+// legacy and migrated forms stay schema 1 and label coverage unverified.
+{
+  const dir = tempDir(); git(dir, 'init', '-q'); createPrd(dir); createTicket(dir); write(dir, '.gitignore', '.pincer/\n'); commit(dir, 'base');
+  const legacy = JSON.parse(passes(rt(dir, 'status', '--json')));
+  assert.equal(legacy.schema, 1); assert.deepEqual(legacy.coverage, { strict: false, label: 'unverified', reason: 'legacy project (no change record); strict coverage needs change records' });
+  assert.match(passes(human(dir)), /^Coverage unverified · legacy project/m);
+  passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md')); passes(rt(dir, 'change', 'select', 'prd-v1'));
+  const changesMode = JSON.parse(passes(rt(dir, 'status', '--json')));
+  assert.equal(changesMode.schema, 3); assert.equal(changesMode.runtime, 3); assert.equal(changesMode.coverage.label, 'unverified');
+}
+console.log('runtime status tests passed (coverage summary)');

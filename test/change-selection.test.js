@@ -75,7 +75,7 @@ function fixture() {
   // Status now reports A: its PRD, its tickets; B's ticket is history; planned routes to activate.
   const s = statusJson(dir);
   assert.equal(s.status, 0);
-  assert.equal(s.json.schema, 2); assert.equal(s.json.mode, 'changes');
+  assert.equal(s.json.schema, 3); assert.equal(s.json.mode, 'changes');
   assert.deepEqual(s.json.selection, { change: 'prd-v1', problem: null });
   assert.equal(s.json.change.id, 'prd-v1'); assert.equal(s.json.change.lifecycle.state, 'planned');
   assert.equal(s.json.change.view.head, before.head); assert.equal(s.json.change.view.base_is_ancestor, true);

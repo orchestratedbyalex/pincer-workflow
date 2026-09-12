@@ -73,7 +73,7 @@ const launches = dir => { try { return read(dir, '.markers/a').split('\n').filte
 {
   const dir = fixture();
   const r = resumeJson(dir);
-  assert.equal(r.schema, 1); assert.equal(r.runtime, 2); assert.equal(r.mode, 'changes');
+  assert.equal(r.schema, 2); assert.equal(r.runtime, 3); assert.equal(r.mode, 'changes');
   assert.deepEqual(r.selection, { change: 'prd-v1', problem: null });
   assert.equal(r.change.id, 'prd-v1'); assert.equal(r.change.lifecycle.state, 'paused'); assert.equal(r.change.view.base_is_ancestor, true);
   assert.equal(r.agreement.verdict, 'current'); assert.equal(r.agreement.current, digestOf(dir));
@@ -221,3 +221,15 @@ const launches = dir => { try { return read(dir, '.markers/a').split('\n').filte
   assert.match(passes(fresh(legacy, 'resume')), /^Selection  none · CHANGE_REQUIRED: this project keeps no change records/m);
 }
 console.log('change resume tests passed');
+
+// PRD v6 T-74: resume JSON schema 2 carries the coverage summary (unverified without
+// adoption) and the human report a Coverage line; nothing else about the v5 report changed.
+{
+  const dir = fixture();
+  passes(rt(dir, 'change', 'select', 'prd-v1'));
+  const r = JSON.parse(passes(rt(dir, 'resume', '--json')));
+  assert.equal(r.schema, 2); assert.equal(r.runtime, 3);
+  assert.equal(r.coverage.strict, false); assert.equal(r.coverage.label, 'unverified'); assert.match(r.coverage.reason, /strict coverage not adopted/);
+  assert.match(passes(rt(dir, 'resume')), /^Coverage   unverified · strict coverage not adopted/m);
+}
+console.log('change resume tests passed (coverage summary)');
