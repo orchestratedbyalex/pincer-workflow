@@ -24,7 +24,10 @@ start of a session. Read-only: change nothing.
    candidate, the authored handoff note and the next command, and never writes;
    `change list` shows every retained change, `status --change <id>` and
    `resume --change <id>` inspect another one without selecting it. `resume` is the
-   report; `change resume <id>` is the lifecycle operation.
+   report; `change resume <id>` is the lifecycle operation. The `Coverage` line says
+   `strict` or `unverified`; on a strict change `node scripts/pincer-runtime.cjs coverage`
+   (and `impact` after an edit) name the exact scenario, ticket, check or decision
+   that is next — quote them rather than inferring coverage from the ticket list.
 2. Report in three lines: where the workflow is, what is in progress or blocked, and the
    next command. Quote the `Next` line as-is. When the `Runtime` line says `legacy`,
    add the register or migrate command it names as the step that precedes the next

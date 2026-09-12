@@ -12,10 +12,11 @@ to the owning stage or a new ticket.
 - [ ] The `Provenance` line names the evidence schema; a schema 2 candidate has no newer nonpassing local attempt for the same check and source inputs, and a fresh clone's `local verification history unavailable` limit is stated, not claimed as verification
 - [ ] Change records only: the selected change is `completed`, its authorization is `current` for the current agreement, `.prd/evidence/changes/<id>.json` names the evaluated candidate, and the audit selected, activated and completed nothing
 - [ ] Every file the evidence manifest lists is tracked; the working tree is clean before and after the audit
+- [ ] Strict coverage only (`Coverage strict …` in status): `node scripts/pincer-runtime.cjs coverage` reports structure complete, every in-scope scenario `delivered` on the evaluated candidate, every deferral or removal backed by its decision and user authorization, `delivery` distinguishing original from agreed scope, and an `adequate` adequacy judgment; `ready` names `COVERAGE_INCOMPLETE`, `SCOPE_UNAUTHORIZED`, `OBLIGATION_MISSING`, `REVIEW_MISSING` or `ADEQUACY_REQUIRED` as failures. A change without the capability is labeled `unverified`: say so, never imply strict coverage
 
 ## Scope and evidence
 
-- [ ] Every requirement in the PRD has a disposition in the evidence manifest: delivered with passing checks, or deferred with recorded user authorization; none is blocked
+- [ ] Every requirement in the PRD has a disposition in the evidence manifest: delivered with passing checks, or deferred with recorded user authorization; none is blocked (strict coverage: the manifest is schema 3, its scenario rows are the inventory's, and the validator reconciled them with the committed candidate)
 - [ ] Ticket dependencies, acceptance criteria, and verification commands match the implemented change
 - [ ] The repository's candidate-wide release gate passes when run directly, without invoking the ticket state writer
 - [ ] Scope cuts and known limitations are explicit in the PRD or evaluation notes

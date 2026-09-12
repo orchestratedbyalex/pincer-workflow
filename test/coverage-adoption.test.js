@@ -42,7 +42,7 @@ const snapshotTree = (dir, { skip = [] } = {}) => {
   };
   walk(''); return out;
 };
-const statusJson = dir => JSON.parse(rt(dir, 'status', '--json').stdout);
+const statusJson = dir => { const r = rt(dir, 'status', '--json'); try { return JSON.parse(r.stdout); } catch (e) { throw new Error(`status --json exit ${r.status}: ${r.stderr}`); } };
 const preview = (dir, id = 'prd-v1') => rt(dir, 'coverage', 'adopt', '--preview', '--change', id);
 const applyIt = (dir, id = 'prd-v1', ...extra) => rt(dir, 'coverage', 'adopt', '--apply', '--change', id, ...extra);
 const V5_MAP = `{
@@ -148,6 +148,8 @@ function freshStrict({ adopt: doAdopt = true, prepare = null } = {}) {
   assert.deepEqual(touched.sort(), ['.prd/changes/prd-v1.json', '.prd/changes/prd-v1/agreements/G-02.json'], 'only the record and the adoption snapshot changed; tickets, attempts, index, selection, evidence and map are untouched');
   const s1 = statusJson(dir);
   assert.equal(s1.change.agreement.verdict, 'AGREEMENT_CHANGED', 'the strict agreement needs the user');
+  assert.equal(s1.coverage.candidate.evaluated, true); assert.equal(s1.coverage.candidate.delivery, null, 'a pre-adoption schema 2 evaluation records no delivery figures');
+  assert.match(rt(dir, 'status').stdout, /Coverage strict .* candidate delivery not recorded \(evidence predates strict coverage\), adequacy not recorded/, 'the human coverage line survives a pre-adoption evaluation');
   assert.deepEqual(s1.tickets[0].readiness.reasons.map(x => x.code), ['HISTORICAL_EVIDENCE'], 'the v5 attempt is history after adoption');
   assert.match(s1.tickets[0].readiness.reasons[0].detail, /recorded under schema 2 \(before this change adopted strict coverage\)/);
   assert.match(passes(applyIt(dir)), /^already adopted: change prd-v1 is strict since .* \(agreement G-02\); nothing changed$/m);

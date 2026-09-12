@@ -160,6 +160,12 @@ observes agent behavior, and one trial on one surface says nothing about the oth
       `unverified`
 - [ ] Cheat: edit a saved log after the evidence commit — status reports
       `evidence invalid: ... digest mismatch`
+- [ ] Strict coverage (when adopted): `coverage adopt --preview` writes nothing and
+      `--apply` records the schema 3 record with a backup; `coverage` names the
+      scenario a map row was dropped for (`COVERAGE_INCOMPLETE`) and `change complete`
+      refuses it; `check C-NN --candidate <sha> -- <other command>` is
+      `CHECK_UNDECLARED`; the exported manifest is schema 3 and `ready` reads
+      `delivery original … agreed …` from `coverage`
 - [ ] Evaluation fixes were completed through new tickets, produced a new candidate,
       and were re-evaluated with fresh evidence
 - [ ] `NOTES.md` exists at the repo root with `prd`, `base`, `candidate` and

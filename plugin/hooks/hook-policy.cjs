@@ -161,12 +161,14 @@ function dangerousReason(source, depth = 0) {
 
 const TICKET_PATH = /(^|[\\/])tickets[\\/]T-[0-9]+[^\\/]*\.md$/;
 // Runtime-owned state: local attempts under .pincer/, change records under
-// .prd/changes/ and evaluation locators under .prd/evidence/changes/ are written
-// only by pincer-runtime.cjs.
+// .prd/changes/ (with their agreement snapshots), evaluation locators under
+// .prd/evidence/changes/ and the inventory/map snapshots a strict evaluation writes
+// under .prd/evidence/prd-vN/<candidate>/coverage/ are written only by
+// pincer-runtime.cjs. The coverage map .prd/coverage/<id>.json is authored by hand.
 // The runtime owns .pincer/runtime/ and .pincer/backups/ (and the directory as a
 // whole); .pincer/drafts/ is the agent's own scratch space for evidence drafts.
 const RUNTIME_PATH = /(^|[\\/])\.pincer(?:[\\/](?:runtime|backups)(?:[\\/]|$)|[\\/]?$)/;
-const BINDING_PATH = /(^|[\\/])\.prd[\\/](?:changes|evidence[\\/]changes)([\\/]|$)/;
+const BINDING_PATH = /(^|[\\/])\.prd[\\/](?:changes|evidence[\\/]changes|evidence[\\/]prd-v[0-9]+[\\/][0-9a-f]{40}[\\/]coverage)([\\/]|$)/;
 const PROTECTED = ['status', 'started', 'last_check', 'verified', 'finished'];
 
 function ticketPath(value) {
@@ -213,7 +215,7 @@ function applyEdit(content, oldText, newText, replaceAll = false) {
 function guardEdits(tool, toolInput) {
   const file = toolInput.file_path;
   if (typeof file !== 'string') block(`${tool} payload must contain a string file_path.`);
-  if (runtimePath(file)) block('runtime state (.pincer/) and change bindings (.prd/changes/) are written only by pincer-runtime.cjs.');
+  if (runtimePath(file)) block('runtime state (.pincer/), change records (.prd/changes/), evaluation locators and coverage snapshots (.prd/evidence/…/coverage/) are written only by pincer-runtime.cjs; the coverage map .prd/coverage/<id>.json is yours to edit.');
   if (!ticketPath(file)) return;
   const before = existingContent(file);
   if (tool === 'Write') {

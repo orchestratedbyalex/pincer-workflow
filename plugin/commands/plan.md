@@ -91,8 +91,13 @@ concrete scope and architecture; do not repeat an approval already given for the
    In Requirements, assign stable `R-NN` IDs within the selected PRD: a revision
    keeps existing IDs and adds new ones, never renumbers. Every requirement has
    observable acceptance scenarios, the relevant failure paths, and the existing
-   behavior it must preserve — `/pincer:narrow` maps each scenario to a ticket and
-   a check, and `/pincer:evaluate` dispositions every ID.
+   behavior it must preserve, each written as a bold `- **S-NN:** …` item under its
+   requirement heading (the template's grammar; the runtime parses exactly these
+   definitions into the inventory that strict coverage tracks, and a requirement
+   without a scenario is invalid there) — `/pincer:narrow` maps each scenario to a
+   ticket and a check in the coverage map, and `/pincer:evaluate` dispositions every
+   ID. A supplied PRD keeps its own uppercase IDs (`REQ-1`, `AC-3`); only its
+   definition syntax is adapted, and the mapping table records what changed.
 2. Include optional sections when risk or the product context warrants them.
 3. Save to the next unused `.prd/prd-v{N}.md` (create `.prd/` if needed), with `N`
    matching the filename and frontmatter:

@@ -16,7 +16,7 @@ function passes(result, label = '') { assert.equal(result.status, 0, `${label}\n
 const kit = tempDir();
 for (const file of ['bin', 'template', 'package.json']) fs.cpSync(path.join(repo, file), path.join(kit, file), { recursive: true });
 const pincer = (dir, ...args) => run(dir, process.execPath, [path.join(kit, 'bin/pincer.js'), ...args], { timeout: 60000 });
-const MODULES = ['agreement', 'authorization', 'changes', 'evidence', 'fsutil', 'gates', 'identity', 'lifecycle', 'locator', 'migrate', 'parse', 'readiness', 'resume', 'runner', 'sanitize', 'source', 'state', 'status', 'transaction', 'transitions'];
+const MODULES = ['adopt', 'agreement', 'authorization', 'changes', 'checks', 'coverage', 'dispositions', 'evidence', 'fsutil', 'gates', 'identity', 'impact', 'lifecycle', 'locator', 'migrate', 'parse', 'phases', 'readiness', 'requirements', 'resume', 'runner', 'sanitize', 'source', 'state', 'status', 'transaction', 'transitions'];
 const digest = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const runtimeDigests = root => Object.fromEntries(['scripts/pincer-runtime.cjs', ...MODULES.map(m => `scripts/pincer-runtime/${m}.cjs`)].map(rel => [rel, fs.existsSync(path.join(root, rel)) ? digest(path.join(root, rel)) : null]));
 const canonical = runtimeDigests(path.join(repo, 'template'));

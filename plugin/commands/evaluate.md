@@ -30,7 +30,13 @@ run the pipeline, then present results.
    in a separate pass, applying `${CLAUDE_PLUGIN_ROOT}/agents/code-quality-reviewer.md` as the rubric.)
    Keep the reviewer's report — or its explicit no-findings statement — for step 9,
    where it is saved as an artifact; a review that left no record cannot be audited.
-3. Yourself, in parallel, check spec compliance. For every requirement `R-NN` in the
+3. Yourself, in parallel, check spec compliance. On a change with strict coverage
+   (`Coverage strict …` in status) start from `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs coverage`:
+   its structure must be complete, and its scenario rows are the obligations — the
+   export derives every disposition from the map and the outcomes, so you do not
+   author `requirements`; your judgment is recorded as `adequacy` (whether the
+   declared checks and reviews really establish their scenarios) and in
+   `coverage_review`. Otherwise, for every requirement `R-NN` in the
    PRD record one disposition: `delivered` (evidence on this candidate), `blocked`
    (required behavior failed or was left unverified — this blocks PASS; do not relabel
    it a known limitation to pass), or `deferred` (only with explicit user authorization;
@@ -65,8 +71,20 @@ run the pipeline, then present results.
    produces a new candidate: re-record `candidate`, re-run the checks against it, and
    write fresh evidence in step 9 — never reuse a manifest from a previous candidate.
 9. Persist evidence for the candidate under `.prd/evidence/prd-vN/<candidate>/`.
-   Migrated project (the `Runtime` status line names a change): run each executable
-   check through the runtime on the clean candidate view —
+   Strict coverage: run every declared command check as
+   `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs check C-NN --candidate <sha>` (no command, no
+   timeout: the map's declaration is the only source, and a supplied command is
+   `CHECK_UNDECLARED`); record each declared review or visual obligation in the
+   draft with its `result` and an artifact saved under the candidate's evidence
+   directory (a required one that is not passed with an artifact is
+   `REVIEW_MISSING`); write `adequacy: { verdict: "adequate" | "inadequate", note }`;
+   list every declared check once and no `requirements` (they are derived). The
+   export writes the inventory and map snapshots under `coverage/`, derives the
+   scenario and requirement rows and `delivery` (original versus agreed scope) and
+   validates them against the committed candidate; an `inadequate` judgment or a
+   failed required check is recorded honestly and blocks readiness. Migrated
+   project without strict coverage (the `Runtime` status line names a change): run
+   each executable check through the runtime on the clean candidate view —
    `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs check C-NN --candidate <sha> -- <command>` (one
    command per check, the command line as run; `npm test` stays one aggregate check) —
    then write the authored fields to a draft outside the evidence directory, for

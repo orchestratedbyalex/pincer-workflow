@@ -44,7 +44,14 @@ files on disk. Select the change to work on (`node scripts/pincer-runtime.cjs ch
 select <id>`; selection is local metadata and touches no source), activate it
 (`change activate <id>`; refused until the user's authorization is recorded with
 `change authorize` and no consequential decision is open) and resume a paused change
-with `change resume <id>`. `legacy` and no ticket of this PRD carries legacy
+with `change resume <id>`. On a change with strict coverage (`Coverage strict …` in status) also read
+`node scripts/pincer-runtime.cjs coverage` — it names the scenario, ticket, check or
+decision that is next and every structural gap (`COVERAGE_INCOMPLETE`,
+`SCOPE_UNAUTHORIZED`, `OBLIGATION_MISSING`) — and, after any PRD, ticket or map edit,
+`node scripts/pincer-runtime.cjs impact` (`--from G-NN` for another baseline): it
+lists the affected scenarios, tickets and checks with reasons and the dependency
+dependents separately, and reports an unscoped PRD change or unavailable history
+rather than "no impact". `legacy` and no ticket of this PRD carries legacy
 receipts → register now (`node scripts/pincer-runtime.cjs register --prd .prd/prd-vN.md`,
 commit `.prd/changes/` and `.gitignore` as `Register PRD vN`), then record the user's
 approval (`change authorize …`, as `$pincer-narrow` describes), select and activate.
@@ -174,18 +181,27 @@ attempt: run `node scripts/pincer-runtime.cjs recover`, which finalizes it as
   approved behavior) records `change authorize <id> --agreement <digest> --delegated --basis A-NN --explanation "<why it stays within the delegation>"`
   without asking again, and the changed check still needs fresh verification.
 - Editing the PRD under its filename, or a ticket's acceptance text, dependencies,
-  size, timeout, association or check, changes the agreement: execution refuses with
-  `AGREEMENT_CHANGED` (status shows the structural difference) until its disposition
-  is recorded as above. Ticking criteria, starting or closing tickets and recording
+  size, timeout, association or check — and, with strict coverage, a scenario's text,
+  a map link, a declared command or timeout, or a scope entry — changes the agreement:
+  execution refuses with `AGREEMENT_CHANGED` (status shows the structural difference;
+  `impact` explains it) until its disposition is recorded as above. Ticking criteria, starting or closing tickets and recording
   attempts never change it. An `AGREEMENT_CHANGED` caused by an edit this session
   did not make — a revised PRD, an added or changed ticket found on resume — is a
   consequential decision: raise it with `change decide <id> --summary "<what changed>"`,
-  report the structural difference and stop. A general instruction to continue,
+  report the structural difference (and the `impact` report) and stop. A general instruction to continue,
   resume or not re-ask never authorizes new scope; record a `user` authorization for
-  the revised agreement only for an instruction that names the revised content.
+  the revised agreement only for an instruction that names the revised content. With strict coverage a scenario that will not be delivered is
+  never dropped from the map or the PRD: it is deferred or removed through a decision
+  the user resolves naming it, a `scope` entry (a removal keeps a tombstone naming the
+  prior agreement) and an authorization naming that decision; `coverage` reports
+  `OBLIGATION_MISSING` or `SCOPE_UNAUTHORIZED` until then, and `change complete`
+  refuses. A revised check declaration (a stricter command, an added check) within the
+  user's delegation is a `--delegated` authorization and needs fresh verification.
 - When every ticket is done and ready: `node scripts/pincer-runtime.cjs change complete <id>`
   (it refuses unfinished tickets, unticked criteria, stale or failed verification and
-  open decisions) and commit the record as `Complete PRD vN`. Completed means ready
+  open decisions; with strict coverage also an incomplete map, an unauthorized
+  disposition or a missing obligation, before the ticket gate) and commit the record
+  as `Complete PRD vN`. Completion never asks for candidate evidence. Completed means ready
   for evaluation, not evaluated or released; a later finding is `change reopen <id> --reason …`
   plus a fix ticket.
 

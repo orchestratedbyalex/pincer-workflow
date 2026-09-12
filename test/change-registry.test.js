@@ -98,7 +98,7 @@ function unchanged(dir, before, fn, label) {
   // Status in changes mode: schema 2, no legacy, no selection, never the highest PRD.
   const treeBeforeInspection = snapshotTree(dir);
   const status = JSON.parse(passes(rt(dir, 'status', '--json')));
-  assert.equal(status.schema, 2); assert.equal(status.mode, 'changes'); assert.equal(status.change, null);
+  assert.equal(status.schema, 3); assert.equal(status.mode, 'changes'); assert.equal(status.change, null);
   assert.equal(status.selection.change, null); assert.equal(status.selection.problem.code, 'SELECTION_REQUIRED');
   assert.deepEqual(status.changes.map(c => c.id), ['feature-b', 'prd-v1']);
   assert.deepEqual(status.tickets, []);

@@ -48,9 +48,10 @@ function compute(root, record, { gathered = null, verdict = null } = {}) {
   out.structure = { complete: problems.length === 0, problems };
   // Implementation: every in-scope scenario's tickets done and ready; every ticket of the change done and ready.
   const g = gathered || require('./status.cjs').render(root, { change: record.change }).gathered;
-  // A fresh clone (no local attempt history) validates the saved candidate record only:
-  // a done ticket's missing local attempt is its stated limit, not unfinished work.
-  const localUnavailable = !state.hasIndex(root);
+  // A fresh clone (no local attempt history) of a completed change validates the saved
+  // candidate record only: a done ticket's missing local attempt is its stated limit, not
+  // unfinished work. Before completion the v5 rule holds: a fresh clone must verify.
+  const localUnavailable = !state.hasIndex(root) && record.lifecycle.state === 'completed';
   out.implementation.limitations = localUnavailable ? ['local verification history unavailable; done tickets rely on the saved candidate evidence until verified here'] : [];
   const ticketState = id => {
     const t = g && g.tickets ? g.tickets.find(x => x.fields.ticket === id) : null;
@@ -228,7 +229,7 @@ function summaryLine(r, record) {
   if (!r.strict) return `Coverage unverified · ${r.reason}`;
   const s = summary(r);
   const reviewed = record && record.authorizations.length ? `${record.authorizations.at(-1).agreement} (${record.authorizations.at(-1).id})` : 'none';
-  return `Coverage strict · agreement ${reviewed} · structure ${s.structure.complete ? 'complete' : `incomplete (${s.structure.problems[0].code})`} · implementation ${s.implementation.scenarios.complete}/${s.implementation.scenarios.total - s.implementation.scenarios.dispositioned} scenarios${s.implementation.scenarios.dispositioned ? ` (${s.implementation.scenarios.dispositioned} dispositioned)` : ''} · candidate ${s.candidate.evaluated ? `delivery original ${s.candidate.delivery.original}, agreed ${s.candidate.delivery.agreed}, adequacy ${s.candidate.adequacy}` : 'not evaluated'}`;
+  return `Coverage strict · agreement ${reviewed} · structure ${s.structure.complete ? 'complete' : `incomplete (${s.structure.problems[0].code})`} · implementation ${s.implementation.scenarios.complete}/${s.implementation.scenarios.total - s.implementation.scenarios.dispositioned} scenarios${s.implementation.scenarios.dispositioned ? ` (${s.implementation.scenarios.dispositioned} dispositioned)` : ''} · candidate ${s.candidate.evaluated ? `${s.candidate.delivery ? `delivery original ${s.candidate.delivery.original}, agreed ${s.candidate.delivery.agreed}` : 'delivery not recorded (evidence predates strict coverage)'}, adequacy ${s.candidate.adequacy || 'not recorded'}` : 'not evaluated'}`;
 }
 
 module.exports = { STRUCTURE_ORDER, compute, firstBlocker, nextAction, report, render, summary, summaryLine };

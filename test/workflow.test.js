@@ -52,7 +52,7 @@ const ticketTemplate = read('template/.claude/references/ticket-template.md');
 assert.match(prdTemplate, /### \d\. Requirements/);
 assert.match(prdTemplate, /#### R-01 — /);
 assert.match(prdTemplate, /never renumbered/i);
-assert.match(prdTemplate, /Scenario:.*\n.*Failure path:.*\n.*Preserve:/s);
+assert.match(prdTemplate, /S-01:\*\* an observable acceptance scenario[\s\S]*S-02:\*\* Failure path:[\s\S]*S-03:\*\* Preserve:/, 'the template keeps scenario, failure path and preservation items (PRD v6 grammar)');
 assert.match(prdTemplate, /Requirement mapping/);
 assert.match(prdTemplate, /Preserve or link the\s+original brief/i);
 assert.match(plan, /stable `R-NN` IDs/);
@@ -284,3 +284,32 @@ assert.equal(
 );
 
 console.log('workflow contract tests passed');
+
+// PRD v6 T-75: the canonical playbooks author the coverage map once, adopt strict
+// coverage explicitly, read coverage/impact, disposition changed scope before any
+// approval is recorded, run declared checks and record the adequacy judgment; the
+// authorization rule stays identical across the four playbooks.
+assert.match(prdTemplate, /- \*\*S-01:\*\* an observable acceptance scenario/);
+assert.match(prdTemplate, /every requirement has at least one/i);
+assert.match(plan, /bold `- \*\*S-NN:\*\* …` item under its\s+requirement heading/);
+assert.match(plan, /keeps its own uppercase IDs/);
+assert.match(narrow, /author the map once as\s+`\.prd\/coverage\/<change id>\.json`/);
+assert.match(narrow, /coverage adopt --preview --change prd-vN/);
+assert.match(narrow, /grants nothing/);
+assert.match(narrow, /Never record a disposition\s+the user did not state/);
+assert.match(code, /pincer-runtime\.cjs coverage`/);
+assert.match(code, /pincer-runtime\.cjs impact`/);
+assert.match(code, /never dropped from the map or the PRD/);
+assert.match(code, /removal keeps a tombstone naming the\s+prior agreement/);
+assert.match(code, /Completion never asks for candidate evidence/);
+assert.match(evaluate, /check C-NN --candidate <sha>` \(no command, no\s+timeout/);
+assert.match(evaluate, /adequacy: \{ verdict: "adequate" \| "inadequate", note \}/);
+assert.match(evaluate, /no `requirements` \(they are derived\)/);
+assert.match(evaluate, /you do not\s+author `requirements`; your judgment is recorded as `adequacy`/);
+assert.match(release, /original versus\s+agreed scope \(never conflate them\)/);
+assert.match(release, /never imply strict coverage was established/);
+assert.match(read('template/.claude/commands/pincer-status.md'), /The `Coverage` line says\s+`strict` or `unverified`/);
+assert.match(read('template/AGENTS.md'), /a generic "continue" authorizes no revised\s+scope/);
+assert.match(read('template/docs/release-checklist.md'), /`delivery` distinguishing original from agreed scope/);
+for (const source of [narrow, code, evaluate]) assert.equal(authorizationBlock(source), sharedRule, 'authorization rule is still identical across playbooks');
+console.log('workflow tests passed (strict coverage guidance)');

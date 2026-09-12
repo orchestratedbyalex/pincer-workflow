@@ -282,6 +282,14 @@ function cmdDoctor() {
     try { prd = JSON.parse(fs.readFileSync(path.join(bindingsDir, n), 'utf8')).prd || prd; } catch { /* reported above by the runtime */ }
     console.log(`  note  migration to change records available: .prd/changes/${n} is a v0.5.0 binding (schema 1) — preview with: node scripts/pincer-runtime.cjs migrate --preview --prd ${prd}`);
   }
+  // A schema 2 change record beside an authored coverage map can adopt strict coverage explicitly; doctor only reports it.
+  for (const n of bindingFiles) {
+    let doc = null;
+    try { doc = JSON.parse(fs.readFileSync(path.join(bindingsDir, n), 'utf8')); } catch { doc = null; }
+    if (!doc || doc.schema !== 2) continue;
+    const id = n.replace(/\.json$/, '');
+    if (fs.existsSync(path.join(dir, '.prd', 'coverage', `${id}.json`))) console.log(`  note  strict coverage adoption available: .prd/coverage/${id}.json exists and .prd/changes/${n} is a schema 2 record — preview with: node scripts/pincer-runtime.cjs coverage adopt --preview --change ${id}`);
+  }
   if (legacyReceipts.length && !hasBinding) {
     const prdDir = path.join(dir, '.prd');
     const prds = fs.existsSync(prdDir) ? fs.readdirSync(prdDir).map((n) => n.match(/^prd-v(\d+)\.md$/)).filter(Boolean).map((m) => Number(m[1])) : [];

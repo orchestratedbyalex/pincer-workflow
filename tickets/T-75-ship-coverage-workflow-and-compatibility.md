@@ -1,9 +1,13 @@
 ---
 ticket: T-75
-status: open
+status: done
 size: M
 prd: .prd/prd-v6.md
 depends_on: [T-74]
+started: 2026-09-12T11:42:10Z
+last_check: 2026-09-12T12:37:38Z passed 5059e1235eb0
+verified: 2026-09-12T12:37:38Z 5059e1235eb0
+finished: 2026-09-12T12:37:38Z
 ---
 
 ## Objective
@@ -22,9 +26,9 @@ Ship strict coverage through every layout and playbook, as specified in PRD v6, 
 - Regenerate both adapter/plugin outputs. Test full strict journeys from every packed layout and plugin runtime, old-runtime rejection and unknown schemas; distinguish packaged parity from live platform observation.
 
 ## Acceptance Criteria
-- [ ] S-24 runs strict register/adopt/authorize/complete/check/export/report journeys against packed copies and asserts equal runtime digests.
-- [ ] Generated instructions consistently route through coverage/impact and distinguish structural checks from adequacy judgment; installed user files survive updates.
-- [ ] Full local suite and generator parity pass; supported CI results are recorded by T-78.
+- [x] S-24 runs strict register/adopt/authorize/complete/check/export/report journeys against packed copies and asserts equal runtime digests.
+- [x] Generated instructions consistently route through coverage/impact and distinguish structural checks from adequacy judgment; installed user files survive updates.
+- [x] Full local suite and generator parity pass; supported CI results are recorded by T-78.
 
 ## Verification
 Proves: packed copies implement the same behavior and generated playbooks preserve decisions, old projects and installation rules.
