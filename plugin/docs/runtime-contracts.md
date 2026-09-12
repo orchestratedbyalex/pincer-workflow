@@ -450,6 +450,14 @@ while still showing historical attempts and evaluations; history never asserts p
 authorization. Refused executions print nothing on stdout, launch nothing and leave
 every ticket, record, index and selection file unchanged.
 
+For `verify` and `check` the guard runs twice: once before anything is prepared, and
+again under the worktree lock immediately before the `running` attempt record is
+written. The second evaluation is the one that counts: a transition, revision or
+authorization committed between the first evaluation and the lock is seen there, so
+the attempt is refused with that gate's code (nothing written, nothing launched) or
+recorded against the agreement current under the lock. An attempt therefore never
+runs for a change whose state or authorization no longer permits it.
+
 ## Content revisions
 
 Digests are SHA-256, hex, shown shortened to 12 characters in human output and in
@@ -669,9 +677,10 @@ terminate it; `recover` finalizes a dead owner's attempt first, after which the
 transition succeeds and the `interrupted` result stays visible.
 
 Contention order: writers serialize on the lock in acquisition order; a `verify`
-holds the lock only while it writes its `running` record and again while it finalizes,
-so a transition can be refused between them by the running check, never the other
-way round. Two concurrent activations of different changes: the first commits, the
+holds the lock only while it evaluates the gates a second time and writes its
+`running` record, and again while it finalizes, so a transition can be refused
+between them by the running check, never the other way round, and a transition
+committed before the check's lock refuses the check (see "Command gates"). Two concurrent activations of different changes: the first commits, the
 second reads the committed record and is refused (`LIFECYCLE_BLOCKED`: another change is
 active). Two concurrent selections: the later one wins and the earlier is overwritten;
 selection carries no history. No lock is held across user interaction: a command that

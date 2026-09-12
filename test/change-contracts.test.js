@@ -134,6 +134,8 @@ has(/\| `verify` \| selected change owns the ticket; state `active` or `complete
 has(/\| `check`, `evidence export` \| selected change owns the PRD; state `completed`/, 'candidate gate');
 has(/Refused executions print nothing on stdout, launch nothing and leave\nevery ticket, record, index and selection file unchanged/, 'refusal before side effects');
 has(/`SELECTION_REQUIRED`\/`SELECTION_INVALID` → `WRONG_CHANGE` → `LIFECYCLE_BLOCKED` →\n`BASE_MISMATCH` → `DECISION_REQUIRED` → `AUTHORIZATION_REQUIRED`\/`AGREEMENT_CHANGED`/, 'gate order');
+has(/For `verify` and `check` the guard runs twice: once before anything is prepared, and\nagain under the worktree lock immediately before the `running` attempt record is\nwritten\. The second evaluation is the one that counts/, 'gates are evaluated again under the attempt lock (review finding 1, T-63)');
+has(/a transition\ncommitted before the check's lock refuses the check/, 'contention order names the second evaluation');
 const precedence = doc.slice(doc.indexOf('Next-action precedence'), doc.indexOf('## Migration and rollback'));
 for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) assert.match(precedence, new RegExp(`^${n}\\. `, 'm'), `precedence rule ${n}`);
 assert.match(precedence, /1\. invalid or missing state[\s\S]*2\. an unresolved `running` attempt[\s\S]*3\. lifecycle or repository mismatch[\s\S]*4\. agreement or decision gap[\s\S]*5\. failed or stale verification or unfinished work[\s\S]*6\. .*`change complete`[\s\S]*7\. .*`\/pincer-evaluate`[\s\S]*8\. .*`\/pincer-release`/, 'precedence order as the PRD states');

@@ -18,6 +18,7 @@ const changes = require(path.join(repo, 'template/scripts/pincer-runtime/changes
 const agreement = require(path.join(repo, 'template/scripts/pincer-runtime/agreement.cjs'));
 const state = require(path.join(repo, 'template/scripts/pincer-runtime/state.cjs'));
 const runtime = path.join(repo, 'template/scripts/pincer-runtime.cjs');
+const raceFixture = path.join(repo, 'test/fixtures/attempt-race.cjs');
 const rt = (dir, ...args) => run(dir, process.execPath, [runtime, ...args], { timeout: 60000 });
 const sh = (dir, ...args) => run(dir, 'bash', [ticketScript, ...args], { timeout: 60000 });
 function passes(result, label = '') { assert.equal(result.status, 0, `${label}\n${result.stdout}${result.stderr}`); return result.stdout; }
@@ -221,5 +222,63 @@ function refusedWithoutSideEffects(dir, args, code, pattern, label, exit = 1) {
   // Without any selection the release gate is blocked and says so.
   fs.unlinkSync(path.join(dir, '.pincer/runtime/selection.json'));
   assert.match(rt(dir, 'ready').stdout, /SELECTION_REQUIRED/);
+}
+// S-24 (check/transition race, review finding 1): a transition committed between the
+// pre-launch gate evaluation and the runner's lock is seen by the second evaluation
+// under the lock; the attempt is refused with the gate's code, nothing is recorded and
+// nothing launched. The same injection of a harmless command still lets the attempt run.
+{
+  const dir = fixture();
+  const race = (injected, command) => run(dir, process.execPath, [raceFixture, dir, ...injected, '--', ...command], { timeout: 60000 });
+  passes(rt(dir, 'change', 'select', 'prd-v1'));
+  passes(rt(dir, 'change', 'authorize', 'prd-v1', '--agreement', digestOf(dir), '--reference', REF, '--excerpt', 'ok'));
+  passes(rt(dir, 'change', 'activate', 'prd-v1'));
+  passes(sh(dir, 'start', 'T-01'));
+  const before = guarded(dir);
+  const raced = race(['change', 'pause', 'prd-v1', '--reason', 'handoff mid-verify'], ['verify', 'T-01']);
+  assert.match(raced.stderr, /\[race\] injected "change pause prd-v1 --reason handoff mid-verify" exited 0/, 'the pause committed between the guard and the lock');
+  assert.equal(raced.status, 1, `verify refused after a pause committed before its lock\n${raced.stdout}${raced.stderr}`);
+  assert.match(raced.stderr, /^pincer: LIFECYCLE_BLOCKED: verify refused: change prd-v1 is paused \(verify runs on active or completed changes\); resume it first/m);
+  assert.equal(raced.stdout, '', 'nothing on stdout');
+  assert.equal(launches(dir), 0, 'the check never launched');
+  assert.equal(state.listAttempts(dir).length, 0, 'no attempt record was written');
+  assert.equal(record(dir).lifecycle.state, 'paused', 'the change stays paused');
+  const after = guarded(dir);
+  delete after['.prd/changes/prd-v1.json']; delete before['.prd/changes/prd-v1.json'];
+  assert.deepEqual(after, before, 'only the injected pause changed anything');
+  passes(rt(dir, 'change', 'resume', 'prd-v1'));
+  const fine = race(['change', 'list'], ['verify', 'T-01']);
+  assert.equal(fine.status, 0, fine.stdout + fine.stderr);
+  assert.match(fine.stdout, /✓ T-01 verified — attempt 000001-/);
+  assert.equal(launches(dir), 1);
+  const attempt = state.listAttempts(dir, 'ticket:prd-v1:T-01')[0];
+  assert.equal(attempt.context.agreement, digestOf(dir), 'the context is the one computed under the lock');
+  // A revision authorized between the guard and the lock is recorded as the attempt's agreement.
+  write(dir, '.prd/prd-v1.md', `${read(dir, '.prd/prd-v1.md')}\nlate but authorized\n`);
+  const revised = agreement.compute(dir, record(dir)).digest;
+  assert.notEqual(revised, attempt.context.agreement);
+  refusedWithoutSideEffects(dir, ['sh', 'verify', 'T-01'], 'AGREEMENT_CHANGED', null, 'verify before the revision is authorized');
+  passes(rt(dir, 'change', 'authorize', 'prd-v1', '--agreement', revised, '--reference', REF, '--excerpt', 'late but authorized'));
+  const second = race(['change', 'list'], ['verify', 'T-01']);
+  assert.equal(second.status, 0, second.stdout + second.stderr);
+  assert.equal(state.listAttempts(dir, 'ticket:prd-v1:T-01').at(-1).context.agreement, revised, 'the attempt carries the agreement current under the lock');
+  git(dir, 'checkout', '--', '.prd/prd-v1.md');
+  // check: a reopen committed before the lock makes the completed change active; check refuses.
+  const dir2 = fixture();
+  const race2 = (injected, command) => run(dir2, process.execPath, [raceFixture, dir2, ...injected, '--', ...command], { timeout: 60000 });
+  passes(rt(dir2, 'change', 'select', 'prd-v1'));
+  passes(rt(dir2, 'change', 'authorize', 'prd-v1', '--agreement', digestOf(dir2), '--reference', REF, '--excerpt', 'ok'));
+  passes(rt(dir2, 'change', 'activate', 'prd-v1'));
+  for (const t of ['T-01', 'T-02']) { passes(sh(dir2, 'start', t)); passes(sh(dir2, 'verify', t)); passes(sh(dir2, 'done', t)); }
+  passes(rt(dir2, 'change', 'complete', 'prd-v1'));
+  edit(dir2, '.prd/prd-v1.md', 'status: ticketed', 'status: built');
+  const candidate = commit(dir2, 'completed and built');
+  const attempts = state.listAttempts(dir2).length;
+  const racedCheck = race2(['change', 'reopen', 'prd-v1', '--reason', 'late thought'], ['check', 'C-01', '--candidate', candidate, '--', 'echo run >> .markers/c; true']);
+  assert.equal(racedCheck.status, 1, `check refused after a reopen committed before its lock\n${racedCheck.stdout}${racedCheck.stderr}`);
+  assert.match(racedCheck.stderr, /^pincer: LIFECYCLE_BLOCKED: check refused: change prd-v1 is active \(check runs on completed changes\)/m);
+  assert.equal(launches(dir2, 'c'), 0, 'the candidate check never launched');
+  assert.equal(state.listAttempts(dir2).length, attempts, 'no candidate attempt was written');
+  assert.equal(record(dir2).lifecycle.state, 'active');
 }
 console.log('change command gate tests passed');

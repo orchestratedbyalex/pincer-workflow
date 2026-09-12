@@ -131,10 +131,14 @@ async function cmdCheck(root, args) {
   const line = command.join(' ');
   const secretLine = sanitize.inlineSecretLine([line]);
   if (secretLine) fail('pincer', 'the check command assigns a secret-like literal; reference it from the environment instead', EXIT.INVALID);
-  process.stdout.write(`── ${checkId} candidate ${o.candidate.slice(0, 7)} ──\n  $ ${sanitize.sanitizeText(line).text}\n`);
-  const context = { kind: 'candidate', change: b.change, prd: b.prd, prd_revision: b.prd_revision, base: b.base, candidate: o.candidate, check: checkId, ...(b.mode === 'changes' ? { mode: 'changes', agreement: b.agreement } : {}) };
-  const result = await runner.runAttempt({ root, context, commands: [line], timeoutSeconds: timeout, command: `check ${checkId}` });
-  if (result.code) fail('pincer', `${result.code}: ${result.problem}`, problemExit(result.code));
+  const announce = () => process.stdout.write(`── ${checkId} candidate ${o.candidate.slice(0, 7)} ──\n  $ ${sanitize.sanitizeText(line).text}\n`);
+  const contextFor = c => ({ kind: 'candidate', change: c.change, prd: c.prd, prd_revision: c.prd_revision, base: c.base, candidate: o.candidate, check: checkId, ...(c.mode === 'changes' ? { mode: 'changes', agreement: c.agreement } : {}) });
+  // In changes mode the guard runs again under the runner's lock (docs/runtime-contracts.md,
+  // "Command gates"); a lifecycle or agreement change committed since the pre-launch
+  // evaluation refuses the attempt before anything is recorded.
+  const revalidate = b.mode === 'changes' ? () => contextFor(gates.guard(root, { command: 'check', prd: b.prd }).binding) : null;
+  const result = await runner.runAttempt({ root, context: contextFor(b), commands: [line], timeoutSeconds: timeout, command: `check ${checkId}`, revalidate, announce });
+  if (result.code) fail('pincer', `${result.code}: ${result.problem}`, result.refused ? exitForCode(result.code) : problemExit(result.code));
   const a = result.attempt;
   const logs = `${state.RUNTIME_DIR}/attempts/${a.id}/`;
   if (a.outcome === 'passed') process.stdout.write(`✓ ${checkId} passed — attempt ${a.id} (source ${a.source.after.slice(0, 12)}, logs ${logs})\n`);

@@ -82,6 +82,7 @@ function usablePrd(root, t) {
 // guard (docs/runtime-contracts.md, "Command gates") before anything is written
 // or launched; the guard's binding carries the change, current agreement and
 // legacy receipts for readiness, attempts and closure.
+const gateExit = code => (code === 'STATE_BUSY' ? 3 : ['INPUT_INVALID', 'MALFORMED', 'UNSUPPORTED_SCHEMA', 'HISTORY_INVALID', 'STATE_INCOMPLETE'].includes(code) ? EXIT.INVALID : EXIT.FAILED);
 function modeFor(root, prd, { command, ticket } = {}) {
   const bind = identity.loadBinding(root, { prd });
   if (bind.binding && !bind.code) return { mode: 'migrated', binding: bind.binding };
@@ -91,7 +92,7 @@ function modeFor(root, prd, { command, ticket } = {}) {
       const g = gates.guard(root, { command, ticket: ticket ? { file: ticket.file, fields: ticket.fields } : null, prd });
       return { mode: 'changes', binding: g.binding, guard: g };
     } catch (error) {
-      if (error && error.refusal) die(`${error.code}: ${error.message}`, { prefix: 'pincer', exit: error.code === 'STATE_BUSY' ? 3 : ['INPUT_INVALID', 'MALFORMED', 'UNSUPPORTED_SCHEMA', 'HISTORY_INVALID', 'STATE_INCOMPLETE'].includes(error.code) ? EXIT.INVALID : EXIT.FAILED, code: error.code });
+      if (error && error.refusal) die(`${error.code}: ${error.message}`, { prefix: 'pincer', exit: gateExit(error.code), code: error.code });
       throw error;
     }
   }
@@ -233,11 +234,14 @@ async function verifyMigrated(root, t, binding, write, error) {
   const commands = parse.verificationCommands(t.text);
   const secretLine = inlineSecretLine(commands);
   if (secretLine) die(`${t.file}: Verification block line ${secretLine} assigns a secret-like literal; reference it from the environment instead (the block is recorded as display text)`, { exit: EXIT.INVALID, code: 'INPUT_INVALID' });
-  write.write(`── ${id} verification ──\n`);
-  for (const c of commands) write.write(`  $ ${sanitizeText(c).text}\n`);
-  const context = { kind: 'ticket', change: binding.change, prd: binding.prd, prd_revision: binding.prd_revision, base: binding.base, ticket: id, ticket_digest: parse.ticketDigest(t.text), ...(binding.agreement ? { agreement: binding.agreement } : {}) };
-  const result = await runner.runAttempt({ root, context, commands, timeoutSeconds: t.timeout, command: `verify ${id}` });
-  if (result.code) die(`${result.code}: ${result.problem}`, { prefix: 'pincer', exit: result.code === 'STATE_BUSY' ? 3 : EXIT.INVALID, code: result.code });
+  const announce = () => { write.write(`── ${id} verification ──\n`); for (const c of commands) write.write(`  $ ${sanitizeText(c).text}\n`); };
+  const contextFor = b => ({ kind: 'ticket', change: b.change, prd: b.prd, prd_revision: b.prd_revision, base: b.base, ticket: id, ticket_digest: parse.ticketDigest(t.text), ...(b.agreement ? { agreement: b.agreement } : {}) });
+  // In changes mode the guard runs again under the runner's lock (docs/runtime-contracts.md,
+  // "Command gates"): a transition, revision or authorization committed since the
+  // pre-launch evaluation refuses the attempt or is the agreement it records.
+  const revalidate = binding.mode === 'changes' ? () => contextFor(gates.guard(root, { command: 'verify', ticket: { file: t.file, fields: t.fields } }).binding) : null;
+  const result = await runner.runAttempt({ root, context: contextFor(binding), commands, timeoutSeconds: t.timeout, command: `verify ${id}`, revalidate, announce });
+  if (result.code) die(`${result.code}: ${result.problem}`, { prefix: 'pincer', exit: result.refused ? gateExit(result.code) : result.code === 'STATE_BUSY' ? 3 : EXIT.INVALID, code: result.code });
   const a = result.attempt;
   const logs = `${state.RUNTIME_DIR}/attempts/${a.id}/`;
   if (a.outcome === 'passed') {

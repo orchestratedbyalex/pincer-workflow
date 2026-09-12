@@ -79,22 +79,31 @@ class Capture {
 // Run one attempt. `context` is the attempt context (kind, change, prd, prd_revision,
 // base, ticket/ticket_digest or candidate/check); `commands` the block lines;
 // `timeoutSeconds` the effective timeout; `echo` when the output should also reach
-// the terminal. Returns { attempt } or { code, problem } for refusals before launch.
-async function runAttempt({ root, context, commands, timeoutSeconds, command = 'verify', echo = true, declared = {} }) {
+// the terminal. `revalidate`, when given, is called under the worktree lock
+// immediately before the `running` record is written and returns the context to
+// record (docs/runtime-contracts.md, "Command gates"): the gates the caller passed
+// before the lock are evaluated again there, so a transition, revision or
+// authorization committed in between is seen and the attempt is refused (a thrown
+// transaction Refusal becomes { code, problem, refused: true }) or recorded against
+// the current agreement. `announce` is called once the record is registered and
+// before the launch, so a refusal prints nothing. Returns { attempt } or { code,
+// problem } for refusals before launch; nothing is written for a refusal.
+async function runAttempt({ root, context, commands, timeoutSeconds, command = 'verify', echo = true, declared = {}, revalidate = null, announce = null }) {
   const block = commands.length ? `${commands.join('\n')}\n` : '';
   const checkDigest = parse.sha256(`${block}timeout=${timeoutSeconds}\n`);
   const display = sanitizeText(block).text.slice(0, 2000);
   const before = source.snapshot(root);
   if (before.problems.length) return { code: before.problems[0].code, problem: before.problems.map(p => `${p.code}: ${p.detail}`).join('\n'), problems: before.problems };
 
-  const key = state.contextKey(context);
-  // Changes mode records (schema 2) carry the agreement digest; `mode` only
-  // selects the key format and is not part of the record.
-  const { mode, ...persisted } = context;
-  const schema = persisted.agreement ? 2 : 1;
   let attempt, logDir, relLogDir;
   try {
     state.withLock(root, () => {
+      if (revalidate) context = revalidate();
+      const key = state.contextKey(context);
+      // Changes mode records (schema 2) carry the agreement digest; `mode` only
+      // selects the key format and is not part of the record.
+      const { mode, ...persisted } = context;
+      const schema = persisted.agreement ? 2 : 1;
       const read = state.readIndex(root);
       if (read.error) { const e = new Error(read.error); e.code = 'INVALID'; throw e; }
       const index = read.index;
@@ -123,11 +132,13 @@ async function runAttempt({ root, context, commands, timeoutSeconds, command = '
       state.writeIndex(root, index);
     }, { command });
   } catch (error) {
+    if (error && error.refusal) return { code: error.code, problem: error.message, refused: true };
     if (error.code === 'STATE_BUSY') return { code: 'STATE_BUSY', problem: error.message };
     if (error.code === 'INVALID') return { code: 'INPUT_INVALID', problem: error.message };
     return { code: 'ATTEMPT_ERROR', problem: `cannot persist the attempt record: ${error.message}` };
   }
 
+  if (announce) announce(attempt);
   // Execute in a fresh process group so timeouts and signals reach every descendant.
   let child, launchError = null;
   const stdout = new Capture(path.join(logDir, 'stdout.log'), echo ? process.stdout : null);
