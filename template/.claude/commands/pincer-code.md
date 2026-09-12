@@ -175,7 +175,12 @@ attempt: run `node scripts/pincer-runtime.cjs recover`, which finalizes it as
   size, timeout, association or check, changes the agreement: execution refuses with
   `AGREEMENT_CHANGED` (status shows the structural difference) until its disposition
   is recorded as above. Ticking criteria, starting or closing tickets and recording
-  attempts never change it.
+  attempts never change it. An `AGREEMENT_CHANGED` caused by an edit this session
+  did not make — a revised PRD, an added or changed ticket found on resume — is a
+  consequential decision: raise it with `change decide <id> --summary "<what changed>"`,
+  report the structural difference and stop. A general instruction to continue,
+  resume or not re-ask never authorizes new scope; record a `user` authorization for
+  the revised agreement only for an instruction that names the revised content.
 - When every ticket is done and ready: `node scripts/pincer-runtime.cjs change complete <id>`
   (it refuses unfinished tickets, unticked criteria, stale or failed verification and
   open decisions) and commit the record as `Complete PRD vN`. Completed means ready

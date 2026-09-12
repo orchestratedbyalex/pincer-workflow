@@ -235,6 +235,9 @@ assert.match(code, /do not ask the user to re-approve unchanged scope/);
 assert.match(code, /change decide <id> --summary "<the question>"/);
 assert.match(code, /--delegated --basis A-NN --explanation/);
 assert.match(code, /refuses with\s+`AGREEMENT_CHANGED`/);
+// T-62 (trial finding): an out-of-session agreement change is a decision, never approved by a continue instruction.
+assert.match(code, /caused by an edit this session\s+did not make .* is a\s+consequential decision: raise it with `change decide <id> --summary "<what changed>"`/s);
+assert.match(code, /A general instruction to continue,\s+resume or not re-ask never authorizes new scope/);
 assert.match(code, /change complete <id>`\s+\(it refuses unfinished tickets/);
 assert.match(code, /Completed means ready\s+for evaluation, not evaluated or released/);
 assert.match(code, /complete the change first \(`change complete <id>`,\s+committed as `Complete PRD vN`\)/);
