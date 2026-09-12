@@ -125,6 +125,74 @@ function evaluate(dir, id, prd, candidate, base, command) {
   assert.equal(statusJson(dir).candidate.notes, 'stale', 'selection revives nothing');
 }
 
+// R-07 (review finding 2): only validated, listed evaluation artifacts may follow the
+// candidate. An unlisted file under another PRD's evidence directory for the same
+// candidate, an unlisted file inside the change's own directory and a malformed or
+// misnamed locator are candidate changes: readiness is stale and `ready` exits 1.
+{
+  const dir = fixture();
+  workThrough(dir, 'a', 'T-01');
+  workThrough(dir, 'b', 'T-02');
+  write(dir, '.prd/prd-v1.md', read(dir, '.prd/prd-v1.md').replace('ticketed', 'built'));
+  write(dir, '.prd/prd-v2.md', read(dir, '.prd/prd-v2.md').replace('ticketed', 'built'));
+  const base = git(dir, 'rev-parse', 'HEAD');
+  const candidate = commit(dir, 'both complete and built');
+  const manifest = evaluate(dir, 'a', '.prd/prd-v1.md', candidate, base, 'test "$(cat value.txt)" = good');
+  writeNotes(dir, { version: 1, base, candidate, evidence: manifest });
+  commit(dir, 'evaluate A');
+  assert.equal(rt(dir, 'ready').status, 0, 'evaluated and current');
+  const esc = p => p.replace(/[.\/]/g, '\\$&');
+  const stale = (label, pattern) => {
+    const s = statusJson(dir);
+    assert.equal(s.candidate.notes, 'stale', `${label}: stale (${s.candidate.reason})`); assert.match(s.candidate.reason, pattern, label);
+    const ready = rt(dir, 'ready');
+    assert.equal(ready.status, 1, `${label}: ready exits 1\n${ready.stdout}`); assert.match(ready.stdout, /CANDIDATE_STALE/, label);
+  };
+  // Unlisted JavaScript under another PRD's evidence directory for this candidate, dirty then committed.
+  const rogue = `.prd/evidence/prd-v2/${candidate}/hook.js`;
+  write(dir, rogue, 'process.exit(0);\n');
+  stale('dirty unlisted file under another PRD\'s evidence directory', new RegExp(`working tree has changes outside the candidate's evidence: ${esc(rogue)}`));
+  commit(dir, 'unlisted evidence-shaped file');
+  stale('committed unlisted file under another PRD\'s evidence directory', new RegExp(`candidate changed after evaluation: ${esc(rogue)}`));
+  git(dir, 'reset', '-q', '--hard', 'HEAD~1');
+  assert.equal(rt(dir, 'ready').status, 0);
+  // An unlisted file inside the change's own evidence directory is a candidate change too.
+  const extra = `.prd/evidence/prd-v1/${candidate}/notes.txt`;
+  write(dir, extra, 'not in the manifest\n');
+  stale('unlisted file in the change\'s own evidence directory', new RegExp(`working tree has changes outside the candidate's evidence: ${esc(extra)}`));
+  fs.rmSync(path.join(dir, extra));
+  // A locator-shaped file that is not a valid locator never follows the candidate.
+  write(dir, '.prd/evidence/changes/zz.json', '{"schema": 1, ');
+  stale('malformed locator file', /working tree has changes outside the candidate's evidence: \.prd\/evidence\/changes\/zz\.json/);
+  commit(dir, 'invalid locator');
+  stale('committed malformed locator file', /candidate changed after evaluation: \.prd\/evidence\/changes\/zz\.json/);
+  git(dir, 'reset', '-q', '--hard', 'HEAD~1');
+  write(dir, '.prd/evidence/changes/zz.json', JSON.stringify({ schema: 1, change: 'a', evaluations: [] }));
+  stale('locator naming another id', /\.prd\/evidence\/changes\/zz\.json/);
+  fs.rmSync(path.join(dir, '.prd/evidence/changes/zz.json'));
+  // A valid locator of another change whose manifest for this candidate validates is a follower (S-22),
+  // but a listed artifact that no longer matches its digest is not.
+  assert.equal(rt(dir, 'ready').status, 0);
+  const manifestB = evaluate(dir, 'b', '.prd/prd-v2.md', candidate, base, 'test "$(cat other.txt)" = fine');
+  passes(rt(dir, 'change', 'select', 'a'));
+  assert.equal(statusJson(dir).candidate.notes, 'current', 'B\'s validated evidence for the same candidate follows it');
+  commit(dir, 'evaluate B');
+  assert.equal(rt(dir, 'ready').status, 0);
+  write(dir, `.prd/evidence/prd-v2/${candidate}/review/code-quality.md`, '# Review\nEdited after export.\n');
+  // B's manifest no longer validates, so none of its listed files follows the candidate any more: the committed ones are reported first.
+  stale('a listed artifact of another change altered after its export', /(candidate changed after evaluation|working tree has changes outside the candidate's evidence): \.prd\/evidence\/prd-v2\//);
+  git(dir, 'checkout', '--', '.prd/evidence');
+  assert.equal(rt(dir, 'ready').status, 0);
+  assert.equal(manifestB, `.prd/evidence/prd-v2/${candidate}/manifest.json`);
+  // check and export on a candidate keep allowing the PRD's own directory while it is assembled, nothing else.
+  passes(rt(dir, 'change', 'reopen', 'a', '--reason', 'x')); passes(rt(dir, 'change', 'complete', 'a'));
+  const candidate2 = commit(dir, 'A again');
+  write(dir, `.prd/evidence/prd-v1/${candidate2}/review/draft.md`, 'assembling\n');
+  passes(rt(dir, 'check', 'C-01', '--candidate', candidate2, '--', 'test "$(cat value.txt)" = good'), 'own evidence directory may be assembled');
+  write(dir, `.prd/evidence/prd-v2/${candidate2}/stray.js`, '1\n');
+  refuses(rt(dir, 'check', 'C-01', '--candidate', candidate2, '--', 'true'), 1, new RegExp(`not a clean view of the candidate: ${esc(`.prd/evidence/prd-v2/${candidate2}/stray.js`)}`), 'another PRD\'s unlisted file blocks the candidate view');
+}
+
 // S-23: complete → evaluate → read-only release audit without a lifecycle commit
 // after evaluation; release writes nothing, selects nothing, runs nothing.
 {

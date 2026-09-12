@@ -495,9 +495,10 @@ Fixed exclusions (never inputs): `.git/`, `.pincer/`, `NOTES.md`, `.prd/evidence
 `.prd/changes/`. This is why a new evidence artifact, a NOTES edit, a lifecycle event,
 an agreement snapshot or an evaluation reference cannot invalidate the snapshot that
 produced it. The separate post-candidate commit policy is unchanged in substance: only
-`NOTES.md`, the manifest's listed files and (changes mode) the change's evaluation
-locator may follow the candidate; a change record edit after the candidate is a
-candidate change, which is why completion precedes the candidate.
+`NOTES.md`, the listed files of validated manifests for that candidate and (changes
+mode) valid evaluation locators may follow the candidate ("Evaluation locator"); a
+change record edit after the candidate is a candidate change, which is why completion
+precedes the candidate.
 
 Configured exclusions: the optional tracked file `.prd/source-exclude`, one pattern
 per line (`#` comments; `dir/` prefixes; `*`, `**` and `?` globs; a pattern without
@@ -851,13 +852,20 @@ exclusion `.prd/evidence/`, is not listed in any manifest (so no digest refers t
 itself), and is one of the paths allowed to differ from the candidate. The
 candidate of a change is "current" when the latest entry's manifest validates for its
 candidate, base and PRD and records this change, the candidate is an ancestor of HEAD,
-and the diff from the candidate to HEAD plus the dirty tree contain nothing but
-`NOTES.md`, evidence directories of that same candidate commit
-(`.prd/evidence/prd-v*/<candidate>/`, so two changes can evaluate one candidate in
-turn) and evaluation locators; otherwise `CANDIDATE_STALE` with the reason quoted.
-Directories of other candidates and every other path are candidate changes. An
-entry whose manifest is missing, whose `change` differs from the locator's, or that
-names another change's candidate is `MALFORMED` and never revives readiness. Root
+and the diff from the candidate to HEAD plus the dirty tree contain nothing but the
+candidate's followers; otherwise `CANDIDATE_STALE` with the reason quoted. The
+followers are computed from validated content, never from a directory or filename
+pattern: `NOTES.md`; every locator under `.prd/evidence/changes/` that parses and
+validates for its own id; and, for each locator entry naming this candidate whose
+manifest validates with file digests for its candidate, base and PRD, that manifest
+and the files it lists (so two changes can evaluate one candidate in turn). Every
+other path is a candidate change: an unlisted file inside an evidence directory, a
+listed artifact whose digest no longer matches, a locator that does not parse or
+names another id, and directories of other candidates. `check` and `evidence export`
+additionally allow the PRD's own `.prd/evidence/prd-vN/<candidate>/` directory while
+the evaluation is being assembled. An entry whose manifest is missing, whose `change`
+differs from the locator's, or that names another change's candidate is `MALFORMED`
+and never revives readiness. Root
 `NOTES.md` remains the human summary of whichever change was evaluated last;
 overwriting it for another change loses nothing. Release (`ready` without a ticket,
 `/pincer:release`) reads the selected change's lifecycle (`completed` required), its

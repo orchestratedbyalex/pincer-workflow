@@ -261,10 +261,14 @@ superiority claim.
 Made during implementation in the same commits as the code, all inside the PRD's
 guarantees; each is pinned by the named suite.
 
-1. A clean candidate view for `check`/`evidence export` allows `NOTES.md`, evidence of
-   any change under `.prd/evidence/prd-v*/<candidate>/` and the evaluation locators,
-   so evaluating a second change on the same candidate is not refused (T-56,
-   `test/change-evaluations.test.js`).
+1. The paths that may follow a candidate are computed from validated content, never
+   matched by directory or filename: `NOTES.md`, valid evaluation locators, and the
+   listed files of manifests that validate for that candidate (so evaluating a second
+   change on the same candidate is not refused); `check`/`evidence export` also allow
+   the PRD's own evidence directory while it is assembled. As built at `1a5cbc5` the
+   rule admitted whole `.prd/evidence/prd-v*/<candidate>/` directories and any
+   locator-shaped filename (review finding 2); fixed in T-64
+   (`test/change-evaluations.test.js`, `test/change-contracts.test.js`).
 2. Status reports `mode: "invalid"` (exit 4, reason `MALFORMED`/`UNSUPPORTED_SCHEMA`/
    `HISTORY_INVALID`/`INPUT_INVALID`) for mixed or unreadable records instead of
    crashing or falling back to legacy; `STATE_INCOMPLETE` is checked first in every

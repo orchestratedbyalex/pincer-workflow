@@ -151,6 +151,8 @@ has(/No lock is held across user interaction/, 'no lock across interaction');
 const locator = fences.find(d => d.schema === 1 && 'evaluations' in d && !('events' in d));
 assert.deepEqual(Object.keys(locator.evaluations[0]), ['candidate', 'base', 'prd', 'prd_revision', 'agreement', 'manifest', 'recorded']);
 has(/is not listed in any manifest \(so no digest refers to\nitself\)/, 'no self-referential digest');
+has(/The\nfollowers are computed from validated content, never from a directory or filename\npattern/, 'post-candidate paths are computed from validated content (review finding 2, T-64)');
+has(/an unlisted file inside an evidence directory, a\nlisted artifact whose digest no longer matches, a locator that does not parse or\nnames another id, and directories of other candidates/, 'every other path is a candidate change');
 has(/`ticket:<change>:<T-NN>` and `candidate:<change>:<40 hex>:<C-NN>` in changes\nmode/, 'candidate keys are change-scoped');
 has(/`ticket:<change>:<T-NN>` and `candidate:<40 hex>:<C-NN>` in migrated\nmode/, 'migrated keys unchanged');
 has(/plus `context\.agreement`\)/, 'attempt schema 2 adds the agreement');

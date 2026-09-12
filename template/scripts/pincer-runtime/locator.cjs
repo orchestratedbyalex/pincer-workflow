@@ -75,12 +75,40 @@ function append(root, id, entry) {
   }
 }
 
+// The paths that may differ from `candidate` (docs/runtime-contracts.md,
+// "Evaluation locator"): NOTES.md, every locator under .prd/evidence/changes/ that
+// parses and validates for its own id, and, for each of their entries naming this
+// candidate whose manifest validates with file digests for its candidate, base and
+// PRD, that manifest and the files it lists. The set is computed from validated
+// content, never from a directory or filename pattern: an unlisted file inside an
+// evidence directory, an altered listed artifact and an unreadable or misnamed
+// locator are candidate changes. Returns a Set of repository-relative paths.
+function followers(root, candidate) {
+  const allowed = new Set(['NOTES.md']);
+  let names = [];
+  try { names = fs.readdirSync(path.join(root, DIR)).filter(n => n.endsWith('.json')); } catch { names = []; }
+  for (const name of names.sort()) {
+    const id = name.slice(0, -'.json'.length);
+    const r = read(root, id);
+    if (r.code || r.missing) continue;
+    allowed.add(file(id));
+    for (const e of r.locator.evaluations) {
+      if (e.candidate !== candidate) continue;
+      const opts = { files: true, candidate: e.candidate, base: e.base, prd: e.prd };
+      const problems = evidence.validate(path.resolve(root, e.manifest), opts, root);
+      if (problems.length || !Array.isArray(opts.list)) continue;
+      for (const listed of opts.list) allowed.add(listed);
+    }
+  }
+  return allowed;
+}
+
 // The candidate of a change from its locator, in the shape status reports for
 // NOTES.md: { text, state: 'current' | 'stale' | 'missing', candidate, base,
 // manifest, entry }. Current means: the latest entry's manifest validates for its
 // candidate, base and PRD, the candidate is an ancestor of HEAD, and the diff
-// from the candidate to HEAD plus the dirty tree contain nothing but NOTES.md,
-// evidence directories of that candidate and evaluation locators.
+// from the candidate to HEAD plus the dirty tree contain nothing but the
+// candidate's followers (NOTES.md, valid locators, validated listed artifacts).
 function current(root, record) {
   const r = read(root, record.change);
   if (r.code) return { text: `stale: ${r.problem}`, state: 'stale', problem: r };
@@ -103,7 +131,8 @@ function current(root, record) {
     const tracked = tryGit(root, ['ls-files', '--error-unmatch', '--', f]);
     if (tracked.error || !tracked.out.trim()) return { ...base, text: `stale: evidence not tracked: ${f}`, state: 'stale' };
   }
-  const allowed = p => p === 'NOTES.md' || new RegExp(`^\\.prd/evidence/prd-v[0-9]+/${entry.candidate}/`).test(p) || /^\.prd\/evidence\/changes\/[a-z0-9][a-z0-9-]{0,63}\.json$/.test(p);
+  const set = followers(root, entry.candidate);
+  const allowed = p => set.has(p);
   const diff = tryGit(root, ['diff', '--name-only', '--relative', entry.candidate, 'HEAD']);
   if (diff.error) return { ...base, text: 'stale: evaluation commits or ancestry unavailable', state: 'stale' };
   const offending = diff.out.split('\n').filter(l => l && !allowed(l))[0];
@@ -126,4 +155,4 @@ function evidenceLine(root, record) {
   return { manifest: entry.manifest, ok: problems.length === 0, reason: problems[0] || null, schema };
 }
 
-module.exports = { SCHEMA, DIR, file, validate, read, latest, append, current, evidenceLine };
+module.exports = { SCHEMA, DIR, file, validate, read, latest, append, followers, current, evidenceLine };

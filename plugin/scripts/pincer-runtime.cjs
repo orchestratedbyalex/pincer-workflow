@@ -97,11 +97,12 @@ function requireCandidateView(root, candidate, prd) {
   const head = identity.head(root);
   if (!head) fail('pincer', 'not a git repository with commits', EXIT.INVALID);
   const version = prd.match(parse.PRD_REF)[1];
-  // Only the candidate's own evidence may follow it: this PRD's, another
-  // change's evidence for the same candidate commit (two changes may share a
-  // candidate), and the per-change evaluation locators. Never a whole directory.
-  const allowed = p => p === 'NOTES.md' || p.startsWith(`.prd/evidence/prd-v${version}/${candidate}/`)
-    || new RegExp(`^\\.prd/evidence/prd-v[0-9]+/${candidate}/`).test(p) || /^\.prd\/evidence\/changes\/[a-z0-9][a-z0-9-]{0,63}\.json$/.test(p);
+  // Only this PRD's evidence directory for the candidate (being assembled by
+  // this evaluation) and the candidate's validated followers (NOTES.md, valid
+  // locators, listed artifacts of validated manifests for the same candidate —
+  // two changes may share a candidate) may differ. Never another whole directory.
+  const followers = locator.followers(root, candidate);
+  const allowed = p => p.startsWith(`.prd/evidence/prd-v${version}/${candidate}/`) || followers.has(p);
   if (head !== candidate) {
     // A descendant that only adds NOTES.md and the candidate's evidence (the
     // evaluate commit) is still a clean view of the candidate's source.
