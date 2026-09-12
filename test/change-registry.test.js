@@ -234,3 +234,19 @@ function unchanged(dir, before, fn, label) {
   assert.equal(changes.loadRecord(legacy, 'prd-v1').code, 'CHANGE_REQUIRED');
 }
 console.log('change registry tests passed');
+
+// PRD v6 T-68: an authored coverage map is inert until a change adopts strict
+// coverage — registration, listing and inspection of schema 2 records ignore
+// `.prd/coverage/` entirely, and the map file is never written by the runtime.
+{
+  const dir = fixture();
+  write(dir, '.prd/coverage/prd-v1.json', read(path.join(repo, 'test/fixtures/prd-v6'), 'strict/coverage/prd-v1.json'));
+  const before = read(dir, '.prd/coverage/prd-v1.json');
+  passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md'), 'register with a map present');
+  const loaded = changes.loadRecords(dir);
+  assert.deepEqual(loaded.problems, []); assert.equal(loaded.mode, 'changes');
+  assert.doesNotMatch(passes(rt(dir, 'change', 'show', 'prd-v1')), /coverage/i, 'a schema 2 record shows no coverage capability');
+  assert.equal(read(dir, '.prd/coverage/prd-v1.json'), before, 'the map is untouched');
+  assert.equal(record(dir, 'prd-v1').schema, 2);
+}
+console.log('change registry tests passed (coverage map inert before adoption)');
