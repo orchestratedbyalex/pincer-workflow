@@ -1,9 +1,13 @@
 ---
 ticket: T-78
-status: open
+status: done
 size: M
 prd: .prd/prd-v6.md
 depends_on: [T-77]
+started: 2026-09-12T21:50:02Z
+last_check: 2026-09-12T22:48:03Z passed 0f5fd3132c8e
+verified: 2026-09-12T22:48:03Z 0f5fd3132c8e
+finished: 2026-09-12T22:48:03Z
 ---
 
 ## Objective
@@ -23,9 +27,9 @@ Assemble v6 traceability, replay cases and final gates, as specified in PRD v6, 
 - Finalize authored review/completion material before evaluation candidate selection. Retain benchmark limitations and open findings; do not evaluate/merge/publish as a side effect of packet assembly.
 
 ## Acceptance Criteria
-- [ ] Every scenario maps to inspectable evidence and an actual disposition; replay cases detect the injected fault and include working controls.
-- [ ] Required local, generated, packed and CI gates pass on the identified implementation; unavailable gates prevent claiming completion.
-- [ ] Packet clearly separates planned coverage, mechanical evidence and reviewer judgments, and records any unresolved limitations.
+- [x] Every scenario maps to inspectable evidence and an actual disposition; replay cases detect the injected fault and include working controls.
+- [x] Required local, generated, packed and CI gates pass on the identified implementation; unavailable gates prevent claiming completion.
+- [x] Packet clearly separates planned coverage, mechanical evidence and reviewer judgments, and records any unresolved limitations.
 
 ## Verification
 Proves: the review packet is complete/resolvable and its independent replay cases execute; reviewer judgment and external CI evidence remain separately identified.

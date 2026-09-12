@@ -1,0 +1,13 @@
+PINCER impact · 2026-09-12T21:59:19Z · <project>
+Change     prd-v1 · current agreement 3d164ef65238 (inventory d1460e439da3, coverage e388ad9495a2)
+Baseline   G-01 (authorized by A-01) recorded 2026-09-12T21:59:13Z · bbe3a5fbb3f9
+Verdict    changed
+Requirements changed R-02 (scenarios)
+Scenarios added S-04
+Unchanged  1 requirement(s), 3 scenario(s): S-01, S-02, S-03
+Affected   scenarios S-04 [scenario added]
+           tickets none
+           checks none
+Dependents none
+Unscoped   no — the PRD revision changed together with its definitions; review the prose outside the definitions too
+Freshness  a narrow impact is not permission to reuse evidence whose source identity changed

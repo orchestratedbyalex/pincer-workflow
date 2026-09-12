@@ -1,0 +1,9 @@
+adoption plan for change prd-v1 (.prd/changes/prd-v1.json, planned)
+  inventory 2 requirement(s), 3 scenario(s) · digest 001a4782d33d
+  map       .prd/coverage/prd-v1.json · digest e388ad9495a2 · structure complete
+  agreement G-01 bbe3a5fbb3f9 (projection 2: PRD revision, inventory, coverage map, tickets, resolved decisions) recorded with its snapshot
+  record    .prd/changes/prd-v1.json → schema 3 with coverage { map, adopted, agreement G-01 } and one adopt event; 0 earlier agreement(s) kept (inventory history unavailable before G-01)
+  history   0 existing attempt(s) of this change become HISTORICAL_EVIDENCE until verified again
+  backup    .pincer/backups/<UTC timestamp>/.prd/changes/prd-v1.json
+  note      adoption grants no authorization: the agreement above needs `change authorize` (user, or --delegated --basis A-NN) before execution
+apply with: node scripts/pincer-runtime.cjs coverage adopt --apply --change prd-v1 --agreement bbe3a5fbb3f9b08b2c141e484a04cf7e35e1ba5c114a3ad511301e7011b4d3fd
