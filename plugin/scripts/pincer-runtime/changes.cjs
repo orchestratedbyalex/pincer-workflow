@@ -14,6 +14,10 @@ const { readJson, nowIso, tryGit } = require('./fsutil.cjs');
 
 const SCHEMA = 2;
 const RUNTIME = 2;
+// Strict coverage (PRD v6): schema 3 records carry the retained capability.
+const SCHEMA_STRICT = 3;
+const RUNTIME_STRICT = 3;
+const RECORD_SCHEMAS = [SCHEMA, SCHEMA_STRICT];
 const CHANGE_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 const SUB_ID = /^[GAD]-[0-9]{2,6}$/;
@@ -25,11 +29,15 @@ const LIFECYCLE_KINDS = {
   resume: [['paused'], 'active'], complete: [['active'], 'completed'], reopen: [['completed'], 'active'],
   cancel: [['planned', 'active', 'paused'], 'cancelled'], supersede: [['planned', 'active', 'paused', 'completed'], 'superseded'],
 };
-const OTHER_KINDS = ['agreement', 'authorize', 'decide', 'resolve'];
-const EVENT_KINDS = [...Object.keys(LIFECYCLE_KINDS), ...OTHER_KINDS];
+const OTHER_KINDS = ['agreement', 'authorize', 'decide', 'resolve', 'adopt'];
+const EVENT_KINDS = [...Object.keys(LIFECYCLE_KINDS), 'agreement', 'authorize', 'decide', 'resolve'];
+const EVENT_KINDS_STRICT = [...EVENT_KINDS, 'adopt'];
 const RECORD_KEYS = ['schema', 'runtime', 'change', 'prd', 'base', 'registered', 'sequence', 'lifecycle', 'agreements', 'authorizations', 'decisions', 'events', 'evaluations', 'legacy'];
+const RECORD_KEYS_STRICT = [...RECORD_KEYS, 'coverage'];
+const COVERAGE_KEYS = ['map', 'adopted', 'agreement'];
 const LIFECYCLE_KEYS = ['state', 'since', 'reason', 'note', 'superseded_by'];
 const AGREEMENT_KEYS = ['id', 'digest', 'prd_revision', 'breakdown', 'tickets', 'decisions', 'snapshot', 'recorded'];
+const AGREEMENT_KEYS_STRICT = ['id', 'digest', 'prd_revision', 'breakdown', 'inventory', 'coverage', 'tickets', 'decisions', 'snapshot', 'recorded'];
 const AUTHORIZATION_KEYS = ['id', 'agreement', 'digest', 'disposition', 'reference', 'excerpt', 'constraints', 'basis', 'explanation', 'decisions', 'recorded'];
 const DECISION_KEYS = ['id', 'status', 'summary', 'reference', 'excerpt', 'raised', 'resolved'];
 const EVENT_KEYS = ['sequence', 'kind', 'from', 'to', 'at', 'reason', 'agreement', 'authorization', 'decision', 'replacement', 'note'];
@@ -37,6 +45,8 @@ const LEGACY_KEYS = ['receipts', 'authorization_text', 'migrated_from', 'migrate
 const MAX_TEXT = transaction.MAX_TEXT;
 
 const CHANGES_DIR = '.prd/changes';
+const COVERAGE_DIR = '.prd/coverage';
+const isStrict = record => Boolean(record) && record.schema === SCHEMA_STRICT;
 const recordFile = id => `${CHANGES_DIR}/${id}.json`;
 const snapshotFile = (id, agreementId) => `${CHANGES_DIR}/${id}/agreements/${agreementId}.json`;
 const isObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -78,10 +88,16 @@ function validateRecord(doc, file) {
   const malformed = p => ({ code: 'MALFORMED', problem: `${where}: ${p}` });
   const history = p => ({ code: 'HISTORY_INVALID', problem: `${where}: ${p}` });
   if (!isObject(doc)) return malformed('record must be a JSON object');
-  if (doc.schema !== SCHEMA) return { code: 'UNSUPPORTED_SCHEMA', problem: `${where}: unsupported change record schema ${JSON.stringify(doc.schema)} (this runtime reads schema 2 records and schema 1 bindings)` };
-  for (const key of Object.keys(doc)) if (!RECORD_KEYS.includes(key)) return malformed(`unknown key "${key}"`);
-  for (const key of RECORD_KEYS) if (!(key in doc)) return malformed(`missing key "${key}"`);
-  if (doc.runtime !== RUNTIME) return { code: 'UNSUPPORTED_SCHEMA', problem: `${where}: unsupported runtime contract ${JSON.stringify(doc.runtime)}` };
+  if (!RECORD_SCHEMAS.includes(doc.schema)) return { code: 'UNSUPPORTED_SCHEMA', problem: `${where}: unsupported change record schema ${JSON.stringify(doc.schema)} (this runtime reads schema 2 and 3 records and schema 1 bindings)` };
+  const strict = doc.schema === SCHEMA_STRICT;
+  const recordKeys = strict ? RECORD_KEYS_STRICT : RECORD_KEYS;
+  const agreementKeys = strict ? AGREEMENT_KEYS_STRICT : AGREEMENT_KEYS;
+  const eventKinds = strict ? EVENT_KINDS_STRICT : EVENT_KINDS;
+  const capability = 'the strict coverage capability cannot be removed by editing the record; restore the backed-up schema 2 record instead';
+  for (const key of Object.keys(doc)) if (!recordKeys.includes(key)) return malformed(`unknown key "${key}"${key === 'coverage' ? ' (a schema 2 record carries no strict coverage capability; adoption writes a schema 3 record)' : ''}`);
+  for (const key of recordKeys) if (!(key in doc)) return malformed(`missing key "${key}"${key === 'coverage' ? ` (${capability})` : ''}`);
+  if (strict && doc.coverage === null) return malformed(capability);
+  if (doc.runtime !== (strict ? RUNTIME_STRICT : RUNTIME)) return { code: 'UNSUPPORTED_SCHEMA', problem: `${where}: unsupported runtime contract ${JSON.stringify(doc.runtime)}` };
   if (!str(doc.change) || !CHANGE_ID.test(doc.change)) return malformed('change must match [a-z0-9][a-z0-9-]{0,63}');
   if (file && path.basename(file, '.json') !== doc.change) return malformed(`filename does not match change "${doc.change}"`);
   if (!str(doc.prd) || !parse.PRD_REF.test(doc.prd)) return malformed('prd must be of the form .prd/prd-vN.md');
@@ -125,8 +141,9 @@ function validateRecord(doc, file) {
   const agreements = new Map();
   for (const [i, g] of doc.agreements.entries()) {
     if (!isObject(g)) return malformed(`agreements[${i}] must be an object`);
-    for (const k of Object.keys(g)) if (!AGREEMENT_KEYS.includes(k)) return malformed(`agreements[${i}].${k} is not allowed`);
-    for (const k of AGREEMENT_KEYS) if (!(k in g)) return malformed(`agreements[${i}].${k} is missing`);
+    for (const k of Object.keys(g)) if (!agreementKeys.includes(k)) return malformed(`agreements[${i}].${k} is not allowed`);
+    for (const k of agreementKeys) if (!(k in g)) return malformed(`agreements[${i}].${k} is missing`);
+    if (strict) for (const k of ['inventory', 'coverage']) if (!(g[k] === null || (str(g[k]) && SHA256.test(g[k])))) return malformed(`${g.id}: ${k} must be null or a 64-hex digest`);
     if (g.id !== sequentialId('G', i)) return malformed(`agreements[${i}].id must be ${sequentialId('G', i)}`);
     for (const k of ['digest', 'prd_revision', 'breakdown']) if (!str(g[k]) || !SHA256.test(g[k])) return malformed(`${g.id}: ${k} must be a 64-hex digest`);
     if (!Array.isArray(g.tickets) || !g.tickets.every(t => parse.canonicalId(t))) return malformed(`${g.id}: tickets must be canonical ticket IDs`);
@@ -162,7 +179,7 @@ function validateRecord(doc, file) {
     if (!isObject(e)) return malformed(`events[${i}] must be an object`);
     for (const k of Object.keys(e)) if (!EVENT_KEYS.includes(k)) return malformed(`events[${i}].${k} is not allowed`);
     for (const k of EVENT_KEYS) if (!(k in e)) return malformed(`events[${i}].${k} is missing`);
-    if (!EVENT_KINDS.includes(e.kind)) return malformed(`events[${i}].kind must be one of ${EVENT_KINDS.join(', ')}`);
+    if (!eventKinds.includes(e.kind)) return malformed(`events[${i}].kind must be one of ${eventKinds.join(', ')}${e.kind === 'adopt' ? ' (a schema 2 record carries no adopt event; adoption writes a schema 3 record)' : ''}`);
     if (!timestamp(e.at)) return malformed(`events[${i}].at must be an ISO UTC timestamp`);
     if (!textOrNull(e.reason) || !textOrNull(e.note)) return malformed(`events[${i}]: reason and note must be null or short strings`);
     if (!(e.agreement === null || agreements.has(e.agreement))) return history(`events[${i}]: references unknown agreement ${JSON.stringify(e.agreement)}`);
@@ -176,6 +193,20 @@ function validateRecord(doc, file) {
   if (projected.state !== lc.state) return history(`lifecycle.state is ${lc.state} but the history ends at ${projected.state}`);
   if ((projected.superseded_by || null) !== lc.superseded_by) return history(`lifecycle.superseded_by disagrees with the supersede event`);
   if (lc.superseded_by === doc.change) return history('a change cannot supersede itself');
+  if (strict) {
+    const cv = doc.coverage;
+    if (!isObject(cv)) return malformed('coverage must be an object { map, adopted, agreement }');
+    for (const k of Object.keys(cv)) if (!COVERAGE_KEYS.includes(k)) return malformed(`coverage.${k} is not allowed`);
+    for (const k of COVERAGE_KEYS) if (!(k in cv)) return malformed(`coverage.${k} is missing`);
+    if (cv.map !== `${COVERAGE_DIR}/${doc.change}.json`) return malformed(`coverage.map must be ${COVERAGE_DIR}/${doc.change}.json`);
+    if (!timestamp(cv.adopted)) return malformed('coverage.adopted must be an ISO UTC timestamp');
+    const g = agreements.get(cv.agreement);
+    if (!g) return history(`coverage.agreement ${JSON.stringify(cv.agreement)} is not an agreement of this record`);
+    if (g.inventory === null || g.coverage === null) return history(`coverage.agreement ${g.id} carries no inventory and coverage digests (it predates adoption)`);
+    const adopts = doc.events.filter(e => e.kind === 'adopt');
+    if (adopts.length !== 1) return history(`a strict record carries exactly one adopt event (found ${adopts.length})`);
+    if (adopts[0].agreement !== cv.agreement) return history(`the adopt event names agreement ${JSON.stringify(adopts[0].agreement)}, coverage.agreement is ${cv.agreement}`);
+  }
   const lg = doc.legacy;
   if (!isObject(lg.receipts)) return malformed('legacy.receipts must be an object');
   for (const [id, r] of Object.entries(lg.receipts)) {
@@ -206,10 +237,10 @@ function scan(root) {
     const doc = read.data;
     if (!isObject(doc)) { entries.push({ file, code: 'MALFORMED', problem: `${file}: record must be a JSON object` }); continue; }
     if (doc.schema === 1) entries.push({ file, schema: 1, doc });
-    else if (doc.schema === SCHEMA) entries.push({ file, schema: 2, id: path.basename(file, '.json'), doc });
-    else entries.push({ file, code: 'UNSUPPORTED_SCHEMA', problem: `${file}: unsupported schema ${JSON.stringify(doc.schema)} (this runtime reads schema 1 bindings and schema 2 change records)` });
+    else if (RECORD_SCHEMAS.includes(doc.schema)) entries.push({ file, schema: doc.schema, record: true, id: path.basename(file, '.json'), doc });
+    else entries.push({ file, code: 'UNSUPPORTED_SCHEMA', problem: `${file}: unsupported schema ${JSON.stringify(doc.schema)} (this runtime reads schema 1 bindings and schema 2 and 3 change records)` });
   }
-  const one = entries.filter(e => e.schema === 1), two = entries.filter(e => e.schema === 2), bad = entries.filter(e => e.code);
+  const one = entries.filter(e => e.schema === 1), two = entries.filter(e => e.record), bad = entries.filter(e => e.code);
   const problems = [];
   let mode;
   if (!entries.length) mode = 'legacy';
@@ -229,7 +260,7 @@ function loadRecords(root) {
   if (s.mode !== 'changes') return out;
   if (out.pending.committed.length) out.problems.push({ code: 'STATE_INCOMPLETE', detail: `a committed transaction (${out.pending.committed[0].command || out.pending.committed[0].id}) was not fully applied; run: node scripts/pincer-runtime.cjs recover` });
   const owners = new Map();
-  for (const e of s.entries.filter(x => x.schema === 2)) {
+  for (const e of s.entries.filter(x => x.record)) {
     const invalid = validateRecord(e.doc, e.file);
     if (invalid) { out.problems.push({ code: invalid.code, detail: invalid.problem }); continue; }
     // Every recorded agreement must be reviewable: its snapshot exists and its
@@ -333,7 +364,7 @@ function register(root, { prd, change } = {}) {
 
 // --- list / show ----------------------------------------------------------------------
 function summarize(id, { record, file }, extra = {}) {
-  return { id, file, prd: record.prd, state: record.lifecycle.state, since: record.lifecycle.since, reason: record.lifecycle.reason, note: record.lifecycle.note, superseded_by: record.lifecycle.superseded_by, sequence: record.sequence, base: record.base, registered: record.registered, ...extra };
+  return { id, file, prd: record.prd, strict: isStrict(record), state: record.lifecycle.state, since: record.lifecycle.since, reason: record.lifecycle.reason, note: record.lifecycle.note, superseded_by: record.lifecycle.superseded_by, sequence: record.sequence, base: record.base, registered: record.registered, ...extra };
 }
 function list(root) {
   const loaded = loadRecords(root);
@@ -372,6 +403,7 @@ function renderShow(id, { record, file }, extra = {}) {
   if (extra.verdict) lines.push(`Authorization ${extra.verdict.verdict}${extra.verdict.verdict === 'current' ? ` — ${extra.verdict.detail}` : `: ${extra.verdict.detail}`}`);
   lines.push(`Decisions  ${r.decisions.length ? r.decisions.map(d => `${d.id} ${d.status}: ${d.summary}${d.status === 'resolved' ? ` — "${d.excerpt}" (${d.reference})` : ''}`).join('; ') : 'none'}`);
   lines.push(`Evaluations ${extra.locatorProblem ? `unreadable: ${extra.locatorProblem}` : extra.evaluations && extra.evaluations.length ? extra.evaluations.map(e => `${e.candidate.slice(0, 7)} ${e.manifest} recorded ${e.recorded}`).join('; ') : `none recorded (.prd/evidence/changes/${id}.json)`}`);
+  lines.push(`Coverage   ${isStrict(r) ? `strict since ${r.coverage.adopted} · map ${r.coverage.map} · adoption agreement ${r.coverage.agreement}` : 'unverified (strict coverage not adopted; preview with: node scripts/pincer-runtime.cjs coverage adopt --preview --change ' + id + ')'}`);
   lines.push(`Legacy     ${r.legacy.migrated_from ? `migrated from ${r.legacy.migrated_from} at ${r.legacy.migrated}; ${Object.keys(r.legacy.receipts).length} receipt(s) as history${r.legacy.authorization_text ? `; v0.5.0 authorization text (unvalidated): "${r.legacy.authorization_text}"` : ''}` : 'none'}`);
   lines.push('Events');
   for (const e of r.events) lines.push(`  ${String(e.sequence).padStart(3)} ${e.at} ${e.kind.padEnd(10)} ${e.from === null ? '—' : e.from} → ${e.to}${e.agreement ? ` ${e.agreement}` : ''}${e.authorization ? ` ${e.authorization}` : ''}${e.decision ? ` ${e.decision}` : ''}${e.replacement ? ` → ${e.replacement}` : ''}${e.reason ? ` · ${e.reason}` : ''}${e.note ? ` · note: ${e.note}` : ''}`);
@@ -379,7 +411,7 @@ function renderShow(id, { record, file }, extra = {}) {
 }
 
 module.exports = {
-  SCHEMA, RUNTIME, CHANGE_ID, STATES, TERMINAL, LIFECYCLE_KINDS, EVENT_KINDS, RECORD_KEYS, CHANGES_DIR, IGNORE_LINE,
+  SCHEMA, RUNTIME, SCHEMA_STRICT, RUNTIME_STRICT, RECORD_SCHEMAS, CHANGE_ID, STATES, TERMINAL, LIFECYCLE_KINDS, EVENT_KINDS, EVENT_KINDS_STRICT, RECORD_KEYS, RECORD_KEYS_STRICT, AGREEMENT_KEYS, AGREEMENT_KEYS_STRICT, COVERAGE_KEYS, CHANGES_DIR, COVERAGE_DIR, IGNORE_LINE, isStrict,
   recordFile, snapshotFile, replay, validateRecord, scan, loadRecords, loadRecord, ownerOf, newRecord, register, list, summarize, renderList, renderShow, head, gitignoreHas, gitignoreWith,
 };
 

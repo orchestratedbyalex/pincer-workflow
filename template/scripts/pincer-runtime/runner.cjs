@@ -103,7 +103,7 @@ async function runAttempt({ root, context, commands, timeoutSeconds, command = '
       // Changes mode records (schema 2) carry the agreement digest; `mode` only
       // selects the key format and is not part of the record.
       const { mode, ...persisted } = context;
-      const schema = persisted.agreement ? 2 : 1;
+      const schema = persisted.coverage ? 3 : persisted.agreement ? 2 : 1;
       const read = state.readIndex(root);
       if (read.error) { const e = new Error(read.error); e.code = 'INVALID'; throw e; }
       const index = read.index;

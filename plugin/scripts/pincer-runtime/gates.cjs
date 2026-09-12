@@ -16,7 +16,7 @@ const PERMITTED = {
   start: ['active'], done: ['active'], verify: ['active', 'completed'],
   check: ['completed'], export: ['completed'],
 };
-const ORDER = ['INPUT_INVALID', 'MALFORMED', 'UNSUPPORTED_SCHEMA', 'HISTORY_INVALID', 'STATE_INCOMPLETE', 'SELECTION_REQUIRED', 'SELECTION_INVALID', 'WRONG_CHANGE', 'LIFECYCLE_BLOCKED', 'BASE_MISMATCH', 'DECISION_REQUIRED', 'AUTHORIZATION_REQUIRED', 'AGREEMENT_CHANGED'];
+const ORDER = ['INPUT_INVALID', 'INVENTORY_INVALID', 'COVERAGE_INVALID', 'MALFORMED', 'UNSUPPORTED_SCHEMA', 'HISTORY_INVALID', 'STATE_INCOMPLETE', 'SELECTION_REQUIRED', 'SELECTION_INVALID', 'WRONG_CHANGE', 'LIFECYCLE_BLOCKED', 'BASE_MISMATCH', 'DECISION_REQUIRED', 'AUTHORIZATION_REQUIRED', 'AGREEMENT_CHANGED'];
 
 // guard(root, { command, ticket: { file, fields } | null, prd: string | null })
 // Returns { id, record, file, selection, view, computed, verdict, binding } where
@@ -57,7 +57,8 @@ function guard(root, { command, ticket = null, prd = null }) {
   if (computed.code) refuse(computed.code, `${command} refused: ${computed.problem}`);
   const verdict = authorization.verdict(root, record, computed);
   if (verdict.verdict !== 'current') refuse(verdict.verdict, `${command} refused: ${verdict.detail}`);
-  const binding = { change: id, prd: record.prd, prd_revision: computed.prd.revision, base: record.base, agreement: computed.digest, legacy_receipts: record.legacy.receipts, mode: 'changes' };
+  // A strict change's binding carries its inventory and coverage map digests (attempt schema 3).
+  const binding = { change: id, prd: record.prd, prd_revision: computed.prd.revision, base: record.base, agreement: computed.digest, legacy_receipts: record.legacy.receipts, mode: 'changes', strict: Boolean(computed.inventory), ...(computed.inventory ? { inventory: computed.inventory.digest, coverage: computed.coverage.digest } : {}) };
   return { id, record, file, selection, view, computed, verdict, binding, loaded };
 }
 

@@ -1,9 +1,13 @@
 ---
 ticket: T-69
-status: open
+status: done
 size: L
 prd: .prd/prd-v6.md
 depends_on: [T-68]
+started: 2026-09-12T08:36:48Z
+last_check: 2026-09-12T09:01:59Z passed 7f919dd3e94d
+verified: 2026-09-12T09:01:59Z 7f919dd3e94d
+finished: 2026-09-12T09:01:59Z
 ---
 
 ## Objective
@@ -23,9 +27,9 @@ Bind strict coverage, dispositions and explicit adoption, as specified in PRD v6
 - Implement literal source-specific rollback fixtures and process-death/concurrent-edit/running-attempt tests. Old runtime fixtures must reject the new record schema.
 
 ## Acceptance Criteria
-- [ ] S-07..S-09 prove changed coverage invalidates authorization, delegated check strengthening preserves its basis, and missing/wrong/open decisions cannot waive scope.
-- [ ] S-22/S-23 prove preview preservation, idempotence, explicit activation, old/new recovery and rollback that retains restored bindings/indexes/evidence.
-- [ ] Concurrent input change refuses stale disposition/adoption commits; unsupported/downgraded/missing strict state never falls back to legacy.
+- [x] S-07..S-09 prove changed coverage invalidates authorization, delegated check strengthening preserves its basis, and missing/wrong/open decisions cannot waive scope.
+- [x] S-22/S-23 prove preview preservation, idempotence, explicit activation, old/new recovery and rollback that retains restored bindings/indexes/evidence.
+- [x] Concurrent input change refuses stale disposition/adoption commits; unsupported/downgraded/missing strict state never falls back to legacy.
 
 ## Verification
 Proves: strict coverage cannot be silently disabled, obligations cannot be erased and adoption/recovery preserve prior state.

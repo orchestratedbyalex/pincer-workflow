@@ -225,8 +225,9 @@ for (const point of ['validated', 'staged', 'manifest', 'rename:0', 'rename:2', 
   const dir = released();
   const before = snapshot(dir);
   const good = read(dir, '.prd/changes/prd-v1.json');
-  write(dir, '.prd/changes/prd-v1.json', good.replace('"schema": 1', '"schema": 3'));
-  refuses(preview(dir), 1, /conflict  UNSUPPORTED_SCHEMA: \.prd\/changes\/prd-v1\.json: unsupported schema 3/);
+  // (schema 3 is the PRD v6 strict record; schema 4 is unknown to this runtime.)
+  write(dir, '.prd/changes/prd-v1.json', good.replace('"schema": 1', '"schema": 4'));
+  refuses(preview(dir), 1, /conflict  UNSUPPORTED_SCHEMA: \.prd\/changes\/prd-v1\.json: unsupported schema 4/);
   refuses(applyIt(dir), 1, /UNSUPPORTED_SCHEMA/);
   assert.equal(JSON.parse(rt(dir, 'status', '--json').stdout).mode, 'invalid', 'never legacy');
   write(dir, '.prd/changes/prd-v1.json', good);
@@ -255,3 +256,18 @@ for (const point of ['validated', 'staged', 'manifest', 'rename:0', 'rename:2', 
   assert.equal(JSON.parse(read(dir, '.pincer/runtime/selection.json')).change, 'prd-v2', 'the migrated change is selected in this worktree');
 }
 console.log('change migration tests passed');
+
+// PRD v6 T-69: migration never adopts strict coverage — a migrated change is a
+// schema 2 record whatever the map says, and a strict record beside a later
+// migration of another PRD is preserved untouched.
+{
+  const dir = released();
+  write(dir, '.prd/coverage/prd-v1.json', '{ "schema": 1, "change": "prd-v1", "prd": ".prd/prd-v1.md", "scenarios": {}, "scope": {}, "tickets": {}, "checks": {} }\n');
+  const out = passes(preview(dir));
+  assert.doesNotMatch(out, /strict|adopt|coverage/i, 'the migration plan never mentions adoption');
+  passes(applyIt(dir));
+  const rec = JSON.parse(read(dir, '.prd/changes/prd-v1.json'));
+  assert.equal(rec.schema, 2); assert.ok(!('coverage' in rec) && !rec.events.some(e => e.kind === 'adopt'), 'migration writes a schema 2 record; adoption is a separate explicit step');
+  assert.match(passes(rt(dir, 'change', 'show', 'prd-v1')), /^Coverage   unverified \(strict coverage not adopted/m);
+}
+console.log('change migration tests passed (migration never adopts)');

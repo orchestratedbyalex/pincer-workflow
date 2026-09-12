@@ -1271,8 +1271,10 @@ decision <D-NN> <decision digest>      (one line per resolved decision, ascendin
 each line terminated by `\n`. The inventory digest and the map digest are agreement
 inputs, so editing a scenario's text, a link, a declared command or timeout, a
 scope disposition or a tombstone changes the agreement and invalidates the
-authorization (`AGREEMENT_CHANGED`), while checkbox marks, the PRD `status` line,
-ticket lifecycle fields, attempts, generated reports and evidence do not. When the
+authorization (`AGREEMENT_CHANGED`), while the PRD `status` line, ticket lifecycle
+fields and ticket checkbox marks, attempts, generated reports and evidence do not. A
+checkbox mark on a scenario line keeps the inventory digest but is a PRD body edit
+("Content revisions"), so it changes `prd_revision` and with it the agreement. When the
 inventory or the map cannot be read the agreement cannot be computed:
 `INVENTORY_INVALID` or `COVERAGE_INVALID` replaces `INPUT_INVALID` in every place
 the contract says the agreement is computed (a missing map is `COVERAGE_INVALID`:
@@ -1324,9 +1326,9 @@ free text. Two dispositions exist, both authored in the map's `scope`:
 A disposition is *authorized* when its decision exists on this record, is
 `resolved`, names the ID, and an applicable user authorization covers it: an
 authorization `A-NN` of this record with disposition `user` that lists the decision
-in its `decisions`, such that the authorization matching the current agreement
-(the `current` verdict's) is `A-NN` itself or a `delegated` authorization whose
-`basis` chain reaches `A-NN`. Anything else is `SCOPE_UNAUTHORIZED` naming the ID
+in its `decisions`, such that an authorization binding the current agreement (any
+one the `current` verdict accepts) is `A-NN` itself or a `delegated` authorization
+whose `basis` chain reaches `A-NN`. Anything else is `SCOPE_UNAUTHORIZED` naming the ID
 and the missing element (`no decision`, `decision D-NN is open`, `decision D-NN does
 not name S-03`, `no user authorization names D-NN`, `the current authorization A-04
 does not descend from A-02`). A delegated authorization can therefore bind a
@@ -1339,14 +1341,17 @@ disposition is a reviewer's judgment, which status and coverage label as such
 (`decision D-01 "…" (reviewer judgment: the excerpt must support the deferral)`).
 
 Deleted obligations are detected against the retained history, never against the
-current files alone. The *baseline* of a strict change is the inventory snapshot of
-the most recently recorded authorization's agreement, else of the most recently
-recorded agreement entry with an inventory snapshot — at minimum the adoption
-agreement. Every scenario of the baseline that is neither defined in the live
-inventory nor a `removed` tombstone in the map is `OBLIGATION_MISSING` naming the IDs:
-deleting the prose and the map row together erases nothing. A first adoption can
-only establish its reviewed starting inventory: no baseline exists before the
-adoption agreement, so nothing predating it is ever reported as an omission. An
+current files alone. The *baseline* of a strict change is the union of the
+inventories of its retained agreement snapshots — the adoption agreement and every
+agreement recorded after it, authorized or not — so an obligation that was ever
+reviewed stays one. Every scenario of the baseline that is neither defined in the
+live inventory nor a `removed` tombstone in the map is `OBLIGATION_MISSING` naming the
+IDs and the latest agreement that defined each: deleting the prose and the map row
+together erases nothing, and neither does authorizing the reduced agreement (a user
+or delegated authorization records approval of the inputs; only a decision with its
+tombstone withdraws an obligation). A first adoption can only establish its reviewed
+starting inventory: no baseline exists before the adoption agreement, so nothing
+predating it is ever reported as an omission. An
 open decision blocks execution (`DECISION_REQUIRED`) whatever the current digest is,
 so reverting the PRD and the map to an earlier authorized digest cannot bypass a
 retained open decision; and `change authorize`, `change decide --resolve` and

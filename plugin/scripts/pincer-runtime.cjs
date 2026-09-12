@@ -17,6 +17,7 @@
 //   node scripts/pincer-runtime.cjs change decide <id> --summary <text> [--id D-NN] | --resolve D-NN --reference <text> --excerpt <text>
 //   node scripts/pincer-runtime.cjs change activate|pause|resume|complete|reopen|cancel|supersede <id> [--reason <text>] [--note <text>] [--decision D-NN] [--with <id>]
 //   node scripts/pincer-runtime.cjs resume [--change <id>] [--json]
+//   node scripts/pincer-runtime.cjs coverage adopt --preview|--apply --change <id> [--agreement <digest>]
 //
 // Exit codes: 0 ok · 1 failed/not ready/refused · 2 usage · 3 state busy ·
 // 4 invalid input or state · 124 timed out · 130 interrupted.
@@ -41,6 +42,7 @@ const transitions = require('./pincer-runtime/transitions.cjs');
 const gates = require('./pincer-runtime/gates.cjs');
 const locator = require('./pincer-runtime/locator.cjs');
 const resume = require('./pincer-runtime/resume.cjs');
+const adopt = require('./pincer-runtime/adopt.cjs');
 const { atomicWrite, nowIso, tryGit } = require('./pincer-runtime/fsutil.cjs');
 const EXIT = { OK: 0, FAILED: 1, USAGE: 2, BUSY: 3, INVALID: 4, TIMED_OUT: 124, INTERRUPTED: 130 };
 
@@ -71,7 +73,8 @@ function usage(message) {
     '       pincer-runtime.cjs change decide <id> --summary <text> [--id D-NN] | --resolve D-NN --reference <text> --excerpt <text>\n' +
     '       pincer-runtime.cjs change activate|resume|complete <id> · change pause <id> --reason <text> [--note <text>] · change reopen <id> --reason <text>\n' +
     '       pincer-runtime.cjs change cancel <id> --decision D-NN --reason <text> · change supersede <id> --with <id> --decision D-NN\n' +
-    '       pincer-runtime.cjs resume [--change <id>] [--json]   (the read-only report; `change resume` is the lifecycle operation)\n');
+    '       pincer-runtime.cjs resume [--change <id>] [--json]   (the read-only report; `change resume` is the lifecycle operation)\n' +
+    '       pincer-runtime.cjs coverage adopt --preview|--apply --change <id> [--agreement <digest>]\n');
   process.exit(EXIT.USAGE);
 }
 
@@ -133,7 +136,7 @@ async function cmdCheck(root, args) {
   const secretLine = sanitize.inlineSecretLine([line]);
   if (secretLine) fail('pincer', 'the check command assigns a secret-like literal; reference it from the environment instead', EXIT.INVALID);
   const announce = () => process.stdout.write(`── ${checkId} candidate ${o.candidate.slice(0, 7)} ──\n  $ ${sanitize.sanitizeText(line).text}\n`);
-  const contextFor = c => ({ kind: 'candidate', change: c.change, prd: c.prd, prd_revision: c.prd_revision, base: c.base, candidate: o.candidate, check: checkId, ...(c.mode === 'changes' ? { mode: 'changes', agreement: c.agreement } : {}) });
+  const contextFor = c => ({ kind: 'candidate', change: c.change, prd: c.prd, prd_revision: c.prd_revision, base: c.base, candidate: o.candidate, check: checkId, ...(c.mode === 'changes' ? { mode: 'changes', agreement: c.agreement } : {}), ...(c.strict ? { inventory: c.inventory, coverage: c.coverage } : {}) });
   // In changes mode the guard runs again under the runner's lock (docs/runtime-contracts.md,
   // "Command gates"); a lifecycle or agreement change committed since the pre-launch
   // evaluation refuses the attempt before anything is recorded.
@@ -335,7 +338,7 @@ function parseOptions(args, { valued = [], switches = [], repeated = [] } = {}) 
 const problemExit = code => (code === 'STATE_BUSY' ? EXIT.BUSY : EXIT.INVALID);
 // Contracted exit codes for the change commands: 3 busy, 4 invalid input or
 // unreadable state, 1 for every refusal (docs/runtime-contracts.md, "Exit codes").
-const INVALID_CODES = ['INPUT_INVALID', 'MALFORMED', 'UNSUPPORTED_SCHEMA', 'HISTORY_INVALID', 'STATE_INCOMPLETE', 'UNSUPPORTED_INPUT', 'CHANGES_MODE', 'AMBIGUOUS', 'INVALID'];
+const INVALID_CODES = ['INPUT_INVALID', 'INVENTORY_INVALID', 'COVERAGE_INVALID', 'MALFORMED', 'UNSUPPORTED_SCHEMA', 'HISTORY_INVALID', 'STATE_INCOMPLETE', 'UNSUPPORTED_INPUT', 'CHANGES_MODE', 'AMBIGUOUS', 'INVALID'];
 const exitForCode = code => (code === 'STATE_BUSY' ? EXIT.BUSY : INVALID_CODES.includes(code) ? EXIT.INVALID : EXIT.FAILED);
 
 function cmdRegister(root, args) {
@@ -363,6 +366,32 @@ function cmdRegister(root, args) {
   const r = result.record;
   process.stdout.write(`${result.action} change ${r.change} → ${r.prd} base ${r.base.slice(0, 7)} · ${r.lifecycle.state} (${result.file})\n`);
   if (result.action === 'registered') process.stderr.write('pincer: note: registration grants no authorization; record the user\'s instruction with `change authorize` and select the change with `change select`\n');
+  process.exit(EXIT.OK);
+}
+
+// coverage adopt --preview|--apply --change <id> [--agreement <digest>] — the explicit
+// entry into strict coverage (docs/runtime-contracts.md, "Adoption and rollback").
+function cmdCoverage(root, args) {
+  const [sub, ...rest] = args;
+  if (sub !== 'adopt') usage(sub ? `unknown coverage subcommand ${sub} (coverage supports: adopt)` : 'coverage requires a subcommand: adopt --preview|--apply --change <id> [--agreement <digest>]');
+  const o = parseOptions(rest, { valued: ['--change', '--agreement'], switches: ['--preview', '--apply'] });
+  if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
+  if (!o.change) usage('coverage adopt requires --change <id>');
+  if (Boolean(o.preview) === Boolean(o.apply)) usage('coverage adopt requires exactly one of --preview or --apply');
+  if (o.agreement !== undefined && !/^[0-9a-f]{64}$/.test(o.agreement)) usage('--agreement must be the 64-hex agreement digest the preview printed');
+  if (o.preview) {
+    const p = adopt.plan(root, { change: o.change });
+    process.stdout.write(adopt.renderPlan(p));
+    process.exit(p.conflicts.length ? EXIT.FAILED : EXIT.OK);
+  }
+  const result = adopt.apply(root, { change: o.change, agreement: o.agreement ?? null });
+  if (result.plan.conflicts.length) { process.stdout.write(adopt.renderPlan(result.plan)); process.exit(EXIT.FAILED); }
+  if (result.already) { process.stdout.write(`already adopted: change ${o.change} is strict since ${result.plan.record.coverage.adopted} (agreement ${result.plan.record.coverage.agreement}); nothing changed\n`); process.exit(EXIT.OK); }
+  if (result.error) { process.stderr.write(`pincer: ${result.code}: adoption refused; nothing was written: ${result.error}\n`); process.exit(exitForCode(result.code)); }
+  const r = result.record, p = result.plan;
+  process.stdout.write(`adopted strict coverage for change ${r.change} (schema 3 record; agreement ${p.agreement.id} ${p.agreement.digest.slice(0, 12)}; inventory ${p.inventory.requirements} requirement(s), ${p.inventory.scenarios} scenario(s); map ${p.map.digest.slice(0, 12)}; ${p.historical} earlier attempt(s) are history)\n`);
+  process.stdout.write(`backup: ${result.backup} (rollback per docs/runtime-contracts.md, "Adoption and rollback")\n`);
+  process.stderr.write(`pincer: note: adoption grants no authorization; record the user's instruction covering the strict agreement with: node scripts/pincer-runtime.cjs change authorize ${r.change} --agreement ${p.agreement.digest} --reference <text> --excerpt <text> (or --delegated --basis A-NN --explanation <text>)\n`);
   process.exit(EXIT.OK);
 }
 
@@ -542,6 +571,7 @@ function main(argv) {
   if (command === 'evidence') return cmdEvidence(root, rest);
   if (command === 'change') return cmdChange(root, rest);
   if (command === 'resume') return cmdResume(root, rest);
+  if (command === 'coverage') return cmdCoverage(root, rest);
   usage(command ? `unknown command ${command}` : undefined);
 }
 

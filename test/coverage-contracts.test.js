@@ -113,7 +113,8 @@ const projection2 = doc.match(/```\npincer agreement 2\n([\s\S]*?)```/);
 assert.ok(projection2, 'the agreement projection 2 is an exact text');
 assert.match(projection2[1], /^change <change id>\nprd <\.prd\/prd-vN\.md> <prd_revision>\ninventory <inventory digest>\ncoverage <\.prd\/coverage\/<id>\.json> <map digest>\nticket <T-NN> <ticket_digest>/m, 'projection 2 lines');
 assert.match(projection2[1], /^decision <D-NN> <decision digest>/m);
-has(/editing a scenario's text, a link, a declared command or timeout, a\nscope disposition or a tombstone changes the agreement and invalidates the\nauthorization \(`AGREEMENT_CHANGED`\), while checkbox marks, the PRD `status` line,\nticket lifecycle fields, attempts, generated reports and evidence do not/, 'S-07 inputs and exclusions');
+has(/editing a scenario's text, a link, a declared command or timeout, a\nscope disposition or a tombstone changes the agreement and invalidates the\nauthorization \(`AGREEMENT_CHANGED`\), while the PRD `status` line, ticket lifecycle\nfields and ticket checkbox marks, attempts, generated reports and evidence do not/, 'S-07 inputs and exclusions');
+has(/checkbox mark on a scenario line keeps the inventory digest but is a PRD body edit/, 'PRD checkbox marks are PRD revisions');
 has(/An incomplete map still yields an agreement:\ncompleteness is a coverage gate/, 'incomplete maps are authorizable');
 const snapshot2 = fences.find(d => d.schema === 2 && 'projection' in d && 'inventory' in d);
 assert.ok(snapshot2, 'a snapshot schema 2 example');
@@ -126,7 +127,7 @@ has(/a pointed-at schema 2 record \(recorded before adoption\) is\n`HISTORICAL_E
 // --- Scope dispositions and deletion detection -------------------------------------------
 has(/It\nis never inferred from a failing check, a missing ticket, a `blocked` requirement or\nfree text/, 'dispositions are never inferred');
 has(/Requires a resolved decision `D-NN` of this change whose `summary` or\n  `excerpt` names the scenario ID as a whole token/, 'decision names the ID');
-has(/an applicable user authorization covers it: an\nauthorization `A-NN` of this record with disposition `user` that lists the decision\nin its `decisions`, such that the authorization matching the current agreement\n\(the `current` verdict's\) is `A-NN` itself or a `delegated` authorization whose\n`basis` chain reaches `A-NN`/, 'applicable user authorization');
+has(/an applicable user authorization covers it: an\nauthorization `A-NN` of this record with disposition `user` that lists the decision\nin its `decisions`, such that an authorization binding the current agreement \(any\none the `current` verdict accepts\) is `A-NN` itself or a `delegated` authorization\nwhose `basis` chain reaches `A-NN`/, 'applicable user authorization');
 has(/but it can never create the scope decision: `authorized_by` free text\nand `--constraints` text are never consulted/, 'delegation cannot waive scope');
 has(/deleting the prose and the map row together erases nothing/, 'S-09 deletion detection');
 has(/A first adoption can\nonly establish its reviewed starting inventory: no baseline exists before the\nadoption agreement/, 'first adoption baseline');

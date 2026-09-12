@@ -82,7 +82,7 @@ function usablePrd(root, t) {
 // guard (docs/runtime-contracts.md, "Command gates") before anything is written
 // or launched; the guard's binding carries the change, current agreement and
 // legacy receipts for readiness, attempts and closure.
-const gateExit = code => (code === 'STATE_BUSY' ? 3 : ['INPUT_INVALID', 'MALFORMED', 'UNSUPPORTED_SCHEMA', 'HISTORY_INVALID', 'STATE_INCOMPLETE'].includes(code) ? EXIT.INVALID : EXIT.FAILED);
+const gateExit = code => (code === 'STATE_BUSY' ? 3 : ['INPUT_INVALID', 'INVENTORY_INVALID', 'COVERAGE_INVALID', 'MALFORMED', 'UNSUPPORTED_SCHEMA', 'HISTORY_INVALID', 'STATE_INCOMPLETE'].includes(code) ? EXIT.INVALID : EXIT.FAILED);
 function modeFor(root, prd, { command, ticket } = {}) {
   const bind = identity.loadBinding(root, { prd });
   if (bind.binding && !bind.code) return { mode: 'migrated', binding: bind.binding };
@@ -116,7 +116,7 @@ function migratedReadiness(root, t, binding, inputs) {
     if (before) changedPaths = source.diffManifests(before, inputs.manifest);
   }
   const legacyReceipt = (binding.legacy_receipts && binding.legacy_receipts[t.id]) || (t.fields.verified || t.fields.last_check ? { verified: t.fields.verified, last_check: t.fields.last_check } : null);
-  const r = readiness.migratedTicketReadiness({ text: t.text, fields: t.fields, timeout: t.timeout, attempt, legacyReceipt, current: inputs.current, sourceProblems: inputs.manifest.problems, changedPaths, contextKey: key, pointedId: inputs.index ? inputs.index.current[key] || null : null, mode: binding.mode || 'migrated' });
+  const r = readiness.migratedTicketReadiness({ text: t.text, fields: t.fields, timeout: t.timeout, attempt, legacyReceipt, current: inputs.current, sourceProblems: inputs.manifest.problems, changedPaths, contextKey: key, pointedId: inputs.index ? inputs.index.current[key] || null : null, mode: binding.mode || 'migrated', strict: Boolean(binding.strict) });
   r.attempt = attempt;
   return r;
 }
@@ -235,7 +235,7 @@ async function verifyMigrated(root, t, binding, write, error) {
   const secretLine = inlineSecretLine(commands);
   if (secretLine) die(`${t.file}: Verification block line ${secretLine} assigns a secret-like literal; reference it from the environment instead (the block is recorded as display text)`, { exit: EXIT.INVALID, code: 'INPUT_INVALID' });
   const announce = () => { write.write(`── ${id} verification ──\n`); for (const c of commands) write.write(`  $ ${sanitizeText(c).text}\n`); };
-  const contextFor = b => ({ kind: 'ticket', change: b.change, prd: b.prd, prd_revision: b.prd_revision, base: b.base, ticket: id, ticket_digest: parse.ticketDigest(t.text), ...(b.agreement ? { agreement: b.agreement } : {}) });
+  const contextFor = b => ({ kind: 'ticket', change: b.change, prd: b.prd, prd_revision: b.prd_revision, base: b.base, ticket: id, ticket_digest: parse.ticketDigest(t.text), ...(b.agreement ? { agreement: b.agreement } : {}), ...(b.strict ? { inventory: b.inventory, coverage: b.coverage } : {}) });
   // In changes mode the guard runs again under the runner's lock (docs/runtime-contracts.md,
   // "Command gates"): a transition, revision or authorization committed since the
   // pre-launch evaluation refuses the attempt or is the agreement it records.

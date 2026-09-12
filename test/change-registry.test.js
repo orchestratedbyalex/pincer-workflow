@@ -140,7 +140,7 @@ function unchanged(dir, before, fn, label) {
   // mismatch, dangling supersession: each refuses with its code and writes nothing.
   const broken = [
     ['malformed JSON', '{"schema": 2, "change": "prd-v1",', 'MALFORMED', /malformed JSON/],
-    ['unknown schema', good.replace('"schema": 2', '"schema": 3'), 'UNSUPPORTED_SCHEMA', /unsupported schema 3/],
+    ['unknown schema', good.replace('"schema": 2', '"schema": 4'), 'UNSUPPORTED_SCHEMA', /unsupported schema 4/],
     ['unknown key', good.replace('"evaluations": []', '"evaluations": [], "extra": 1'), 'MALFORMED', /unknown key "extra"/],
     ['sequence without history', good.replace('"sequence": 1', '"sequence": 2'), 'HISTORY_INVALID', /sequence is 2 but the history has 1 event/],
     ['projection without event', good.replace('"state": "planned"', '"state": "active"'), 'HISTORY_INVALID', /lifecycle\.state is active but the history ends at planned/],
@@ -245,7 +245,8 @@ console.log('change registry tests passed');
   passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md'), 'register with a map present');
   const loaded = changes.loadRecords(dir);
   assert.deepEqual(loaded.problems, []); assert.equal(loaded.mode, 'changes');
-  assert.doesNotMatch(passes(rt(dir, 'change', 'show', 'prd-v1')), /coverage/i, 'a schema 2 record shows no coverage capability');
+  const shown = passes(rt(dir, 'change', 'show', 'prd-v1'));
+  assert.match(shown, /^Coverage   unverified \(strict coverage not adopted/m, 'a schema 2 record is labeled unverified'); assert.doesNotMatch(shown, /strict since/, 'no capability');
   assert.equal(read(dir, '.prd/coverage/prd-v1.json'), before, 'the map is untouched');
   assert.equal(record(dir, 'prd-v1').schema, 2);
 }

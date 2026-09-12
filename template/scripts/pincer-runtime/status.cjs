@@ -234,7 +234,7 @@ function gatherBody(root, out, ctx) {
         if (before) changedPaths = source.diffManifests(before, manifestNow);
       }
       const legacyReceipt = (binding.legacy_receipts && binding.legacy_receipts[t.fields.ticket]) || (t.fields.verified || t.fields.last_check ? { verified: t.fields.verified, last_check: t.fields.last_check } : null);
-      r = readiness.migratedTicketReadiness({ text: t.text, fields: t.fields, timeout: t.timeout, attempt, legacyReceipt, current, sourceProblems, changedPaths, contextKey: key, pointedId: indexRead.index ? indexRead.index.current[key] || null : null, mode });
+      r = readiness.migratedTicketReadiness({ text: t.text, fields: t.fields, timeout: t.timeout, attempt, legacyReceipt, current, sourceProblems, changedPaths, contextKey: key, pointedId: indexRead.index ? indexRead.index.current[key] || null : null, mode, strict: Boolean(binding && binding.strict) });
       r.attempt = attempt;
     }
     readinessOf.set(t.file, r);
@@ -439,7 +439,7 @@ function gatherChanges(root, out, { budget, now, change }) {
   const prdResult = v.prdResult;
   const prd = record.prd;
   const prdStatus = prdResult.ok ? prdResult.fields.status : '?';
-  const binding = { change: id, prd, prd_revision: prdResult.ok ? parse.prdDigest(prdResult.text) : null, base: record.base, legacy_receipts: record.legacy.receipts };
+  const binding = { change: id, prd, prd_revision: prdResult.ok ? parse.prdDigest(prdResult.text) : null, base: record.base, legacy_receipts: record.legacy.receipts, strict: changes.isStrict(record) };
   // The current agreement (read-only): the digest of the authored inputs now, and
   // which recorded entry it equals, if any.
   const agreed = prdResult.ok ? agreement.compute(root, record) : { code: 'INPUT_INVALID', problem: prdResult.problems[0] };

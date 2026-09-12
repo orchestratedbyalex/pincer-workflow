@@ -261,3 +261,29 @@ for (const point of ['validated', 'staged', 'manifest', 'rename:0', 'rename:1', 
   assert.deepEqual(journalEntries(dir), []);
 }
 console.log('change transaction tests passed');
+
+// PRD v6 T-69: adoption of strict coverage goes through the same transaction API —
+// it waits on the lock (STATE_BUSY after the bound), writes the record and the
+// snapshot together, leaves no staging behind and releases the lock.
+{
+  const dir = tempDir(); run(dir, 'git', ['init', '-q']);
+  write(dir, '.gitignore', '.pincer/\n');
+  write(dir, '.prd/prd-v1.md', read(path.join(repo, 'test/fixtures/prd-v6'), 'strict/prd-v1.md'));
+  for (const f of fs.readdirSync(path.join(repo, 'test/fixtures/prd-v6/strict/tickets'))) write(dir, `tickets/${f}`, read(path.join(repo, 'test/fixtures/prd-v6'), `strict/tickets/${f}`));
+  write(dir, '.prd/coverage/prd-v1.json', read(path.join(repo, 'test/fixtures/prd-v6'), 'strict/coverage/prd-v1.json'));
+  run(dir, 'git', ['add', '-A']); run(dir, 'git', ['-c', 'user.name=T', '-c', 'user.email=t@example.invalid', 'commit', '-q', '-m', 'base']);
+  assert.equal(rt(dir, 'register', '--prd', '.prd/prd-v1.md').status, 0);
+  const changeOp = path.join(repo, 'test/fixtures/change-op.cjs');
+  const held = await holdLock(dir, 1500);
+  const busy = run(dir, process.execPath, [changeOp, dir, 'adopt', 'prd-v1'], { env: { ...process.env, CLAUDE_PROJECT_DIR: dir, PINCER_LOCK_WAIT_MS: '200' } });
+  assert.equal(busy.status, 3, busy.stdout + busy.stderr); assert.match(busy.stdout, /refused STATE_BUSY/);
+  assert.equal(JSON.parse(read(dir, '.prd/changes/prd-v1.json')).schema, 2, 'nothing written while busy');
+  await waitExit(held);
+  const ok = run(dir, process.execPath, [changeOp, dir, 'adopt', 'prd-v1']);
+  assert.equal(ok.status, 0, ok.stdout + ok.stderr);
+  assert.equal(JSON.parse(read(dir, '.prd/changes/prd-v1.json')).schema, 3);
+  assert.ok(fs.existsSync(path.join(dir, '.prd/changes/prd-v1/agreements/G-01.json')), 'the adoption snapshot landed with the record');
+  assert.deepEqual(journalEntries(dir), [], 'no staging left');
+  assert.ok(!fs.existsSync(path.join(dir, `${RUNTIME}/lock`)), 'lock released');
+}
+console.log('change transaction tests passed (adoption through the transaction API)');
