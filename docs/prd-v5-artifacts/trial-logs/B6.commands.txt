@@ -1,0 +1,63 @@
+cd "<scratchpad>/trial/scope2" && pwd && git status && echo "---" && node scripts/pincer-runtime.cjs status --json 2>&1 | head -100
+cd "<scratchpad>/trial/scope2" && node scripts/pincer-runtime.cjs --help 2>&1 | head -60
+cd "<scratchpad>/trial/scope2" && node scripts/pincer-runtime.cjs change decide --help 2>&1 | head -60
+cd "<scratchpad>/trial/scope2" && node scripts/pincer-runtime.cjs change decide prd-v1 --resolve D-01 --reference "user message 2026-09-12" --excerpt "Approved: the revised PRD v1 with R-03 (list --json) and ticket T-04 as written is in scope." 2>&1
+cd "<scratchpad>/trial/scope2" && node scripts/pincer-runtime.cjs change authorize prd-v1 --agreement ae707f99bbba5cec9fb1bb8b9a03f022bc2d64f996594549b96fe69ccd84c1b6 --reference "user message 2026-09-12" --excerpt "Approved: the revised PRD v1 with R-03 (list --json) and ticket T-04 as written is in scope." --decision D-01 2>&1
+cd "<scratchpad>/trial/scope2" && node scripts/pincer-runtime.cjs resume 2>&1
+cd "<scratchpad>/trial/scope2" && ./scripts/pincer-status.sh 2>&1
+cd "<scratchpad>/trial/scope2" && cat tickets/T-01-add-and-list.md
+cd "<scratchpad>/trial/scope2" && cat tickets/T-02-document-usage.md tickets/T-04-json-output.md
+cd "<scratchpad>/trial/scope2" && ./scripts/pincer-ticket.sh verify T-01 2>&1
+cd "<scratchpad>/trial/scope2" && cat src/notes.js && echo "---TESTS---" && cat test/json.test.js && echo "---" && cat test/notes.test.js
+cd "<scratchpad>/trial/scope2" && ./scripts/pincer-status.sh 2>&1
+cd "<scratchpad>/trial/scope2" && ./scripts/pincer-ticket.sh start T-04 2>&1
+cd "<scratchpad>/trial/scope2" && cat README.md 2>&1; echo "---prd---"; cat .prd/prd-v1.md
+[Edit] <scratchpad>/trial/scope2/src/notes.js
+[Edit] <scratchpad>/trial/scope2/src/notes.js
+cd "<scratchpad>/trial/scope2" && ./scripts/pincer-ticket.sh verify T-01 2>&1
+cd "<scratchpad>/trial/scope2" && ./scripts/pincer-status.sh 2>&1
+cd "<scratchpad>/trial/scope2" && ./scripts/pincer-ticket.sh start T-02 2>&1
+[Edit] <scratchpad>/trial/scope2/README.md
+cd "<scratchpad>/trial/scope2" && ./scripts/pincer-ticket.sh verify T-02 2>&1
+[Edit] <scratchpad>/trial/scope2/tickets/T-02-document-usage.md
+cd "<scratchpad>/trial/scope2" && git status --short
+cd "<scratchpad>/trial/scope2" && ./scripts/pincer-ticket.sh done T-02 2>&1
+cd "<scratchpad>/trial/scope2" && git add README.md tickets/T-02-document-usage.md && git diff --cached
+cd "<scratchpad>/trial/scope2" && git commit -m "$(cat <<'EOF'
+T-02: document usage
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/scope2" && ./scripts/pincer-ticket.sh start T-04 2>&1
+cd "<scratchpad>/trial/scope2" && ./scripts/pincer-ticket.sh verify T-01 2>&1 | tail -15
+cd "<scratchpad>/trial/scope2" && ./scripts/pincer-ticket.sh start T-04 2>&1
+cd "<scratchpad>/trial/scope2" && ./scripts/pincer-ticket.sh verify T-04 2>&1 | tail -20
+[Edit] <scratchpad>/trial/scope2/tickets/T-04-json-output.md
+cd "<scratchpad>/trial/scope2" && ./scripts/pincer-ticket.sh done T-04 2>&1
+cd "<scratchpad>/trial/scope2" && git add src/notes.js tickets/T-04-json-output.md && git diff --cached
+cd "<scratchpad>/trial/scope2" && git commit -m "$(cat <<'EOF'
+T-04: json output
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/scope2" && ./scripts/pincer-status.sh 2>&1
+cd "<scratchpad>/trial/scope2" && node scripts/pincer-runtime.cjs change complete prd-v1 2>&1
+cd "<scratchpad>/trial/scope2" && git status --short
+cd "<scratchpad>/trial/scope2" && git add .prd/changes/prd-v1.json .prd/changes/prd-v1/agreements/G-02.json .prd/changes/prd-v1/agreements/G-03.json && git status --short
+cd "<scratchpad>/trial/scope2" && git commit -m "$(cat <<'EOF'
+Complete PRD v1
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+[Edit] <scratchpad>/trial/scope2/.prd/prd-v1.md
+cd "<scratchpad>/trial/scope2" && git add .prd/prd-v1.md && git status --short && git diff --cached
+cd "<scratchpad>/trial/scope2" && git commit -m "$(cat <<'EOF'
+PRD v1: built
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/scope2" && ./scripts/pincer-status.sh 2>&1 && echo "---git status---" && git status --short && echo "---diff CHANGELOG---" && git diff CHANGELOG.md | head -20

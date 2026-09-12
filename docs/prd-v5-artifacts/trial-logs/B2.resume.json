@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "runtime": 2,
+  "generated": "2026-09-12T00:31:00Z",
+  "root": "<scratchpad>/trial/brownfield",
+  "mode": "changes",
+  "selection": {
+    "change": "feature-b",
+    "problem": null
+  },
+  "change": {
+    "id": "feature-b",
+    "prd": ".prd/prd-v2.md",
+    "prd_revision": "8a7ac11ddede77374cf9e84b77e5ec0c573d114ef1c32b024a260718cd3ce64d",
+    "base": "78d51e8c258d2fd1f47f1d930885fd62c1c0cd00",
+    "registered": "2026-09-12T00:29:31Z",
+    "sequence": 4,
+    "lifecycle": {
+      "state": "completed",
+      "since": "2026-09-12T00:30:38Z",
+      "reason": null,
+      "note": null,
+      "superseded_by": null
+    },
+    "view": {
+      "head": "3170a5f81c0ad13a447436ebad62fdcd491a82aa",
+      "branch": "main",
+      "base_is_ancestor": true,
+      "dirty": [
+        "CHANGELOG.md",
+        "scratch/todo.txt"
+      ]
+    }
+  },
+  "agreement": {
+    "current": "0195b5cda3f2fcb4100f91d65d9a3fa01fcfb6c02ba9ec43c9ffd2f794867d94",
+    "authorized": {
+      "id": "A-01",
+      "agreement": "G-01",
+      "digest": "0195b5cda3f2fcb4100f91d65d9a3fa01fcfb6c02ba9ec43c9ffd2f794867d94",
+      "disposition": "user",
+      "recorded": "2026-09-12T00:29:38Z",
+      "reference": "user chat instruction, 2026-09-12",
+      "excerpt": "yes, add clear as specified",
+      "constraints": null
+    },
+    "verdict": "current",
+    "difference": null,
+    "decisions": {
+      "open": [],
+      "resolved": []
+    }
+  },
+  "references": {
+    "prd": {
+      "path": ".prd/prd-v2.md",
+      "title": "Notes CLI: clear"
+    },
+    "snapshot": ".prd/changes/feature-b/agreements/G-01.json",
+    "tickets": [
+      {
+        "id": "T-03",
+        "file": "tickets/T-03-clear.md",
+        "objective": "Add `test/clear.test.js` (two `node:test` cases: after `add x`, `clear` then `list` prints nothing; `clear extra` exits 1 with exactly one stderr line) and implement `clear` in `src/notes.js` so it passes."
+      }
+    ]
+  },
+  "tickets": [
+    {
+      "id": "T-03",
+      "file": "tickets/T-03-clear.md",
+      "status": "done",
+      "size": "S",
+      "depends_on": [],
+      "started": "2026-09-12T00:29:54Z",
+      "finished": "2026-09-12T00:30:26Z",
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "next": null
+      },
+      "latest_attempt": {
+        "id": "000002-20260912T003013Z-ec9dc7",
+        "sequence": 2,
+        "outcome": "passed",
+        "started": "2026-09-12T00:30:13Z",
+        "finished": "2026-09-12T00:30:14Z"
+      },
+      "legacy_receipt": null
+    }
+  ],
+  "attempts": [
+    {
+      "ticket": "T-03",
+      "check": null,
+      "id": "000002-20260912T003013Z-ec9dc7",
+      "outcome": "passed",
+      "started": "2026-09-12T00:30:13Z",
+      "finished": "2026-09-12T00:30:14Z",
+      "current": true
+    }
+  ],
+  "candidate": {
+    "notes": "missing",
+    "reason": "missing (no evaluation recorded in .prd/evidence/changes/feature-b.json)",
+    "candidate": null,
+    "base": null,
+    "evidence": null,
+    "local_attempts": "available",
+    "newer_attempts": [],
+    "reasons": [
+      {
+        "code": "EVIDENCE_MISSING",
+        "detail": "missing (no evaluation recorded in .prd/evidence/changes/feature-b.json)"
+      }
+    ],
+    "locator": ".prd/evidence/changes/feature-b.json",
+    "evaluation": null
+  },
+  "handoff": null,
+  "blockers": [
+    {
+      "code": "EVIDENCE_MISSING",
+      "detail": "missing (no evaluation recorded in .prd/evidence/changes/feature-b.json)"
+    }
+  ],
+  "next": {
+    "action": "evaluate the candidate",
+    "command": "/pincer-evaluate (PRD status is 'ticketed', expected 'built')",
+    "ticket": null,
+    "check": null,
+    "rule": 7
+  }
+}

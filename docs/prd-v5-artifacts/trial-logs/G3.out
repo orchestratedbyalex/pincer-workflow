@@ -1,0 +1,3 @@
+The change committed cleanly with no agreement conflicts.
+
+**Report:** Resumed `prd-v1` (was paused mid-work while feature-b/T-03 was completed on this branch). T-01 had gone `SOURCE_CHANGED` from the interleaved work but re-verified green unchanged. Implemented and closed T-02 (README usage docs for `add`/`list`), completed the change, and marked the PRD `built` — 3 commits: `T-02: document usage`, `Complete PRD v1`, `PRD v1: built`. Status now shows both tickets done, change `completed`, next step is `/pincer-evaluate`.

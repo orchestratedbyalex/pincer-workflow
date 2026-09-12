@@ -1,0 +1,38 @@
+cd "<scratchpad>/trial/greenfield" && ./scripts/pincer-status.sh 2>&1
+cd "<scratchpad>/trial/greenfield" && node scripts/pincer-runtime.cjs resume 2>&1
+cd "<scratchpad>/trial/greenfield" && node scripts/pincer-runtime.cjs change select prd-v1 2>&1 && echo "---RESUME---" && node scripts/pincer-runtime.cjs resume 2>&1
+cd "<scratchpad>/trial/greenfield" && node scripts/pincer-runtime.cjs change resume prd-v1 2>&1
+cd "<scratchpad>/trial/greenfield" && cat tickets/T-01-add-and-list.md && echo "---T02---" && cat tickets/T-02-document-usage.md
+cd "<scratchpad>/trial/greenfield" && node --test test/notes.test.js 2>&1
+cd "<scratchpad>/trial/greenfield" && ./scripts/pincer-ticket.sh verify T-01 2>&1
+cd "<scratchpad>/trial/greenfield" && ./scripts/pincer-ticket.sh start T-02 2>&1
+[Edit] <scratchpad>/trial/greenfield/README.md
+cd "<scratchpad>/trial/greenfield" && ./scripts/pincer-ticket.sh verify T-02 2>&1
+cd "<scratchpad>/trial/greenfield" && git status --short && echo "---DIFF---" && git diff README.md
+[Edit] <scratchpad>/trial/greenfield/tickets/T-02-document-usage.md
+cd "<scratchpad>/trial/greenfield" && ./scripts/pincer-ticket.sh done T-02 2>&1
+cd "<scratchpad>/trial/greenfield" && git add README.md tickets/T-02-document-usage.md .prd/changes/prd-v1.json && git diff --cached
+cd "<scratchpad>/trial/greenfield" && git commit -m "$(cat <<'EOF'
+T-02: document usage
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/greenfield" && node scripts/pincer-runtime.cjs change complete prd-v1 2>&1
+cd "<scratchpad>/trial/greenfield" && ./scripts/pincer-ticket.sh verify T-01 2>&1
+cd "<scratchpad>/trial/greenfield" && node scripts/pincer-runtime.cjs change complete prd-v1 2>&1
+cd "<scratchpad>/trial/greenfield" && git status --short
+cd "<scratchpad>/trial/greenfield" && git add .prd/changes/prd-v1.json && git commit -m "$(cat <<'EOF'
+Complete PRD v1
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/greenfield" && head -20 .prd/prd-v1.md
+[Edit] <scratchpad>/trial/greenfield/.prd/prd-v1.md
+cd "<scratchpad>/trial/greenfield" && git add .prd/prd-v1.md && git commit -m "$(cat <<'EOF'
+PRD v1: built
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)" && ./scripts/pincer-status.sh 2>&1

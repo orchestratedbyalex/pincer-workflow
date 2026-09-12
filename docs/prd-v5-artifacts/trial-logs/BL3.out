@@ -1,0 +1,11 @@
+Working tree is clean, no warnings. PRD v1 is done.
+
+**Report**
+
+PRD v1 was left with T-01 done and T-02 open, but the runtime's active change binding pointed at PRD v2 (registered when v2's work started). Since only one change binding can exist per worktree, I had to:
+1. Replace the binding: `register --prd .prd/prd-v1.md --replace`, reusing the original approval *"go ahead with both tickets as written"* (recorded at commit `f3d80d2`) — committed as `Register PRD v1` (`8d79744`).
+2. Twice re-verify T-01 (`scripts/pincer-ticket.sh verify T-01`) because PRD v2's `clear` feature and then T-02's README edit had changed source files after T-01's last recorded attempt — no code changes, just fresh passing runs.
+3. Implement and close T-02 (README usage docs for `add`/`list`) — committed as `T-02: document usage` (`accfe48`).
+4. Set PRD v1 to `status: built` in its own commit — `PRD v1: built` (`9b1a2e6`).
+
+**What happened to PRD v2's registration:** it was temporarily replaced (deleted, not lost — its authorization and T-03 progress stayed intact in git history at commit `c8801fd`) while I worked on v1. Since PRD v2 still has open work (T-03 done, awaiting `/pincer-evaluate`), I restored its binding afterward — `register --prd .prd/prd-v2.md --replace`, reusing its original approval *"yes, add clear as specified"* — committed as `Register PRD v2` (`9740f53`), and re-verified T-03 once more since README.md had changed underneath it too. The repo is now clean, with the binding back on PRD v2 and PRD v1 fully built.

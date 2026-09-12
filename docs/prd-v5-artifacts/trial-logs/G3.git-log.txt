@@ -1,0 +1,8 @@
+8b587ed PRD v1: built
+ea80d69 Complete PRD v1
+b1160b0 T-02: document usage
+1983b19 PRD v2: built
+af05413 Complete PRD v2
+ba48d8c T-03: clear
+4a3aeb9 Authorize feature-b
+8f8f498 Register PRD v2 (change feature-b)

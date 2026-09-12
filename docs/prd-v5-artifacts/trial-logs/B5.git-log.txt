@@ -1,0 +1,8 @@
+c85d237 operator: kit update with the T-62 playbook fix
+9128a9e operator: revise PRD v1 with R-03 (list --json) and ticket T-04
+3170a5f Complete PRD v2
+7e6f03d T-03: clear
+b3e308c Register PRD v2 as change feature-b
+78d51e8 Pause change prd-v1
+6ed000f T-01: add and list
+d990024 Activate PRD v1

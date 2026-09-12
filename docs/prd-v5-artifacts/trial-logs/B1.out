@@ -1,0 +1,10 @@
+T-01 is complete, and as instructed I'm stopping here without touching T-02.
+
+**Report:**
+- Registered change `prd-v1` for `.prd/prd-v1.md` and committed it (`Register PRD v1`)
+- Recorded your approval — "go ahead with both tickets as written" — against the agreement digest, covering T-01 and T-02 (`Authorize PRD v1`)
+- Selected and activated the change (`Activate PRD v1`)
+- Implemented T-01: `add <text>` and `list` in `src/notes.js`, storing notes in `notes.json` in the cwd; `add` without text exits 1 with a one-line stderr message
+- Verified via `npm test` (2/2 tests pass) and committed as `T-01: add and list`
+
+The unrelated uncommitted `CHANGELOG.md` and `scratch/` changes were left exactly as they were and not staged or committed. T-02 and T-03/PRD v2 were not touched — `pincer-status.sh` now shows T-02 as the next ready ticket.

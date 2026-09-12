@@ -1,0 +1,8 @@
+2e0efb5 PRD v1: built
+216993d Complete PRD v1
+ede5b27 T-04: json output
+6866ecf T-02: document usage
+c85d237 operator: kit update with the T-62 playbook fix
+9128a9e operator: revise PRD v1 with R-03 (list --json) and ticket T-04
+3170a5f Complete PRD v2
+7e6f03d T-03: clear

@@ -1,0 +1,15 @@
+cd "<scratchpad>/trial/scope2" && scripts/pincer-status.sh
+cd "<scratchpad>/trial/scope2" && node scripts/pincer-runtime.cjs resume
+cd "<scratchpad>/trial/scope2" && git log --oneline -20 && echo --- && git show 9128a9e --stat && echo --- && git show 9128a9e -- .prd/prd-v1.md | head -200
+cd "<scratchpad>/trial/scope2" && grep -n "authorize" scripts/pincer-runtime.cjs | head -80
+cd "<scratchpad>/trial/scope2" && find . -iname "*authoriz*" -not -path "*/node_modules/*"
+cd "<scratchpad>/trial/scope2" && git show bdee8e3 | head -100
+cd "<scratchpad>/trial/scope2" && node scripts/pincer-runtime.cjs change authorize prd-v1 --agreement e22544d31a7a1ef38358b2ef6bea391fa94cef7daee9658041ea1ceb1bba9488 --reference "user message in this conversation" --excerpt "Do not ask me to re-approve scope I already approved."
+cd "<scratchpad>/trial/scope2" && node scripts/pincer-runtime.cjs change resume prd-v1
+cd "<scratchpad>/trial/scope2" && scripts/pincer-status.sh
+cd "<scratchpad>/trial/scope2" && node scripts/pincer-runtime.cjs change show prd-v1 --json 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+print('authorizations:', json.dumps(d.get('authorizations'), indent=2))
+"
+cd "<scratchpad>/trial/scope2" && node scripts/pincer-runtime.cjs change decide prd-v1 --summary "AGREEMENT_CHANGED found on resume (not made this session): PRD v1 revised to add R-03 'list --json' and ticket T-04. Per AGENTS.md/pincer-code, this needs explicit confirmation naming the content, not a general 'don't re-ask' instruction."

@@ -1,0 +1,140 @@
+{
+  "schema": 1,
+  "runtime": 2,
+  "generated": "2026-09-12T00:53:01Z",
+  "root": "<scratchpad>/trial/greenfield",
+  "mode": "changes",
+  "selection": {
+    "change": "count",
+    "problem": null
+  },
+  "change": {
+    "id": "count",
+    "prd": ".prd/prd-v3.md",
+    "prd_revision": "1f97963843a31f0229e91bd57c94d297e0af752183a8af6cfc0396d659c19749",
+    "base": "2096ac1ab03614305879740df382e82cb66807fa",
+    "registered": "2026-09-12T00:48:45Z",
+    "sequence": 4,
+    "lifecycle": {
+      "state": "completed",
+      "since": "2026-09-12T00:50:02Z",
+      "reason": null,
+      "note": null,
+      "superseded_by": null
+    },
+    "view": {
+      "head": "2e5d194014b5120c4574bae1d629b74904bfdc9f",
+      "branch": "main",
+      "base_is_ancestor": true,
+      "dirty": []
+    }
+  },
+  "agreement": {
+    "current": "1d654e5ed4f6d0fdd3427c080e2b8a19eea3a04b9f11698e67f5486f9c2f509a",
+    "authorized": {
+      "id": "A-01",
+      "agreement": "G-01",
+      "digest": "1d654e5ed4f6d0fdd3427c080e2b8a19eea3a04b9f11698e67f5486f9c2f509a",
+      "disposition": "user",
+      "recorded": "2026-09-12T00:48:45Z",
+      "reference": "operator setup for the interruption trial",
+      "excerpt": "approved: add count as specified",
+      "constraints": null
+    },
+    "verdict": "current",
+    "difference": null,
+    "decisions": {
+      "open": [],
+      "resolved": []
+    }
+  },
+  "references": {
+    "prd": {
+      "path": ".prd/prd-v3.md",
+      "title": "Notes CLI: count"
+    },
+    "snapshot": ".prd/changes/count/agreements/G-01.json",
+    "tickets": [
+      {
+        "id": "T-05",
+        "file": "tickets/T-05-count.md",
+        "objective": "Add `test/count.test.js` (after two adds `count` prints `2`; `count extra` exits 1 with one stderr line) and implement `count` in `src/notes.js`."
+      }
+    ]
+  },
+  "tickets": [
+    {
+      "id": "T-05",
+      "file": "tickets/T-05-count.md",
+      "status": "done",
+      "size": "S",
+      "depends_on": [],
+      "started": "2026-09-12T00:48:45Z",
+      "finished": "2026-09-12T00:49:53Z",
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "next": null
+      },
+      "latest_attempt": {
+        "id": "000008-20260912T004935Z-4268db",
+        "sequence": 8,
+        "outcome": "passed",
+        "started": "2026-09-12T00:49:35Z",
+        "finished": "2026-09-12T00:49:42Z"
+      },
+      "legacy_receipt": null
+    }
+  ],
+  "attempts": [
+    {
+      "ticket": "T-05",
+      "check": null,
+      "id": "000007-20260912T004846Z-8fd0c9",
+      "outcome": "interrupted",
+      "started": "2026-09-12T00:48:46Z",
+      "finished": "2026-09-12T00:49:01Z",
+      "current": false
+    },
+    {
+      "ticket": "T-05",
+      "check": null,
+      "id": "000008-20260912T004935Z-4268db",
+      "outcome": "passed",
+      "started": "2026-09-12T00:49:35Z",
+      "finished": "2026-09-12T00:49:42Z",
+      "current": true
+    }
+  ],
+  "candidate": {
+    "notes": "missing",
+    "reason": "missing (no evaluation recorded in .prd/evidence/changes/count.json)",
+    "candidate": null,
+    "base": null,
+    "evidence": null,
+    "local_attempts": "available",
+    "newer_attempts": [],
+    "reasons": [
+      {
+        "code": "EVIDENCE_MISSING",
+        "detail": "missing (no evaluation recorded in .prd/evidence/changes/count.json)"
+      }
+    ],
+    "locator": ".prd/evidence/changes/count.json",
+    "evaluation": null
+  },
+  "handoff": null,
+  "blockers": [
+    {
+      "code": "EVIDENCE_MISSING",
+      "detail": "missing (no evaluation recorded in .prd/evidence/changes/count.json)"
+    }
+  ],
+  "next": {
+    "action": "evaluate the candidate",
+    "command": "/pincer-evaluate (missing (no evaluation recorded in .prd/evidence/changes/count.json))",
+    "ticket": null,
+    "check": null,
+    "rule": 7
+  }
+}

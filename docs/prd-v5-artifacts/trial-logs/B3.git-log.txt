@@ -1,0 +1,8 @@
+ffff4b5 PRD v1: built
+1d3908a Complete PRD v1
+73f803a T-02: document usage
+d364d4d T-04: json output
+31cf652 Authorize and resume change prd-v1 (G-02/A-02)
+9128a9e operator: revise PRD v1 with R-03 (list --json) and ticket T-04
+3170a5f Complete PRD v2
+7e6f03d T-03: clear

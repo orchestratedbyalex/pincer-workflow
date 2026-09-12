@@ -1,0 +1,10 @@
+**T-01 done.** Summary:
+
+- Registered PRD v1 with the runtime, quoting your approval: *"go ahead with both tickets as written"* (commit `f3d80d2`, `.prd/changes/prd-v1.json`).
+- Implemented `add <text>` and `list` in `src/notes.js`: notes stored as a JSON array in `notes.json` (created on first `add`), `add` without text exits 1 with a single-line stderr message.
+- Verified via `npm test` — both tests pass (receipt recorded under `.pincer/runtime/attempts/`).
+- Ticked both acceptance criteria, closed the ticket, committed as `966095b` (`T-01: add and list`).
+
+Assumption recorded: multi-word `add` args (e.g. `add first note`) are joined with spaces into a single note string, since the PRD only specifies `add <text>` without addressing multi-word input.
+
+Stopping here as instructed — T-02 and PRD v2/T-03 untouched.

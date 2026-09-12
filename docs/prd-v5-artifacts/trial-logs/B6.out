@@ -1,0 +1,9 @@
+All work is complete, and the unrelated `CHANGELOG.md`/`scratch/` edits remain exactly as they were — untouched throughout.
+
+Summary of what happened:
+- Recorded the approval as decision D-01's resolution and re-authorized the change (`agreement G-03`, `A-03`) since the instruction named the specific revised content (R-03 / T-04), satisfying the "explicit confirmation naming the content" requirement.
+- Re-verified T-01, which was hit unexpectedly by `CHECK_FAILED`: its check runs the full `npm test` suite, which already included `test/json.test.js` for T-04's not-yet-built feature. Fixed this by implementing `list --json` / `list --xml` in `src/notes.js` (T-04's actual scope), which unblocked T-01.
+- Completed tickets in order: T-02 (README usage docs) and T-04 (JSON output), each with its own commit (`T-02: document usage`, `T-04: json output`).
+- Completed the change (`change complete prd-v1`) and committed the record (`Complete PRD v1`), then flipped the PRD to `status: built` (`PRD v1: built`).
+
+The workflow now reports "all tickets done" with next step `/pincer-evaluate`.

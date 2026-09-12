@@ -1,0 +1,53 @@
+cd "$(pwd)" && scripts/pincer-status.sh 2>&1
+cd "$(pwd)" && node scripts/pincer-runtime.cjs recover 2>&1
+cd "$(pwd)" && node scripts/pincer-runtime.cjs resume 2>&1 && echo "---STATUS---" && scripts/pincer-status.sh 2>&1
+cd "$(pwd)" && git status --short && echo "---DIFF---" && git diff --stat
+cd "$(pwd)" && cat src/notes.js && echo "---TESTDIR---" && ls test/ && echo "---COUNTTEST---" && cat test/count.test.js 2>/dev/null || echo "MISSING"
+cd "$(pwd)" && cat test/clear.test.js && echo "---NOTES.TEST---" && cat test/notes.test.js && echo "---PKG---" && cat package.json
+[Edit] <scratchpad>/trial/greenfield/src/notes.js
+[Write] <scratchpad>/trial/greenfield/test/count.test.js
+cd "$(pwd)" && scripts/pincer-ticket.sh verify T-05 2>&1
+cd "$(pwd)" && git diff -- src/notes.js test/count.test.js
+[Edit] <scratchpad>/trial/greenfield/tickets/T-05-count.md
+cd "$(pwd)" && scripts/pincer-ticket.sh done T-05 2>&1
+cd "$(pwd)" && git status --short
+cd "$(pwd)" && git add src/notes.js tickets/T-05-count.md test/count.test.js && git diff --cached --stat
+cd "$(pwd)" && git commit -m "$(cat <<'EOF'
+T-05: count
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)" 2>&1
+cd "$(pwd)" && node scripts/pincer-runtime.cjs change complete count 2>&1
+cd "$(pwd)" && git status --short
+cd "$(pwd)" && git add .prd/changes/count.json && git commit -m "$(cat <<'EOF'
+Complete PRD v3
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)" 2>&1
+cd "$(pwd)" && cat .claude/hooks/ticket-guard.sh 2>&1 | head -100
+cd "$(pwd)" && grep -n "prd/changes\|git add\|add\b" .claude/hooks/hook-policy.cjs | head -50
+cd "$(pwd)" && grep -n "ticketShellMutation" -A 40 .claude/hooks/hook-policy.cjs | head -80
+cd "$(pwd)" && grep -n "function gitSubcommand\|function commandParts\|function shellCommands\|function ticketPath\|function runtimePath\|function wholeTreeRestore" -A 20 .claude/hooks/hook-policy.cjs
+cd "$(pwd)" && git add .prd/changes/count.json 2>&1; echo "EXIT:$?"
+cd "$(pwd)" && sed -n '285,320p' .claude/hooks/hook-policy.cjs
+cd "$(pwd)" && sed -n '96,110p' .claude/hooks/hook-policy.cjs
+cd "$(pwd)" && wc -l .claude/hooks/hook-policy.cjs && sed -n '1,60p' .claude/hooks/hook-policy.cjs
+cd "$(pwd)" && echo '{"tool_name":"Bash","tool_input":{"command":"git add .prd/changes/count.json"}}' | node .claude/hooks/hook-policy.cjs ticket; echo "EXIT:$?"
+[Write] /tmp/payload-test.json
+node <scratchpad>/trial/greenfield/.claude/hooks/hook-policy.cjs ticket < /tmp/payload-test.json; echo "EXIT:$?"
+[Write] /tmp/payload-test2.json
+node <scratchpad>/trial/greenfield/.claude/hooks/hook-policy.cjs ticket < /tmp/payload-test2.json; echo "EXIT:$?"
+grep -n "description" <scratchpad>/trial/greenfield/.claude/hooks/hook-policy.cjs
+git add .prd/changes/count.json
+git commit -m "$(cat <<'EOF'
+Complete PRD v3
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+[Edit] <scratchpad>/trial/greenfield/.prd/prd-v3.md
+git add .prd/prd-v3.md && git status --short
+git commit -m "PRD v3: built"
+scripts/pincer-status.sh 2>&1

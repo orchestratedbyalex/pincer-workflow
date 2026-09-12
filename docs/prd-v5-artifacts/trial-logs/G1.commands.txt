@@ -1,0 +1,62 @@
+cd "<scratchpad>/trial/greenfield" && scripts/pincer-status.sh
+cd "<scratchpad>/trial/greenfield" && ls .prd/ && echo "---tickets---" && ls tickets/ && echo "---prd-v1 head---" && head -50 .prd/prd-v1.md && echo "---prd-v1 status line---" && grep -i "^status" .prd/prd-v1.md
+cd "<scratchpad>/trial/greenfield" && ls .prd/changes/ 2>/dev/null; echo "---"; cat .gitignore 2>/dev/null; echo "---runtime resume---"; node scripts/pincer-runtime.cjs resume 2>&1; echo "---runtime status json---"; node scripts/pincer-runtime.cjs status --json 2>&1 | head -100
+cd "<scratchpad>/trial/greenfield" && node scripts/pincer-runtime.cjs resume
+cd "<scratchpad>/trial/greenfield" && node scripts/pincer-runtime.cjs register --prd .prd/prd-v1.md
+cd "<scratchpad>/trial/greenfield" && git status --short && echo --- && cat .gitignore
+[Edit] <scratchpad>/trial/greenfield/.gitignore
+[Edit] <scratchpad>/trial/greenfield/.gitignore
+cd "<scratchpad>/trial/greenfield" && git add .prd/changes/ .gitignore && git status --short
+cd "<scratchpad>/trial/greenfield" && git commit -m "$(cat <<'EOF'
+Register PRD v1
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/greenfield" && node scripts/pincer-runtime.cjs change select prd-v1
+cd "<scratchpad>/trial/greenfield" && node scripts/pincer-runtime.cjs resume
+cd "<scratchpad>/trial/greenfield" && node scripts/pincer-runtime.cjs change authorize prd-v1 --agreement a90a889a85dcfe8c71189cfdee897aa9cf4d40e123ee497318fcee10deb50ef9 --reference "user message, current conversation" --excerpt "go ahead with both tickets as written"
+cd "<scratchpad>/trial/greenfield" && node scripts/pincer-runtime.cjs change activate prd-v1
+cd "<scratchpad>/trial/greenfield" && git status --short
+cd "<scratchpad>/trial/greenfield" && grep -n -i "commit" .claude/commands/pincer-narrow.md | head -30
+cd "<scratchpad>/trial/greenfield" && git add .prd/changes/ && git status --short && git commit -m "$(cat <<'EOF'
+Authorize PRD v1
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/greenfield" && git status --short && echo "---" && scripts/pincer-status.sh
+cd "<scratchpad>/trial/greenfield" && scripts/pincer-ticket.sh start T-01
+cd "<scratchpad>/trial/greenfield" && ls -la src test 2>&1; echo "---package.json---"; cat package.json 2>&1; echo "---test file---"; cat test/notes.test.js 2>&1
+cd "<scratchpad>/trial/greenfield" && cat test/clear.test.js && echo "---current notes.js---" && cat src/notes.js
+cd "<scratchpad>/trial/greenfield" && cat tickets/T-02-document-usage.md && echo "---T-03---" && cat tickets/T-03-clear.md && echo "---run npm test now (pre-impl, expect failures)---" && npm test 2>&1 | tail -40
+cd "<scratchpad>/trial/greenfield" && npm test 2>&1 | tail -40
+cd "<scratchpad>/trial/greenfield" && node --version && node --test test 2>&1 | tail -20 && echo "===trailing slash try2===" && node --test ./test/ 2>&1 | tail -20
+cd "<scratchpad>/trial/greenfield" && node --test test/notes.test.js 2>&1 | tail -30
+cd "<scratchpad>/trial/greenfield" && node -e "console.log(require('fs').statSync('test').isDirectory())" && node --test --help 2>&1 | head -5
+cd "<scratchpad>/trial/greenfield" && node --test test/ 2>&1 | tail -20
+cd "<scratchpad>/trial/greenfield" && node --test test/*.test.js 2>&1 | tail -20
+[Write] <scratchpad>/trial/greenfield/src/notes.js
+cd "<scratchpad>/trial/greenfield" && node --test test/notes.test.js 2>&1 | tail -20
+[Edit] <scratchpad>/trial/greenfield/tickets/T-01-add-and-list.md
+cd "<scratchpad>/trial/greenfield" && scripts/pincer-ticket.sh verify T-01
+cd "<scratchpad>/trial/greenfield" && node scripts/pincer-runtime.cjs change authorize prd-v1 --agreement a55572c160a96177e40198bc735643edc77c2d536729c9defbd7d121c0361909 --delegated --basis A-01 --explanation "T-01's verification narrowed from 'npm test' to 'node --test test/notes.test.js': npm test (node --test test/) also collects test/clear.test.js, which belongs to T-03/PRD v2 (explicitly out of scope for this change) and is unimplemented, so the full-suite check would fail T-01 on unrelated work; separately, node --test test/ (bare directory arg) errors with MODULE_NOT_FOUND in this environment regardless of test content, while node --test <file> works. Acceptance criteria and behavior proven are unchanged."
+cd "<scratchpad>/trial/greenfield" && scripts/pincer-ticket.sh verify T-01
+cd "<scratchpad>/trial/greenfield" && git status --short && echo "---diff src---" && git diff -- src/notes.js
+[Edit] <scratchpad>/trial/greenfield/tickets/T-01-add-and-list.md
+cd "<scratchpad>/trial/greenfield" && scripts/pincer-ticket.sh done T-01
+cd "<scratchpad>/trial/greenfield" && git status --short
+cd "<scratchpad>/trial/greenfield" && git add .prd/changes/ && git diff --cached --stat && git commit -m "$(cat <<'EOF'
+Authorize PRD v1 (delegated): narrow T-01 verification scope
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/greenfield" && git add src/notes.js tickets/T-01-add-and-list.md && git status --short && git diff --cached
+cd "<scratchpad>/trial/greenfield" && git commit -m "$(cat <<'EOF'
+T-01: add and list
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/greenfield" && git status --short && echo "---" && scripts/pincer-status.sh
