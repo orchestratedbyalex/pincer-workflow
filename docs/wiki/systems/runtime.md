@@ -99,7 +99,7 @@ Decision: [[runtime-owned-verification]]. Extends [[ticket-state-machine]],
 - The repo itself is NOT migrated (PRD v4 §9 dogfooding); its own tickets used the
   pinned v0.4.1 kit from `1cb5ab4` in the session scratchpad.
 
-## PRD v5 additions (feat/prd-v5, 2026-09-11/12, T-47..T-62)
+## PRD v5 additions (feat/prd-v5, 2026-09-11/12, T-47..T-65)
 
 Changes mode (schema 2 records under `.prd/changes/`) sits next to legacy and migrated
 (v0.5.0 schema 1 binding) modes; `identity.loadBinding` returns `CHANGES_MODE` and
@@ -127,9 +127,21 @@ records" … "Worktrees", pinned by `test/change-contracts.test.js`.
 - `gates.cjs` — `guard` for start/done/verify/check/export (order: records →
   selection → WRONG_CHANGE → LIFECYCLE_BLOCKED → BASE_MISMATCH → verdict); returns the
   `binding` (with `agreement`, `mode: 'changes'`) that `lifecycle.cjs` and the runner use.
+  For `verify`/`check` the guard runs twice: `runner.runAttempt({ revalidate, announce })`
+  calls `revalidate()` under the worktree lock right before the `running` record is
+  written and takes the context from it (T-63, review finding 1: a `change pause`
+  committed between the pre-lock guard and the lock used to let a verification pass);
+  `announce` prints the header only once the record exists so refusals stay silent.
+  Race seam: `test/fixtures/attempt-race.cjs <root> <injected args> -- <command>`
+  wraps `runner.runAttempt` to run an injected runtime command first.
 - `locator.cjs` — `.prd/evidence/changes/<id>.json`, appended by `evidence export`;
-  `current()` replaces `notesCurrent` in changes mode (same-candidate evidence dirs
-  and locators may follow the candidate).
+  `current()` replaces `notesCurrent` in changes mode. `followers(root, candidate)`
+  is the computed set of paths that may differ from the candidate: `NOTES.md`, valid
+  locators, and the listed files of manifests that validate (with digests) for that
+  candidate; never a directory or filename pattern (T-64, review finding 2: an
+  unlisted `.js` under another PRD's evidence dir plus a malformed locator left
+  `ready` at 0). `requireCandidateView` (check/export) adds only the PRD's own
+  `.prd/evidence/prd-vN/<candidate>/` while it is assembled.
 - Attempts: schema 2 in changes mode (`context.agreement`); candidate keys
   `candidate:<change>:<sha>:<C-NN>`; schema 1 records → `HISTORICAL_EVIDENCE`.
 - `status.cjs` was split into `gather` + `gatherBody(ctx)` + `gatherChanges`;
@@ -146,7 +158,11 @@ records" … "Worktrees", pinned by `test/change-contracts.test.js`.
   and `index.json`; pointer rewrite `candidate:<sha>:C-NN` → `candidate:<id>:<sha>:C-NN`;
   the migrated change is `planned`/unauthorized; the binding's free text becomes
   `legacy.authorization_text` (unvalidated). `bin/pincer.js doctor` reports
-  "migration to change records available".
+  "migration to change records available". Rollback is one procedure per source
+  (T-65, review finding 3): from a binding, restoring the backup overwrites the
+  record at the same path (never delete it afterwards), restore `index.json`, remove
+  the selection, keep attempts; from legacy, restore tickets/.gitignore, delete the
+  record, remove `.pincer/`.
 - Gate order pinned by `gates.ORDER`: `INPUT_INVALID … STATE_INCOMPLETE →
   SELECTION_REQUIRED/INVALID → WRONG_CHANGE → LIFECYCLE_BLOCKED → BASE_MISMATCH →
   DECISION_REQUIRED → AUTHORIZATION_REQUIRED → AGREEMENT_CHANGED`. An unreadable

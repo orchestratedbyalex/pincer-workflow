@@ -9,8 +9,14 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 ## Current state
 
 **PRD v5 ("Preserve changes, authorization, and resume context", `.prd/prd-v5.md`)
-is fully implemented and built on `feat/prd-v5` (2026-09-11/12, T-47..T-62, base
-`9bcf8df` = main at v0.5.0). Not evaluated, not merged, not released.** The runtime
+is fully implemented and built on `feat/prd-v5` (2026-09-11/12, T-47..T-65, base
+`9bcf8df` = main at v0.5.0). Not evaluated, not merged, not released.** The user's
+review of the built branch (`1a5cbc5`) found three defects, all fixed as follow-up
+tickets on 2026-09-12: T-63 gates re-evaluated under the attempt lock (a pause
+committed between guard and lock let a verify pass), T-64 post-candidate paths
+computed from validated listed artifacts (an unlisted file under an evidence dir kept
+`ready` green), T-65 rollback split by migration source (the guide deleted the
+restored binding). The runtime
 ([[runtime]], decision [[explicit-change-lifecycle]]) now keeps one schema 2 change
 record per change under `.prd/changes/` (agreements `G-NN`, authorizations `A-NN`,
 decisions `D-NN`, lifecycle events, evaluation references) written only in journaled
@@ -35,7 +41,8 @@ Earlier: v0.4.x PRD v2/v3 ([[requirements-through-delivery]], [[candidate-eviden
 
 ## Active / next task
 
-1. User actions on `feat/prd-v5`: read the review packet; `/pincer-evaluate` with the
+1. User actions on `feat/prd-v5`: re-review the fixes (packet section 10 items 1, 10,
+   11; commits `d43168c`, `7d94c58`, `dcbcfbe`); `/pincer-evaluate` with the
    pinned v0.5.0 kit (this repo stays legacy; schema 2 manifest under
    `.prd/evidence/prd-v5/<candidate>/`); push for CI (ubuntu/macOS × Node 18/22); then
    release (fast-forward to main, `npm version` by hand as before, publish with 2FA).

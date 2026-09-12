@@ -10,11 +10,13 @@ and publishes nothing; evaluation and release remain separate actions.
 
 - Branch: `feat/prd-v5`, base `9bcf8df` (main after v0.5.0 was published; the commit
   the PRD was written against). The PRD was ticketed as `b133da2` (T-47..T-61,
-  `docs/prd-v5-ticket-map.md`); T-62 was added from a trial finding. Ticket commits:
+  `docs/prd-v5-ticket-map.md`); T-62 was added from a trial finding, T-63..T-65 from
+  the user's review of the built branch at `1a5cbc5` (three findings, all fixed; the
+  fixes are follow-up tickets, never edits to done tickets). Ticket commits:
   T-47 `04c49a2`, T-48 `381231d`, T-49 `7d376ab`, T-50 `e07b813`, T-51 `43b1016`,
   T-52 `57a88fd`, T-53 `216e9dd`, T-54 `32418b5`, T-55 `5a0a7bc`, T-56 `9f01884`,
   T-57 `7c587c6`, T-58 `ec216d2`, T-59 `a302735`, T-62 `6e37294`, T-60 `c0bb7e9`,
-  T-61 the commit that closes it (this packet).
+  T-61 `473bfee` (this packet), T-63 `d43168c`, T-64 `7d94c58`, T-65 `dcbcfbe`.
 - Candidate commit: not chosen by this packet. This repository stays in legacy mode
   (PRD section 7: its own tickets are managed with the pinned released v0.5.0 kit), so
   `/pincer-evaluate` records the candidate in `NOTES.md` and a schema 2 manifest under
@@ -54,9 +56,9 @@ its `S-NN` in the test source, so `grep -n "S-NN" test/<suite>` lands on the blo
 | R-04 authorization bound to the agreement digest | S-11, S-12, S-13 | `agreement.cjs` projection and snapshots, `authorization.cjs` verdicts (T-51, T-52) | `test/change-agreement.test.js`, `test/change-authorization.test.js`, `test/change-command-gates.test.js`; trial S-30 (A-01 retained across sessions, no re-approval) | delivered |
 | R-05 revisions and decisions dispositioned explicitly | S-14, S-15, S-16 | `change revise`, `change decide`, `--delegated --basis`, verdict order (T-52, T-54) | `test/change-authorization.test.js`, `test/change-command-gates.test.js`; trial S-31 changed scope (block held; agent finding 1 fixed in T-62 and re-run) | delivered; agent-side residual disclosed (trial finding 1) |
 | R-06 fresh-session resume from the repository alone | S-17, S-18, S-19 | `resume.cjs` report and next-action precedence, authored handoff labeled (T-57) | `test/change-resume.test.js`; trial S-30 both project types, S-31 interruption | delivered |
-| R-07 change-scoped evidence and evaluations | S-20, S-21, S-22, S-23 | attempt schema 2 with `context.agreement`, change-keyed candidate keys, `locator.cjs`, clean-view rule (T-55, T-56) | `test/change-evidence-context.test.js`, `test/change-evaluations.test.js`, `test/runtime-evidence.test.js` | delivered |
-| R-08 atomic transactions, recovery, running attempts | S-24, S-25, S-26 | `transaction.cjs` journal and manifest, `recover`, `ATTEMPT_RUNNING` (T-48, T-53) | `test/change-transactions.test.js`, `test/change-lifecycle.test.js`, `test/runtime-state.test.js`; trial S-31 interruption (`recover` finalized the killed attempt) | delivered |
-| R-09 explicit migration, preserved installs, packed parity | S-27, S-28, S-29 | `migrate.cjs` (legacy and binding sources, backups, rollback), doctor, installer, plugin build (T-58, T-59) | `test/change-migration.test.js`, `test/runtime-migrate.test.js`, `test/change-distribution.test.js`, `test/distribution.test.js`, `test/installer.test.js` | delivered |
+| R-07 change-scoped evidence and evaluations | S-20, S-21, S-22, S-23 | attempt schema 2 with `context.agreement`, change-keyed candidate keys, `locator.cjs`, followers computed from validated listed artifacts (T-55, T-56; review finding 2 fixed in T-64) | `test/change-evidence-context.test.js`, `test/change-evaluations.test.js`, `test/runtime-evidence.test.js` | delivered |
+| R-08 atomic transactions, recovery, running attempts | S-24, S-25, S-26 | `transaction.cjs` journal and manifest, `recover`, `ATTEMPT_RUNNING`, gates re-evaluated under the attempt lock (T-48, T-53; review finding 1 fixed in T-63) | `test/change-transactions.test.js`, `test/change-lifecycle.test.js`, `test/change-command-gates.test.js`, `test/runtime-state.test.js`; trial S-31 interruption (`recover` finalized the killed attempt) | delivered |
+| R-09 explicit migration, preserved installs, packed parity | S-27, S-28, S-29 | `migrate.cjs` (legacy and binding sources, backups, one rollback procedure per source), doctor, installer, plugin build (T-58, T-59; review finding 3 fixed in T-65) | `test/change-migration.test.js`, `test/runtime-migrate.test.js`, `test/change-distribution.test.js`, `test/distribution.test.js`, `test/installer.test.js` | delivered |
 | R-10 live observation with honest baseline | S-30, S-31, S-32 | T-60 trials, `docs/trial-prd-v5.md`, artifacts | `test/change-trial-record.test.js` (completeness only); the trial record and `docs/prd-v5-artifacts/trial-logs/` | delivered on one surface (Claude Code `-p`, Sonnet, macOS); other surfaces untested |
 
 Scenario table (one row per S-NN):
@@ -84,12 +86,12 @@ Scenario table (one row per S-NN):
 | S-19 inspection writes, launches and records nothing | `test/change-resume.test.js` S-19; replay `crash` (inspection between crash and recover) | delivered |
 | S-20 A and B share C-01 and a candidate; each keeps its own attempt | `test/change-evidence-context.test.js` S-20; replay `shared-c01` | delivered |
 | S-21 B changes source while A is paused; A keeps its approval, evidence goes stale | `test/change-evidence-context.test.js` S-21; trial S-30 (`SOURCE_CHANGED` on resume, re-verified) | delivered |
-| S-22 evaluations retained per change | `test/change-evaluations.test.js` S-22 | delivered |
+| S-22 evaluations retained per change; only validated listed artifacts follow the candidate | `test/change-evaluations.test.js` S-22 and the R-07 block (review finding 2, T-64) | delivered |
 | S-23 complete precedes evaluation; release is read-only | `test/change-evaluations.test.js` S-23 | delivered |
-| S-24 contested mutations serialize; a stale expected revision refuses | `test/change-transactions.test.js` S-24, `test/change-lifecycle.test.js` S-24 | delivered |
+| S-24 contested mutations serialize; a stale expected revision refuses; a transition committed before a check's lock refuses the check | `test/change-transactions.test.js` S-24, `test/change-lifecycle.test.js` S-24, `test/change-command-gates.test.js` S-24 (review finding 1, T-63) | delivered |
 | S-25 process death at every journal boundary leaves the old or the committed state | `test/change-transactions.test.js` S-25, `test/change-lifecycle.test.js` S-25; replay `crash` | delivered |
 | S-26 a running attempt blocks transitions without being killed | `test/change-transactions.test.js` S-26, `test/change-lifecycle.test.js` S-26; trial S-31 interruption | delivered |
-| S-27 legacy and v0.5.0 projects migrate with backups; reapply and rollback preserve files | `test/change-migration.test.js` S-27, `test/runtime-migrate.test.js` | delivered |
+| S-27 legacy and v0.5.0 projects migrate with backups; reapply and the documented rollback per source preserve files | `test/change-migration.test.js` S-27, `test/runtime-migrate.test.js` (review finding 3, T-65) | delivered |
 | S-28 legacy authorization text is never promoted | `test/change-migration.test.js` S-28, `test/change-authorization.test.js` S-28 | delivered |
 | S-29 packed layouts carry the same runtime; unknown schemas and mixed directories refused | `test/change-migration.test.js` S-29, `test/change-distribution.test.js` | delivered |
 | S-30 fresh-session A/B/A handoff on both project types | `docs/trial-prd-v5.md` S-30 greenfield (G1–G3) and brownfield (B1–B3) | delivered on one surface |
@@ -112,9 +114,9 @@ fixtures under `test/fixtures/prd-v5/`).
 
 | Gate | Command | Result |
 | --- | --- | --- |
-| full local suite | `npm test` (36 suites: smoke, installer, ticket, validation, verification, behavioral-verification, evidence, candidate, recovery, hooks, runtime-parse, runtime-identity, change-registry, change-selection, change-agreement, change-authorization, change-lifecycle, change-command-gates, change-evidence-context, change-evaluations, change-resume, change-trial-record, runtime-state, change-transactions, runtime-status, runtime-runner, runtime-lifecycle, runtime-migrate, change-migration, runtime-evidence, workflow, contracts, change-contracts, distribution, change-distribution, change-review-packet) | passed locally on macOS 26.6.2, Node v22.23.1, as T-61's recorded verification (the ticket receipt names the attempt) |
+| full local suite | `npm test` (36 suites: smoke, installer, ticket, validation, verification, behavioral-verification, evidence, candidate, recovery, hooks, runtime-parse, runtime-identity, change-registry, change-selection, change-agreement, change-authorization, change-lifecycle, change-command-gates, change-evidence-context, change-evaluations, change-resume, change-trial-record, runtime-state, change-transactions, runtime-status, runtime-runner, runtime-lifecycle, runtime-migrate, change-migration, runtime-evidence, workflow, contracts, change-contracts, distribution, change-distribution, change-review-packet) | passed locally on macOS 26.6.2, Node v22.23.1, as T-61's recorded verification, and again after the review fixes at `dcbcfbe` (T-63..T-65) before this packet revision was committed |
 | packed-install parity | `node test/distribution.test.js && node test/change-distribution.test.js` (Claude-only, Codex-only, Copilot-only, all-platform and plugin layouts; identical runtime digests; change commands executed from each installed copy) | passed locally (part of `npm test`) |
-| generator parity | `bash template/scripts/sync-prompts.sh && bash scripts/build-plugin.sh && git status --short -- template plugin` | no diff at `c0bb7e9` |
+| generator parity | `bash template/scripts/sync-prompts.sh && bash scripts/build-plugin.sh && git status --short -- template plugin` | no diff at `c0bb7e9`; no diff after each of T-63..T-65 regenerated its outputs (`test/distribution.test.js` fails on stale output) |
 | review replay | `bash docs/prd-v5-artifacts/replay.sh all` (section 11) | all eight cases `ok` locally; executed by `test/change-review-packet.test.js` |
 | CI matrix (ubuntu-latest, macos-latest × Node 18, 22; `.github/workflows/ci.yml`) | push of `feat/prd-v5` | outstanding — the branch has not been pushed; the last CI run is `34637172105` on main at `9bcf8df` (success). Release readiness is blocked until the matrix passes on the candidate. |
 
@@ -307,6 +309,21 @@ guarantees; each is pinned by the named suite.
    by an edit the session did not make as a decision to surface with `change decide`;
    a general "continue" instruction never authorizes new scope
    (`test/workflow.test.js`).
+10. T-63 (review finding 1, P1): as built at `1a5cbc5`, `verify` and `check` evaluated
+    the gates before the runner took the worktree lock and never again, so a
+    `change pause` committed in between let a verification run and pass on a paused
+    change. The guard now runs a second time under the lock immediately before the
+    `running` record is written; that evaluation decides (refusal with the gate's
+    code, nothing written or launched, or an attempt recorded against the agreement
+    current under the lock), and the verification header is printed only once the
+    record exists so refusals stay silent on stdout
+    (`test/change-command-gates.test.js` S-24, `test/fixtures/attempt-race.cjs`,
+    `test/change-contracts.test.js`).
+11. T-65 (review finding 3, P2): the rollback guide restored the binding and then
+    deleted the same path; it is now one procedure per migration source and both
+    rollback tests follow their procedure step by step
+    (`test/change-contracts.test.js`, `test/change-migration.test.js`,
+    `test/runtime-migrate.test.js`).
 
 ## 11. Independent replay
 

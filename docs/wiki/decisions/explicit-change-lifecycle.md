@@ -1,6 +1,6 @@
 # Explicit change lifecycle, agreements and authorization (PRD v5)
 
-**Decided 2026-09-11/12 on `feat/prd-v5` (T-47..T-62).** See [[runtime]] for the
+**Decided 2026-09-11/12 on `feat/prd-v5` (T-47..T-65).** See [[runtime]] for the
 modules and [[runtime-owned-verification]] for the PRD v4 base it extends.
 
 ## What was decided
@@ -26,10 +26,15 @@ modules and [[runtime-owned-verification]] for the PRD v4 base it extends.
   scope; an out-of-session agreement change is raised as a decision (T-62).
 - **One active change per tree**; pause/resume/complete/reopen/cancel/supersede are
   single journaled transactions (lock, staging, `manifest.json` commit point,
-  `recover`). Completed means ready for evaluation, not released.
+  `recover`). Completed means ready for evaluation, not released. The execution gates
+  are evaluated a second time under the same lock right before an attempt's `running`
+  record is written, so a transition committed between the pre-launch guard and the
+  lock refuses the check (T-63).
 - **Evidence is change-scoped**: attempt schema 2 carries `context.agreement`; candidate
   keys are `candidate:<change>:<sha>:<C-NN>`; evaluations are retained per change in
-  `.prd/evidence/changes/<id>.json`.
+  `.prd/evidence/changes/<id>.json`. Only validated, listed artifacts follow a
+  candidate: the set is computed from valid locators and validated manifests, never
+  from directory or filename patterns (T-64).
 - **`resume` is the handoff**: one computed next action (rules 1–8); authored pause
   notes are displayed, labeled, never inputs.
 
