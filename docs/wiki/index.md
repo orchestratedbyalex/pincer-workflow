@@ -22,6 +22,11 @@
 - [[evidence-validator]] — pincer-evidence.cjs: schema 1 fields, failure classes, CLI, callers, packaging
 - [[github-pages-site]] — docs/index.html served by GitHub Pages from main:/docs; the 12-sheet walkthrough, provenance, sync rules
 
+## Planned work
+
+- [PRD v6](../../.prd/prd-v6.md) — complete requirement coverage, structural change impact and independent delivery benchmark; ticketed, not implemented
+- [V6 ticket map](../prd-v6-ticket-map.md) — T-66..T-78, all 30 acceptance scenarios and build dependencies
+
 ## Meta
 
 - [[briefing]] — session-start orientation page (rewritten every `end`)

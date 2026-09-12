@@ -8,6 +8,15 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 
 ## Current state
 
+**PRD v6 is ticketed (2026-09-12): “Complete requirement coverage and explain change
+impact”, `.prd/prd-v6.md`, T-66..T-78.** The user selected the direction and requested
+the breakdown. It adds a complete PRD inventory, explicit coverage/check links,
+agreement-bound scope dispositions, structural impact, independent export/release
+reconciliation and a six-brief paired delivery benchmark (36 runs). No v6 runtime
+implementation has started. See `docs/prd-v6-ticket-map.md` for all 30 scenarios and
+dependencies; start with T-66's contract freeze. New test paths are deliverables,
+not existing passing evidence. Keep the distribution repo in legacy management mode.
+
 **PRD v5 ("Preserve changes, authorization, and resume context", `.prd/prd-v5.md`)
 is fully implemented and built on `feat/prd-v5` (2026-09-11/12, T-47..T-65, base
 `9bcf8df` = main at v0.5.0). Not evaluated, not merged, not released.** The user's
@@ -41,15 +50,16 @@ Earlier: v0.4.x PRD v2/v3 ([[requirements-through-delivery]], [[candidate-eviden
 
 ## Active / next task
 
-1. User actions on `feat/prd-v5`: re-review the fixes (packet section 10 items 1, 10,
-   11; commits `d43168c`, `7d94c58`, `dcbcfbe`); `/pincer-evaluate` with the
-   pinned v0.5.0 kit (this repo stays legacy; schema 2 manifest under
-   `.prd/evidence/prd-v5/<candidate>/`); push for CI (ubuntu/macOS × Node 18/22); then
-   release (fast-forward to main, `npm version` by hand as before, publish with 2FA).
-   Findings from review go through new tickets (T-63+), never edits to done tickets.
-2. Open runtime follow-ups: the trial residual (an agent recorded an authorization from
-   a generic instruction before raising the decision) and the guard's heredoc false
-   positive — see [[open-threads]].
+1. V6 implementation starts at T-66, then follows `docs/prd-v6-ticket-map.md`.
+   The selected scope is already recorded; ask only for a newly discovered material
+   decision. T-76's independent benchmark can be prepared after T-66 and must be
+   frozen before T-77's observed runs. Do not fabricate receipts for future suites.
+2. V5 remains built with T-63..T-65 review fixes recorded. Its re-review, evaluation,
+   supported CI matrix and release are separate gates; v6 planning completes none
+   of them. Use the v5 branch/candidate when completing those gates.
+3. The generic-continue authorization residual is explicitly observed again by v6
+   S-27/T-77. A false authorization is a failure even if a later decision gate blocks.
+   Other parked items remain in [[open-threads]].
 
 ## Recent decisions
 

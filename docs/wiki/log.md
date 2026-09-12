@@ -191,3 +191,10 @@ The user's review of `feat/prd-v5` at `1a5cbc5` found two P1s and one P2; each b
 T-63: `runner.runAttempt` takes `revalidate`/`announce`; verify/check re-run `gates.guard` under the lock before the running record (fixture `test/fixtures/attempt-race.cjs`, gate suite S-24 block, contract pins). T-64: `locator.followers` computes allowed post-candidate paths from valid locators + validated manifests; `requireCandidateView` uses it (evaluations suite R-07 block). T-65: contract rollback split into legacy and binding procedures; both rollback tests follow them literally.
 Packet sections 1, 2, 4, 6, 10 updated; wiki runtime/decision/briefing updated; full `npm test` re-run after the fixes (result in the packet's verification record).
 Outcome: PRD v5 still `built`, awaiting the user's re-review, evaluation, CI push and release.
+
+## [2026-09-12] end | PRD v6 and implementation breakdown created
+- What: `.prd/prd-v6.md` (ticketed), 13 open tickets T-66..T-78 and `docs/prd-v6-ticket-map.md`; 10 requirements and 30 scenarios with primary owners, checks and dependency order.
+- Why: the user selected complete requirement coverage and change impact, with an independent delivery benchmark, and requested tickets.
+- Decisions: PRD prose owns definitions; a strict authored map owns links and candidate check declarations; adoption is explicit and agreement-bound; export/release reconcile the full candidate inventory; semantic adequacy remains a review judgment. Benchmark: six briefs, three paired repetitions each, 36 runs with independently frozen evaluators and honest failures/limitations.
+- Validation: existing parser accepts the PRD and all new tickets; full ticket-set validation passes; planning checks confirm unique R/S IDs, all scenario owners, valid local links, ordered acyclic dependencies and open/unchecked state without receipts. Runtime tests were not rerun for this documentation-only task.
+- Outcome: v6 runtime implementation begins with T-66; no code, migration, evaluation, merge or publication performed. V5 release/re-review gates remain separate.
