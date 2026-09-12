@@ -198,3 +198,19 @@ Outcome: PRD v5 still `built`, awaiting the user's re-review, evaluation, CI pus
 - Decisions: PRD prose owns definitions; a strict authored map owns links and candidate check declarations; adoption is explicit and agreement-bound; export/release reconcile the full candidate inventory; semantic adequacy remains a review judgment. Benchmark: six briefs, three paired repetitions each, 36 runs with independently frozen evaluators and honest failures/limitations.
 - Validation: existing parser accepts the PRD and all new tickets; full ticket-set validation passes; planning checks confirm unique R/S IDs, all scenario owners, valid local links, ordered acyclic dependencies and open/unchecked state without receipts. Runtime tests were not rerun for this documentation-only task.
 - Outcome: v6 runtime implementation begins with T-66; no code, migration, evaluation, merge or publication performed. V5 release/re-review gates remain separate.
+
+## [2026-09-12] end | PRD v6 implemented: strict coverage, impact and the delivery benchmark
+Built T-66..T-78 on `feat/prd-v6` (base `07b2210`): the PRD's own prose is the inventory,
+`.prd/coverage/<id>.json` is the one authored map, both live inside the agreement digest,
+`coverage`/`impact` are read-only reports, strict `check C-NN` runs only the declaration,
+and evidence schema 3 derives every row from the map snapshot. Adoption is opt-in and
+backed up; unadopted projects are untouched.
+Also: a six-brief, 36-run paired delivery benchmark with held-out evaluators
+(`docs/trial-prd-v6.md`) — acceptance 17/18 per arm, kit arm ~4.7x cost, the only
+difference being changed-scope handling (3/3 vs 2/3); and the review packet with eight
+executable replay cases (`docs/prd-v6-review-packet.md`).
+Files: `template/scripts/pincer-runtime/{requirements,coverage,dispositions,adopt,phases,impact,checks}.cjs`,
+14 new suites, `scripts/delivery-benchmark/`, `test/fixtures/delivery-benchmark/`, `docs/prd-v6-artifacts/`.
+Outcome: 50 suites green locally through the pinned v0.5.0 kit; both generators in parity;
+CI not run on the branch and Node 18 unverified anywhere; nothing evaluated, merged or released.
+New pages: [[strict-coverage]], [[delivery-benchmark]], [[coverage-is-authored-and-bound]].
