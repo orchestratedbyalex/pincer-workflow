@@ -1,9 +1,13 @@
 ---
 ticket: T-59
-status: open
+status: done
 size: M
 prd: .prd/prd-v5.md
 depends_on: [T-58]
+started: 2026-09-11T23:56:58Z
+last_check: 2026-09-12T00:12:08Z passed af23246c6665
+verified: 2026-09-12T00:12:08Z af23246c6665
+finished: 2026-09-12T00:12:08Z
 ---
 
 ## Objective
@@ -24,9 +28,9 @@ Ship the change workflow in every layout and adapter so PRD v5 can be implemente
 - Regenerate adapters/plugin, include every new behavior suite in npm test, and run packed CLI journeys plus existing preservation checks. Publish no claims of unobserved agent parity.
 
 ## Acceptance Criteria
-- [ ] Packed Claude-only, Codex-only, Copilot-only, all-platform and plugin layouts contain identical runtime modules and execute the declared change commands.
-- [ ] Canonical and generated guidance names valid commands/paths and the same authorization rule; guards allow documented drafts and reject direct state manipulation.
-- [ ] Installer update preserves customized user files; doctor reports migration/conflict/unsupported state accurately; no version bump or release action occurs.
+- [x] Packed Claude-only, Codex-only, Copilot-only, all-platform and plugin layouts contain identical runtime modules and execute the declared change commands.
+- [x] Canonical and generated guidance names valid commands/paths and the same authorization rule; guards allow documented drafts and reject direct state manipulation.
+- [x] Installer update preserves customized user files; doctor reports migration/conflict/unsupported state accurately; no version bump or release action occurs.
 
 ## Verification
 Proves: Exercises packed installations and adapter/guard contracts; catches missing modules, wrong plugin paths, unusable documented commands and lost user customizations.

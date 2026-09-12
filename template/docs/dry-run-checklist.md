@@ -69,9 +69,10 @@ observes agent behavior, and one trial on one surface says nothing about the oth
       consequential choice (if any) was surfaced before implementation
 - [ ] PRD frontmatter now says `status: ticketed`
 - [ ] Tickets are committed
-- [ ] The change was registered (`Register PRD vN` commit with `.prd/changes/prd-vN.json`)
-      with the user's approval quoted in `authorization`; status now shows
-      `Runtime  change prd-vN`
+- [ ] The change was registered (`Register PRD vN` commit with `.prd/changes/prd-vN.json`,
+      retaining any earlier change), the user's approval was recorded with
+      `change authorize` (quoted in the excerpt, committed as `Authorize PRD vN`) and
+      the change was selected; status now shows `Runtime  changes · selected prd-vN`
 
 ## After `/pincer-code`
 
@@ -114,7 +115,23 @@ observes agent behavior, and one trial on one surface says nothing about the oth
       cheat: run `verify` twice on an unchanged tree — `git status` shows no change;
       cheat: edit a ticket body, then `migrate --apply` again — the edit is preserved and
       the second apply reports `already migrated`
+- [ ] Change records only: `change activate prd-vN` ran once before the first ticket and
+      no ticket command asked for a repeat approval; cheat: start a ticket of another
+      change — `WRONG_CHANGE`, nothing launched
+- [ ] Change records only, cheat: pause the change with a reason and a handoff note, clear
+      the context, run `resume` — the report names the change, the blocker and the next
+      command from files alone, the note is labeled authored, and `change resume`
+      continues under the same authorization without a repeat approval
+- [ ] Change records only, cheat: edit the PRD under its filename — `verify` refuses with
+      `AGREEMENT_CHANGED` until `change authorize` records the disposition; cheat: raise a
+      decision with `change decide --summary` — execution is blocked until the user's
+      answer is recorded and authorized
+- [ ] v0.5.0 project only: the binding was converted by `migrate --apply` after a
+      preview, the old attempts read `HISTORICAL_EVIDENCE`, and the old authorization
+      text did not authorize anything
 - [ ] Any scope cut made during build is recorded in the PRD's Out of Scope section
+- [ ] Change records only: `change complete prd-vN` ran (`Complete PRD vN` commit) before
+      the built commit and refused while a ticket was stale or unfinished
 - [ ] PRD frontmatter now says `status: built`, committed on its own (`PRD vN: built`)
       before evaluation, not folded into the evidence commit
 - [ ] Status shows the wall-clock elapsed line only while a ticket is in progress or
@@ -234,4 +251,8 @@ Copy this into `docs/trial-<date>-<greenfield|brownfield>.md` and fill every lin
 | R-04 | |
 | R-05 | |
 | R-06 | |
+| R-07 | |
+| R-08 | |
+| R-09 | |
+| R-10 | |
 ```

@@ -10,6 +10,7 @@ to the owning stage or a new ticket.
 - [ ] Every ticket associated with that PRD is done and ready: current `last_check` and `verified` evidence before migration, a current passing attempt after it (`node scripts/pincer-runtime.cjs ready` exits 0)
 - [ ] `NOTES.md` names the selected PRD, reviewed base, candidate, and `evidence:` manifest; status reports the notes current and the evidence `ok`
 - [ ] The `Provenance` line names the evidence schema; a schema 2 candidate has no newer nonpassing local attempt for the same check and source inputs, and a fresh clone's `local verification history unavailable` limit is stated, not claimed as verification
+- [ ] Change records only: the selected change is `completed`, its authorization is `current` for the current agreement, `.prd/evidence/changes/<id>.json` names the evaluated candidate, and the audit selected, activated and completed nothing
 - [ ] Every file the evidence manifest lists is tracked; the working tree is clean before and after the audit
 
 ## Scope and evidence

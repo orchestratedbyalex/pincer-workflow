@@ -121,6 +121,9 @@ material choice not already authorized, and prepare the concrete proposal before
 asking. A decision the user delegated (for example "pick the architecture") does not
 need another approval when you exercise it, but a newly discovered consequential
 choice is surfaced before implementation. Record the authorization basis and the
-scope it covers in the PRD or the handover. An agent-written record or a status
+scope it covers in the PRD or the handover, and on a project with change records as
+a `change authorize` record (the user's words as the excerpt, or a `--delegated`
+disposition with its basis). An agent-written record or a status
 field is not authenticated human approval. When resuming without the context that
-granted authorization, do not invent it — ask.
+granted authorization, do not invent it — read the `resume` report; an authorization
+it reports as `current` needs no repeat approval, and any other verdict is asked.

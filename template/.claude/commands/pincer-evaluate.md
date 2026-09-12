@@ -19,8 +19,10 @@ run the pipeline, then present results.
    that uncertainty before claiming a complete review. Record full commit IDs for
    `base` and `candidate` (`git rev-parse HEAD`), then review `git diff <base>..<candidate>`.
    The candidate is the clean, committed tree that already includes the implementation,
-   the ticket closures and the PRD `status: built` commit: `git status --short` must be
-   empty before review. If anything is uncommitted or the PRD is not yet built, return
+   the ticket closures, on a project with change records the `change complete` commit
+   (the `Runtime` line reads `… · completed ·`; `check` and `evidence export` refuse an
+   active, paused or unauthorized change), and the PRD `status: built` commit:
+   `git status --short` must be empty before review. If anything is uncommitted or the PRD is not yet built, return
    to `/pincer-code`; do not review a dirty tree.
 2. Dispatch a `code-quality-reviewer` agent with: the diff, the PRD's Success Criteria and
    Scope sections, and the list of tickets. If the diff is large, split by area and
@@ -77,8 +79,12 @@ run the pipeline, then present results.
    `result`, `provenance: runtime` and `attempt` from the attempts, labels review and
    visual checks `provenance: authored`, computes the digests and writes an evidence
    schema 2 manifest; it refuses a dirty tree, a HEAD that is not the candidate, a stub
-   without an attempt, and a `passed` or `failed` command result written by hand. A
-   tool that cannot run is recorded as an authored command check with
+   without an attempt, and a `passed` or `failed` command result written by hand. On a
+   project with change records the export also appends the evaluation to the change's
+   locator `.prd/evidence/changes/<id>.json` (the identity of this change's
+   evaluation; root `NOTES.md` stays the human summary and may be overwritten by a
+   later change's evaluation without losing this one) — commit the locator with the
+   evidence. A tool that cannot run is recorded as an authored command check with
    `result: unverified` and a note, as before. Legacy project (no change binding):
    author the schema 1 manifest as follows.
    - `checks/C-NN.log` — the command and a redacted summary or safe log of each
@@ -120,11 +126,13 @@ run the pipeline, then present results.
    evidence: .prd/evidence/prd-vN/<candidate>/manifest.json
    ---
    ```
-   Then commit NOTES.md, the manifest and its listed artifacts — and nothing else —
+   Then commit NOTES.md, the manifest, its listed artifacts and (change records) the
+   evaluation locator — and nothing else —
    as `evaluate: PRD vN candidate <short sha>`. Status accepts this later commit only
-   when its diff from the candidate is limited to `NOTES.md` and the evidence files
-   the manifest lists; changes to source, tests, configuration, tickets, the PRD or
-   other evaluations require reevaluation. Legacy notes without these references
+   when its diff from the candidate is limited to `NOTES.md`, the candidate's evidence
+   directories and evaluation locators; changes to source, tests, configuration,
+   tickets, the PRD or the change record (a lifecycle transition after the
+   candidate) require reevaluation. Legacy notes without these references
    do not establish readiness. Then describe what was built, what was cut
    and why, known issues, and what you'd do next with more time. Then a **Handover**
    section, written for the stranger who inherits this repo in six months: how to get
@@ -142,6 +150,9 @@ material choice not already authorized, and prepare the concrete proposal before
 asking. A decision the user delegated (for example "pick the architecture") does not
 need another approval when you exercise it, but a newly discovered consequential
 choice is surfaced before implementation. Record the authorization basis and the
-scope it covers in the PRD or the handover. An agent-written record or a status
+scope it covers in the PRD or the handover, and on a project with change records as
+a `change authorize` record (the user's words as the excerpt, or a `--delegated`
+disposition with its basis). An agent-written record or a status
 field is not authenticated human approval. When resuming without the context that
-granted authorization, do not invent it — ask.
+granted authorization, do not invent it — read the `resume` report; an authorization
+it reports as `current` needs no repeat approval, and any other verdict is asked.

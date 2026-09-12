@@ -85,12 +85,20 @@ existing authorization for the same scope and order.
    once it is resolved — only when step 4 surfaced a newly discovered consequential
    choice or a scope change the PRD does not cover. Then register the change when the
    `Runtime` status line says `legacy` and no ticket of this PRD carries legacy
-   receipts: `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs register --prd .prd/prd-vN.md --authorization "<the user's approval, quoted>"`,
-   then stage `.prd/changes/` and `.gitignore` (registration adds `.pincer/` to it) and
-   commit them as `Register PRD vN`. The authorization
-   text records the user's own words; running the command proves nothing by itself. A
-   project whose tickets carry legacy receipts is migrated from `/pincer:code` after a
-   preview, never here. Finish with:
+   receipts, or `changes` (the project already keeps change records):
+   `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs register --prd .prd/prd-vN.md` writes the change
+   record `.prd/changes/prd-vN.json` (retaining every earlier change); stage
+   `.prd/changes/` and `.gitignore` (registration adds `.pincer/` to it) and commit them
+   as `Register PRD vN`. Then record the user's actual approval against the agreement
+   the record binds — `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs change show prd-vN --json`
+   prints the agreement digest — with
+   `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs change authorize prd-vN --agreement <digest> --reference "<where the user said it>" --excerpt "<the user's approval, quoted>"`,
+   select it for this worktree (`node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs change select prd-vN`)
+   and commit `.prd/changes/` as `Authorize PRD vN`. The excerpt records the user's own
+   words; running the command proves nothing by itself, and a registration, a PRD
+   status or a passing check never becomes an authorization. A project whose tickets
+   carry legacy receipts, or that still holds a v0.5.0 binding (`Runtime  change <id> ·
+   revision …`), is migrated from `/pincer:code` after a preview, never here. Finish with:
    "Tickets ready in `tickets/`. Run `/pincer:code` to start implementing."
 
 ## Authorization rule (shared by plan, narrow, code and evaluate)
@@ -100,6 +108,9 @@ material choice not already authorized, and prepare the concrete proposal before
 asking. A decision the user delegated (for example "pick the architecture") does not
 need another approval when you exercise it, but a newly discovered consequential
 choice is surfaced before implementation. Record the authorization basis and the
-scope it covers in the PRD or the handover. An agent-written record or a status
+scope it covers in the PRD or the handover, and on a project with change records as
+a `change authorize` record (the user's words as the excerpt, or a `--delegated`
+disposition with its basis). An agent-written record or a status
 field is not authenticated human approval. When resuming without the context that
-granted authorization, do not invent it — ask.
+granted authorization, do not invent it — read the `resume` report; an authorization
+it reports as `current` needs no repeat approval, and any other verdict is asked.

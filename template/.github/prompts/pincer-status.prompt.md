@@ -20,11 +20,18 @@ start of a session. Read-only: change nothing.
    candidate, any warnings (each readiness problem once), and the next command to run.
    `scripts/pincer-status.sh --json` prints one status object with reason codes and the
    next action for tooling; `node scripts/pincer-runtime.cjs ready [T-NN]` is the
-   read-only gate.
+   read-only gate. On a project with change records (`Runtime  changes …`) run
+   `node scripts/pincer-runtime.cjs resume` as well: it reports the selected change, its
+   lifecycle, agreement and authorization, decisions, references, tickets, attempts,
+   candidate, the authored handoff note and the next command, and never writes;
+   `change list` shows every retained change, `status --change <id>` and
+   `resume --change <id>` inspect another one without selecting it. `resume` is the
+   report; `change resume <id>` is the lifecycle operation.
 2. Report in three lines: where the workflow is, what is in progress or blocked, and the
    next command. Quote the `Next` line as-is. When the `Runtime` line says `legacy`,
    add the register or migrate command it names as the step that precedes the next
-   ticket (fresh project → `register`, legacy receipts → `migrate --preview`).
+   ticket (fresh project → `register`, legacy receipts → `migrate --preview`, a v0.5.0
+   binding → `migrate --preview`, no selection → `change select <id>`).
 3. If a ticket is `in_progress`, read it and `git status`, then offer to resume it with
    `/pincer-code T-{NN}`. If the script printed a warning, surface it — a done ticket
    without a receipt was marked by hand and needs `scripts/pincer-ticket.sh verify T-{NN}`.

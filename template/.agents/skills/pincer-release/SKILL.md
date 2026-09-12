@@ -49,6 +49,14 @@ durable runtime-owned release record is later work.
      exits 1 and names the check). A fresh clone reports `local verification history
      unavailable; saved candidate evidence validated only`: state that limit in the
      verdict rather than claiming local verification.
+   - Change records (the `Runtime` line reads `changes`): the selected change is
+     `completed`, its authorization is `current` for the current agreement, and its
+     evaluation locator `.prd/evidence/changes/<id>.json` names the evaluated
+     candidate; `node scripts/pincer-runtime.cjs ready` reports `SELECTION_REQUIRED`,
+     `LIFECYCLE_BLOCKED`, `DECISION_REQUIRED`, `AUTHORIZATION_REQUIRED` or
+     `AGREEMENT_CHANGED` as failures. Release selects, activates and completes nothing;
+     historical evidence of a cancelled or superseded change is inspectable but never
+     release-ready.
    - Every file the manifest lists is tracked, and `git status --short` is empty before
      and after the audit.
    - Run the repository's candidate-wide release gate directly (`npm test`, or the

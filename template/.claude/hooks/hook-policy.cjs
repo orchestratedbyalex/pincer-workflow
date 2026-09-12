@@ -160,12 +160,13 @@ function dangerousReason(source, depth = 0) {
 }
 
 const TICKET_PATH = /(^|[\\/])tickets[\\/]T-[0-9]+[^\\/]*\.md$/;
-// Runtime-owned state: local attempts under .pincer/ and change bindings under
-// .prd/changes/ are written only by pincer-runtime.cjs.
+// Runtime-owned state: local attempts under .pincer/, change records under
+// .prd/changes/ and evaluation locators under .prd/evidence/changes/ are written
+// only by pincer-runtime.cjs.
 // The runtime owns .pincer/runtime/ and .pincer/backups/ (and the directory as a
 // whole); .pincer/drafts/ is the agent's own scratch space for evidence drafts.
 const RUNTIME_PATH = /(^|[\\/])\.pincer(?:[\\/](?:runtime|backups)(?:[\\/]|$)|[\\/]?$)/;
-const BINDING_PATH = /(^|[\\/])\.prd[\\/]changes([\\/]|$)/;
+const BINDING_PATH = /(^|[\\/])\.prd[\\/](?:changes|evidence[\\/]changes)([\\/]|$)/;
 const PROTECTED = ['status', 'started', 'last_check', 'verified', 'finished'];
 
 function ticketPath(value) {
@@ -244,7 +245,7 @@ function isExactPincerCall(source) {
   let words = [executable, ...args];
   if (['bash', 'sh', 'node'].includes(words[0])) words = words.slice(1);
   if (/pincer-runtime\.cjs$/.test(words[0] || '')) {
-    return ['start', 'verify', 'done', 'bind', 'register', 'migrate', 'recover', 'check', 'evidence'].includes(words[1]);
+    return ['start', 'verify', 'done', 'bind', 'register', 'migrate', 'recover', 'check', 'evidence', 'change', 'resume'].includes(words[1]);
   }
   if (!/pincer-ticket\.sh$/.test(words[0] || '')) return false;
   const action = words[1];
@@ -335,7 +336,7 @@ function ticketShellMutation(source, depth = 0) {
       if (viaXargs && ['checkout', 'restore', 'clean'].includes(sub.name) && stdinPathspec) return true;
     }
     const hasTicket = words.some(ticketPath) || /(^|[\s'"`])tickets[\\/]T-[0-9]+[^\s'"`]*/.test(source) ||
-      words.some(runtimePath) || /(^|[\s'"`=])\.pincer(?:[\\/](?:runtime|backups)(?:[\\/]|[\s'"`]|$)|[\\/]?(?:[\s'"`]|$))/.test(source) || /(^|[\s'"`=])\.prd[\\/]changes([\\/]|[\s'"`]|$)/.test(source);
+      words.some(runtimePath) || /(^|[\s'"`=])\.pincer(?:[\\/](?:runtime|backups)(?:[\\/]|[\s'"`]|$)|[\\/]?(?:[\s'"`]|$))/.test(source) || /(^|[\s'"`=])\.prd[\\/](?:changes|evidence[\\/]changes)([\\/]|[\s'"`]|$)/.test(source);
     if (!hasTicket) continue;
     if (command.operators.some(op => op === '>' || op === '>>')) return true;
     if (['rm', 'mv', 'cp', 'install', 'truncate', 'touch', 'tee', 'ed', 'ex'].includes(executable)) return true;

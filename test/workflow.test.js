@@ -99,7 +99,7 @@ assert.match(evaluate, /pincer-evidence\.cjs digest/);
 assert.match(evaluate, /^\s*evidence: \.prd\/evidence\/prd-vN\/<candidate>\/manifest\.json$/m);
 assert.match(evaluate, /`result: unverified`.*never a\s+fabricated artifact/is);
 assert.match(evaluate, /visual_review: \{applicable: false, reason\}/);
-assert.match(evaluate, /NOTES\.md, the manifest and its listed artifacts — and nothing else/);
+assert.match(evaluate, /NOTES\.md, the manifest, its listed artifacts and \(change records\) the\s+evaluation locator — and nothing else/);
 assert.match(evaluate, /never reuse a manifest from a previous candidate/i);
 assert.match(evaluate, /not that the commands ran/i);
 // PRD v3 R-02: one check per command, command line as run; npm test stays aggregate.
@@ -202,11 +202,14 @@ const dryRun = read('template/docs/dry-run-checklist.md');
 for (const phrase of ['SOURCE_CHANGED', 'recover', 'already migrated', 'evidence export', 'local verification history unavailable', 'ready` exits 1']) assert.match(dryRun, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `dry-run cheat: ${phrase}`);
 
 // PRD v4 (T-42): registration and migration are explicit steps in the workflow.
-assert.match(narrow, /register --prd \.prd\/prd-vN\.md --authorization "<the user's approval, quoted>"/);
-assert.match(narrow, /commit them as `Register PRD vN`/);
+assert.match(narrow, /register --prd \.prd\/prd-vN\.md` writes the change\s+record/);
+assert.match(narrow, /change authorize prd-vN --agreement <digest> --reference "<where the user said it>" --excerpt "<the user's approval, quoted>"/);
+assert.match(narrow, /commit `\.prd\/changes\/` as `Authorize PRD vN`/);
+assert.match(narrow, /never becomes an authorization/);
+assert.match(narrow, /commit them\s+as `Register PRD vN`/);
 assert.match(narrow, /running the command proves nothing by itself/);
 assert.match(code, /migrate --preview --prd \.prd\/prd-vN\.md/);
-assert.match(code, /ask once whether to\s+apply\. Apply only on a yes/);
+assert.match(code, /ask once whether to\s+apply\. Apply only on\s+a yes/);
 assert.match(code, /Never migrate silently/);
 assert.match(statusPlaybook, /fresh project → `register`, legacy receipts → `migrate --preview`/);
 assert.match(dryRun, /Register PRD vN/);
@@ -214,13 +217,49 @@ assert.match(dryRun, /Register PRD vN/);
 assert.match(dryRun, /legacy project only\s+\(no change binding\): `verified` receipts too/);
 assert.match(dryRun, /Legacy project only, cheat: revert the source/);
 assert.match(dryRun, /Legacy project only, cheat: with the tree at the candidate/);
-assert.match(narrow, /stage `\.prd\/changes\/` and `\.gitignore`/);
+assert.match(narrow, /stage\s+`\.prd\/changes\/` and `\.gitignore`/);
 assert.match(code, /commit `\.prd\/changes\/` and `\.gitignore` as `Register PRD vN`/);
 assert.match(read('template/docs/runtime-contracts.md'), /at most 2147483/);
 assert.match(read('template/docs/runtime-contracts.md'), /is the target surface/);
 assert.doesNotMatch(read('template/docs/runtime-contracts.md'), /Tested platforms are the CI matrix/);
 assert.match(read('plugin/docs/runtime-contracts.md'), /\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/pincer-runtime\//, 'plugin transform rewrites the module directory');
 assert.match(dryRun, /nothing was\s+migrated silently/);
+
+// PRD v5 (T-59): the change workflow in every playbook, the checklists and the guards.
+assert.match(code, /run `node scripts\/pincer-runtime\.cjs resume` and follow its `Next`/);
+assert.match(code, /change\s+select <id>`; selection is local metadata and touches no source/);
+assert.match(code, /`change activate <id>`; refused until the user's authorization is recorded/);
+assert.match(code, /## Changes: pausing, decisions and completion/);
+assert.match(code, /change pause <id> --reason "<why>" --note "<handoff for the next session>"/);
+assert.match(code, /do not ask the user to re-approve unchanged scope/);
+assert.match(code, /change decide <id> --summary "<the question>"/);
+assert.match(code, /--delegated --basis A-NN --explanation/);
+assert.match(code, /refuses with\s+`AGREEMENT_CHANGED`/);
+assert.match(code, /change complete <id>`\s+\(it refuses unfinished tickets/);
+assert.match(code, /Completed means ready\s+for evaluation, not evaluated or released/);
+assert.match(code, /complete the change first \(`change complete <id>`,\s+committed as `Complete PRD vN`\)/);
+assert.match(code, /the v0\.5\.0 free text is\s+history only/);
+assert.match(code, /`SELECTION_REQUIRED`,\s+`WRONG_CHANGE`, `LIFECYCLE_BLOCKED`, `BASE_MISMATCH`, `DECISION_REQUIRED`,\s+`AUTHORIZATION_REQUIRED` or `AGREEMENT_CHANGED` before anything runs or is written/);
+assert.match(evaluate, /the `change complete` commit/);
+assert.match(evaluate, /appends the evaluation to the change's\s+locator `\.prd\/evidence\/changes\/<id>\.json`/);
+assert.match(release, /Release selects, activates and completes nothing/);
+assert.match(release, /`AGREEMENT_CHANGED` as failures/);
+assert.match(statusPlaybook, /`resume` is the\s+report; `change resume <id>` is the lifecycle operation/);
+assert.match(statusPlaybook, /no selection → `change select <id>`/);
+assert.match(sharedRule, /as\s+a `change authorize` record/);
+assert.match(sharedRule, /read the `resume` report; an authorization\s+it reports as `current` needs no repeat approval/);
+assert.match(agentsRules, /`change select <id>` picks the change this worktree works on\s+\(never the newest PRD\)/);
+assert.match(agentsRules, /Selecting grants no approval/);
+assert.match(releaseChecklist, /the selected change is `completed`, its authorization is `current`/);
+assert.match(dryRun, /recorded with\s+`change authorize`/);
+assert.match(dryRun, /run `resume` — the report names the change, the blocker and the next\s+command from files alone/);
+assert.match(dryRun, /`change complete prd-vN` ran \(`Complete PRD vN` commit\)/);
+assert.match(dryRun, /\| R-10 \| \|/);
+assert.match(rootReadme, /change select/);
+assert.match(rootReadme, /old free-text authorization never authorizes execution/);
+assert.match(read('docs/index.html'), /resume<\/code> report/);
+assert.match(read('template/.claude/hooks/hook-policy.cjs'), /'change', 'resume'\]/);
+assert.match(read('template/.claude/hooks/hook-policy.cjs'), /evidence\[\\\\\/\]changes/);
 
 for (const source of [rootReadme, codex]) {
   assert.doesNotMatch(source, /Codex has no PreToolUse hooks/i);
