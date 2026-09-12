@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "digest": "938efc4fb40dc666254fffc008f0133327842c770bd5a059bcf30a62a59dfa85",
+  "files": [
+    {
+      "path": ".gitignore",
+      "sha256": "b358370a4cfce1fcc27cb7862860399f4dac70e74cacb7220167fe03cb0ced5c",
+      "mode": "100644"
+    },
+    {
+      "path": ".prd/prd-v1.md",
+      "sha256": "166c3b155df52597b80705efd38fffbce73dcfdf6df27d7e070fc50a94994416",
+      "mode": "100644"
+    },
+    {
+      "path": "base.txt",
+      "sha256": "f34848ca92665c342abd5816c9e3eda0e82180671195362bcd0080544a3bc2ac",
+      "mode": "100644"
+    },
+    {
+      "path": "tickets/T-01-example.md",
+      "sha256": "977ff09018b6d8f08b9eab571cb0e4abc8c9230414931779325a67449eec5a37",
+      "mode": "100644"
+    },
+    {
+      "path": "value.txt",
+      "sha256": "106675dc1490d5cdd6d1f0410731316ce93fc964c6cf6726e2b0d53e19688feb",
+      "mode": "100644"
+    }
+  ],
+  "excluded": [
+    ".prd/changes/prd-v1.json",
+    ".prd/changes/prd-v1/agreements/G-01.json"
+  ],
+  "limitations": [
+    "external services and installed toolchains are not part of the source identity"
+  ],
+  "problems": []
+}

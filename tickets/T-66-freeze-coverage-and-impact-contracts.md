@@ -1,9 +1,13 @@
 ---
 ticket: T-66
-status: open
+status: done
 size: M
 prd: .prd/prd-v6.md
 depends_on: []
+started: 2026-09-12T08:15:55Z
+last_check: 2026-09-12T08:27:04Z passed 17c159fd8f79
+verified: 2026-09-12T08:27:04Z 17c159fd8f79
+finished: 2026-09-12T08:27:04Z
 ---
 
 ## Objective
@@ -23,9 +27,9 @@ Freeze coverage, impact and compatibility contracts, as specified in PRD v6, so 
 - Specify human/JSON commands, deterministic codes/ordering, path validation, under-lock digest checks, and exact listed evaluation artifacts. Record compatibility fixtures from the fixed v5 source at 00aad6d with provenance.
 
 ## Acceptance Criteria
-- [ ] The contract and fixtures cover valid/invalid inputs and each phase, including authorized non-delivery and deletion from both prose and map.
-- [ ] Schema/ownership/version decisions are settled before implementation writers change; no second editable requirement inventory is introduced.
-- [ ] Static checks validate fixture structure/provenance and contract consistency; they make no claim about runtime behavior.
+- [x] The contract and fixtures cover valid/invalid inputs and each phase, including authorized non-delivery and deletion from both prose and map.
+- [x] Schema/ownership/version decisions are settled before implementation writers change; no second editable requirement inventory is introduced.
+- [x] Static checks validate fixture structure/provenance and contract consistency; they make no claim about runtime behavior.
 
 ## Verification
 Proves: the frozen static contracts/examples are internally consistent and preserve v5 guarantees; behavior is proved by later tickets.

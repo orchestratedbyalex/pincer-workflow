@@ -1,0 +1,23 @@
+{
+  "COVERAGE_INVALID": {
+    "malformed-json.json": "malformed JSON",
+    "unknown-key.json": "unknown key \"extra\"",
+    "duplicate-json-key.json": "duplicate key \"schema\"",
+    "duplicate-entry.json": "S-01: duplicate entry T-01",
+    "unsafe-path.json": "C-01: cwd ../outside",
+    "unknown-schema.json": "unsupported coverage map schema 2",
+    "wrong-prd.json": "prd must be .prd/prd-v1.md",
+    "wrong-type.json": "C-01: timeout must be a positive integer",
+    "inline-secret.json": "C-01: command assigns a secret-like literal",
+    "removed-without-prior.json": "S-03: a removed tombstone names its prior agreement G-NN"
+  },
+  "COVERAGE_INCOMPLETE": {
+    "invented-scenario.json": "S-09 is not a scenario of the inventory",
+    "missing-scenario.json": "S-02 has no row",
+    "unreferenced-implements.json": "T-03 is classified implements but no scenario links it",
+    "unclassified-ticket.json": "T-03 is not classified",
+    "undeclared-check.json": "S-02: check C-03 is not declared",
+    "scenario-without-ticket.json": "S-01: no implementing ticket",
+    "missing-ticket.json": "S-01: ticket T-09 is not a ticket of this change"
+  }
+}

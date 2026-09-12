@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "sequence": 2,
+  "current": {
+    "ticket:prd-v1:T-01": "000001-20260912T082647Z-0808ba",
+    "candidate:prd-v1:73aebd8090ef6dcb52bcd8b6269e61cc192f9a2c:C-01": "000002-20260912T082647Z-2f6492"
+  },
+  "running": []
+}

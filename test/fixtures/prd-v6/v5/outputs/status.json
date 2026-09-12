@@ -1,0 +1,125 @@
+{
+  "schema": 2,
+  "runtime": 2,
+  "generated": "2026-09-12T08:26:48Z",
+  "root": "/fixture",
+  "mode": "changes",
+  "change": {
+    "id": "prd-v1",
+    "prd": ".prd/prd-v1.md",
+    "prd_revision": "166c3b155df52597b80705efd38fffbce73dcfdf6df27d7e070fc50a94994416",
+    "base": "f90442ae2436132c2582441b42056ab6b4266312",
+    "sequence": 4,
+    "lifecycle": {
+      "state": "completed",
+      "since": "2026-09-12T08:26:47Z",
+      "reason": null,
+      "note": null,
+      "superseded_by": null
+    },
+    "agreement": {
+      "current": "ee27abef2aab0ef09171047e1b0943495bf57a917113a1ce1850d4f6a1cd5426",
+      "recorded": "G-01",
+      "latest": {
+        "id": "G-01",
+        "digest": "ee27abef2aab0ef09171047e1b0943495bf57a917113a1ce1850d4f6a1cd5426",
+        "recorded": "2026-09-12T08:26:46Z"
+      },
+      "difference": null,
+      "authorized": {
+        "id": "A-01",
+        "agreement": "G-01",
+        "digest": "ee27abef2aab0ef09171047e1b0943495bf57a917113a1ce1850d4f6a1cd5426",
+        "disposition": "user",
+        "recorded": "2026-09-12T08:26:46Z"
+      },
+      "verdict": "current",
+      "verdict_detail": "A-01 (user) covers the current agreement ee27abef2aab",
+      "open_decisions": []
+    },
+    "view": {
+      "head": "603fbd6e745d56fa7af7a9017664db7f57fdb5d9",
+      "branch": "main",
+      "base_is_ancestor": true,
+      "dirty": []
+    }
+  },
+  "prd": {
+    "path": ".prd/prd-v1.md",
+    "status": "built",
+    "profile": "standard",
+    "date": "2026-09-12"
+  },
+  "tickets": [
+    {
+      "id": "T-01",
+      "file": "tickets/T-01-example.md",
+      "status": "done",
+      "size": "S",
+      "depends_on": [],
+      "started": "2026-09-12T08:26:46Z",
+      "finished": "2026-09-12T08:26:47Z",
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "next": null
+      },
+      "latest_attempt": {
+        "id": "000001-20260912T082647Z-0808ba",
+        "sequence": 1,
+        "outcome": "passed",
+        "started": "2026-09-12T08:26:47Z",
+        "finished": "2026-09-12T08:26:47Z"
+      },
+      "legacy_receipt": null
+    }
+  ],
+  "history": 0,
+  "candidate": {
+    "notes": "current",
+    "reason": null,
+    "candidate": "73aebd8090ef6dcb52bcd8b6269e61cc192f9a2c",
+    "base": "f90442ae2436132c2582441b42056ab6b4266312",
+    "evidence": {
+      "manifest": ".prd/evidence/prd-v1/73aebd8090ef6dcb52bcd8b6269e61cc192f9a2c/manifest.json",
+      "schema": 2,
+      "provenance": "runtime",
+      "verdict": "ok"
+    },
+    "local_attempts": "available",
+    "newer_attempts": [],
+    "reasons": [],
+    "locator": ".prd/evidence/changes/prd-v1.json",
+    "evaluation": {
+      "candidate": "73aebd8090ef6dcb52bcd8b6269e61cc192f9a2c",
+      "base": "f90442ae2436132c2582441b42056ab6b4266312",
+      "manifest": ".prd/evidence/prd-v1/73aebd8090ef6dcb52bcd8b6269e61cc192f9a2c/manifest.json",
+      "recorded": "2026-09-12T08:26:48Z",
+      "agreement": "ee27abef2aab0ef09171047e1b0943495bf57a917113a1ce1850d4f6a1cd5426"
+    }
+  },
+  "reasons": [],
+  "next": "/pincer-release — evaluation matches the current PRD and candidate; audit the artifacts",
+  "selection": {
+    "change": "prd-v1",
+    "problem": null
+  },
+  "changes": [
+    {
+      "id": "prd-v1",
+      "file": ".prd/changes/prd-v1.json",
+      "prd": ".prd/prd-v1.md",
+      "state": "completed",
+      "since": "2026-09-12T08:26:47Z",
+      "reason": null,
+      "note": null,
+      "superseded_by": null,
+      "sequence": 4,
+      "base": "f90442ae2436132c2582441b42056ab6b4266312",
+      "registered": "2026-09-12T08:26:46Z",
+      "selected": true,
+      "authorization": "current",
+      "agreement": "ee27abef2aab0ef09171047e1b0943495bf57a917113a1ce1850d4f6a1cd5426"
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "schema": 2,
+  "runtime": 2,
+  "id": "000001-20260912T082647Z-0808ba",
+  "sequence": 1,
+  "context": {
+    "kind": "ticket",
+    "change": "prd-v1",
+    "prd": ".prd/prd-v1.md",
+    "prd_revision": "166c3b155df52597b80705efd38fffbce73dcfdf6df27d7e070fc50a94994416",
+    "base": "f90442ae2436132c2582441b42056ab6b4266312",
+    "ticket": "T-01",
+    "ticket_digest": "977ff09018b6d8f08b9eab571cb0e4abc8c9230414931779325a67449eec5a37",
+    "agreement": "ee27abef2aab0ef09171047e1b0943495bf57a917113a1ce1850d4f6a1cd5426"
+  },
+  "check": {
+    "digest": "0e0b9ee1e5cc884e75390a811c8d855994a6ae90174f38ea47f5a3470fa8392f",
+    "display": "test \"$(cat value.txt)\" = good\n",
+    "timeout_seconds": 600
+  },
+  "outcome": "passed",
+  "exit_code": 0,
+  "signal": null,
+  "runner": {
+    "shell": "/bin/bash",
+    "args": [
+      "-eo",
+      "pipefail",
+      "-c"
+    ],
+    "version": "GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)"
+  },
+  "cwd": ".",
+  "environment": {
+    "os": "darwin 25.6.0",
+    "node": "v22.23.1",
+    "declared": {}
+  },
+  "started": "2026-09-12T08:26:47Z",
+  "finished": "2026-09-12T08:26:47Z",
+  "source": {
+    "before": "938efc4fb40dc666254fffc008f0133327842c770bd5a059bcf30a62a59dfa85",
+    "after": "938efc4fb40dc666254fffc008f0133327842c770bd5a059bcf30a62a59dfa85",
+    "files": 5,
+    "limitations": [
+      "external services and installed toolchains are not part of the source identity"
+    ]
+  },
+  "artifacts": {
+    "stdout": {
+      "path": ".pincer/runtime/attempts/000001-20260912T082647Z-0808ba/stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "truncated": false,
+      "redactions": 0
+    },
+    "stderr": {
+      "path": ".pincer/runtime/attempts/000001-20260912T082647Z-0808ba/stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "truncated": false,
+      "redactions": 0
+    }
+  },
+  "owner": {
+    "pid": 87375,
+    "ppid": 87203,
+    "host": "fixture-host.example"
+  },
+  "child": {
+    "pid": 87685
+  },
+  "limitations": []
+}

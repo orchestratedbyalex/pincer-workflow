@@ -138,7 +138,7 @@ has(/For `verify` and `check` the guard runs twice: once before anything is prep
 has(/a transition\ncommitted before the check's lock refuses the check/, 'contention order names the second evaluation');
 const precedence = doc.slice(doc.indexOf('Next-action precedence'), doc.indexOf('## Migration and rollback'));
 for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) assert.match(precedence, new RegExp(`^${n}\\. `, 'm'), `precedence rule ${n}`);
-assert.match(precedence, /1\. invalid or missing state[\s\S]*2\. an unresolved `running` attempt[\s\S]*3\. lifecycle or repository mismatch[\s\S]*4\. agreement or decision gap[\s\S]*5\. failed or stale verification or unfinished work[\s\S]*6\. .*`change complete`[\s\S]*7\. .*`\/pincer-evaluate`[\s\S]*8\. .*`\/pincer-release`/, 'precedence order as the PRD states');
+assert.match(precedence, /1\. invalid or missing state[\s\S]*2\. an unresolved `running` attempt[\s\S]*3\. lifecycle or repository mismatch[\s\S]*4\. agreement, decision or coverage gap[\s\S]*5\. failed or stale verification or unfinished work[\s\S]*6\. .*`change complete`[\s\S]*7\. .*`\/pincer-evaluate`[\s\S]*8\. .*`\/pincer-release`/, 'precedence order as the PRD states');
 has(/`handoff` is the authored pause or reopen reason and note, labeled `authored: true`; it\nis displayed and never used as an input/, 'notes cannot override computed state');
 
 // --- Transactions, locator, attempts, worktrees, migration --------------------

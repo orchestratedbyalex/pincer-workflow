@@ -18,6 +18,11 @@ Selection, agreement snapshot, evaluation locator, transaction manifest and resu
 JSON records start at `schema: 1`. A record whose schema this runtime does not read is
 refused as `UNSUPPORTED_SCHEMA`; an older runtime refuses the newer schemas the same
 way and never interprets several change records through its single-binding logic.
+Strict coverage (PRD v6, "Strict coverage") adds change records `schema: 3`, attempts
+`schema: 3`, evidence `schema: 3`, status JSON `schema: 3`, resume JSON `schema: 2`,
+agreement projection version 2 with snapshots `schema: 2`, the coverage map `schema: 1`
+and the runtime contract version `runtime: 3`; a v0.5.0 or PRD v5 runtime refuses every
+one of them, and this runtime keeps reading the older schemas unchanged.
 
 ## Modes
 
@@ -82,6 +87,9 @@ directory. Diagnostics go to stderr, prefixed `pincer-ticket: ` for ticket input
 | `change decide` | `<id> --summary <text> [--id D-NN]` | the record (decision, event) | raises an open consequential decision; blocks execution until resolved |
 | `change decide` | `<id> --resolve D-NN --reference <text> --excerpt <text>` | the record (decision, event) | records the user's decision; the agreement digest changes and needs authorization |
 | `resume` | `[--change <id>] [--json]` | nothing | the read-only resume report ("Resume report"); `--change` inspects without selecting |
+| `coverage` | `[--change <id>] [--json]` | nothing | the phase-specific coverage report ("Strict coverage"); read-only |
+| `impact` | `[--change <id>] [--from G-NN \| A-NN] [--json]` | nothing | structural differences against a retained agreement ("Strict coverage"); read-only |
+| `coverage adopt` | `--preview \| --apply --change <id> [--agreement <digest>]` | apply: a backup, the schema 3 record, the adoption snapshot | the explicit entry into strict coverage ("Adoption and rollback"); authorizes nothing |
 
 Exit codes:
 
@@ -750,6 +758,16 @@ changing, and a `completed` change can be non-ready without its history changing
 | `STATE_BUSY` | the lock is held | retry, or `recover` |
 | `SECRET_PATH` | a secret file is in the source view | remove or ignore it |
 | `UNSUPPORTED_INPUT` | symlink, submodule, no git, or a refused exclusion | remove the input or change the configuration |
+| `INVENTORY_INVALID` | the PRD's requirement and scenario definitions violate the inventory grammar (line named) | repair the PRD definitions |
+| `COVERAGE_INVALID` | the coverage map cannot be interpreted: missing file, malformed or duplicate-key JSON, unknown or missing keys, wrong types or IDs, duplicate entries, unsafe path, wrong change or PRD | repair `.prd/coverage/<id>.json` |
+| `COVERAGE_INCOMPLETE` | the map is readable but its graph is incomplete: a live scenario without a row, an invented or stale row, a scenario without work or checks, an unclassified or wrong-change ticket, an undeclared check | author the missing rows, then `change authorize` |
+| `OBLIGATION_MISSING` | a scenario of the baseline inventory is defined neither in the PRD nor as a `removed` tombstone in the map | restore it, or record the decision and the tombstone |
+| `SCOPE_UNAUTHORIZED` | a deferral or removal has no resolved decision naming the ID, or no applicable user authorization covers that decision | `change decide`, then `change authorize` |
+| `CHECK_UNDECLARED` | the check is not declared in the map, the supplied command or timeout differs from the declaration, the declaration changed since the command was prepared, or a review obligation was invoked as a command | declare it in the map, or run the declared form |
+| `REVIEW_MISSING` | a required review obligation has no candidate-bound artifact with a passed result | perform the review and record it in the evaluation draft |
+| `ADEQUACY_REQUIRED` | the adequacy judgment is missing or `inadequate` | record the reviewer's judgment in the evaluation draft |
+| `HISTORY_UNAVAILABLE` | impact has no baseline agreement with an inventory snapshot | authorize the adoption agreement, then compare |
+| `COVERAGE_UNVERIFIED` | label only, never a blocker: strict coverage is not adopted (legacy, migrated or schema 2) | `coverage adopt --preview --change <id>` when strict coverage is wanted |
 
 Status JSON schema 1 (legacy and migrated modes; one object on stdout; diagnostics on
 stderr; no progress text, no secret values):
@@ -913,7 +931,7 @@ command to run):
 1. invalid or missing state (`INPUT_INVALID`, `MALFORMED`, `UNSUPPORTED_SCHEMA`, `HISTORY_INVALID`, `STATE_INCOMPLETE`) or no selection (`SELECTION_REQUIRED`, `SELECTION_INVALID`) → repair, `recover` or `change select`;
 2. an unresolved `running` attempt of the change → wait or `recover`;
 3. lifecycle or repository mismatch (`cancelled`/`superseded` → inspect or register a replacement, never execute; `BASE_MISMATCH` → check out the branch; `planned`/`paused` → `change activate`/`change resume` once 4 is satisfied);
-4. agreement or decision gap (`DECISION_REQUIRED`, `AUTHORIZATION_REQUIRED`, `AGREEMENT_CHANGED`) → `change decide --resolve` / `change authorize`;
+4. agreement, decision or coverage gap (`DECISION_REQUIRED`, `AUTHORIZATION_REQUIRED`, `AGREEMENT_CHANGED`; in a strict change also `COVERAGE_INVALID`, `COVERAGE_INCOMPLETE`, `OBLIGATION_MISSING`, `SCOPE_UNAUTHORIZED` — "Strict coverage") → `change decide --resolve` / `change authorize` / repair the map;
 5. failed or stale verification or unfinished work → `verify T-NN` naming the ticket (or `check C-NN`), or `start T-NN` for the next ready ticket;
 6. everything done and ready but not `completed` → `change complete`;
 7. `completed` without a current evaluation → `/pincer:evaluate`;
@@ -975,6 +993,640 @@ originals, and neither procedure deletes a file it has just restored.
 
 The backup directory can be removed afterwards. An older runtime does not enforce the
 runtime guarantees: it will accept the restored receipts as it did before.
+
+## Strict coverage
+
+Strict coverage (PRD v6) is an explicit, retained capability of one change: the
+runtime derives the complete requirement and scenario inventory from the change's
+PRD, validates one authored coverage map against it, binds both into the reviewed
+agreement, derives structural, implementation and candidate coverage from that graph,
+explains structural impact, executes candidate checks from their declarations, and
+reconciles the exported evidence with the committed candidate's authored inputs.
+Nothing switches a change into strict coverage implicitly: `coverage adopt --apply`
+is the only entry, it is recorded in the change record (schema 3), and a project or
+change without it keeps the documented behavior above with its coverage labeled
+`unverified`. A report never implies that strict coverage was established where it
+was not adopted. Semantic adequacy — whether a check really establishes its scenario —
+remains a named reviewer judgment (`adequacy`) and is never computed.
+
+Versions frozen by this section: change records `schema: 3` (`runtime: 3`), attempts
+`schema: 3` (`runtime: 3`), evidence manifests `schema: 3`, status JSON `schema: 3`
+(changes mode), resume JSON `schema: 2`, agreement projection `pincer agreement 2`,
+agreement snapshots `schema: 2`, coverage map `schema: 1`, inventory projection
+`pincer inventory 1`, evidence snapshots (`coverage/inventory.json`,
+`coverage/map.json`) `schema: 1`, coverage JSON `schema: 1`, impact JSON `schema: 1`.
+A v0.5.0 runtime (reads change binding schema 1) and a PRD v5 runtime (reads change
+records schema 2 and attempts schema 1 and 2, validates evidence schema 1 and 2)
+refuse every new schema as `UNSUPPORTED_SCHEMA` (records, evidence) or as an
+incomplete record (`ATTEMPT_ERROR` for attempts); neither ever interprets a strict
+change through the older logic. This runtime keeps reading schema 2 records, schema 2
+attempts and schema 2 evidence exactly as documented above.
+
+### Requirement inventory
+
+The PRD of a strict change is parsed into an inventory: the complete set of
+requirement and scenario definitions. The PRD prose is authoritative — the coverage
+map cannot add, rename or remove a definition — and parsing produces a computed view,
+never a second editable source. The grammar is bounded on purpose; syntax outside it
+is either ignored as prose or refused as unsupported, and no partial inventory is
+ever treated as complete.
+
+- **Identifiers:** `<PREFIX>-<digits>` matching `[A-Z][A-Z0-9]{0,7}-[0-9]{1,6}` (the
+  template's `R-01`/`S-01`, or a supplied PRD's `REQ-1`/`AC-12`). Requirement and
+  scenario IDs share one namespace within the PRD. IDs are kept verbatim: nothing is
+  renumbered, padded or generated. What makes an ID a requirement or a scenario is
+  the definition form, not the prefix.
+- **Fenced code:** a line whose first non-blank characters are three or more
+  backticks opens a fence; the next such line closes it; every line in between is
+  ignored (no definition, no reference). A fence still open at the end of the file is
+  `INVENTORY_INVALID` (`unclosed fence opened at line N`). A tilde fence line is
+  `INVENTORY_INVALID` (`tilde fences are unsupported (line N)`).
+- **Tables and quotes:** a line whose first non-blank character is `|` or `>` is a
+  reference context: it is prose and defines nothing.
+- **Requirement definition:** an ATX heading of level 2, 3 or 4 whose text is an ID,
+  a separator (` — `, ` – `, ` - ` or `: `) and a nonempty title:
+  `### R-01 — Derive the complete authored inventory`. Its section runs to the next
+  requirement definition, or to the next heading whose level is less than or equal
+  to its own, whichever comes first. A heading whose text starts with an ID in any
+  other shape (no separator, no title, a separator with nothing after it) is
+  `INVENTORY_INVALID` (`unsupported requirement definition syntax at line N; use
+  "### R-NN — Title"`).
+- **Scenario definition:** a list item inside a requirement section whose text is a
+  bold ID, optionally followed by a colon inside or after the bold, then nonempty
+  text: `- **S-01:** A PRD with two requirements …`. Markers `-`, `+`, `*` and
+  indentation are supported; an optional checkbox mark (`[ ]`, `[x]`, `[X]`) may
+  precede the bold ID. Lines that follow the item, are indented by at least two
+  spaces or a tab, and are not themselves list items, headings, fences or table rows
+  are the item's continuation lines. A list item whose text begins with an ID
+  followed by `:` or `.` without the bold form, or a bold ID with nothing after it,
+  is `INVENTORY_INVALID` (`unsupported scenario definition syntax at line N; use
+  "- **S-NN:** text"` / `empty definition S-NN at line N`).
+- **References:** an ID anywhere else — in prose, in a list item that does not start
+  with the ID, in a table row, inside a fence, in a heading that is not a definition
+  form because the ID is not first — defines nothing and creates no error.
+- **Membership rules, each `INVENTORY_INVALID` with the line named:** a duplicate
+  definition of an ID (requirement or scenario, in any combination); a scenario
+  definition outside every requirement section (`orphan scenario S-NN at line N`);
+  a requirement with no scenario (`requirement R-NN at line N has no scenario`);
+  an empty requirement title; a PRD with no requirement definition at all (`no
+  requirement definitions`). Every scenario therefore has exactly one owning
+  requirement: the section it appears in.
+- **Source locations:** each definition records `{ line, end }` (1-based, inclusive):
+  the section for a requirement, the item and its continuation lines for a scenario.
+- **Normalized content:** a requirement's text is its title, then the lines of its
+  section outside scenario definitions and their continuations, each right-trimmed,
+  with leading and trailing blank lines removed and runs of blank lines collapsed to
+  one; a scenario's text is the item text after the bold ID (marker, checkbox mark
+  and bold ID removed) followed by its continuation lines with their indentation
+  removed, joined by `\n`, right-trimmed. The frontmatter is not part of any
+  definition, so the PRD `status` line (already excluded from `prd_revision`) never
+  reaches a definition either. Checkbox marks and whitespace-only edits therefore
+  preserve identity; any change to a scenario's wording changes its digest.
+- **Digests:** requirement `SHA-256("requirement <ID>\n<text>\n")`, scenario
+  `SHA-256("scenario <ID>\n<text>\n")`. The inventory projection is the exact text
+
+  ```
+  pincer inventory 1
+  prd <.prd/prd-vN.md>
+  requirement <ID> <digest>              (one line per requirement)
+  scenario <ID> <owner ID> <digest>      (one line per scenario)
+  ```
+
+  each line terminated by `\n`, requirements and scenarios each sorted by ID (prefix
+  in byte order, then numerically), and the inventory digest is SHA-256 over it.
+  Reordering sections changes `prd_revision` but not the inventory digest; moving a
+  scenario to another requirement changes the inventory digest (the owner line) but
+  not the scenario digest.
+
+Example of a valid PRD body (two requirements, three scenarios; the table row, the
+prose mention and the fenced block create no definitions; the checkbox mark on
+`S-02` is normalized away):
+
+````markdown
+### R-01 — Parse the inventory
+
+Every definition is derived from the PRD prose. S-01 and S-02 belong here.
+
+- **S-01:** A PRD with two requirements and three scenarios yields exactly those
+  IDs, parent links, content digests and source locations.
+- [x] **S-02:** Duplicate IDs cause an actionable diagnostic.
+
+| Scenario | Ticket |
+| --- | --- |
+| S-01 | T-01 |
+
+```markdown
+- **S-99:** an example inside a fence is not a definition
+```
+
+### R-02: Report impact
+
+- **S-03** — Changing one scenario names that scenario and its requirement.
+````
+
+Its projection is `pincer inventory 1`, `prd .prd/prd-v1.md`, `requirement R-01 …`,
+`requirement R-02 …`, `scenario S-01 R-01 …`, `scenario S-02 R-01 …`,
+`scenario S-03 R-02 …`. The same body with `### R-01 — Parse the inventory` repeated
+is `INVENTORY_INVALID: duplicate definition R-01 at line N`; with `- **S-03** —`
+moved above the first heading, `orphan scenario S-03 at line N`; with `- S-04: text`
+under R-02, `unsupported scenario definition syntax at line N`; with `### R-03 —`
+and no scenario, `requirement R-03 at line N has no scenario`; with the closing
+fence deleted, `unclosed fence opened at line N`.
+
+A PRD that is not a strict change's PRD (legacy or migrated mode, or a schema 2
+record) is never parsed for a verdict: status, resume and `coverage` label such a
+change `coverage: unverified`, and inventory diagnostics for it are informational,
+never blockers. Old PRDs stay readable by `validate` exactly as before.
+
+### Coverage map
+
+`.prd/coverage/<change-id>.json` is the authored coverage map of a strict change,
+tracked in git and edited by hand. It owns links and planned scope dispositions and
+declares the candidate checks; it never owns requirement prose or observed outcomes.
+Coverage map schema 1, with every key required and no other key allowed:
+
+```json
+{
+  "schema": 1,
+  "change": "prd-v2",
+  "prd": ".prd/prd-v2.md",
+  "scenarios": {
+    "S-01": { "tickets": ["T-03"], "checks": ["C-01"] },
+    "S-02": { "tickets": ["T-03", "T-04"], "checks": ["C-01", "C-02"] }
+  },
+  "scope": {
+    "S-03": { "disposition": "deferred", "decision": "D-01", "prior": null, "note": "deferred to the next change; see D-01" },
+    "S-04": { "disposition": "removed", "decision": "D-02", "prior": "G-02", "note": null }
+  },
+  "tickets": {
+    "T-03": { "role": "implements", "rationale": null },
+    "T-04": { "role": "implements", "rationale": null },
+    "T-05": { "role": "enables", "rationale": "shared fixture harness used by C-01 and C-02; implements no scenario" }
+  },
+  "checks": {
+    "C-01": { "kind": "command", "required": true, "command": "npm test", "timeout": 600, "cwd": null, "obligation": null, "note": null },
+    "C-02": { "kind": "review", "required": true, "command": null, "timeout": null, "cwd": null, "obligation": "read the error-state rendering of S-02 against the mock-ups", "note": null }
+  }
+}
+```
+
+The map is parsed strictly: a JSON object with a duplicate key anywhere, a file
+larger than 1 MiB, a value of the wrong type, an unknown key, a missing key, an ID
+that does not match its grammar, a string longer than 2000 characters, an array
+with a duplicate entry, `schema` other than 1, `change` other than the record's ID
+(and the filename), `prd` other than the record's PRD, or an unsafe path is
+`COVERAGE_INVALID` (exit 4) before any mutation or launch. Paths (`prd`, `cwd`) are
+repository-relative POSIX paths without `..`, `.` or empty segments; the map file,
+the PRD and a `cwd` must be regular files or directories inside the repository, not
+symbolic links and not reached through one. Whole-file rules:
+
+- `scenarios` keys and `scope` keys are scenario IDs. Every scenario of the live
+  inventory appears exactly once, in `scenarios` or in `scope`. A `scenarios` key that
+  is not a live scenario (an invented ID, a requirement ID, a scenario that the PRD no
+  longer defines) and a `scope` key that is neither a live scenario nor a `removed`
+  tombstone are `COVERAGE_INCOMPLETE`, as is a live scenario missing from both.
+- A `scenarios` entry has `tickets` (nonempty array of ticket IDs) and `checks`
+  (nonempty array of check IDs); every ticket named must be a ticket of this change
+  with role `implements`, every check named must be declared. A ticket that does not
+  exist, belongs to another PRD (`WRONG_CHANGE` is reported inside the
+  `COVERAGE_INCOMPLETE` detail), is listed as `enables`, or is unlisted, and a check
+  that is not declared, are `COVERAGE_INCOMPLETE` naming the scenario and the ID.
+- `tickets` lists every ticket of the change (every valid ticket whose PRD is the
+  record's PRD) exactly once with `role` `implements` (referenced by at least one
+  `scenarios` entry) or `enables` (referenced by none, with a nonempty `rationale`).
+  An unlisted ticket, a listed ID that is not a ticket of this change, an
+  `implements` ticket no scenario references and an `enables` ticket some scenario
+  references are `COVERAGE_INCOMPLETE`. `rationale` is `null` for `implements`.
+- `scope` entries carry `disposition` (`deferred` or `removed`), `decision` (`D-NN`),
+  `prior` (`null` for `deferred`; for `removed` the agreement ID `G-NN` of this change
+  whose inventory snapshot defines the ID — the tombstone's reference to the prior
+  inventory) and `note` (`null` or text). Whether the decision exists, is resolved,
+  names the ID and is covered by an applicable user authorization is decided by
+  "Scope dispositions", not by the map syntax.
+- `checks` declares candidate checks by stable ID `C-NN`. `kind` is `command`,
+  `review` or `visual`; `required` is a boolean. A `command` check has `command`
+  (nonempty, at most 2000 characters, valid Bash syntax under `bash -n`, no inline
+  secret-like literal — the sanitizer's rule), `timeout` (a positive integer number of
+  seconds, at most 2147483), `cwd` (`null` or a safe directory path) and `obligation`
+  `null`. A `review` or `visual` check has `obligation` (nonempty text: what the
+  reviewer must establish) and `command`, `timeout`, `cwd` `null`. `note` is `null`
+  or text. A declared check may be referenced by several scenarios or by none; a check
+  referenced by a scenario must be declared. A declaration is never an observed
+  result.
+- Definition digests: a `command` check's is `SHA-256("<command>\ntimeout=<timeout>\n")`
+  — exactly the check digest an attempt records, so an attempt satisfies a declaration
+  only when its `check.digest` equals it; a `review`/`visual` check's is
+  `SHA-256("<kind>\n<obligation>\n")`.
+- The map digest is SHA-256 over the normalized map text: the parsed object
+  serialized as JSON with object keys sorted, the ID arrays (`tickets`, `checks`)
+  sorted in the inventory's ID order, no insignificant whitespace, one trailing
+  newline. Reformatting or reordering the file changes nothing; every value edit
+  changes the digest.
+
+`COVERAGE_INVALID` means the file cannot be interpreted; `COVERAGE_INCOMPLETE` means
+it is interpretable but the graph it describes is incomplete or disagrees with the
+inventory and the tickets. Both refuse execution and export; the detail names every
+affected ID. The map module exposes one validated graph (inventory, links,
+declarations, dispositions) that every consumer — coverage, impact, gates,
+completion, `check`, export, release, status and resume — reads; no consumer keeps a
+policy copy, and validation writes no file.
+
+### Strict change records
+
+A strict change's record is `.prd/changes/<id>.json` with `schema: 3` and
+`runtime: 3`: every schema 2 key with the same owners and rules, plus:
+
+| Field | Owner | Value |
+| --- | --- | --- |
+| `coverage` | `coverage adopt --apply` | `{ map: ".prd/coverage/<id>.json", adopted: <timestamp>, agreement: "G-NN" }` — the capability, when it was recorded, and the adoption agreement (the reviewed starting inventory) |
+
+Event kind `adopt` is added: it carries `from = to =` the state at the time and
+`agreement: "G-NN"`. Exactly one `adopt` event exists in a schema 3 record, its
+`agreement` equals `coverage.agreement`, and that agreement entry carries the
+projection version 2 digests. Agreement entries in a schema 3 record carry two
+more fields, `inventory` and `coverage` (the inventory and map digests, 64 hex;
+`null` on entries recorded before adoption, which are projection version 1). A
+schema 3 record without `coverage`, with `coverage: null`, or with no `adopt` event
+is `MALFORMED` (`the strict coverage capability cannot be removed by editing the
+record; restore the backed-up schema 2 record instead`); a schema 2 record carrying a
+`coverage` key or an `adopt` event is `MALFORMED` under this runtime and under the
+PRD v5 runtime alike. Schema 2 and schema 3 records coexist in one `.prd/changes/`
+directory (each change adopts on its own); a schema 1 binding next to either is
+`INPUT_INVALID` as before. A schema 3 record read by a v0.5.0 or PRD v5 runtime is
+`UNSUPPORTED_SCHEMA`.
+
+Agreement projection version 2, computed for strict changes only (schema 2 records
+keep version 1):
+
+```
+pincer agreement 2
+change <change id>
+prd <.prd/prd-vN.md> <prd_revision>
+inventory <inventory digest>
+coverage <.prd/coverage/<id>.json> <map digest>
+ticket <T-NN> <ticket_digest>          (one line per ticket of the PRD, ascending numeric ID)
+decision <D-NN> <decision digest>      (one line per resolved decision, ascending ID)
+```
+
+each line terminated by `\n`. The inventory digest and the map digest are agreement
+inputs, so editing a scenario's text, a link, a declared command or timeout, a
+scope disposition or a tombstone changes the agreement and invalidates the
+authorization (`AGREEMENT_CHANGED`), while checkbox marks, the PRD `status` line,
+ticket lifecycle fields, attempts, generated reports and evidence do not. When the
+inventory or the map cannot be read the agreement cannot be computed:
+`INVENTORY_INVALID` or `COVERAGE_INVALID` replaces `INPUT_INVALID` in every place
+the contract says the agreement is computed (a missing map is `COVERAGE_INVALID`:
+`author .prd/coverage/<id>.json first`). An incomplete map still yields an agreement:
+completeness is a coverage gate ("Phase-specific coverage"), not an input error, so a
+user may authorize an incomplete map and strengthen it later.
+
+Agreement snapshot schema 2 (strict changes; `.prd/changes/<id>/agreements/G-NN.json`)
+keeps every schema 1 key and adds:
+
+```json
+{ "schema": 2, "change": "prd-v2", "agreement": "G-03", "digest": "<64 hex>", "projection": "pincer agreement 2\nchange prd-v2\n…", "prd": { "path": ".prd/prd-v2.md", "revision": "<64 hex>", "text": "<normalized PRD text>" }, "inventory": { "digest": "<64 hex>", "projection": "pincer inventory 1\nprd .prd/prd-v2.md\n…", "requirements": { "R-01": { "title": "Parse the inventory", "text": "<normalized text>", "digest": "<64 hex>", "line": 40, "end": 58, "scenarios": ["S-01", "S-02"] } }, "scenarios": { "S-01": { "requirement": "R-01", "text": "<normalized text>", "digest": "<64 hex>", "line": 44, "end": 45 } } }, "coverage": { "path": ".prd/coverage/prd-v2.json", "digest": "<64 hex>", "text": "<normalized map text>" }, "tickets": { "T-03": { "file": "tickets/T-03-slug.md", "digest": "<64 hex>", "text": "<normalized ticket text>" } }, "decisions": { "D-01": { "summary": "…", "reference": "…", "excerpt": "…" } }, "recorded": "2026-09-12T08:05:00Z" }
+```
+
+`readSnapshot` recomputes the inventory projection from the snapshot's own
+requirement and scenario digests, the map digest from the normalized map text, and
+the agreement digest from the projection; any disagreement with the record entry is
+`HISTORY_INVALID`, so an old agreement's inventory and map can always be reviewed
+from the file alone. Snapshot schema 1 entries (recorded before adoption) stay valid
+in a schema 3 record and are compared as "history unavailable" for inventory purposes.
+
+Attempt schema 3 (strict changes): every schema 2 field, plus `context.inventory`
+and `context.coverage`, the inventory and map digests at launch (64 hex, required).
+The runtime writes schema 3 attempts for a strict change and reads schema 1, 2 and 3
+records; readiness validates the context fields as it validates `agreement`. In a
+strict change a pointed-at schema 2 record (recorded before adoption) is
+`HISTORICAL_EVIDENCE`: it stays inspectable, never becomes current evidence, and the
+next action is `verify`. A schema 3 record read for a schema 2 change is
+`ATTEMPT_ERROR`. Context keys are unchanged. For a candidate attempt of a strict
+change the recorded `check.digest` is the declaration's digest by construction (the
+runtime builds the command from the map), and export compares it with the
+declaration current on the candidate.
+
+### Scope dispositions
+
+A scope disposition records that an obligation is not delivered by this change. It
+is never inferred from a failing check, a missing ticket, a `blocked` requirement or
+free text. Two dispositions exist, both authored in the map's `scope`:
+
+- `deferred`: the scenario stays defined in the PRD and is not implemented by this
+  change. Requires a resolved decision `D-NN` of this change whose `summary` or
+  `excerpt` names the scenario ID as a whole token.
+- `removed`: the obligation is withdrawn. The entry is a tombstone: `decision` as
+  above and `prior: "G-NN"`, an agreement entry of this change whose inventory
+  snapshot defines the ID. The ID may still be defined in the PRD (withdrawn but
+  documented) or absent from it; in both cases the tombstone is the only way an ID
+  that was once reviewed can stop being an obligation.
+
+A disposition is *authorized* when its decision exists on this record, is
+`resolved`, names the ID, and an applicable user authorization covers it: an
+authorization `A-NN` of this record with disposition `user` that lists the decision
+in its `decisions`, such that the authorization matching the current agreement
+(the `current` verdict's) is `A-NN` itself or a `delegated` authorization whose
+`basis` chain reaches `A-NN`. Anything else is `SCOPE_UNAUTHORIZED` naming the ID
+and the missing element (`no decision`, `decision D-NN is open`, `decision D-NN does
+not name S-03`, `no user authorization names D-NN`, `the current authorization A-04
+does not descend from A-02`). A delegated authorization can therefore bind a
+strengthened map (a stricter command, an added check, a new link) without a new
+user instruction, and can carry a user's earlier scope decision forward through its
+basis chain, but it can never create the scope decision: `authorized_by` free text
+and `--constraints` text are never consulted. The runtime checks reference
+integrity and agreement currency; whether the user's words really support the
+disposition is a reviewer's judgment, which status and coverage label as such
+(`decision D-01 "…" (reviewer judgment: the excerpt must support the deferral)`).
+
+Deleted obligations are detected against the retained history, never against the
+current files alone. The *baseline* of a strict change is the inventory snapshot of
+the most recently recorded authorization's agreement, else of the most recently
+recorded agreement entry with an inventory snapshot — at minimum the adoption
+agreement. Every scenario of the baseline that is neither defined in the live
+inventory nor a `removed` tombstone in the map is `OBLIGATION_MISSING` naming the IDs:
+deleting the prose and the map row together erases nothing. A first adoption can
+only establish its reviewed starting inventory: no baseline exists before the
+adoption agreement, so nothing predating it is ever reported as an omission. An
+open decision blocks execution (`DECISION_REQUIRED`) whatever the current digest is,
+so reverting the PRD and the map to an earlier authorized digest cannot bypass a
+retained open decision; and `change authorize`, `change decide --resolve` and
+`coverage adopt --apply` refuse with `AGREEMENT_CHANGED`/`STATE_CHANGED` when the
+inputs or the record changed after the operation was prepared.
+
+### Phase-specific coverage
+
+Coverage is one pure computation over the validated graph (the inventory, the map,
+the record, the tickets and their readiness, the evaluation), consumed by `coverage`,
+`change complete`, `evidence export`, `ready`, status and resume. It has three
+separate fields; none implies another, and a linked check, a passing syntax check
+or a done ticket never implies candidate delivery:
+
+| Field | Complete when | Blocking codes |
+| --- | --- | --- |
+| `structure` | the inventory and the map are valid; every live scenario is linked (tickets and checks) or dispositioned; every ticket is classified; every disposition is authorized; no baseline obligation is missing | `INVENTORY_INVALID`, `COVERAGE_INVALID`, `COVERAGE_INCOMPLETE`, `SCOPE_UNAUTHORIZED`, `OBLIGATION_MISSING` |
+| `implementation` | `structure` is complete and every ticket of the change is `done` and ready under the v5 rules (checked criteria; current passing schema 3 attempt of this change; no `SOURCE_CHANGED`, `CHECK_CHANGED`, `REVISION_CHANGED`, `HISTORICAL_EVIDENCE`) | the structure codes, then the ticket's readiness code prefixed by its scenario (`S-02: T-03 CHECK_FAILED …`) |
+| `candidate` | the change's latest evaluation is schema 3 evidence that validates and reconciles with the candidate; every in-scope scenario is `delivered`; `adequacy.verdict` is `adequate` | the structure codes, `EVIDENCE_MISSING`, `CANDIDATE_STALE`, `CHECK_FAILED`/`ATTEMPT_*` (a check), `REVIEW_MISSING`, `ADEQUACY_REQUIRED`, plus the v5 candidate reasons |
+
+Per scenario the report carries `scope` (`in-scope`, `deferred`, `removed`),
+`implementation` (`complete`, `unfinished` — a linked ticket is not `done`,
+`unverified` — a linked ticket is done but not ready, with the code, `not applicable`
+for dispositioned scenarios) and `candidate` (`delivered`, `blocked` with the failing
+check or review, `deferred`, `removed`, `not evaluated`). `change complete` of a
+strict change requires `structure` and `implementation` complete and refuses,
+writing nothing, with the first blocking code in the table order; it never demands
+candidate evidence, which cannot exist before the candidate. `evidence export`
+requires `structure` complete. Release (`ready` without a ticket) requires
+`candidate` complete. Coverage output labels the absence of candidate evidence and
+the absence of an adequacy judgment explicitly (`candidate: not evaluated`,
+`adequacy: not recorded`) and never prints `delivered` or `release-ready` for a
+change whose evidence is missing, stale or judged inadequate.
+
+### Declared candidate checks
+
+In a strict change `check C-NN --candidate <sha>` runs the declaration: the map's
+`command`, `timeout` and `cwd` for `C-NN`. A `--timeout` or a `-- <command>` on the
+command line, an ID that is not declared, and a `review`/`visual` declaration
+(recorded in the evidence draft, never run) are refused with `CHECK_UNDECLARED`
+(exit 4) before anything is prepared; an arbitrary supplied command therefore cannot
+become evidence for a declared check by reusing its ID. The old forms stay supported
+unchanged in legacy, migrated and schema 2 changes mode. The guard for strict `check`
+and `evidence export` is the v5 guard plus a valid inventory and map (gate order:
+`INPUT_INVALID`/`INVENTORY_INVALID`/`COVERAGE_INVALID`/`MALFORMED`/… first, the rest
+as documented). Under the attempt lock the guard runs again as for every attempt,
+the map is re-read and re-validated, and the declaration of `C-NN` is recomputed: a
+map or agreement change committed since the pre-launch evaluation refuses the
+attempt with that gate's code, and a changed declaration whose agreement was
+re-authorized meanwhile refuses with `CHECK_UNDECLARED` (`the declaration of C-NN
+changed since the command was prepared`) — the attempt either launches the command
+it validated against the inputs it recorded, or launches nothing and writes nothing.
+The attempt's `context.agreement`, `context.inventory` and `context.coverage` are the
+values validated under the lock. Changing a declaration stales every prior attempt
+for that check (their `check.digest` no longer equals the declaration), and a
+declaration's results are keyed by change and candidate (`candidate:<change>:<40
+hex>:<C-NN>`), so another change's `C-01` is never borrowed.
+
+Review obligations (`review` and `visual` declarations) are recorded in the
+evaluation draft with an explicit `result` and at least one artifact saved under the
+candidate's evidence directory (a passed `visual` check needs an image, as in schema
+1). A required review obligation that is missing from the draft, `unverified`,
+`failed` or without an artifact is `REVIEW_MISSING` and blocks export and release.
+Passing every command check creates no review result and no adequacy judgment.
+
+### Evidence schema 3
+
+Schema 3 keeps every schema 2 field and rule and adds the complete reconciled
+coverage of the candidate:
+
+- `coverage`: `{ agreement, authorization, inventory, map, snapshots: { inventory, map } }`
+  — the agreement digest (projection 2) the evaluation ran under, the ID of the
+  authorization that covered it (`A-NN`), the inventory and map digests, and the two
+  snapshot artifacts `<evidence dir>/coverage/inventory.json` (`{ schema: 1, prd,
+  digest, projection, requirements, scenarios }`, the inventory computed from the
+  candidate's PRD, in the snapshot schema 2 shape) and `<evidence dir>/coverage/map.json`
+  (`{ schema: 1, path, digest, map }`, the parsed map). Both are listed in
+  `artifacts` with their file digests like every artifact; neither carries a digest
+  of the manifest, so no digest refers to itself.
+- `scenarios`: one row per scenario of the inventory snapshot plus one per `removed`
+  tombstone, `{ id, requirement, disposition, tickets, checks, decision, authorization,
+  note }` with disposition `delivered`, `deferred`, `removed` or `blocked`.
+- `requirements` rows are `{ id, disposition, tickets, checks, scenarios, decision,
+  authorization, note }` (`authorized_by` is gone): one per requirement of the
+  inventory snapshot; `delivered` when every scenario is delivered, `deferred` or
+  `removed` when every non-delivered scenario carries that disposition (`removed`
+  only when all do), `blocked` otherwise.
+- `adequacy`: `{ verdict: "adequate" | "inadequate", note }`, authored in the draft:
+  the reviewer's judgment that the delivered checks establish their scenarios.
+  `note` is nonempty.
+- `delivery`: `{ original, agreed }` — `original` is true when every scenario of the
+  inventory snapshot is `delivered`; `agreed` when every scenario is `delivered`,
+  `deferred` or `removed` with an authorized disposition. A report shows both, so
+  delivery with authorized scope dispositions is never presented as delivery of
+  every original obligation.
+- each check row carries `declared` (the definition digest from the map snapshot).
+
+Dispositions are derived, never authored: a scenario is `delivered` when every
+required check it links passed (command checks with `runtime` provenance and
+`attempt.check_digest` equal to `declared`; review checks with a passed result and a
+candidate-bound artifact), `deferred`/`removed` when its map disposition is
+authorized (the row names the decision and the user authorization), `blocked`
+otherwise. Validation of a schema 3 manifest establishes, in addition to the schema
+2 rules: the snapshots are listed artifacts whose content recomputes to
+`coverage.inventory` and `coverage.map`; the scenario and requirement rows are
+exactly the inventory snapshot's set plus tombstones, each once, with the links the
+map snapshot gives; every check the map declares appears in `checks`, every check in
+`checks` is declared with the same kind and `required`, and `declared` equals the
+declaration; every disposition follows the rule above; `delivery` recomputes; a
+required check that did not pass, a required review obligation that is not passed
+with an artifact, a `blocked` row and an `inadequate` adequacy each make the manifest
+invalid with the reason named. When the repository is available (export, status,
+release, and `validate` run inside the repository) validation also reconciles
+independently with the committed candidate: the inventory recomputed from `git show
+<candidate>:<prd>` and the map digest from `git show <candidate>:.prd/coverage/<id>.json`
+must equal `coverage.inventory` and `coverage.map`, and `git show
+<candidate>:.prd/changes/<id>.json` must be a schema 3 record whose agreement entry
+with digest `coverage.agreement` exists and is bound by authorization
+`coverage.authorization`; a manifest whose own lists are consistent but disagree with
+the candidate is invalid (`the candidate's PRD defines S-05, which the manifest omits`).
+Outside a repository (`pincer-evidence.cjs validate` on copied files) that
+reconciliation is skipped and printed as a limitation, never claimed. A schema 3
+manifest is `UNSUPPORTED_SCHEMA`-refused by the v0.5.0 and PRD v5 validators
+(`unknown evidence schema 3`).
+
+`evidence export` of a strict change reads a draft with the keys `environment`,
+`coverage_review`, `adequacy`, `checks` and `visual_review`; a draft `requirements`
+key is refused (`dispositions are derived from the map and the outcomes`). Every
+declared check appears in `checks` exactly once: a `command` entry is `{ id }` (a
+`kind`, `required` or `command` given must equal the declaration), a `review` or
+`visual` entry carries `result`, `artifacts` and the schema 1 fields; a declared
+check missing from the draft (`an unused failing required check cannot be omitted`)
+and an undeclared entry are refused naming the ID. Export requires `structure`
+complete, populates command checks from the attempts as in schema 2, writes the two
+snapshots and `checks/C-NN.log`, computes every row and `delivery`, writes
+`manifest.json`, validates it with the reconciliation above, and appends the
+locator entry (schema 1, unchanged; its `agreement` is the projection 2 digest).
+Release reads the selected strict change's lifecycle (`completed`), its verdict, the
+locator, the schema 3 manifest with reconciliation and the latest applicable
+attempts (a newer nonpassing local attempt on the same source blocks, as in schema
+2); a fresh clone validates the saved record with the v5 provenance limit; release
+writes nothing. The post-candidate allowlist is unchanged: the snapshots are listed
+artifacts of a validated manifest and therefore followers; an unlisted file under
+the evidence directory, an altered snapshot and a malformed locator remain
+candidate changes. Two changes evaluated on one candidate keep distinct locators,
+manifests and attempt keys.
+
+### Adoption and rollback
+
+`coverage adopt --preview --change <id>` prints the plan and writes nothing; it exits 0
+when apply would proceed (or when the change is already strict: `already adopted`)
+and 1 when a conflict stops it. Conflicts, all before the first write: not changes
+mode (`CHANGE_REQUIRED`/`MIGRATION_REQUIRED` — migrate first; migration never
+adopts), an unreadable record or directory, a `cancelled`/`superseded` change
+(`LIFECYCLE_BLOCKED`), a `running` attempt of the change (`ATTEMPT_RUNNING`), an
+incomplete transaction (`STATE_INCOMPLETE`), a PRD that does not parse strictly
+(`INVENTORY_INVALID`), a missing or invalid map (`COVERAGE_INVALID`), a map whose
+graph is incomplete (`COVERAGE_INCOMPLETE`: membership, classification and links must
+be complete before adoption; scope authorization is reported, not required, because
+the authorization that covers the map is recorded after adoption). The preview shows
+the inventory (counts, digest), the map digest, the agreement `G-NN` and digest apply
+would record, the attempts that become `HISTORICAL_EVIDENCE`, the backup path, and
+that adoption grants no authorization.
+
+`coverage adopt --apply --change <id> [--agreement <digest>]` is one transaction:
+it recomputes the plan under the lock (refusing with the same codes), compares the
+agreement digest with `--agreement` when given (`AGREEMENT_CHANGED` when the inputs
+changed since the preview), backs up `.prd/changes/<id>.json` under
+`.pincer/backups/<UTC timestamp>/.prd/changes/<id>.json`, and stages the record as
+schema 3 (`runtime: 3`, `coverage: { map, adopted, agreement }`, the agreement entry
+`G-NN` with `inventory` and `coverage` digests, the `adopt` event) together with the
+snapshot `.prd/changes/<id>/agreements/G-NN.json` (schema 2). Nothing else changes:
+tickets, attempts, the index, the selection, the locator and the map are untouched;
+no authorization is created, inferred from the record's history, or copied from an
+earlier one — the user's instruction covering the new agreement is recorded
+afterwards with `change authorize` (user) or `--delegated --basis A-NN`, and until
+then the verdict is `AGREEMENT_CHANGED` (or `AUTHORIZATION_REQUIRED`). Repeated apply
+reports `already adopted` and writes nothing. A process killed during apply leaves
+the schema 2 record or the schema 3 record with its event and snapshot (`recover`
+completes a committed apply). Existing attempts of the change are history after
+adoption (`HISTORICAL_EVIDENCE`) until verified again.
+
+Rollback from adoption restores the backed-up `.prd/changes/<id>.json` — it
+overwrites the schema 3 record at the same path, so nothing under `.prd/changes/` is
+deleted; the adoption snapshot `.prd/changes/<id>/agreements/G-NN.json` is no longer
+referenced by the restored record and may be removed or left in place. The map
+(authored), `.pincer/runtime/` (attempts, index, selection) and the evidence are kept.
+The change is a schema 2 record again with its history through the last
+pre-adoption event; attempts recorded as schema 3 during the strict period are then
+`ATTEMPT_ERROR` for that change until verified again. The migration rollbacks above
+are unchanged.
+
+### Coverage and impact commands
+
+| Command | Arguments | Writes | Notes |
+| --- | --- | --- | --- |
+| `coverage` | `[--change <id>] [--json]` | nothing | the phase-specific coverage report of the selected (or named) change; exit 0 when the report was computed (complete or not), 4 when the inputs cannot be read |
+| `impact` | `[--change <id>] [--from G-NN \| A-NN] [--json]` | nothing | structural differences between the current authored inputs and a retained agreement; exit 0 when computed (`unchanged`, `changed` or `unavailable`), 4 on invalid input |
+| `coverage adopt` | `--preview \| --apply --change <id> [--agreement <digest>]` | apply: the backup, the schema 3 record, the adoption snapshot | preview writes nothing; exit 0 / 1 (conflict) / 4 (invalid state) |
+| `check` | `C-NN --candidate <sha>` (strict) | an attempt | the declared command; `--timeout` and `-- <command>` are `CHECK_UNDECLARED` in a strict change |
+
+`coverage` and `impact` launch no check, record no approval, change no selection and
+write no file; repeated runs are byte-identical apart from `generated`. Their human
+output and their JSON name the same IDs, codes and next action.
+
+Coverage JSON schema 1:
+
+```
+{ schema: 1, runtime: 3, generated, root, mode, change: <id> | null,
+  strict: boolean, label: "strict" | "unverified", reason: <why unverified> | null,
+  inventory: { digest, requirements: [ { id, title, line, end, scenarios: [ids] } ], scenarios: [ { id, requirement, line, end } ] } | null,
+  map: { path, digest, checks: [ { id, kind, required, declared } ] } | null,
+  agreement: { current, reviewed: { agreement: "G-NN", authorization: "A-NN" | null, digest } | null, verdict },
+  baseline: { agreement: "G-NN", authorization: "A-NN" | null, inventory: <digest> } | null,
+  structure: { complete, problems: [ { code, detail, ids: [] } ] },
+  implementation: { complete, scenarios: { "<id>": { scope, implementation, tickets: [ { id, status, ready, code } ], detail } } },
+  candidate: { evaluated, candidate, manifest, delivery: { original, agreed } | null, adequacy: { verdict, note } | null,
+               scenarios: { "<id>": { disposition, checks: [ { id, kind, required, result } ], detail } } } | null,
+  blockers: [ { code, detail } ], next: { action, command, ticket | check | decision | null } }
+```
+
+Impact JSON schema 1 (the baseline is `--from`, else the latest authorization's
+agreement, else the latest retained agreement with an inventory snapshot):
+
+```
+{ schema: 1, runtime: 3, generated, root, change,
+  baseline: { agreement: "G-NN", authorization: "A-NN" | null, recorded, digest } | null,
+  current: { digest, inventory, coverage },
+  verdict: "unchanged" | "changed" | "unavailable", reason: <text> | null,
+  requirements: { added: [ids], removed: [ids], changed: [ { id, parts: ["title" | "text" | "scenarios"] } ], unchanged: [ids] },
+  scenarios: { added: [ids], removed: [ { id, tombstone: boolean } ], changed: [ { id, parts: ["text" | "requirement"] } ], unchanged: [ids] },
+  links: { changed: [ { id, tickets: { added, removed }, checks: { added, removed } } ] },
+  scope: { added: [ { id, disposition } ], removed: [ids], changed: [ { id, from, to } ] },
+  checks: { added: [ids], removed: [ids], changed: [ { id, parts: ["kind" | "command" | "timeout" | "cwd" | "obligation" | "required"] } ] },
+  tickets: { added, removed, changed: [ { id, parts } ] },
+  affected: { scenarios: [ { id, because: [reasons] } ], tickets: [ { id, because: [reasons] } ], checks: [ { id, because: [reasons] } ],
+              dependents: [ { id, via: "T-NN", because: "depends_on" } ] },
+  unscoped: { prd: boolean, detail } ,
+  freshness: { note: "a narrow impact is not permission to reuse evidence whose source identity changed" } }
+```
+
+`affected` names every scenario whose text, owner, links or linked declarations
+changed, and every ticket and check linked from one of them, with the reason each is
+included; `dependents` lists tickets that `depends_on` an affected ticket, separately
+from direct links. `unscoped.prd` is true when `prd_revision` changed while every
+definition is unchanged (a constraint, the scope table, an architecture note): the
+verdict is then `changed` with the detail `unscoped PRD change requiring review`,
+never `unchanged`. `unavailable` is reported with its reason when the baseline
+agreement has no inventory snapshot (a pre-adoption or schema 1 snapshot, or none at
+all), when `--from` names a missing entry, or when the snapshot is `HISTORY_INVALID`;
+the runtime never reports "no impact" for history it cannot read. Impact is
+structural: it never judges semantics, and it does not touch evidence freshness —
+`SOURCE_CHANGED` keeps invalidating attempts by whole-source identity regardless of
+how narrow the report is.
+
+Status JSON schema 3 (changes mode) keeps every schema 2 field and adds
+`coverage`: `{ strict, label, reason, structure: { complete, problems }, implementation:
+{ complete, scenarios: { total, complete, unfinished, unverified, dispositioned } },
+candidate: { evaluated, delivery, adequacy } | null, next }`; legacy and migrated
+mode status JSON stays schema 1 with `coverage: { strict: false, label: "unverified",
+reason }`. The human status prints one `Coverage` line: `Coverage strict · agreement
+G-03 (A-02) · structure complete · implementation 4/6 scenarios · candidate not
+evaluated` or `Coverage unverified · strict coverage not adopted (node
+${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs coverage adopt --preview --change <id>)`. Resume JSON
+schema 2 keeps every schema 1 field and adds the same `coverage` object; its
+next-action precedence gains the coverage codes inside rule 4 ("agreement, decision
+or coverage gap": `COVERAGE_INVALID` → repair the map, `COVERAGE_INCOMPLETE` → author
+the missing rows, `OBLIGATION_MISSING` → restore the obligation or record the decision
+and tombstone, `SCOPE_UNAUTHORIZED` → `change decide --resolve` / `change authorize`),
+and rules 7 and 8 read the candidate coverage (`REVIEW_MISSING`, `ADEQUACY_REQUIRED`
+→ `/pincer:evaluate`). The v5 blocker precedence is otherwise unchanged. Routine
+resume never records or requests authorization: it prints the exact `change
+authorize` command when and only when the verdict is not `current`.
+
+A compact PRD (one requirement, one or two scenarios) with a map of one or two
+declarations passes the same validation; nothing requires an authored traceability
+table beyond the map. Playbooks author the map once (during `/pincer:narrow`) and
+read `coverage`/`impact` afterwards; a changed scope is dispositioned (decision,
+tombstone, authorization) before approval is recorded, and a generic "continue" is
+never an authorization of revised scope.
 
 ## Legacy compatibility
 
