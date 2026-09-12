@@ -45,6 +45,7 @@ const locator = require('./pincer-runtime/locator.cjs');
 const resume = require('./pincer-runtime/resume.cjs');
 const adopt = require('./pincer-runtime/adopt.cjs');
 const impact = require('./pincer-runtime/impact.cjs');
+const checks = require('./pincer-runtime/checks.cjs');
 const { atomicWrite, nowIso, tryGit } = require('./pincer-runtime/fsutil.cjs');
 const EXIT = { OK: 0, FAILED: 1, USAGE: 2, BUSY: 3, INVALID: 4, TIMED_OUT: 124, INTERRUPTED: 130 };
 
@@ -130,21 +131,43 @@ async function cmdCheck(root, args) {
   const [checkId, ...command] = o.positional;
   if (!checkId || !evidence.CHECK_ID.test(checkId)) usage('check requires a check ID such as C-01');
   if (!o.candidate || !parse.HEX40.test(o.candidate)) usage('check requires --candidate <full 40-hex commit ID>');
-  if (!command.length) usage('check requires the command after --');
-  const timeout = o.timeout === undefined ? parse.DEFAULT_TIMEOUT : Number(o.timeout);
-  if (!Number.isInteger(timeout) || timeout <= 0) usage('--timeout must be a positive integer number of seconds');
   const b = candidateBinding(root, 'check', null);
+  // Strict coverage (docs/runtime-contracts.md, "Declared candidate checks"): the map's
+  // declaration is the only source of the command, timeout and cwd; a supplied
+  // command or timeout cannot become evidence for a declared check by reusing its ID.
+  let commands, timeout, cwd = null, declared = null;
+  if (b.strict) {
+    if (o.timeout !== undefined || command.length) fail('pincer', `CHECK_UNDECLARED: ${checkId} runs its declaration in a strict change; --timeout and a command after -- are not accepted (edit .prd/coverage/${b.change}.json and authorize the agreement instead)`, EXIT.INVALID);
+    declared = checks.declaration(root, b, checkId);
+    if (declared.code) fail('pincer', `${declared.code}: ${declared.problem}`, exitForCode(declared.code));
+    commands = declared.commands; timeout = declared.timeout; cwd = declared.cwd;
+  } else {
+    if (!command.length) usage('check requires the command after --');
+    timeout = o.timeout === undefined ? parse.DEFAULT_TIMEOUT : Number(o.timeout);
+    if (!Number.isInteger(timeout) || timeout <= 0) usage('--timeout must be a positive integer number of seconds');
+    commands = [command.join(' ')];
+  }
   requireCandidateView(root, o.candidate, b.prd);
-  const line = command.join(' ');
-  const secretLine = sanitize.inlineSecretLine([line]);
+  const line = commands.join('\n');
+  const secretLine = sanitize.inlineSecretLine(commands);
   if (secretLine) fail('pincer', 'the check command assigns a secret-like literal; reference it from the environment instead', EXIT.INVALID);
-  const announce = () => process.stdout.write(`── ${checkId} candidate ${o.candidate.slice(0, 7)} ──\n  $ ${sanitize.sanitizeText(line).text}\n`);
+  const announce = () => process.stdout.write(`── ${checkId} candidate ${o.candidate.slice(0, 7)}${declared ? ` (declared in ${declared.file}${cwd ? `, cwd ${cwd}` : ''})` : ''} ──\n${commands.map(c => `  $ ${sanitize.sanitizeText(c).text}`).join('\n')}\n`);
   const contextFor = c => ({ kind: 'candidate', change: c.change, prd: c.prd, prd_revision: c.prd_revision, base: c.base, candidate: o.candidate, check: checkId, ...(c.mode === 'changes' ? { mode: 'changes', agreement: c.agreement } : {}), ...(c.strict ? { inventory: c.inventory, coverage: c.coverage } : {}) });
   // In changes mode the guard runs again under the runner's lock (docs/runtime-contracts.md,
   // "Command gates"); a lifecycle or agreement change committed since the pre-launch
   // evaluation refuses the attempt before anything is recorded.
-  const revalidate = b.mode === 'changes' ? () => contextFor(gates.guard(root, { command: 'check', prd: b.prd }).binding) : null;
-  const result = await runner.runAttempt({ root, context: contextFor(b), commands: [line], timeoutSeconds: timeout, command: `check ${checkId}`, revalidate, announce });
+  // In a strict change the declaration is recomputed under the lock too: a changed
+  // declaration whose agreement was re-authorized meanwhile refuses (CHECK_UNDECLARED).
+  const revalidate = b.mode === 'changes' ? () => {
+    const g = gates.guard(root, { command: 'check', prd: b.prd });
+    if (g.binding.strict) {
+      const again = checks.declaration(root, g.binding, checkId);
+      if (again.code) require('./pincer-runtime/transaction.cjs').refuse(again.code, again.problem);
+      if (!declared || again.digest !== declared.digest) require('./pincer-runtime/transaction.cjs').refuse('CHECK_UNDECLARED', `the declaration of ${checkId} changed since the command was prepared (${declared ? declared.digest.slice(0, 12) : 'none'} → ${again.digest.slice(0, 12)}); run the check again`);
+    } else if (declared) require('./pincer-runtime/transaction.cjs').refuse('CHECK_UNDECLARED', `change ${b.change} is no longer strict; run the check again`);
+    return contextFor(g.binding);
+  } : null;
+  const result = await runner.runAttempt({ root, context: contextFor(b), commands, timeoutSeconds: timeout, command: `check ${checkId}`, revalidate, announce, cwd });
   if (result.code) fail('pincer', `${result.code}: ${result.problem}`, result.refused ? exitForCode(result.code) : problemExit(result.code));
   const a = result.attempt;
   const logs = `${state.RUNTIME_DIR}/attempts/${a.id}/`;
@@ -341,7 +364,7 @@ function parseOptions(args, { valued = [], switches = [], repeated = [] } = {}) 
 const problemExit = code => (code === 'STATE_BUSY' ? EXIT.BUSY : EXIT.INVALID);
 // Contracted exit codes for the change commands: 3 busy, 4 invalid input or
 // unreadable state, 1 for every refusal (docs/runtime-contracts.md, "Exit codes").
-const INVALID_CODES = ['INPUT_INVALID', 'INVENTORY_INVALID', 'COVERAGE_INVALID', 'MALFORMED', 'UNSUPPORTED_SCHEMA', 'HISTORY_INVALID', 'STATE_INCOMPLETE', 'UNSUPPORTED_INPUT', 'CHANGES_MODE', 'AMBIGUOUS', 'INVALID'];
+const INVALID_CODES = ['INPUT_INVALID', 'INVENTORY_INVALID', 'COVERAGE_INVALID', 'CHECK_UNDECLARED', 'MALFORMED', 'UNSUPPORTED_SCHEMA', 'HISTORY_INVALID', 'STATE_INCOMPLETE', 'UNSUPPORTED_INPUT', 'CHANGES_MODE', 'AMBIGUOUS', 'INVALID'];
 const exitForCode = code => (code === 'STATE_BUSY' ? EXIT.BUSY : INVALID_CODES.includes(code) ? EXIT.INVALID : EXIT.FAILED);
 
 function cmdRegister(root, args) {

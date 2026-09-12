@@ -88,7 +88,7 @@ class Capture {
 // the current agreement. `announce` is called once the record is registered and
 // before the launch, so a refusal prints nothing. Returns { attempt } or { code,
 // problem } for refusals before launch; nothing is written for a refusal.
-async function runAttempt({ root, context, commands, timeoutSeconds, command = 'verify', echo = true, declared = {}, revalidate = null, announce = null }) {
+async function runAttempt({ root, context, commands, timeoutSeconds, command = 'verify', echo = true, declared = {}, revalidate = null, announce = null, cwd = null }) {
   const block = commands.length ? `${commands.join('\n')}\n` : '';
   const checkDigest = parse.sha256(`${block}timeout=${timeoutSeconds}\n`);
   const display = sanitizeText(block).text.slice(0, 2000);
@@ -117,7 +117,7 @@ async function runAttempt({ root, context, commands, timeoutSeconds, command = '
         schema, runtime: schema, id, sequence, context: persisted,
         check: { digest: checkDigest, display, timeout_seconds: timeoutSeconds },
         outcome: 'running', exit_code: null, signal: null,
-        runner: runnerInfo(), cwd: '.',
+        runner: runnerInfo(), cwd: cwd || '.',
         environment: { os: `${os.platform()} ${os.release()}`, node: process.version, declared },
         started: nowIso(), finished: null,
         source: { before: before.digest, after: null, files: before.files.length, limitations: before.limitations },
@@ -177,7 +177,7 @@ async function runAttempt({ root, context, commands, timeoutSeconds, command = '
     let settled = false;
     settle = result => { if (!settled) { settled = true; resolve(result); } };
     try {
-      child = spawn(runnerInfo().shell, [...RUNNER_ARGS, block], { cwd: root, detached: true, stdio: ['ignore', 'pipe', 'pipe'], env: process.env });
+      child = spawn(runnerInfo().shell, [...RUNNER_ARGS, block], { cwd: cwd ? path.join(root, cwd) : root, detached: true, stdio: ['ignore', 'pipe', 'pipe'], env: process.env });
     } catch (error) { launchError = error.message; return settle({ code: null, signal: null }); }
     child.on('error', error => { launchError = error.message; });
     if (child.pid) {

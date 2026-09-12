@@ -282,3 +282,30 @@ function refusedWithoutSideEffects(dir, args, code, pattern, label, exit = 1) {
   assert.equal(record(dir2).lifecycle.state, 'active');
 }
 console.log('change command gate tests passed');
+
+// PRD v6 T-72: in a strict change the guard also needs a readable inventory and map
+// (INVENTORY_INVALID/COVERAGE_INVALID come with the input codes, before the
+// decision and authorization gates); a schema 2 change keeps the v5 gate order and
+// the legacy `check -- <command>` form.
+{
+  const dir = tempDir(); git(dir, 'init', '-q');
+  const fx6 = path.join(repo, 'test/fixtures/prd-v6');
+  write(dir, '.gitignore', '.pincer/\n');
+  write(dir, '.prd/prd-v1.md', read(fx6, 'strict/prd-v1.md'));
+  for (const f of fs.readdirSync(path.join(fx6, 'strict/tickets'))) write(dir, `tickets/${f}`, read(fx6, `strict/tickets/${f}`));
+  write(dir, '.prd/coverage/prd-v1.json', read(fx6, 'strict/coverage/prd-v1.json'));
+  write(dir, 'value.txt', 'good\n');
+  commit(dir, 'base');
+  passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md')); passes(rt(dir, 'change', 'select', 'prd-v1'));
+  const digest = () => JSON.parse(passes(rt(dir, 'change', 'show', 'prd-v1', '--json'))).agreement.current;
+  passes(rt(dir, 'change', 'authorize', 'prd-v1', '--agreement', digest(), '--reference', REF, '--excerpt', 'ok'));
+  passes(rt(dir, 'change', 'activate', 'prd-v1'));
+  passes(rt(dir, 'coverage', 'adopt', '--apply', '--change', 'prd-v1'));
+  passes(rt(dir, 'change', 'decide', 'prd-v1', '--summary', 'open question'));
+  fs.rmSync(path.join(dir, '.prd/coverage/prd-v1.json'));
+  refuses(sh(dir, 'start', 'T-01'), 4, /^pincer: COVERAGE_INVALID: start refused: \.prd\/coverage\/prd-v1\.json: missing/m, 'the missing map is reported before the open decision');
+  write(dir, '.prd/coverage/prd-v1.json', read(fx6, 'strict/coverage/prd-v1.json'));
+  refuses(sh(dir, 'start', 'T-01'), 1, /^pincer: DECISION_REQUIRED: start refused/m, 'then the decision gate');
+  assert.equal(read(dir, 'tickets/T-01-parse.md').includes('status: open'), true, 'nothing written');
+}
+console.log('change command gate tests passed (strict input gates)');

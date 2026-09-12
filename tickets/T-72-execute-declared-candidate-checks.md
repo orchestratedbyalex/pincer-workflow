@@ -1,9 +1,13 @@
 ---
 ticket: T-72
-status: open
+status: done
 size: M
 prd: .prd/prd-v6.md
 depends_on: [T-69, T-70]
+started: 2026-09-12T09:17:49Z
+last_check: 2026-09-12T09:27:40Z passed de3ab52236f5
+verified: 2026-09-12T09:27:40Z de3ab52236f5
+finished: 2026-09-12T09:27:40Z
 ---
 
 ## Objective
@@ -22,9 +26,9 @@ Execute agreement-bound candidate check definitions, as specified in PRD v6, so 
 - Represent review obligations explicitly with candidate-bound artifact/result requirements for downstream export; require all declared required checks, including otherwise unused ones.
 
 ## Acceptance Criteria
-- [ ] S-16..S-18 include substitution, changed timeout, shared C-01, missing review and meaningful failed/unverified review cases.
-- [ ] Injected pause/reopen/definition change between preflight and lock either refuses without launch/write/output or records the newly validated authorized inputs.
-- [ ] Existing timeout, captured-log, failure and legacy invocation regressions remain valid.
+- [x] S-16..S-18 include substitution, changed timeout, shared C-01, missing review and meaningful failed/unverified review cases.
+- [x] Injected pause/reopen/definition change between preflight and lock either refuses without launch/write/output or records the newly validated authorized inputs.
+- [x] Existing timeout, captured-log, failure and legacy invocation regressions remain valid.
 
 ## Verification
 Proves: a reused check ID cannot launder a different command or race past changed authorization.
