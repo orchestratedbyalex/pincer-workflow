@@ -1,0 +1,70 @@
+$ npm test
+51 suites chained from package.json; 65 'passed' lines (several suites print more than one).
+
+  smoke test passed
+  installer preservation tests passed
+  ticket lifecycle test passed
+  ticket validation tests passed
+  verification freshness tests passed
+  behavioral verification acceptance set passed (3 controlled faults)
+  evidence validator tests passed
+  candidate identity and evidence integration tests passed
+  PRD recovery tests passed
+  hook regression tests passed (296 payloads)
+  runtime parser tests passed
+  runtime parser tests passed (strict inventory beside the old parser)
+  coverage inventory tests passed
+  coverage map tests passed
+  coverage agreement tests passed
+  coverage adoption tests passed
+  coverage readiness tests passed
+  coverage impact tests passed
+  coverage checks tests passed
+  coverage evidence tests passed
+  coverage evidence tests passed (T-83: undeclared link, missing PRD blob, invented authorization)
+  coverage report tests passed
+  runtime identity and source manifest tests passed
+  change registry tests passed
+  change registry tests passed (coverage map inert before adoption)
+  change selection tests passed
+  change agreement tests passed
+  change authorization tests passed
+  change lifecycle tests passed
+  change lifecycle tests passed (schema 2 completion ignores coverage maps)
+  change command gate tests passed
+  change command gate tests passed (strict input gates)
+  change evidence context tests passed
+  change evidence context tests passed (impact unavailable without strict coverage)
+  change evaluation tests passed
+  change evaluation tests passed (schema 2 export unchanged)
+  change resume tests passed
+  change resume tests passed (coverage summary)
+  change trial record tests passed (5 scenario rows, 13 sessions, 9 count rows)
+  change review packet tests passed (10 requirements, 32 scenarios, 8 replay cases)
+  runtime state and locking tests passed
+  change transaction tests passed
+  change transaction tests passed (adoption through the transaction API)
+  runtime status tests passed
+  runtime status tests passed (coverage summary)
+  runtime output tests passed (complete output through a pipe, on stdout and stderr)
+  runtime runner tests passed
+  runtime runner tests passed (declared cwd)
+  runtime lifecycle tests passed
+  runtime migration tests passed
+  change migration tests passed
+  change migration tests passed (migration never adopts)
+  runtime evidence tests passed
+  runtime evidence tests passed (schema 4 refused)
+  workflow contract tests passed
+  workflow tests passed (strict coverage guidance)
+  runtime contract document tests passed
+  change contract tests passed
+  coverage contract tests passed
+  distribution parity and packed-install tests passed
+  change distribution tests passed
+  coverage distribution tests passed
+  delivery benchmark tests passed (6 briefs, controls accepted, injected faults rejected)
+  coverage trial record tests passed (36 runs, 3 scenario rows, 42 run rows)
+  coverage review packet tests passed (10 requirements, 30 scenarios, 8 replay cases)
+
+NPM_TEST_EXIT=0

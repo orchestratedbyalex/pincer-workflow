@@ -1,0 +1,13 @@
+$ gh run view 34781414193 --json jobs
+CI matrix on candidate ce98abdbc6edd4e8d4f5736fee35dd765b930452
+.github/workflows/ci.yml: {ubuntu-latest, macos-latest} x Node {22, 24}, npm test
+
+  success  test (macos-latest, 22)
+  success  test (ubuntu-latest, 24)
+  success  test (macos-latest, 24)
+  success  test (ubuntu-latest, 22)
+
+run 34781414193 (push)         conclusion: success
+run 34781416089 (pull_request) conclusion: success
+
+exit=0

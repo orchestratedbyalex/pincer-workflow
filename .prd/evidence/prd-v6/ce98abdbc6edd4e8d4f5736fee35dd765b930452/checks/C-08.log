@@ -1,0 +1,32 @@
+$ git log -p 9bcf8df..<candidate> — added lines scanned for credential and PII patterns
+Mechanical secret and PII scan over every commit in the range, not only the final tree,
+because a secret committed and then deleted is still leaked.
+
+Scanned for: sk-ant-/sk-/AKIA/ASIA/ghp_/gho_/ghu_/ghs_/github_pat_/xox[baprs]-/AIza/
+ya29./glpat-/npm_ prefixes; PEM private-key headers; JWTs; connection strings with
+inline credentials; bearer and x-api-key headers; SECRET|TOKEN|PASSWORD|API_KEY
+assignments; email addresses; IPv4; hostnames; /Users/ and /home/ absolute paths;
+wall-clock-plus-timezone pairs; and a Shannon-entropy sweep (>4.0 bits, length >=24)
+excluding hex digests, UUIDs and PINCER identifiers.
+
+Result: no credential of any kind, in any commit of the range.
+  - the only TOKEN= shaped hits are two deliberate negative fixtures asserting the
+    runtime's own refusal of a secret-like literal in an excerpt or a declared command
+  - emails added are noreply@anthropic.com trailers and *@example.invalid fixtures
+  - the only IPv4 is 127.0.0.1 in the integration-untested brief's loopback listener
+  - all 810 added ISO timestamps are UTC; no local offsets
+  - no hostname residue; no /Users/ or /home/ absolute paths added by this range
+
+Two PII residues were found in the benchmark artifacts and removed from the branch's
+history before this candidate: a macOS per-user $TMPDIR token and a reset wall-clock
+time with its IANA timezone. Both were reachable from a pushed commit before the
+rewrite and should be treated as already disclosed; neither is a credential and
+neither grants access. See the `history:` commit.
+
+Pre-existing and out of scope for this range, recorded for awareness: the operator's
+username appears as a bare word in five files present identically at the base commit
+(PRD v4 evidence logs and trial logs), and two of those also carry /Users/<user> paths.
+
+Claude Code session identifiers are retained in the benchmark logs by the documented
+decision in docs/prd-v6-artifacts/README.md: they are the identity of each run, are
+opaque, and grant no access.

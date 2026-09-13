@@ -1,0 +1,19 @@
+=== C-05 replay v6 ===
+pincer: note: this records local provenance of the user's instruction, not authenticated identity; execution still needs the change selected and active
+ok omitted
+ok revision
+pincer: note: execution of prd-v1 is blocked (DECISION_REQUIRED) until the user's decision is recorded with: node scripts/pincer-runtime.cjs change decide prd-v1 --resolve D-01 --reference <text> --excerpt <text>
+pincer: note: the agreement is now 018960298309 and needs authorization: node scripts/pincer-runtime.cjs change authorize prd-v1 --agreement 0189602983096188f79ca5ea410eafba5acf0634f7e69656fd3859e15b9ae6f5 --decision D-01 …
+pincer: note: this records local provenance of the user's instruction, not authenticated identity; execution still needs the change selected and active
+pincer: note: this records local provenance of the user's instruction, not authenticated identity; execution still needs the change selected and active
+ok removal
+pincer: note: completed means implementation complete and ready for evaluation, not evaluated or released; commit the record before choosing the candidate
+ok substituted
+ok race
+pincer: note: registration grants no authorization; record the user's instruction with `change authorize` and select the change with `change select`
+ok shared
+ok rollback
+pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization
+ok clone
+ok all (8 cases)
+exit=0
