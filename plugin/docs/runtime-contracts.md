@@ -1666,6 +1666,9 @@ rules, or it is `HISTORY_INVALID`.
 The check runner is a POSIX contract: `bash` in `PATH`, process groups
 (`detached: true`, `kill(-pid)`), `SIGTERM`/`SIGKILL`. Native Windows is not
 supported and not claimed. The CI matrix (`.github/workflows/ci.yml`: ubuntu and macOS
-× Node 18 and 22) is the target surface; a release claims only the runs it can cite,
-and any platform outside the matrix is untested. Sandbox and approval controls of the
+× Node 22 and 24) is the target surface; a release claims only the runs it can cite,
+and any platform outside the matrix is untested. Node 22 is the floor
+(`engines`): on Node 18 and 20 a command that writes more than one pipe buffer of
+output loses the tail when the process exits and still exits 0, so piped `--json`
+output cannot be trusted there. Sandbox and approval controls of the
 host stay in force; the runtime never bypasses them.

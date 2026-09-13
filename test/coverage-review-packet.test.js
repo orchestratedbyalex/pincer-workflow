@@ -116,7 +116,12 @@ assert.ok(ci, 'the CI matrix is a listed gate');
 assert.match(ci[2], /outstanding|run `?\d+`?|https:\/\//, `the CI gate is outstanding or names a run: ${ci[2]}`);
 if (/outstanding/.test(ci[2])) assert.doesNotMatch(verification, /CI (is )?green/i, 'an outstanding CI gate is never described as green');
 const ciYml = read('.github/workflows/ci.yml');
-for (const dim of ['ubuntu-latest', 'macos-latest', '18', '22']) assert.ok(ciYml.includes(dim), `the CI workflow covers ${dim}`);
+// The dimensions come from the gate itself, so the packet and the workflow are checked
+// against each other rather than against a list that has to be edited in two places.
+const osNames = [...ci[1].matchAll(/\b([a-z]+-latest)\b/g)].map(m => m[1]);
+const nodeVersions = (ci[1].match(/Node \{([^}]+)\}/) || [, ''])[1].split(',').map(s => s.trim()).filter(Boolean);
+assert.ok(osNames.length && nodeVersions.length, `the CI gate names its matrix dimensions: ${ci[1]}`);
+for (const dim of [...osNames, ...nodeVersions]) assert.ok(ciYml.includes(dim), `the CI workflow covers ${dim}`);
 assert.match(ci[1], /ci\.yml/, 'the CI gate names the workflow');
 
 // --- 5-7. Artifacts, adoption and the trial are resolvable -------------------------------------

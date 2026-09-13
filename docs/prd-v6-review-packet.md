@@ -134,7 +134,7 @@ commands and their results are below; nothing here is inferred from an earlier c
 | packed parity | `test/coverage-distribution.test.js` (npm pack, install into every supported layout, compare runtime behaviour) | passed in 34 s — every supported layout and the plugin carry identical runtime behaviour, and old runtimes reject the new records |
 | independent replay | `bash docs/prd-v6-artifacts/replay.sh all` | passed in 20 s — all eight cases (`ok all (8 cases)`) |
 | benchmark freeze | `node scripts/delivery-benchmark/benchmark.cjs check-freeze` | passed — briefs, evaluators, harness and protocol match the freeze of 2026-09-12 |
-| CI matrix | GitHub Actions `.github/workflows/ci.yml`: {ubuntu-latest, macos-latest} × Node {18, 22} | **outstanding** — the branch has not been pushed, so no run exists for this candidate. Node 18 is not installed on the machine that produced this packet, so the Node 18 dimension is unverified anywhere. Do not treat the matrix as green. |
+| CI matrix | GitHub Actions `.github/workflows/ci.yml`: {ubuntu-latest, macos-latest} × Node {22, 24} | **ran on 2026-09-13**, after this packet was written. The first run on the pushed branch failed all four cells of the then-current {18, 22} matrix: three on the shallow default checkout, where `git cat-file -e` exits 128 and this packet's own commit citations cannot resolve (fixed by `fetch-depth: 0`), and macOS × Node 18 on stdout truncated at one 8 KiB pipe buffer. Node 18 and 20 were then measured to lose the tail of any output larger than a pipe buffer while still exiting 0, so the floor is `engines: >=22` and the matrix is {22, 24}. Still outstanding for whatever candidate is finally evaluated; do not treat it as green until it passes there. |
 
 The 13 suites added by v6 are `coverage-inventory`, `coverage-map`, `coverage-agreement`,
 `coverage-adoption`, `coverage-readiness`, `coverage-impact`, `coverage-checks`,
@@ -248,8 +248,11 @@ Nothing outside the scratch directory is written; it takes about twenty seconds.
   operating system, one day. Its evaluators were written by this project before the runs
   and held out of the workspace, which is process separation rather than a defence
   against an adversarial agent with access to this repository.
-- The CI matrix is outstanding for this candidate, and Node 18 is unverified anywhere in
-  this work. That gate must run before anyone claims the branch is green.
+- The CI matrix ran after this packet was written; section 8 records what it found. It is
+  still outstanding for whatever candidate is finally evaluated, and that gate must pass
+  before anyone claims the branch is green. Node 18 and 20 are no longer unverified: both
+  were measured to truncate piped output larger than one pipe buffer while exiting 0, so
+  they are out of support rather than untested, and the floor is now `engines: >=22`.
 - `test/delivery-benchmark.test.js` spawns many processes and runs `npm test` inside
   generated candidate projects. It is the slowest suite in the chain and it needs `git`
   and `npm` on PATH.
