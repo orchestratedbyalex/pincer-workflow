@@ -11,7 +11,7 @@
 # three tickets, one coverage map, one commit), drives the runtime with the same commands
 # a session would run, and asserts the observable outcome (exit code, reason code, record
 # content). It prints "ok <case>" or fails with the first assertion that does not hold.
-# Nothing outside the scratch directory is written. Requires git and Node >= 18.
+# Nothing outside the scratch directory is written. Requires git and Node >= 22.
 set -euo pipefail
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 CASE=${1:-all}

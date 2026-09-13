@@ -9,6 +9,7 @@ const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { nowIso, atomicWrite, readJson } = require('./fsutil.cjs');
+const io = require('./io.cjs');
 
 const RUNTIME_DIR = '.pincer/runtime';
 const INDEX_SCHEMA = 1;
@@ -76,7 +77,7 @@ class StateBusy extends Error {
 // Acquire the exclusive lock: mkdir is atomic; a lock whose owner pid is dead on
 // this host is reclaimed with a diagnostic; a live or foreign-host owner is never
 // stolen. Returns a release function.
-function acquireLock(root, { waitMs, command = 'runtime', log = message => process.stderr.write(`${message}\n`) } = {}) {
+function acquireLock(root, { waitMs, command = 'runtime', log = message => io.err(`${message}\n`) } = {}) {
   const p = ensureLayout(root);
   const bound = waitMs ?? (Number(process.env.PINCER_LOCK_WAIT_MS) > 0 ? Number(process.env.PINCER_LOCK_WAIT_MS) : LOCK_WAIT_MS);
   const deadline = Date.now() + bound;

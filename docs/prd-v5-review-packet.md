@@ -114,13 +114,13 @@ fixtures under `test/fixtures/prd-v5/`).
 
 | Gate | Command | Result |
 | --- | --- | --- |
-| full local suite | `npm test` (50 suites: smoke, installer, ticket, validation, verification, behavioral-verification, evidence, candidate, recovery, hooks, runtime-parse, coverage-inventory, coverage-map, coverage-agreement, coverage-adoption, coverage-readiness, coverage-impact, coverage-checks, coverage-evidence, coverage-reports, runtime-identity, change-registry, change-selection, change-agreement, change-authorization, change-lifecycle, change-command-gates, change-evidence-context, change-evaluations, change-resume, change-trial-record, change-review-packet, runtime-state, change-transactions, runtime-status, runtime-runner, runtime-lifecycle, runtime-migrate, change-migration, runtime-evidence, workflow, contracts, change-contracts, coverage-contracts, distribution, change-distribution, coverage-distribution, delivery-benchmark, coverage-trial-record, coverage-review-packet) | 36 PRD v5 suites passed locally on macOS 26.6.2, Node v22.23.1, as T-61's recorded verification, and again after the review fixes at `dcbcfbe` (T-63..T-65) before this packet revision was committed; the 14 PRD v6 suite(s) (coverage-inventory, coverage-map, coverage-agreement, coverage-adoption, coverage-readiness, coverage-impact, coverage-checks, coverage-evidence, coverage-reports, coverage-contracts, coverage-distribution, delivery-benchmark, coverage-trial-record, coverage-review-packet) were added on `feat/prd-v6` and are verified by their own tickets — this v5 record makes no claim about them |
+| full local suite | `npm test` (51 suites: smoke, installer, ticket, validation, verification, behavioral-verification, evidence, candidate, recovery, hooks, runtime-parse, coverage-inventory, coverage-map, coverage-agreement, coverage-adoption, coverage-readiness, coverage-impact, coverage-checks, coverage-evidence, coverage-reports, runtime-identity, change-registry, change-selection, change-agreement, change-authorization, change-lifecycle, change-command-gates, change-evidence-context, change-evaluations, change-resume, change-trial-record, change-review-packet, runtime-state, change-transactions, runtime-status, runtime-output, runtime-runner, runtime-lifecycle, runtime-migrate, change-migration, runtime-evidence, workflow, contracts, change-contracts, coverage-contracts, distribution, change-distribution, coverage-distribution, delivery-benchmark, coverage-trial-record, coverage-review-packet) | 36 PRD v5 suites passed locally on macOS 26.6.2, Node v22.23.1, as T-61's recorded verification, and again after the review fixes at `dcbcfbe` (T-63..T-65) before this packet revision was committed; the 14 PRD v6 suite(s) (coverage-inventory, coverage-map, coverage-agreement, coverage-adoption, coverage-readiness, coverage-impact, coverage-checks, coverage-evidence, coverage-reports, coverage-contracts, coverage-distribution, delivery-benchmark, coverage-trial-record, coverage-review-packet) were added on `feat/prd-v6` and are verified by their own tickets — this v5 record makes no claim about them |
 | packed-install parity | `node test/distribution.test.js && node test/change-distribution.test.js` (Claude-only, Codex-only, Copilot-only, all-platform and plugin layouts; identical runtime digests; change commands executed from each installed copy) | passed locally (part of `npm test`) |
 | generator parity | `bash template/scripts/sync-prompts.sh && bash scripts/build-plugin.sh && git status --short -- template plugin` | no diff at `c0bb7e9`; no diff after each of T-63..T-65 regenerated its outputs (`test/distribution.test.js` fails on stale output) |
 | review replay | `bash docs/prd-v5-artifacts/replay.sh all` (section 11) | all eight cases `ok` locally; executed by `test/change-review-packet.test.js` |
-| CI matrix (ubuntu-latest, macos-latest × Node 18, 22; `.github/workflows/ci.yml`) | push of `feat/prd-v5` | outstanding — the branch has not been pushed; the last CI run is `34637172105` on main at `9bcf8df` (success). Release readiness is blocked until the matrix passes on the candidate. |
+| CI matrix (ubuntu-latest, macos-latest × Node 22, 24; `.github/workflows/ci.yml`) | push of `feat/prd-v6`, which carries this PRD | passed on 2026-09-13 — run `34746495397` at the then-current candidate, all four cells success, the first time this code ran on Linux. The matrix was {18, 22} when this packet was written; Node 18 and 20 are now out of support as past end of life. Release readiness still requires the matrix to pass on whatever candidate is finally evaluated. |
 
-Node 18 and Linux are therefore unverified for PRD v5 code at the time of this packet.
+Linux and Node 18 were unverified for PRD v5 code when this packet was written; Linux has since passed and Node 18 is out of support.
 
 ## 5. Representative artifacts
 
@@ -363,8 +363,9 @@ part of `npm test`.
   and `git commit`.
 - A kit update inside a project is a source change: every done ticket's attempt is
   `SOURCE_CHANGED` until re-verified (unchanged from PRD v4).
-- Process cleanup uses POSIX process groups; native Windows is unsupported; Node 18
-  and Linux are covered by the CI matrix, which has not run on this branch (section 4).
+- Process cleanup uses POSIX process groups; native Windows is unsupported; Linux and
+  the supported Node versions are covered by the CI matrix, which has since run green
+  (section 4).
 - The trial covers Claude Code print mode with Sonnet on macOS only; interactive mode,
   Codex, Copilot, the plugin install and concurrent worktrees are untested live.
 - Dogfooding: this repository was not migrated (PRD section 7); its own tickets carry

@@ -1,7 +1,7 @@
 # PINCER Runtime Contracts
 
 The runtime is `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs` with its modules under
-`${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime/`. It is dependency-free CommonJS for Node.js 18+ and is the
+`${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime/`. It is dependency-free CommonJS for Node.js 22+ and is the
 only writer of ticket lifecycle state, verification attempts, change records and
 their lifecycle, the local selection, evaluation locators and exported candidate
 evidence. The shell entry points `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-ticket.sh` and
@@ -106,7 +106,7 @@ Exit codes:
 Wrapper mappings: `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-ticket.sh <start|verify|done|bind> …` calls the
 command of the same name and returns its exit code; `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-status.sh` calls
 `status` (reading `PINCER_BUILD_BUDGET_MIN` from the environment) and returns its exit
-code. Both print a Node.js 18+ requirement message and exit 4 when `node` is absent.
+code. Both print a Node.js 22+ requirement message and exit 4 when `node` is absent.
 
 Argument grammar: `<id>` is a change ID; `D-NN`, `A-NN`, `G-NN` and `E-NN` are
 two-to-six-digit decision, authorization, agreement and event IDs; `--reason`,
@@ -1667,8 +1667,12 @@ The check runner is a POSIX contract: `bash` in `PATH`, process groups
 (`detached: true`, `kill(-pid)`), `SIGTERM`/`SIGKILL`. Native Windows is not
 supported and not claimed. The CI matrix (`.github/workflows/ci.yml`: ubuntu and macOS
 × Node 22 and 24) is the target surface; a release claims only the runs it can cite,
-and any platform outside the matrix is untested. Node 22 is the floor
-(`engines`): on Node 18 and 20 a command that writes more than one pipe buffer of
-output loses the tail when the process exits and still exits 0, so piped `--json`
-output cannot be trusted there. Sandbox and approval controls of the
+and any platform outside the matrix is untested. Node 22 is the floor (`engines`)
+because 18 and 20 are past end of life, not because of any output defect: until
+T-79 a command whose stdout or stderr outgrew one pipe buffer lost the tail and
+still exited 0, on every version alike — the boundary was the pipe buffer, 65,536
+bytes, where 65,536 arrived and 65,537 did not. Every write now goes to the file
+descriptor synchronously (`${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime/io.cjs`), so a report is
+complete when the command exits however it is consumed; `test/runtime-output.test.js`
+compares a piped report against the same report redirected to a file. Sandbox and approval controls of the
 host stay in force; the runtime never bypasses them.

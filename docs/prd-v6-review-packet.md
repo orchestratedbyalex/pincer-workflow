@@ -128,13 +128,13 @@ commands and their results are below; nothing here is inferred from an earlier c
 
 | Gate | Command | Result |
 | --- | --- | --- |
-| full local suite | `npm test` (50 suites) | passed — all 50 suites on macOS 26.6.2 with Node v22.23.1, about ten minutes end to end (`delivery-benchmark` and this packet's own replay run dominate) |
+| full local suite | `npm test` (51 suites) | passed — all 51 suites on macOS 26.6.2 with Node v22.23.1, about ten minutes end to end (`delivery-benchmark` and this packet's own replay run dominate) |
 | adapter generator | `bash template/scripts/sync-prompts.sh && git diff --exit-code template/.agents template/.github` | passed — `sync-prompts.sh` regenerates `template/.agents` and `template/.github` with no diff |
 | plugin generator | `bash scripts/build-plugin.sh && git diff --exit-code plugin` | passed — `build-plugin.sh` regenerates `plugin/` with no diff |
 | packed parity | `test/coverage-distribution.test.js` (npm pack, install into every supported layout, compare runtime behaviour) | passed in 34 s — every supported layout and the plugin carry identical runtime behaviour, and old runtimes reject the new records |
 | independent replay | `bash docs/prd-v6-artifacts/replay.sh all` | passed in 20 s — all eight cases (`ok all (8 cases)`) |
 | benchmark freeze | `node scripts/delivery-benchmark/benchmark.cjs check-freeze` | passed — briefs, evaluators, harness and protocol match the freeze of 2026-09-12 |
-| CI matrix | GitHub Actions `.github/workflows/ci.yml`: {ubuntu-latest, macos-latest} × Node {22, 24} | **ran on 2026-09-13**, after this packet was written. The first run on the pushed branch failed all four cells of the then-current {18, 22} matrix: three on the shallow default checkout, where `git cat-file -e` exits 128 and this packet's own commit citations cannot resolve (fixed by `fetch-depth: 0`), and macOS × Node 18 on stdout truncated at one 8 KiB pipe buffer. Node 18 and 20 were then measured to lose the tail of any output larger than a pipe buffer while still exiting 0, so the floor is `engines: >=22` and the matrix is {22, 24}. Still outstanding for whatever candidate is finally evaluated; do not treat it as green until it passes there. |
+| CI matrix | GitHub Actions `.github/workflows/ci.yml`: {ubuntu-latest, macos-latest} × Node {22, 24} | **ran on 2026-09-13**, after this packet was written. The first run on the pushed branch failed all four cells of the then-current {18, 22} matrix: three on the shallow default checkout, where `git cat-file -e` exits 128 and this packet's own commit citations cannot resolve (fixed by `fetch-depth: 0`), and macOS × Node 18 on `coverage-agreement` reading a truncated `change show --json` (`SyntaxError: Unexpected end of JSON input`). That truncation was then diagnosed as a Node 18/20 defect and the floor raised to `engines: >=22` with the matrix {22, 24}; the evaluation of the combined candidate found that diagnosis wrong. The defect is the runtime writing to stdout asynchronously and then calling `process.exit()`, it reproduces on 22 and 24 alike at 65,537 bytes, and it is fixed in T-79. The floor and the matrix stay, justified by end of life. Still outstanding for whatever candidate is finally evaluated; do not treat it as green until it passes there. |
 
 The 13 suites added by v6 are `coverage-inventory`, `coverage-map`, `coverage-agreement`,
 `coverage-adoption`, `coverage-readiness`, `coverage-impact`, `coverage-checks`,
@@ -250,9 +250,10 @@ Nothing outside the scratch directory is written; it takes about twenty seconds.
   against an adversarial agent with access to this repository.
 - The CI matrix ran after this packet was written; section 8 records what it found. It is
   still outstanding for whatever candidate is finally evaluated, and that gate must pass
-  before anyone claims the branch is green. Node 18 and 20 are no longer unverified: both
-  were measured to truncate piped output larger than one pipe buffer while exiting 0, so
-  they are out of support rather than untested, and the floor is now `engines: >=22`.
+  before anyone claims the branch is green. Node 18 and 20 are out of support (`engines: >=22`)
+  because both are past end of life. The piped-output truncation first seen on Node 18 is
+  not version-specific — it reproduces on 22 and 24 at 65,537 bytes — and is fixed in T-79,
+  not by the floor.
 - `test/delivery-benchmark.test.js` spawns many processes and runs `npm test` inside
   generated candidate projects. It is the slowest suite in the chain and it needs `git`
   and `npm` on PATH.

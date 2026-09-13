@@ -26,6 +26,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
+const io = require('./pincer-runtime/io.cjs');
 const parse = require('./pincer-runtime/parse.cjs');
 const identity = require('./pincer-runtime/identity.cjs');
 const source = require('./pincer-runtime/source.cjs');
@@ -59,8 +60,8 @@ function repoRoot() {
 }
 
 function usage(message) {
-  if (message) process.stderr.write(`pincer: ${message}\n`);
-  process.stderr.write('usage: pincer-runtime.cjs validate <file>... [--digests]\n' +
+  if (message) io.err(`pincer: ${message}\n`);
+  io.err('usage: pincer-runtime.cjs validate <file>... [--digests]\n' +
     '       pincer-runtime.cjs register --prd .prd/prd-vN.md [--change <id>] [--authorization <text>] [--replace] [--rebind]\n' +
     '       pincer-runtime.cjs snapshot [--json] [--store]\n' +
     '       pincer-runtime.cjs recover\n' +
@@ -151,7 +152,7 @@ async function cmdCheck(root, args) {
   const line = commands.join('\n');
   const secretLine = sanitize.inlineSecretLine(commands);
   if (secretLine) fail('pincer', 'the check command assigns a secret-like literal; reference it from the environment instead', EXIT.INVALID);
-  const announce = () => process.stdout.write(`── ${checkId} candidate ${o.candidate.slice(0, 7)}${declared ? ` (declared in ${declared.file}${cwd ? `, cwd ${cwd}` : ''})` : ''} ──\n${commands.map(c => `  $ ${sanitize.sanitizeText(c).text}`).join('\n')}\n`);
+  const announce = () => io.out(`── ${checkId} candidate ${o.candidate.slice(0, 7)}${declared ? ` (declared in ${declared.file}${cwd ? `, cwd ${cwd}` : ''})` : ''} ──\n${commands.map(c => `  $ ${sanitize.sanitizeText(c).text}`).join('\n')}\n`);
   const contextFor = c => ({ kind: 'candidate', change: c.change, prd: c.prd, prd_revision: c.prd_revision, base: c.base, candidate: o.candidate, check: checkId, ...(c.mode === 'changes' ? { mode: 'changes', agreement: c.agreement } : {}), ...(c.strict ? { inventory: c.inventory, coverage: c.coverage } : {}) });
   // In changes mode the guard runs again under the runner's lock (docs/runtime-contracts.md,
   // "Command gates"); a lifecycle or agreement change committed since the pre-launch
@@ -171,8 +172,8 @@ async function cmdCheck(root, args) {
   if (result.code) fail('pincer', `${result.code}: ${result.problem}`, result.refused ? exitForCode(result.code) : problemExit(result.code));
   const a = result.attempt;
   const logs = `${state.RUNTIME_DIR}/attempts/${a.id}/`;
-  if (a.outcome === 'passed') process.stdout.write(`✓ ${checkId} passed — attempt ${a.id} (source ${a.source.after.slice(0, 12)}, logs ${logs})\n`);
-  else process.stderr.write(`✗ ${checkId} ${a.outcome}${a.exit_code !== null ? ` (exit ${a.exit_code})` : ''}${a.error ? `: ${a.error}` : ''} — attempt ${a.id} (logs ${logs})\n`);
+  if (a.outcome === 'passed') io.out(`✓ ${checkId} passed — attempt ${a.id} (source ${a.source.after.slice(0, 12)}, logs ${logs})\n`);
+  else io.err(`✗ ${checkId} ${a.outcome}${a.exit_code !== null ? ` (exit ${a.exit_code})` : ''}${a.error ? `: ${a.error}` : ''} — attempt ${a.id} (logs ${logs})\n`);
   process.exit(runner.exitFor(a));
 }
 
@@ -217,18 +218,18 @@ function cmdEvidence(root, args) {
     environment: { os: `${os.platform()} ${os.release()}`, node: process.version }, now: nowIso(), atomicWrite, strict,
   });
   if (result.problems.length) {
-    for (const p of result.problems) process.stderr.write(`evidence: ${result.manifest || o.draft}: ${p}\n`);
+    for (const p of result.problems) io.err(`evidence: ${result.manifest || o.draft}: ${p}\n`);
     process.exit(EXIT.FAILED);
   }
-  process.stdout.write(`exported ${result.manifest} (schema ${result.schema})${result.delivery ? ` — delivery: original ${result.delivery.original}, agreed ${result.delivery.agreed}` : ''} — validate: node scripts/pincer-evidence.cjs validate ${result.manifest} --candidate ${o.candidate} --prd ${o.prd}\n`);
-  for (const l of result.limitations || []) process.stderr.write(`pincer: limitation: ${l}\n`);
+  io.out(`exported ${result.manifest} (schema ${result.schema})${result.delivery ? ` — delivery: original ${result.delivery.original}, agreed ${result.delivery.agreed}` : ''} — validate: node scripts/pincer-evidence.cjs validate ${result.manifest} --candidate ${o.candidate} --prd ${o.prd}\n`);
+  for (const l of result.limitations || []) io.err(`pincer: limitation: ${l}\n`);
   if (b.mode === 'changes') {
     // The per-change evaluation locator is the identity of this evaluation;
     // root NOTES.md stays the human summary (docs/runtime-contracts.md).
     const entry = { candidate: o.candidate, base: o.base, prd: o.prd, prd_revision: b.prd_revision, agreement: b.agreement, manifest: result.manifest, recorded: nowIso() };
     const appended = locator.append(root, b.change, entry);
     if (appended.code) fail('pincer', `${appended.code}: the manifest was written but the evaluation locator could not be updated: ${appended.problem}`, exitForCode(appended.code));
-    process.stdout.write(`${appended.action === 'recorded' ? 'recorded' : 'already recorded'} evaluation of change ${b.change} in ${locator.file(b.change)} (candidate ${o.candidate.slice(0, 7)}); commit it with the evidence\n`);
+    io.out(`${appended.action === 'recorded' ? 'recorded' : 'already recorded'} evaluation of change ${b.change} in ${locator.file(b.change)} (candidate ${o.candidate.slice(0, 7)}); commit it with the evidence\n`);
   }
   process.exit(EXIT.OK);
 }
@@ -241,22 +242,22 @@ function cmdMigrate(root, args) {
   const options = { prd: o.prd, change: o.change, authorization: o.authorization ?? null };
   if (o.preview) {
     const p = migrate.plan(root, options);
-    process.stdout.write(migrate.renderPlan(p));
+    io.out(migrate.renderPlan(p));
     process.exit(p.conflicts.length ? EXIT.FAILED : EXIT.OK);
   }
   const result = migrate.apply(root, options);
-  if (result.plan.conflicts.length) { process.stdout.write(migrate.renderPlan(result.plan)); process.exit(EXIT.FAILED); }
-  if (result.already) { process.stdout.write(`already migrated: ${o.prd} is change ${result.plan.change} (schema 2 record); nothing changed\n`); process.exit(EXIT.OK); }
-  if (result.error) { process.stderr.write(`pincer: ${result.code}: migration refused; nothing was written: ${result.error}\n`); process.exit(exitForCode(result.code)); }
+  if (result.plan.conflicts.length) { io.out(migrate.renderPlan(result.plan)); process.exit(EXIT.FAILED); }
+  if (result.already) { io.out(`already migrated: ${o.prd} is change ${result.plan.change} (schema 2 record); nothing changed\n`); process.exit(EXIT.OK); }
+  if (result.error) { io.err(`pincer: ${result.code}: migration refused; nothing was written: ${result.error}\n`); process.exit(exitForCode(result.code)); }
   const r = result.record, p = result.plan;
-  process.stdout.write(`migrated ${o.prd} → change ${r.change} (schema 2 record, ${r.lifecycle.state}${p.source === 'binding' ? ', converted from the v0.5.0 binding' : p.source === 'record' ? ', receipts imported' : ''}; base ${r.base.slice(0, 7)}; ${p.tickets.length} ticket(s) rewritten; ${Object.keys(r.legacy.receipts).length} legacy receipt(s) as history${p.index ? `; ${p.index.rewritten.length} candidate pointer(s) rewritten` : ''})\n`);
-  if (result.backupDir) process.stdout.write(`backups: ${result.backupDir} (${result.backups.length} file(s)); rollback per docs/runtime-contracts.md\n`);
-  if (p.selection) process.stdout.write(`selected change ${r.change} in this worktree (${changes.SELECTION_FILE})\n`);
-  process.stderr.write(`pincer: note: the change is planned with no authorization${r.legacy.authorization_text ? ' (the v0.5.0 authorization text is history only)' : ''}; existing attempts and evaluations are history until verified again — next: node scripts/pincer-runtime.cjs change authorize ${r.change} --agreement <digest> --reference <text> --excerpt <text>, then change activate ${r.change}\n`);
+  io.out(`migrated ${o.prd} → change ${r.change} (schema 2 record, ${r.lifecycle.state}${p.source === 'binding' ? ', converted from the v0.5.0 binding' : p.source === 'record' ? ', receipts imported' : ''}; base ${r.base.slice(0, 7)}; ${p.tickets.length} ticket(s) rewritten; ${Object.keys(r.legacy.receipts).length} legacy receipt(s) as history${p.index ? `; ${p.index.rewritten.length} candidate pointer(s) rewritten` : ''})\n`);
+  if (result.backupDir) io.out(`backups: ${result.backupDir} (${result.backups.length} file(s)); rollback per docs/runtime-contracts.md\n`);
+  if (p.selection) io.out(`selected change ${r.change} in this worktree (${changes.SELECTION_FILE})\n`);
+  io.err(`pincer: note: the change is planned with no authorization${r.legacy.authorization_text ? ' (the v0.5.0 authorization text is history only)' : ''}; existing attempts and evaluations are history until verified again — next: node scripts/pincer-runtime.cjs change authorize ${r.change} --agreement <digest> --reference <text> --excerpt <text>, then change activate ${r.change}\n`);
   process.exit(EXIT.OK);
 }
 
-const fail = (prefix, message, code = EXIT.INVALID) => { process.stderr.write(`${prefix}: ${message}\n`); process.exit(code); };
+const fail = (prefix, message, code = EXIT.INVALID) => { io.err(`${prefix}: ${message}\n`); process.exit(code); };
 
 // start | verify | done | bind — both modes; refusals carry their prefix and exit code.
 async function cmdLifecycle(root, command, args) {
@@ -269,7 +270,7 @@ async function cmdLifecycle(root, command, args) {
       : command === 'start' ? lifecycle.start(root, o.positional[0])
         : command === 'verify' ? await lifecycle.verify(root, o.positional[0])
           : await lifecycle.done(root, o.positional[0]);
-    if (result.out) process.stdout.write(result.out);
+    if (result.out) io.out(result.out);
     process.exit(result.exit ?? EXIT.OK);
   } catch (error) {
     if (error instanceof lifecycle.Refusal) fail(error.prefix, error.message, error.exit);
@@ -282,8 +283,8 @@ function cmdStatus(root, args) {
   if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
   const budget = process.env.PINCER_BUILD_BUDGET_MIN || '';
   const result = status.render(root, { budget, change: o.change || null });
-  if (o.json) process.stdout.write(`${JSON.stringify(result.json, null, 2)}\n`);
-  else process.stdout.write(result.text);
+  if (o.json) io.out(`${JSON.stringify(result.json, null, 2)}\n`);
+  else io.out(result.text);
   process.exit(result.exit);
 }
 
@@ -292,7 +293,7 @@ function cmdReady(root, args) {
   const o = parseOptions(args, { valued: ['--change'] });
   if (o.positional.length > 1) usage('ready takes at most one ticket ID');
   const result = status.render(root, { change: o.change || null });
-  if (result.exit !== 0) { process.stderr.write(result.text); process.exit(result.exit); }
+  if (result.exit !== 0) { io.err(result.text); process.exit(result.exit); }
   const j = result.json;
   // Changes mode: the selection, lifecycle, view and authorization gates block
   // read-only readiness too (the same codes the execution guard would refuse with).
@@ -301,11 +302,11 @@ function cmdReady(root, args) {
   if (o.positional.length === 1) {
     const id = parse.normalizeId(o.positional[0]);
     const ticket = id && j.tickets.find(t => t.id === id);
-    if (!ticket) { process.stderr.write(`pincer: no ticket ${o.positional[0]} is associated with the selected PRD${j.mode === 'changes' && !j.change ? ` (${j.selection.problem ? j.selection.problem.detail : 'no change selected'})` : ''}\n`); process.exit(EXIT.INVALID); }
-    if (ticket.readiness.ready && !changeBlockers.length) { process.stdout.write(`ready ${id}\n`); process.exit(EXIT.OK); }
-    for (const r of changeBlockers) process.stdout.write(`not ready ${id}: ${r.code} ${r.detail}\n`);
-    for (const r of ticket.readiness.reasons) process.stdout.write(`not ready ${id}: ${r.code} ${r.detail}\n`);
-    process.stdout.write(`next: ${changeBlockers.length ? `${changeBlockers[0].code}: ${changeBlockers[0].detail}` : ticket.readiness.next}\n`);
+    if (!ticket) { io.err(`pincer: no ticket ${o.positional[0]} is associated with the selected PRD${j.mode === 'changes' && !j.change ? ` (${j.selection.problem ? j.selection.problem.detail : 'no change selected'})` : ''}\n`); process.exit(EXIT.INVALID); }
+    if (ticket.readiness.ready && !changeBlockers.length) { io.out(`ready ${id}\n`); process.exit(EXIT.OK); }
+    for (const r of changeBlockers) io.out(`not ready ${id}: ${r.code} ${r.detail}\n`);
+    for (const r of ticket.readiness.reasons) io.out(`not ready ${id}: ${r.code} ${r.detail}\n`);
+    io.out(`next: ${changeBlockers.length ? `${changeBlockers[0].code}: ${changeBlockers[0].detail}` : ticket.readiness.next}\n`);
     process.exit(EXIT.FAILED);
   }
   const blockers = [...changeBlockers];
@@ -329,17 +330,17 @@ function cmdReady(root, args) {
     const report = require('./pincer-runtime/phases.cjs').compute(root, result.gathered.record, { gathered: result.gathered });
     for (const p of [...report.structure.problems, ...report.candidate.problems]) if (!blockers.some(b => b.code === p.code && b.detail === p.detail) && !(p.code === 'CANDIDATE_STALE' && blockers.some(b => b.code === 'CANDIDATE_STALE'))) blockers.push({ code: p.code, detail: p.detail });
   }
-  if (!blockers.length) { process.stdout.write(`ready candidate ${j.candidate.candidate}\n`); process.exit(EXIT.OK); }
-  for (const b of blockers) process.stdout.write(`not ready: ${b.code} ${b.detail}\n`);
-  process.stdout.write(`next: ${j.next}\n`);
+  if (!blockers.length) { io.out(`ready candidate ${j.candidate.candidate}\n`); process.exit(EXIT.OK); }
+  for (const b of blockers) io.out(`not ready: ${b.code} ${b.detail}\n`);
+  io.out(`next: ${j.next}\n`);
   process.exit(EXIT.FAILED);
 }
 
 // Run a state operation, mapping the contracted failures to exit codes.
 function guarded(fn) {
   try { return fn(); } catch (error) {
-    if (error && error.code === 'STATE_BUSY') { process.stderr.write(`pincer: STATE_BUSY: ${error.message}\n`); process.exit(EXIT.BUSY); }
-    if (error && error.code === 'INVALID') { process.stderr.write(`pincer: ${error.message}\n`); process.exit(EXIT.INVALID); }
+    if (error && error.code === 'STATE_BUSY') { io.err(`pincer: STATE_BUSY: ${error.message}\n`); process.exit(EXIT.BUSY); }
+    if (error && error.code === 'INVALID') { io.err(`pincer: ${error.message}\n`); process.exit(EXIT.INVALID); }
     throw error;
   }
 }
@@ -347,18 +348,18 @@ function guarded(fn) {
 function cmdRecover(root, args) {
   const o = parseOptions(args, {});
   if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
-  if (!state.exists(root)) { process.stdout.write('nothing to recover: no local runtime state\n'); process.exit(EXIT.OK); }
+  if (!state.exists(root)) { io.out('nothing to recover: no local runtime state\n'); process.exit(EXIT.OK); }
   const report = guarded(() => state.recover(root));
-  for (const t of report.transactions.completed) process.stdout.write(`completed transaction ${t.id} (${t.command}): ${t.targets.join(', ')}\n`);
-  for (const t of report.transactions.discarded) process.stdout.write(`discarded uncommitted staging ${t.id}\n`);
-  for (const t of report.transactions.unreadable) process.stdout.write(`left transaction ${t.id} in place: ${t.problem} (inspect ${state.RUNTIME_DIR}/journal/${t.id}/manifest.json by hand)\n`);
-  for (const id of report.finalized) process.stdout.write(`finalized ${id} as interrupted (owner no longer running)\n`);
-  for (const { id, owner } of report.live) process.stdout.write(`still running ${id} (pid ${owner.pid} is alive)\n`);
-  for (const { id, owner } of report.foreign) process.stdout.write(`still running ${id} (owned by ${owner.host}; not reclaimed from another host)\n`);
-  for (const id of report.missing) process.stdout.write(`dropped ${id} from running: record missing\n`);
-  for (const file of report.journal) process.stdout.write(`removed stray journal file ${file}\n`);
+  for (const t of report.transactions.completed) io.out(`completed transaction ${t.id} (${t.command}): ${t.targets.join(', ')}\n`);
+  for (const t of report.transactions.discarded) io.out(`discarded uncommitted staging ${t.id}\n`);
+  for (const t of report.transactions.unreadable) io.out(`left transaction ${t.id} in place: ${t.problem} (inspect ${state.RUNTIME_DIR}/journal/${t.id}/manifest.json by hand)\n`);
+  for (const id of report.finalized) io.out(`finalized ${id} as interrupted (owner no longer running)\n`);
+  for (const { id, owner } of report.live) io.out(`still running ${id} (pid ${owner.pid} is alive)\n`);
+  for (const { id, owner } of report.foreign) io.out(`still running ${id} (owned by ${owner.host}; not reclaimed from another host)\n`);
+  for (const id of report.missing) io.out(`dropped ${id} from running: record missing\n`);
+  for (const file of report.journal) io.out(`removed stray journal file ${file}\n`);
   const { transactions, ...lists } = report;
-  if (!Object.values(lists).some(list => list.length) && !Object.values(transactions).some(list => list.length)) process.stdout.write('nothing to recover\n');
+  if (!Object.values(lists).some(list => list.length) && !Object.values(transactions).some(list => list.length)) io.out('nothing to recover\n');
   process.exit(EXIT.OK);
 }
 
@@ -398,10 +399,10 @@ function cmdRegister(root, args) {
     // v0.5.0 binding: the released semantics, except that a second PRD or
     // --replace now needs the migration to change records.
     const result = identity.register(root, { prd: o.prd, change: o.change, authorization: o.authorization ?? null, replace: Boolean(o.replace), rebind: Boolean(o.rebind) });
-    if (result.code) { process.stderr.write(`pincer: ${result.code === 'MIGRATION_REQUIRED' ? 'MIGRATION_REQUIRED: ' : ''}${result.problem}\n`); process.exit(result.code === 'MIGRATION_REQUIRED' ? EXIT.FAILED : problemExit(result.code)); }
-    for (const note of result.notes) process.stderr.write(`pincer: note: ${note}\n`);
+    if (result.code) { io.err(`pincer: ${result.code === 'MIGRATION_REQUIRED' ? 'MIGRATION_REQUIRED: ' : ''}${result.problem}\n`); process.exit(result.code === 'MIGRATION_REQUIRED' ? EXIT.FAILED : problemExit(result.code)); }
+    for (const note of result.notes) io.err(`pincer: note: ${note}\n`);
     const b = result.binding;
-    process.stdout.write(`${result.action} change ${b.change} → ${b.prd} revision ${b.prd_revision.slice(0, 12)} base ${b.base.slice(0, 7)} (${result.file})\n`);
+    io.out(`${result.action} change ${b.change} → ${b.prd} revision ${b.prd_revision.slice(0, 12)} base ${b.base.slice(0, 7)} (${result.file})\n`);
     process.exit(EXIT.OK);
   }
   // Legacy or changes mode: a schema 2 record. The v0.5.0 flags are refused
@@ -410,10 +411,10 @@ function cmdRegister(root, args) {
   if (o.rebind) fail('pincer', 'AGREEMENT_CHANGED: --rebind is not supported for change records; record the revised agreement with `change revise <id>` and its disposition with `change authorize`', EXIT.FAILED);
   if (o.authorization !== undefined) fail('pincer', 'AUTHORIZATION_REQUIRED: --authorization is not recorded on change records (free text cannot become approval); record the user\'s instruction with `change authorize <id> --agreement <digest> --reference <text> --excerpt <text>` after registration', EXIT.FAILED);
   const result = changes.register(root, { prd: o.prd, change: o.change });
-  if (result.code) { process.stderr.write(`pincer: ${result.code}: ${result.problem}\n`); process.exit(exitForCode(result.code)); }
+  if (result.code) { io.err(`pincer: ${result.code}: ${result.problem}\n`); process.exit(exitForCode(result.code)); }
   const r = result.record;
-  process.stdout.write(`${result.action} change ${r.change} → ${r.prd} base ${r.base.slice(0, 7)} · ${r.lifecycle.state} (${result.file})\n`);
-  if (result.action === 'registered') process.stderr.write('pincer: note: registration grants no authorization; record the user\'s instruction with `change authorize` and select the change with `change select`\n');
+  io.out(`${result.action} change ${r.change} → ${r.prd} base ${r.base.slice(0, 7)} · ${r.lifecycle.state} (${result.file})\n`);
+  if (result.action === 'registered') io.err('pincer: note: registration grants no authorization; record the user\'s instruction with `change authorize` and select the change with `change select`\n');
   process.exit(EXIT.OK);
 }
 
@@ -429,10 +430,10 @@ function cmdCoverage(root, args) {
     const resolved = changes.resolveSelected(root, { change: o.change || null });
     if (resolved.code) fail('pincer', `${resolved.code}: ${resolved.problem}`, exitForCode(resolved.code));
     const st = status.render(root, { change: o.change || null });
-    if (st.exit === 4) { process.stderr.write(st.text); process.exit(EXIT.INVALID); }
+    if (st.exit === 4) { io.err(st.text); process.exit(EXIT.INVALID); }
     const result = phases.report(root, resolved.record, { gathered: st.gathered, generated: st.json.generated });
-    if (o.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-    else process.stdout.write(phases.render(result));
+    if (o.json) io.out(`${JSON.stringify(result, null, 2)}\n`);
+    else io.out(phases.render(result));
     process.exit(EXIT.OK);
   }
   const o = parseOptions(rest, { valued: ['--change', '--agreement'], switches: ['--preview', '--apply'] });
@@ -442,17 +443,17 @@ function cmdCoverage(root, args) {
   if (o.agreement !== undefined && !/^[0-9a-f]{64}$/.test(o.agreement)) usage('--agreement must be the 64-hex agreement digest the preview printed');
   if (o.preview) {
     const p = adopt.plan(root, { change: o.change });
-    process.stdout.write(adopt.renderPlan(p));
+    io.out(adopt.renderPlan(p));
     process.exit(p.conflicts.length ? EXIT.FAILED : EXIT.OK);
   }
   const result = adopt.apply(root, { change: o.change, agreement: o.agreement ?? null });
-  if (result.plan.conflicts.length) { process.stdout.write(adopt.renderPlan(result.plan)); process.exit(EXIT.FAILED); }
-  if (result.already) { process.stdout.write(`already adopted: change ${o.change} is strict since ${result.plan.record.coverage.adopted} (agreement ${result.plan.record.coverage.agreement}); nothing changed\n`); process.exit(EXIT.OK); }
-  if (result.error) { process.stderr.write(`pincer: ${result.code}: adoption refused; nothing was written: ${result.error}\n`); process.exit(exitForCode(result.code)); }
+  if (result.plan.conflicts.length) { io.out(adopt.renderPlan(result.plan)); process.exit(EXIT.FAILED); }
+  if (result.already) { io.out(`already adopted: change ${o.change} is strict since ${result.plan.record.coverage.adopted} (agreement ${result.plan.record.coverage.agreement}); nothing changed\n`); process.exit(EXIT.OK); }
+  if (result.error) { io.err(`pincer: ${result.code}: adoption refused; nothing was written: ${result.error}\n`); process.exit(exitForCode(result.code)); }
   const r = result.record, p = result.plan;
-  process.stdout.write(`adopted strict coverage for change ${r.change} (schema 3 record; agreement ${p.agreement.id} ${p.agreement.digest.slice(0, 12)}; inventory ${p.inventory.requirements} requirement(s), ${p.inventory.scenarios} scenario(s); map ${p.map.digest.slice(0, 12)}; ${p.historical} earlier attempt(s) are history)\n`);
-  process.stdout.write(`backup: ${result.backup} (rollback per docs/runtime-contracts.md, "Adoption and rollback")\n`);
-  process.stderr.write(`pincer: note: adoption grants no authorization; record the user's instruction covering the strict agreement with: node scripts/pincer-runtime.cjs change authorize ${r.change} --agreement ${p.agreement.digest} --reference <text> --excerpt <text> (or --delegated --basis A-NN --explanation <text>)\n`);
+  io.out(`adopted strict coverage for change ${r.change} (schema 3 record; agreement ${p.agreement.id} ${p.agreement.digest.slice(0, 12)}; inventory ${p.inventory.requirements} requirement(s), ${p.inventory.scenarios} scenario(s); map ${p.map.digest.slice(0, 12)}; ${p.historical} earlier attempt(s) are history)\n`);
+  io.out(`backup: ${result.backup} (rollback per docs/runtime-contracts.md, "Adoption and rollback")\n`);
+  io.err(`pincer: note: adoption grants no authorization; record the user's instruction covering the strict agreement with: node scripts/pincer-runtime.cjs change authorize ${r.change} --agreement ${p.agreement.digest} --reference <text> --excerpt <text> (or --delegated --basis A-NN --explanation <text>)\n`);
   process.exit(EXIT.OK);
 }
 
@@ -465,8 +466,8 @@ function cmdImpact(root, args) {
   if (resolved.code) fail('pincer', `${resolved.code}: ${resolved.problem}`, exitForCode(resolved.code));
   const result = impact.compute(root, resolved.record, { from: o.from || null });
   if (result.code) fail('pincer', `${result.code}: ${result.problem}`, exitForCode(result.code));
-  if (o.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-  else process.stdout.write(impact.render(result));
+  if (o.json) io.out(`${JSON.stringify(result, null, 2)}\n`);
+  else io.out(impact.render(result));
   process.exit(EXIT.OK);
 }
 
@@ -475,8 +476,8 @@ function cmdResume(root, args) {
   const o = parseOptions(args, { switches: ['--json'], valued: ['--change'] });
   if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
   const result = resume.build(root, { change: o.change || null });
-  if (o.json) process.stdout.write(`${JSON.stringify(result.json, null, 2)}\n`);
-  else process.stdout.write(result.text);
+  if (o.json) io.out(`${JSON.stringify(result.json, null, 2)}\n`);
+  else io.out(result.text);
   process.exit(result.exit);
 }
 
@@ -506,8 +507,8 @@ function cmdChange(root, args) {
     const sel = changes.readSelection(root);
     const selection = sel.code ? { change: null, problem: { code: sel.code, detail: sel.problem } } : { change: sel.change, problem: null };
     result.changes.forEach(c => { c.selected = Boolean(sel.change) && sel.change === c.id; });
-    if (o.json) process.stdout.write(`${JSON.stringify({ schema: 1, runtime: changes.RUNTIME, generated: nowIso(), root, mode: result.mode, selection, changes: result.changes, problems: result.problems }, null, 2)}\n`);
-    else process.stdout.write(changes.renderList(result, { selection: sel.code ? null : sel }));
+    if (o.json) io.out(`${JSON.stringify({ schema: 1, runtime: changes.RUNTIME, generated: nowIso(), root, mode: result.mode, selection, changes: result.changes, problems: result.problems }, null, 2)}\n`);
+    else io.out(changes.renderList(result, { selection: sel.code ? null : sel }));
     process.exit(result.problems.length ? EXIT.INVALID : EXIT.OK);
   }
   if (sub === 'select') {
@@ -515,8 +516,8 @@ function cmdChange(root, args) {
     if (o.positional.length !== 1) usage('change select requires exactly one change ID');
     const result = changes.select(root, o.positional[0]);
     if (result.code) fail('pincer', `${result.code}: ${result.problem}`, exitForCode(result.code));
-    process.stdout.write(`${result.action === 'unchanged' ? 'already selected' : 'selected'} change ${o.positional[0]} → ${result.record.prd} · ${result.record.lifecycle.state} (${changes.SELECTION_FILE}, local to this worktree${result.previous ? `; previously ${result.previous}` : ''})\n`);
-    if (result.action === 'selected') process.stderr.write('pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization\n');
+    io.out(`${result.action === 'unchanged' ? 'already selected' : 'selected'} change ${o.positional[0]} → ${result.record.prd} · ${result.record.lifecycle.state} (${changes.SELECTION_FILE}, local to this worktree${result.previous ? `; previously ${result.previous}` : ''})\n`);
+    if (result.action === 'selected') io.err('pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization\n');
     process.exit(EXIT.OK);
   }
   if (sub === 'show') {
@@ -529,8 +530,8 @@ function cmdChange(root, args) {
     const v = authorization.verdict(root, result.record);
     const loc = locator.read(root, o.positional[0]);
     const evaluations = loc.code ? [] : loc.locator.evaluations;
-    if (o.json) process.stdout.write(`${JSON.stringify({ schema: 1, runtime: changes.RUNTIME, generated: nowIso(), root, file: result.file, selected: !sel.code && sel.change === o.positional[0], record: result.record, agreement: now.code ? { current: null, problem: { code: now.code, detail: now.problem } } : { current: now.digest, recorded: now.entry ? now.entry.id : null, latest: now.latest ? now.latest.id : null, difference: now.difference }, authorization: { verdict: v.verdict, detail: v.detail, authorized: v.authorized ? v.authorized.id : null, open_decisions: v.open }, evaluations, locator: loc.code ? { code: loc.code, detail: loc.problem } : null }, null, 2)}\n`);
-    else process.stdout.write(changes.renderShow(o.positional[0], result, { agreement: now, verdict: v, evaluations: loc.code ? [] : evaluations, locatorProblem: loc.code ? loc.problem : null }));
+    if (o.json) io.out(`${JSON.stringify({ schema: 1, runtime: changes.RUNTIME, generated: nowIso(), root, file: result.file, selected: !sel.code && sel.change === o.positional[0], record: result.record, agreement: now.code ? { current: null, problem: { code: now.code, detail: now.problem } } : { current: now.digest, recorded: now.entry ? now.entry.id : null, latest: now.latest ? now.latest.id : null, difference: now.difference }, authorization: { verdict: v.verdict, detail: v.detail, authorized: v.authorized ? v.authorized.id : null, open_decisions: v.open }, evaluations, locator: loc.code ? { code: loc.code, detail: loc.problem } : null }, null, 2)}\n`);
+    else io.out(changes.renderShow(o.positional[0], result, { agreement: now, verdict: v, evaluations: loc.code ? [] : evaluations, locatorProblem: loc.code ? loc.problem : null }));
     process.exit(EXIT.OK);
   }
   if (transitions.OPS.includes(sub)) {
@@ -539,12 +540,12 @@ function cmdChange(root, args) {
     const id = o.positional[0];
     const result = transitions.transition(root, id, sub, { reason: o.reason, note: o.note, decision: o.decision, with: o.with });
     if (result.code) fail('pincer', `${result.code}: ${result.problem}`, exitForCode(result.code));
-    if (result.action === 'unchanged') { process.stdout.write(`change ${id} is already ${result.to}${result.record.lifecycle.superseded_by ? ` by ${result.record.lifecycle.superseded_by}` : ''}; nothing written\n`); process.exit(EXIT.OK); }
+    if (result.action === 'unchanged') { io.out(`change ${id} is already ${result.to}${result.record.lifecycle.superseded_by ? ` by ${result.record.lifecycle.superseded_by}` : ''}; nothing written\n`); process.exit(EXIT.OK); }
     const e = result.event;
     const past = { activate: 'activated', pause: 'paused', resume: 'resumed', complete: 'completed', reopen: 'reopened', cancel: 'cancelled', supersede: 'superseded' }[sub];
-    process.stdout.write(`${past} change ${id}: ${result.from} → ${result.to} (event ${e.sequence}${e.authorization ? `, authorization ${e.authorization}` : ''}${e.decision ? `, decision ${e.decision}` : ''}${e.replacement ? `, replaced by ${e.replacement}` : ''}${e.reason ? `; reason: ${e.reason}` : ''})\n`);
-    if (sub === 'complete') process.stderr.write('pincer: note: completed means implementation complete and ready for evaluation, not evaluated or released; commit the record before choosing the candidate\n');
-    if (sub === 'pause' && e.note) process.stderr.write('pincer: note: the handoff note is authored text; status and resume show it but never derive readiness from it\n');
+    io.out(`${past} change ${id}: ${result.from} → ${result.to} (event ${e.sequence}${e.authorization ? `, authorization ${e.authorization}` : ''}${e.decision ? `, decision ${e.decision}` : ''}${e.replacement ? `, replaced by ${e.replacement}` : ''}${e.reason ? `; reason: ${e.reason}` : ''})\n`);
+    if (sub === 'complete') io.err('pincer: note: completed means implementation complete and ready for evaluation, not evaluated or released; commit the record before choosing the candidate\n');
+    if (sub === 'pause' && e.note) io.err('pincer: note: the handoff note is authored text; status and resume show it but never derive readiness from it\n');
     process.exit(EXIT.OK);
   }
   if (sub === 'authorize') {
@@ -554,9 +555,9 @@ function cmdChange(root, args) {
     const result = authorization.authorize(root, o.positional[0], { agreement: o.agreement, delegated: Boolean(o.delegated), reference: o.reference, excerpt: o.excerpt, constraints: o.constraints, basis: o.basis, explanation: o.explanation, decisions: o.decision });
     if (result.code) fail('pincer', `${result.code}: ${result.problem}`, exitForCode(result.code));
     const a = result.authorization;
-    if (result.action === 'unchanged') process.stdout.write(`unchanged: ${a.id} (${a.disposition}) already records this authorization of agreement ${a.agreement} ${a.digest.slice(0, 12)} for ${o.positional[0]}; nothing written\n`);
-    else process.stdout.write(`recorded authorization ${a.id} (${a.disposition}${a.basis ? `, basis ${a.basis}` : ''}) of agreement ${a.agreement} ${a.digest.slice(0, 12)} for ${o.positional[0]}${a.decisions.length ? ` · decisions ${a.decisions.join(', ')}` : ''}\n`);
-    if (result.action === 'recorded') process.stderr.write(`pincer: note: this records local provenance of ${a.disposition === 'user' ? "the user's instruction" : 'a delegation judgment'}, not authenticated identity; execution still needs the change selected and active\n`);
+    if (result.action === 'unchanged') io.out(`unchanged: ${a.id} (${a.disposition}) already records this authorization of agreement ${a.agreement} ${a.digest.slice(0, 12)} for ${o.positional[0]}; nothing written\n`);
+    else io.out(`recorded authorization ${a.id} (${a.disposition}${a.basis ? `, basis ${a.basis}` : ''}) of agreement ${a.agreement} ${a.digest.slice(0, 12)} for ${o.positional[0]}${a.decisions.length ? ` · decisions ${a.decisions.join(', ')}` : ''}\n`);
+    if (result.action === 'recorded') io.err(`pincer: note: this records local provenance of ${a.disposition === 'user' ? "the user's instruction" : 'a delegation judgment'}, not authenticated identity; execution still needs the change selected and active\n`);
     process.exit(EXIT.OK);
   }
   if (sub === 'decide') {
@@ -566,9 +567,9 @@ function cmdChange(root, args) {
     const result = authorization.decide(root, o.positional[0], { summary: o.summary, id: o.id, resolve: o.resolve, reference: o.reference, excerpt: o.excerpt });
     if (result.code) fail('pincer', `${result.code}: ${result.problem}`, exitForCode(result.code));
     const d = result.decision;
-    if (result.action === 'unchanged') process.stdout.write(`unchanged: ${d.id} is already ${d.status} (${d.summary}); nothing written\n`);
-    else if (result.action === 'raised') { process.stdout.write(`raised decision ${d.id} on ${o.positional[0]}: ${d.summary}\n`); process.stderr.write(`pincer: note: execution of ${o.positional[0]} is blocked (DECISION_REQUIRED) until the user's decision is recorded with: node scripts/pincer-runtime.cjs change decide ${o.positional[0]} --resolve ${d.id} --reference <text> --excerpt <text>\n`); }
-    else { process.stdout.write(`resolved decision ${d.id} on ${o.positional[0]}: "${d.excerpt}" (${d.reference})\n`); process.stderr.write(`pincer: note: the agreement is now ${result.agreement ? result.agreement.slice(0, 12) : 'unavailable'} and needs authorization: node scripts/pincer-runtime.cjs change authorize ${o.positional[0]} --agreement ${result.agreement || '<digest>'} --decision ${d.id} …\n`); }
+    if (result.action === 'unchanged') io.out(`unchanged: ${d.id} is already ${d.status} (${d.summary}); nothing written\n`);
+    else if (result.action === 'raised') { io.out(`raised decision ${d.id} on ${o.positional[0]}: ${d.summary}\n`); io.err(`pincer: note: execution of ${o.positional[0]} is blocked (DECISION_REQUIRED) until the user's decision is recorded with: node scripts/pincer-runtime.cjs change decide ${o.positional[0]} --resolve ${d.id} --reference <text> --excerpt <text>\n`); }
+    else { io.out(`resolved decision ${d.id} on ${o.positional[0]}: "${d.excerpt}" (${d.reference})\n`); io.err(`pincer: note: the agreement is now ${result.agreement ? result.agreement.slice(0, 12) : 'unavailable'} and needs authorization: node scripts/pincer-runtime.cjs change authorize ${o.positional[0]} --agreement ${result.agreement || '<digest>'} --decision ${d.id} …\n`); }
     process.exit(EXIT.OK);
   }
   if (sub === 'revise') {
@@ -576,9 +577,9 @@ function cmdChange(root, args) {
     if (o.positional.length !== 1) usage('change revise requires exactly one change ID');
     const result = agreement.revise(root, o.positional[0]);
     if (result.code) fail('pincer', `${result.code}: ${result.problem}`, exitForCode(result.code));
-    if (result.action === 'unchanged') process.stdout.write(`unchanged: the current agreement of ${o.positional[0]} is ${result.agreement.id} ${result.agreement.digest.slice(0, 12)} (recorded ${result.agreement.recorded}); nothing written\n`);
-    else process.stdout.write(`recorded agreement ${result.agreement.id} ${result.agreement.digest.slice(0, 12)} for ${o.positional[0]} (${result.agreement.tickets.length} ticket(s), snapshot ${result.agreement.snapshot})${result.difference ? ` — differs from the previous agreement: ${agreement.renderDifference(result.difference)}` : ''}\n`);
-    if (result.action === 'recorded') process.stderr.write('pincer: note: recording an agreement authorizes nothing; record its disposition with `change authorize`\n');
+    if (result.action === 'unchanged') io.out(`unchanged: the current agreement of ${o.positional[0]} is ${result.agreement.id} ${result.agreement.digest.slice(0, 12)} (recorded ${result.agreement.recorded}); nothing written\n`);
+    else io.out(`recorded agreement ${result.agreement.id} ${result.agreement.digest.slice(0, 12)} for ${o.positional[0]} (${result.agreement.tickets.length} ticket(s), snapshot ${result.agreement.snapshot})${result.difference ? ` — differs from the previous agreement: ${agreement.renderDifference(result.difference)}` : ''}\n`);
+    if (result.action === 'recorded') io.err('pincer: note: recording an agreement authorizes nothing; record its disposition with `change authorize`\n');
     process.exit(EXIT.OK);
   }
   usage(sub ? `unknown change subcommand ${sub} (change supports: list, show, select, revise, authorize, decide, activate, pause, resume, complete, reopen, cancel, supersede)` : 'change requires a subcommand: list, show, select, revise, authorize, decide, activate, pause, resume, complete, reopen, cancel, supersede');
@@ -588,13 +589,13 @@ function cmdSnapshot(root, args) {
   const o = parseOptions(args, { switches: ['--json', '--store'] });
   if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
   const manifest = source.snapshot(root);
-  for (const problem of manifest.problems) process.stderr.write(`pincer: ${problem.code}: ${problem.detail}\n`);
+  for (const problem of manifest.problems) io.err(`pincer: ${problem.code}: ${problem.detail}\n`);
   if (manifest.problems.length) process.exit(EXIT.INVALID);
   if (o.store) source.storeManifest(root, manifest);
-  if (o.json) process.stdout.write(`${JSON.stringify(manifest, null, 2)}\n`);
+  if (o.json) io.out(`${JSON.stringify(manifest, null, 2)}\n`);
   else {
-    process.stdout.write(`digest ${manifest.digest}\nfiles ${manifest.files.length}\nexcluded ${manifest.excluded.length}\n`);
-    for (const l of manifest.limitations) process.stderr.write(`pincer: limitation: ${l}\n`);
+    io.out(`digest ${manifest.digest}\nfiles ${manifest.files.length}\nexcluded ${manifest.excluded.length}\n`);
+    for (const l of manifest.limitations) io.err(`pincer: limitation: ${l}\n`);
   }
   process.exit(EXIT.OK);
 }
@@ -605,7 +606,7 @@ function cmdValidate(root, args) {
   if (files.some(arg => arg.startsWith('--'))) usage(`unknown option ${files.find(arg => arg.startsWith('--'))}`);
   if (files.length === 0) usage('validate requires at least one file');
   let invalid = false;
-  const report = (prefix, file, problems) => { for (const p of problems) process.stderr.write(`${prefix}: ${file}: ${p}\n`); invalid ||= problems.length > 0; };
+  const report = (prefix, file, problems) => { for (const p of problems) io.err(`${prefix}: ${file}: ${p}\n`); invalid ||= problems.length > 0; };
   for (const file of files) {
     const relative = path.isAbsolute(file) ? path.relative(root, file) : file;
     const base = path.basename(relative);
@@ -615,13 +616,13 @@ function cmdValidate(root, args) {
       const result = parse.validateTicket(relative, text);
       report('pincer-ticket', relative, result.problems);
       if (result.ok && digests) {
-        process.stdout.write(`ticket ${parse.ticketDigest(text)}\n`);
-        process.stdout.write(`check ${parse.checkDigest(text, result.timeout)}\n`);
+        io.out(`ticket ${parse.ticketDigest(text)}\n`);
+        io.out(`check ${parse.checkDigest(text, result.timeout)}\n`);
       }
     } else if (parse.PRD_REF.test(relative)) {
       const result = parse.validatePrd(root, relative);
       report('pincer', relative, result.problems);
-      if (result.ok && digests) process.stdout.write(`prd ${parse.prdDigest(result.text)}\n`);
+      if (result.ok && digests) io.out(`prd ${parse.prdDigest(result.text)}\n`);
     } else {
       let text;
       try { text = fs.readFileSync(path.resolve(root, relative), 'utf8'); } catch { report('pincer', relative, ['no such file']); continue; }
@@ -652,6 +653,6 @@ function main(argv) {
 }
 
 Promise.resolve(main(process.argv.slice(2))).catch(error => {
-  process.stderr.write(`pincer: unexpected error: ${error && error.stack ? error.stack : error}\n`);
+  io.err(`pincer: unexpected error: ${error && error.stack ? error.stack : error}\n`);
   process.exit(EXIT.INVALID);
 });
