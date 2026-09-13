@@ -18,8 +18,11 @@ const repo = path.resolve(here, '..', '..', '..');
 const replacements = [[runsRoot, '<runs>'], [path.dirname(runsRoot), '<scratchpad>'], [os.homedir(), '~'], [os.hostname(), '<host>']].filter(([a]) => a);
 // Literal replacements first, then any absolute path that still names a scratchpad or a
 // home directory — nested sessions write their own flattened forms of both.
-const PATHS = [/\/private\/tmp\/claude-\d+\/[^\s"'`)\]]*/g, /\/tmp\/claude-\d+\/[^\s"'`)\]]*/g, /\/Users\/[A-Za-z0-9._-]+\/[^\s"'`)\]]*/g, /\/home\/[A-Za-z0-9._-]+\/[^\s"'`)\]]*/g];
-const clean = s => PATHS.reduce((t, re) => t.replace(re, '<path>'), replacements.reduce((t, [a, b]) => t.split(a).join(b), s));
+const PATHS = [/\/private\/tmp\/claude-\d+\/[^\s"'`)\]]*/g, /\/tmp\/claude-\d+\/[^\s"'`)\]]*/g, /\/Users\/[A-Za-z0-9._-]+\/[^\s"'`)\]]*/g, /\/home\/[A-Za-z0-9._-]+\/[^\s"'`)\]]*/g, /\/var\/folders\/[^\s"'`)\]]*/g];
+// Account-state notices name a wall-clock time and a timezone; the reason is kept as the
+// record of why a run was invalidated, the time and region are not.
+const REDACT = [[/(session limit|usage limit)([^"\\]{0,12})resets [^"\\)]*\([^"\\)]*\)/gi, (m, k, s) => `${k}${s}resets <time>`]];
+const clean = s => REDACT.reduce((t, [re, to]) => t.replace(re, to), PATHS.reduce((t, re) => t.replace(re, '<path>'), replacements.reduce((t, [a, b]) => t.split(a).join(b), s)));
 const lib = require(path.join(repo, 'scripts', 'delivery-benchmark', 'lib.cjs'));
 fs.rmSync(out, { recursive: true, force: true });
 let n = 0;
