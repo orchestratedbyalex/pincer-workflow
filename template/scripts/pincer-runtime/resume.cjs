@@ -23,6 +23,7 @@ const STATE_CODES = ['INPUT_INVALID', 'MALFORMED', 'UNSUPPORTED_SCHEMA', 'HISTOR
 const COVERAGE_CODES = ['INVENTORY_INVALID', 'COVERAGE_INVALID', 'COVERAGE_INCOMPLETE', 'OBLIGATION_MISSING', 'SCOPE_UNAUTHORIZED'];
 const CANDIDATE_COVERAGE_CODES = ['REVIEW_MISSING', 'ADEQUACY_REQUIRED'];
 const phases = require('./phases.cjs');
+const routing = require('./routing.cjs');
 const SELECTION_CODES = ['SELECTION_REQUIRED', 'SELECTION_INVALID'];
 const AGREEMENT_CODES = ['DECISION_REQUIRED', 'AUTHORIZATION_REQUIRED', 'AGREEMENT_CHANGED'];
 const RUNTIME = 'node scripts/pincer-runtime.cjs';
@@ -111,24 +112,26 @@ function build(root, { change = null } = {}) {
   if (changes.TERMINAL.includes(lc.state)) push('LIFECYCLE_BLOCKED', `change ${id} is ${lc.state}${lc.superseded_by ? ` by ${lc.superseded_by}` : ''}; it cannot execute`);
   if (ag.verdict && ag.verdict !== 'current') push(ag.verdict, ag.verdict_detail || ag.verdict);
   // Rule 4 also covers the structural coverage gaps of a strict change.
-  const cov = changes.isStrict(record) ? phases.report(root, record, { gathered: st.gathered, generated }) : null;
+  const selected = !resolved.selection || resolved.selection.change === id;
+  const cov = changes.isStrict(record) ? phases.report(root, record, { gathered: st.gathered, generated, selected }) : null;
   if (cov) for (const p of cov.structure.problems) push(p.code, p.detail);
   for (const t of j.tickets) for (const r of t.readiness.reasons) if (t.status === 'done' || t.status === 'in_progress') push(r.code, `${t.id}: ${r.detail}`);
   // A missing or stale evaluation blocks only a completed change: before completion no candidate is expected.
   if (j.candidate && lc.state === 'completed') for (const r of j.candidate.reasons) push(r.code, r.detail);
   if (cov && lc.state === 'completed') for (const p of cov.candidate.problems) if (p.code !== 'EVIDENCE_MISSING' || !cov.candidate.evaluated) push(p.code, p.detail);
   report.blockers = blockers;
-  report.next = decide({ id, lc, ag, j, running, viewProblems, gathered: st.gathered, record, cov });
+  report.next = routing.qualify(decide({ id, lc, ag, j, running, viewProblems, gathered: st.gathered, record, cov, selected }), { id, selected });
   return { json: report, text: render(report), exit: st.exit };
 }
 
 // The documented next-action precedence (rules 1..8); rule 1 is handled by the caller.
-function decide({ id, lc, ag, j, running, viewProblems, gathered, record, cov = null }) {
+function decide({ id, lc, ag, j, running, viewProblems, gathered, record, cov = null, selected = true }) {
   const cmd = (action, command, extra = {}) => ({ action, command, ticket: null, check: null, ...extra });
   const change = sub => `${RUNTIME} change ${sub} ${id}`;
-  if (running.length) return cmd(running[0].alive === false ? 'recover the interrupted attempt' : 'wait for the running attempt', running[0].alive === false ? `${RUNTIME} recover` : `wait for attempt ${running[0].id}, or ${RUNTIME} recover if its owner died`, { rule: 2 });
-  if (changes.TERMINAL.includes(lc.state)) return cmd('inspect the historical change; execution needs a new change', `${change('show')} — then register a replacement: ${RUNTIME} register --prd <prd> --change <id>`, { rule: 3 });
-  if (viewProblems.length) return cmd('check out the branch that carries the change', `git checkout <branch with base ${record.base.slice(0, 7)}> — ${viewProblems[0].detail}`, { rule: 3 });
+  // Rules 2 and 3 are shared with the coverage report (routing.cjs) so the two
+  // cannot drift apart again.
+  const ahead = routing.preface({ id, lifecycle: lc, base: record.base, running, viewProblems });
+  if (ahead) return ahead;
   const gap = ag.verdict && ag.verdict !== 'current';
   if (gap) {
     if (ag.verdict === 'DECISION_REQUIRED') return cmd('record the user\'s decision', `${change('decide')} --resolve ${ag.open_decisions[0]} --reference <text> --excerpt <text>`, { rule: 4 });
@@ -138,8 +141,8 @@ function decide({ id, lc, ag, j, running, viewProblems, gathered, record, cov = 
   }
   // Rule 4 (strict coverage): a structural coverage gap precedes any verification work.
   if (cov && cov.structure.problems.length) return { ...cov.next, rule: 4 };
-  if (lc.state === 'planned') return cmd('activate the change', change('activate'), { rule: 3 });
-  if (lc.state === 'paused') return cmd('resume the change', change('resume'), { rule: 3 });
+  const staged = routing.lifecycleAction({ id, lifecycle: lc });
+  if (staged) return staged;
   const tickets = j.tickets;
   const inProgress = tickets.find(t => t.status === 'in_progress');
   // A fresh clone without local attempt history relies on the saved candidate record (as `ready` does): a done

@@ -10,6 +10,7 @@
 // becomes a delivery or adequacy verdict. A change without the capability is
 // labeled `unverified`. Nothing here writes, launches or judges semantics.
 const changes = require('./changes.cjs');
+const routing = require('./routing.cjs');
 const agreement = require('./agreement.cjs');
 const authorization = require('./authorization.cjs');
 const coverage = require('./coverage.cjs');
@@ -130,10 +131,15 @@ function firstBlocker(report, phase) {
 const RUNTIME_CMD = 'node scripts/pincer-runtime.cjs';
 // One ordered next action for a strict change: the first blocking code, else the
 // phase that is due (verify/start/complete/evaluate/release), or nothing to do.
-function nextAction(report, record, { verdict = null } = {}) {
+function nextAction(report, record, { verdict = null, running = [], selected = true } = {}) {
   const cmd = (action, command, extra = {}) => ({ action, command, ticket: null, check: null, decision: null, ...extra });
   if (!report.strict) return cmd('adopt strict coverage when wanted', `${RUNTIME_CMD} coverage adopt --preview --change ${record.change}`);
   const id = record.change;
+  // Rules 2 and 3 outrank everything below, including the agreement verdict: a
+  // historical change is never routed to execution or to authorization, and a
+  // running attempt is waited for rather than raced.
+  const ahead = routing.preface({ id, lifecycle: record.lifecycle, base: record.base, running });
+  if (ahead) return { ...cmd(ahead.action, ahead.command), ...ahead };
   if (verdict && verdict.verdict !== 'current') {
     if (verdict.verdict === 'DECISION_REQUIRED') return cmd("record the user's decision", `${RUNTIME_CMD} change decide ${id} --resolve ${verdict.open[0]} --reference <text> --excerpt <text>`, { decision: verdict.open[0] });
     if (['AUTHORIZATION_REQUIRED', 'AGREEMENT_CHANGED'].includes(verdict.verdict)) return cmd("record the user's authorization of the current agreement", `${RUNTIME_CMD} change authorize ${id} --agreement ${verdict.current} --reference <text> --excerpt <text>`);
@@ -150,6 +156,8 @@ function nextAction(report, record, { verdict = null } = {}) {
     if (p.code === 'OBLIGATION_MISSING') return cmd('restore the obligation, or record the decision and the removed tombstone', p.detail);
     return cmd('repair the coverage inputs', `${p.code}: ${p.detail}`);
   }
+  const staged = routing.lifecycleAction({ id, lifecycle: record.lifecycle });
+  if (staged) return { ...cmd(staged.action, staged.command), ...staged };
   const i = report.implementation.problems[0];
   if (i) {
     const ticket = i.ids.find(x => /^T-/.test(x)) || null;
@@ -158,7 +166,6 @@ function nextAction(report, record, { verdict = null } = {}) {
     return cmd('finish the mapped work', i.detail);
   }
   if (record.lifecycle.state === 'active') return cmd('complete the change', `${RUNTIME_CMD} change complete ${id}`);
-  if (record.lifecycle.state !== 'completed') return cmd('bring the change to active', `${RUNTIME_CMD} change ${record.lifecycle.state === 'planned' ? 'activate' : record.lifecycle.state === 'paused' ? 'resume' : 'show'} ${id}`);
   const c = report.candidate.problems[0];
   if (c) {
     const check = c.ids.find(x => /^C-/.test(x)) || null;
@@ -172,8 +179,9 @@ function nextAction(report, record, { verdict = null } = {}) {
 }
 
 // report(root, record, { gathered, verdict, generated }) → coverage JSON schema 1.
-function report(root, record, { gathered = null, verdict = null, generated = null } = {}) {
+function report(root, record, { gathered = null, verdict = null, generated = null, selected = true } = {}) {
   const authorization = require('./authorization.cjs');
+  const running = record ? require('./transaction.cjs').runningAttempts(root, record.change) : [];
   const v = verdict || (record ? authorization.verdict(root, record) : null);
   const r = compute(root, record, { gathered, verdict: v });
   const reviewed = v && v.authorized && record ? (() => { const g = record.agreements.find(x => x.id === v.authorized.agreement); return g ? { agreement: g.id, authorization: v.authorized.id, digest: g.digest } : null; })() : null;
@@ -186,8 +194,10 @@ function report(root, record, { gathered = null, verdict = null, generated = nul
     agreement: { current: v && v.current ? v.current : null, reviewed, verdict: v ? v.verdict : null },
     baseline: base ? { agreements: base.agreements, scenarios: Object.keys(base.scenarios) } : null,
     structure: r.structure, implementation: r.implementation, candidate: r.candidate, scope: r.scope,
-    blockers: [...(v && v.verdict !== 'current' ? [{ code: v.verdict, detail: v.detail }] : []), ...r.blockers],
-    next: nextAction(r, record, { verdict: v }),
+    blockers: [
+      ...(running.length ? [{ code: 'ATTEMPT_RUNNING', detail: `attempt ${running[0].id} of change ${record.change} is running${running[0].alive === false ? ' (its owner is no longer running)' : ''}` }] : []),
+      ...(v && v.verdict !== 'current' ? [{ code: v.verdict, detail: v.detail }] : []), ...r.blockers],
+    next: routing.qualify(nextAction(r, record, { verdict: v, running, selected }), { id: record ? record.change : null, selected }),
   };
   return out;
 }

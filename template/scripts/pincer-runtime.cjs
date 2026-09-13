@@ -431,7 +431,10 @@ function cmdCoverage(root, args) {
     if (resolved.code) fail('pincer', `${resolved.code}: ${resolved.problem}`, exitForCode(resolved.code));
     const st = status.render(root, { change: o.change || null });
     if (st.exit === 4) { io.err(st.text); process.exit(EXIT.INVALID); }
-    const result = phases.report(root, resolved.record, { gathered: st.gathered, generated: st.json.generated });
+    // A report asked for with --change may describe a change this worktree has not
+    // selected; no execution command it prints could run as written.
+    const selected = !resolved.selection || resolved.selection.change === resolved.record.change;
+    const result = phases.report(root, resolved.record, { gathered: st.gathered, generated: st.json.generated, selected });
     if (o.json) io.out(`${JSON.stringify(result, null, 2)}\n`);
     else io.out(phases.render(result));
     process.exit(EXIT.OK);

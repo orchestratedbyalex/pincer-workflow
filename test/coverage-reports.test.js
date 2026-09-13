@@ -229,4 +229,70 @@ function evaluate(dir, candidate, base, version = 1) {
   assert.equal(ls.schema, 1); assert.deepEqual(ls.coverage, { strict: false, label: 'unverified', reason: 'legacy project (no change record); strict coverage needs change records' });
   refuses(rt(legacy, 'coverage'), 1, /CHANGE_REQUIRED/, 'no change record to report on');
 }
+
+// --- T-80 (R-09; PRD v5 R-06 precedence, S-18): every state routes to a command the
+// runtime will accept, and coverage, resume and status agree about which one. The
+// defect was that coverage tested implementation problems before lifecycle state, so
+// the lifecycle branch was unreachable exactly when there was unfinished work.
+{
+  const nextOf = (dir, cmd, ...args) => json(dir, cmd, ...args).next;
+  // They must agree on the routing decision, not on its phrasing: for work in
+  // progress coverage names the whole arc (start → verify → done) where resume names
+  // the immediate step, and both are commands the runtime accepts.
+  const routeOf = next => next.ticket || next.check || next.command;
+  const agreeOn = (dir, label, ...args) => {
+    const c = nextOf(dir, 'coverage', ...args), r = nextOf(dir, 'resume', ...args);
+    assert.equal(routeOf(c), routeOf(r), `${label}: coverage and resume route to the same thing\ncoverage: ${c.command}\nresume:   ${r.command}`);
+    return c;
+  };
+
+  // Paused, with work still open: the report must not send anyone to a ticket command.
+  {
+    const dir = strictFixture();
+    decideAndAuthorize(dir);
+    passes(rt(dir, 'change', 'pause', 'prd-v1', '--reason', 'waiting on the API review'));
+    const next = agreeOn(dir, 'paused');
+    assert.match(next.command, /change resume prd-v1/, `paused routes to resume, not to a ticket: ${next.command}`);
+    refuses(rt(dir, 'start', 'T-01'), 1, /LIFECYCLE_BLOCKED/, 'the ticket command the old report suggested is refused');
+    passes(rt(dir, 'change', 'resume', 'prd-v1'), 'the recommended command succeeds');
+  }
+
+  // Pause then resume returns to ordinary work routing.
+  {
+    const dir = strictFixture();
+    decideAndAuthorize(dir);
+    passes(rt(dir, 'change', 'pause', 'prd-v1', '--reason', 'hold'));
+    passes(rt(dir, 'change', 'resume', 'prd-v1'));
+    const next = agreeOn(dir, 'active');
+    assert.ok(/pincer-ticket\.sh|change (complete|authorize|decide)/.test(next.command), `active routes to real work: ${next.command}`);
+  }
+
+  // Cancelled: historical changes route to inspection and a replacement, never to
+  // execution and never to authorize — PRD v5 R-06 and S-09 say so explicitly.
+  {
+    const dir = strictFixture();
+    passes(rt(dir, 'change', 'decide', 'prd-v1', '--summary', 'drop this change'));
+    passes(rt(dir, 'change', 'decide', 'prd-v1', '--resolve', 'D-01', '--reference', 'chat', '--excerpt', 'dropped'));
+    passes(rt(dir, 'change', 'cancel', 'prd-v1', '--decision', 'D-01', '--reason', 'dropped'));
+    const next = agreeOn(dir, 'cancelled');
+    assert.match(next.command, /change show prd-v1/, `cancelled routes to inspection: ${next.command}`);
+    assert.ok(!/pincer-ticket\.sh|change authorize/.test(next.command), `no execution or authorization on a terminal change: ${next.command}`);
+    const blockers = json(dir, 'coverage').blockers.map(b => b.code);
+    assert.ok(blockers.includes('LIFECYCLE_BLOCKED') || /historical/.test(next.action), `the terminal state is visible: ${JSON.stringify(blockers)}`);
+  }
+
+  // A change inspected with --change that this worktree has not selected: the printed
+  // ticket command is refused with WRONG_CHANGE unless the selection changes first.
+  {
+    const dir = strictFixture();
+    decideAndAuthorize(dir);
+    write(dir, '.prd/prd-v2.md', read(dir, '.prd/prd-v1.md').replace(/^version: 1$/m, 'version: 2'));
+    commit(dir, 'second PRD');
+    passes(rt(dir, 'register', '--prd', '.prd/prd-v2.md', '--change', 'prd-v2'));
+    passes(rt(dir, 'change', 'select', 'prd-v2'));
+    const next = nextOf(dir, 'coverage', '--change', 'prd-v1');
+    if (/pincer-ticket\.sh/.test(next.command)) assert.match(next.command, /change select prd-v1, then/, `a ticket command for a non-selected change names the selection first: ${next.command}`);
+  }
+}
+
 console.log('coverage report tests passed');
