@@ -1058,7 +1058,10 @@ ever treated as complete.
   indentation are supported; an optional checkbox mark (`[ ]`, `[x]`, `[X]`) may
   precede the bold ID. Lines that follow the item, are indented by at least two
   spaces or a tab, and are not themselves list items, headings, fences or table rows
-  are the item's continuation lines. A list item whose text begins with an ID
+  are the item's continuation lines. A blank line does not end the item: a scenario
+  written as two or more paragraphs keeps all of them, and every paragraph of it
+  belongs to the scenario rather than to its requirement, so editing any of them
+  changes that scenario's digest. A list item whose text begins with an ID
   followed by `:` or `.` without the bold form, or a bold ID with nothing after it,
   is `INVENTORY_INVALID` (`unsupported scenario definition syntax at line N; use
   "- **S-NN:** text"` / `empty definition S-NN at line N`).

@@ -61,6 +61,16 @@ function parseInventory(text, { prd } = {}) {
   let i = 0;
   if (rows[0] === '---') { i = 1; while (i < rows.length && rows[i] !== '---') i++; i++; }
   let fenceLine = null, current = null, lastScenario = null;
+  // Blank lines seen while a scenario is still open. A blank line does not end a
+  // list item, so they are held until the next line decides where they belong:
+  // to the scenario, when an indented line follows and the item had a second
+  // paragraph, or to the requirement, when anything else follows.
+  const pending = [];
+  const endScenario = () => {
+    if (current) for (const blank of pending) requirements[current].lines.push(blank);
+    pending.length = 0;
+    lastScenario = null;
+  };
   // Close the open section at the line before `boundary` (1-based; rows.length + 1 at
   // the end of the file): its span ends at its last nonblank line.
   const closeRequirement = boundary => {
@@ -70,7 +80,7 @@ function parseInventory(text, { prd } = {}) {
     while (end > r.line && rows[end - 1].trim() === '') end--;
     r.end = end;
     if (!r.scenarios.length) problems.push(`requirement ${current} at line ${r.line} has no scenario`);
-    current = null; lastScenario = null;
+    endScenario(); current = null;
   };
   const define = (kind, id, line) => {
     const prior = defined.get(id);
@@ -85,12 +95,12 @@ function parseInventory(text, { prd } = {}) {
       if (current) requirements[current].lines.push(line);
       continue;
     }
-    if (TILDE.test(line)) { problems.push(`tilde fences are unsupported (line ${n})`); lastScenario = null; if (current) requirements[current].lines.push(line); continue; }
-    if (FENCE.test(line)) { fenceLine = n; lastScenario = null; if (current) requirements[current].lines.push(line); continue; }
-    if (REFERENCE_CONTEXT.test(line)) { lastScenario = null; if (current) requirements[current].lines.push(line); continue; }
+    if (TILDE.test(line)) { problems.push(`tilde fences are unsupported (line ${n})`); endScenario(); if (current) requirements[current].lines.push(line); continue; }
+    if (FENCE.test(line)) { fenceLine = n; endScenario(); if (current) requirements[current].lines.push(line); continue; }
+    if (REFERENCE_CONTEXT.test(line)) { endScenario(); if (current) requirements[current].lines.push(line); continue; }
     const heading = line.match(HEADING);
     if (heading) {
-      lastScenario = null;
+      endScenario();
       const level = heading[1].length, textOf = heading[2];
       const def = textOf.match(REQUIREMENT_DEF);
       if (def && level >= 2 && level <= 4 && def[2].trim() !== '') {
@@ -109,7 +119,7 @@ function parseInventory(text, { prd } = {}) {
     }
     const item = line.match(ITEM);
     if (item) {
-      lastScenario = null;
+      endScenario();
       const body = item[3].replace(/^\[[ xX]\][ \t]+/, '');
       const def = body.match(SCENARIO_DEF);
       const numbered = /^[0-9]/.test(item[2]);
@@ -127,9 +137,14 @@ function parseInventory(text, { prd } = {}) {
       if (current) requirements[current].lines.push(line);
       continue;
     }
+    if (lastScenario && line.trim() === '') { pending.push(line); continue; }
     const cont = lastScenario ? line.match(CONTINUATION) : null;
-    if (cont) { const s = scenarios[lastScenario]; s.lines.push(rtrim(cont[1])); s.end = n; continue; }
-    lastScenario = null;
+    if (cont) {
+      const s = scenarios[lastScenario];
+      while (pending.length) { pending.pop(); s.lines.push(''); }
+      s.lines.push(rtrim(cont[1])); s.end = n; continue;
+    }
+    endScenario();
     if (current) requirements[current].lines.push(line);
   }
   if (fenceLine !== null) problems.push(`unclosed fence opened at line ${fenceLine}`);
