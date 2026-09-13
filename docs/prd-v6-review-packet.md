@@ -85,7 +85,7 @@ it really establishes its scenario — is reviewer judgment, not a mechanical re
 | S-17 gates revalidated under the lock | `test/coverage-checks.test.js` S-17, `docs/prd-v6-artifacts/replay.sh race` | delivered |
 | S-18 review obligations need artifacts | `test/coverage-checks.test.js` S-18 | delivered |
 | S-19 manifest rows reconciled | `test/coverage-evidence.test.js` S-19 | delivered |
-| S-20 two changes on one candidate | `test/coverage-evidence.test.js` S-20, `docs/prd-v6-artifacts/replay.sh shared` | delivered |
+| S-20 two changes on one candidate | `test/coverage-evidence.test.js` S-20 | delivered |
 | S-21 a fresh clone states its limits | `test/coverage-evidence.test.js` S-21, `docs/prd-v6-artifacts/replay.sh clone` | delivered |
 | S-22 nothing changes without adoption | `test/coverage-adoption.test.js` S-22, `docs/prd-v6-artifacts/replay.sh rollback` | delivered |
 | S-23 adoption survives interruption | `test/coverage-adoption.test.js` S-23 | delivered |
@@ -217,8 +217,10 @@ account usage limit; they are kept, marked invalid with that reason, and rerun.
 
 `bash docs/prd-v6-artifacts/replay.sh all` builds a fresh strict-coverage project from
 this repository's `template/` for each case, drives the runtime with the commands a
-session would run, and asserts the observable outcome. Each case injects one fault and
-also exercises the correct path, so a case that passes for the wrong reason is visible.
+session would run, and asserts the observable outcome. Most cases inject one fault and
+exercise the correct path beside it, so a case that passes for the wrong reason is
+visible; the control column says for each case what that comparison is, and names the
+cases that have none.
 Nothing outside the scratch directory is written; it takes about twenty seconds.
 
 | Case | Injected fault | Expected refusal | Working control in the same case |
@@ -227,7 +229,7 @@ Nothing outside the scratch directory is written; it takes about twenty seconds.
 | `revision` | a scenario appended to the PRD after authorization | `AGREEMENT_CHANGED`; `start` refuses; the new scenario is an open obligation | `impact` names S-04 added, R-02 changed, the three unchanged scenarios and the baseline G-01/A-01 |
 | `removal` | a scenario removed with an unknown, then an unauthorized, decision | the unknown decision is refused; a resolved decision alone is `SCOPE_UNAUTHORIZED`; a generic "continue and finish it" is still `SCOPE_UNAUTHORIZED` | an authorization naming D-01 accepts the removal and reports S-03 as `removed` |
 | `substituted` | a command supplied on the command line, a review obligation run as a command, an unknown check id, then the map's command swapped | three `CHECK_UNDECLARED` refusals (exit 4); the swapped declaration cannot run under the old authorization (`AGREEMENT_CHANGED`) | the declared command runs and the attempt records its declaration digest and the command it ran |
-| `race` | `change pause` committed between the pre-launch guard and the attempt lock | the attempt is refused with a gate code and no attempt is recorded | the same verify passes when nothing races it (the setup builds through the same path) |
+| `race` | `change pause` committed between the pre-launch guard and the attempt lock | the attempt is refused with a gate code and no attempt is recorded | none — the case runs one raced verify and no unraced one. What it establishes is that the refusal carries a gate code and records no attempt, not which gate refused. Removing the under-lock revalidation does fail it. |
 | `shared` | a second change registered beside the strict one | both records keep their own identity and schema (3 for the adopted change, 2 for the new one) | neither registration disturbs the other |
 | `rollback` | the adopted record restored from its backup | coverage falls back to the label `unverified` | the backup holds the schema 2 original, and the authored map is not deleted |
 | `clone` | a fresh clone with no local attempt history | `local_attempts: unavailable`, no attempts present | strict coverage survives the clone and the report still names a next action |

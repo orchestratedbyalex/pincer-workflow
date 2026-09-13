@@ -72,12 +72,16 @@ for (const r of scenRows) {
 const citations = [];
 for (const r of scenRows) {
   const id = r[0].slice(0, 4);
-  for (const m of r[1].matchAll(/`(test\/[a-z-]+\.test\.js)` (S-\d\d)/g)) citations.push([id, m[1], m[2]]);
+  const own = [...r[1].matchAll(/`(test\/[a-z-]+\.test\.js)` (S-\d\d)/g)];
+  assert.ok(own.length >= 1, `${id} cites a tagged suite of its own`);
+  for (const m of own) citations.push([id, m[1], m[2]]);
   for (const m of r[1].matchAll(/`(docs\/[a-z0-9-]+\.md)`|(docs\/trial-prd-v6\.md)|`(docs\/prd-v6-artifacts\/[^`]+)`/g)) {
     const rel = (m[1] || m[2] || m[3] || '').split(' ')[0];
     if (rel) assert.ok(exists(rel), `${id} cites ${rel} which exists`);
   }
 }
+// A total across all rows let a scenario cite nothing at all, as long as another row
+// carried an extra citation. The property is per row.
 assert.ok(citations.length >= 30, `every scenario cites at least one tagged suite (${citations.length} citations)`);
 for (const [id, suite, tag] of citations) {
   assert.equal(tag, id, `${id} cites ${suite} under its own id`);
@@ -102,6 +106,32 @@ assert.equal(JSON.parse(read('docs/prd-v6-artifacts/records/agreement-snapshot-s
 assert.equal(JSON.parse(read('docs/prd-v6-artifacts/records/coverage-map.json')).schema, 1);
 assert.equal(JSON.parse(read('docs/prd-v6-artifacts/records/coverage-complete.json')).schema, 1);
 assert.equal(JSON.parse(read('docs/prd-v6-artifacts/records/impact-after-revision.json')).schema, 1);
+// The section claims these are what the runtime writes, so the runtime's own
+// validators decide it. Reading back the number each file declares about itself
+// proves only that the file is resolvable: flipping every scenario row to delivered,
+// dropping the adequacy judgment and zeroing the inventory digest left the suite green.
+{
+  const { createRequire } = await import('node:module');
+  const req = createRequire(import.meta.url);
+  const rt = name => req(path.join(repo, 'template/scripts/pincer-runtime', name));
+  const changesMod = rt('changes.cjs'), coverageMod = rt('coverage.cjs'), requirementsMod = rt('requirements.cjs');
+  assert.equal(changesMod.validateRecord(record, '.prd/changes/prd-v1.json'), null, 'the representative change record is one the runtime would accept');
+  const mapDoc = JSON.parse(read('docs/prd-v6-artifacts/records/coverage-map.json'));
+  assert.equal(coverageMod.validateMap(mapDoc, { change: mapDoc.change, prd: mapDoc.prd, root: null }), null, 'the representative coverage map is one the runtime would accept');
+  const snap = JSON.parse(read('docs/prd-v6-artifacts/records/agreement-snapshot-schema2.json'));
+  assert.equal(requirementsMod.validateSnapshot(snap.inventory, snap.prd.path), null, 'the representative inventory snapshot recomputes');
+  // The manifest cannot be validated in place (it does not live under an evidence
+  // directory), so check the properties the export derives rather than its own claims.
+  const inv = JSON.parse(read('docs/prd-v6-artifacts/records/coverage-complete.json'));
+  const expected = new Set(inv.inventory.scenarios.map(s => s.id));
+  assert.deepEqual(manifest.scenarios.map(s => s.id).sort(), [...expected].sort(), 'every scenario of the inventory has a row — none omitted, none invented');
+  assert.ok(manifest.scenarios.every(s => ['delivered', 'deferred', 'removed', 'blocked'].includes(s.disposition)), 'every row carries a derived disposition');
+  assert.ok(manifest.adequacy && ['adequate', 'inadequate'].includes(manifest.adequacy.verdict), 'it carries the reviewer adequacy judgment, which no derivation can supply');
+  const allDelivered = manifest.scenarios.every(s => s.disposition === 'delivered');
+  assert.equal(manifest.delivery.original, allDelivered, 'delivery.original agrees with the rows rather than asserting itself');
+  assert.equal(manifest.delivery.agreed, manifest.scenarios.every(s => s.disposition !== 'blocked'), 'delivery.agreed agrees with the rows');
+  assert.match(manifest.coverage.inventory, /^[0-9a-f]{64}$/, 'the coverage identity is a real digest');
+}
 
 // --- 4. Verification record: every gate has a result; CI is not claimed green ------------------
 const verification = section(4);

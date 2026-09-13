@@ -187,7 +187,7 @@ case_substituted() {
   echo "ok substituted"
 }
 
-# 5. An authorization committed between the pre-launch guard and the attempt lock.
+# 5. A lifecycle transition committed between the pre-launch guard and the attempt lock.
 case_race() {
   local out; set +e
   # A lifecycle transition committed between the pre-launch guard and the attempt lock.
@@ -199,7 +199,7 @@ case_race() {
   echo "ok race"
 }
 
-# 6. Two changes evaluated on one candidate keep distinct evaluation locators.
+# 6. A second change registered beside the strict one keeps a distinct record and schema.
 case_shared() {
   printf -- '---\nversion: 2\nstatus: ticketed\ndate: 2026-09-12\n---\n# PRD v2: other\n\n## 4. Requirements\n\n### R-01 — Other\n\n- **S-01:** Another change.\n' > .prd/prd-v2.md
   ticket T-03 'true'

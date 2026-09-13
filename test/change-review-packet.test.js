@@ -32,9 +32,18 @@ function rows(text, columns) {
 // --- 1. Implementation reference: base and ticket commits exist; tickets exist and are closed ----
 const ref = section(1);
 assert.match(ref, /Branch: `feat\/prd-v5`, base `9bcf8df`/, 'base commit named');
-for (const m of ref.matchAll(/(T-\d\d) `([0-9a-f]{7})`/g)) {
+// The expected list, in the packet's own build order — T-62 came from a trial finding
+// and sits between T-59 and T-60. Without it the loop proved nothing when it matched
+// nothing, and a citation was never tied to the ticket it names: pointing all nineteen
+// at the base commit passed, and so did deleting every SHA.
+const EXPECTED_TICKETS = ['T-47', 'T-48', 'T-49', 'T-50', 'T-51', 'T-52', 'T-53', 'T-54', 'T-55', 'T-56', 'T-57', 'T-58', 'T-59', 'T-62', 'T-60', 'T-61', 'T-63', 'T-64', 'T-65'];
+const cited = [...ref.matchAll(/(T-\d\d) `([0-9a-f]{7})`/g)];
+assert.deepEqual(cited.map(m => m[1]), EXPECTED_TICKETS, 'section 1 cites every ticket of this PRD, in build order');
+for (const m of cited) {
   const r = spawnSync('git', ['-C', repo, 'cat-file', '-e', `${m[2]}^{commit}`]);
   assert.equal(r.status, 0, `${m[1]} commit ${m[2]} exists`);
+  const subject = spawnSync('git', ['-C', repo, 'log', '-1', '--format=%s', m[2]], { encoding: 'utf8' }).stdout;
+  assert.ok(subject.startsWith(`${m[1]}:`), `${m[2]} is ${m[1]}'s own commit, not another (${subject.slice(0, 60).trim()})`);
   const ticket = fs.readdirSync(path.join(repo, 'tickets')).find(f => f.startsWith(`${m[1]}-`));
   assert.ok(ticket, `${m[1]} ticket file exists`);
   assert.match(read(`tickets/${ticket}`), /^status: done$/m, `${m[1]} is done`);
