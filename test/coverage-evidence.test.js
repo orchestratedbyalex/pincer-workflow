@@ -278,3 +278,78 @@ function evaluate(dir, { candidate, base, version = 1, review = 'passed', adequa
   assert.ok(rep.candidate.evaluated, 'the saved evidence is still inspectable');
 }
 console.log('coverage evidence tests passed');
+
+// --- T-83 (R-07, S-19): three manifests the independent validator used to accept.
+// `pincer-evidence.cjs validate` is what a reviewer runs on evidence they did not
+// produce, so each of these returned `ok` while certifying something the candidate
+// does not support.
+{
+  const { dir, candidate, base } = candidateFixture();
+  const dirRel = `.prd/evidence/prd-v1/${candidate}`;
+  const manifestRel = `${dirRel}/manifest.json`, mapRel = `${dirRel}/coverage/map.json`;
+  passes(evaluate(dir, { candidate, base }), 'export for the T-83 cases');
+  const original = read(dir, manifestRel), mapOriginal = read(dir, mapRel);
+  const cov = require(path.join(repo, 'template/scripts/pincer-runtime/coverage.cjs'));
+  const problemsNow = () => evidence.validate(path.join(dir, manifestRel), { candidate, prd: '.prd/prd-v1.md' }, dir);
+
+  // 1. A scenario linked to a check the snapshot does not declare was treated as
+  //    vacuously satisfied and derived `delivered` — an obligation nothing verified.
+  {
+    const snap = JSON.parse(mapOriginal);
+    snap.map.scenarios['S-01'].checks = ['C-09'];
+    snap.digest = cov.digestOf(cov.normalize(snap.map));
+    write(dir, mapRel, JSON.stringify(snap, null, 2) + '\n');
+    const doc = JSON.parse(original);
+    doc.artifacts.find(a => a.path === mapRel).sha256 = evidence.digestFile(path.join(dir, mapRel));
+    doc.coverage.map = snap.digest;
+    doc.scenarios.find(s => s.id === 'S-01').checks = ['C-09'];
+    write(dir, manifestRel, JSON.stringify(doc, null, 2) + '\n');
+    const problems = problemsNow();
+    assert.ok(problems.some(p => /links S-01 to C-09, which it does not declare/.test(p)), `undeclared link is refused: ${JSON.stringify(problems)}`);
+    refuses(validate(dir, candidate), 1, /links S-01 to C-09, which it does not declare/, 'undeclared link at the CLI');
+    write(dir, mapRel, mapOriginal); write(dir, manifestRel, original);
+  }
+
+  // 2. A candidate whose PRD blob cannot be read was reported as "not available in
+  //    this repository" — false when the commit is present — and the map and change
+  //    record were left unreconciled with it.
+  {
+    const prdText = read(dir, '.prd/prd-v1.md');
+    fs.rmSync(path.join(dir, '.prd/prd-v1.md'));
+    const without = commit(dir, 'remove the PRD from the tree');
+    assert.equal(git(dir, 'cat-file', '-t', without), 'commit', 'the candidate commit resolves');
+    const snap = JSON.parse(mapOriginal);
+    snap.map.checks['C-02'].required = false;                 // the fault the early return hid
+    snap.digest = cov.digestOf(cov.normalize(snap.map));
+    write(dir, mapRel, JSON.stringify(snap, null, 2) + '\n');
+    const doc = JSON.parse(original);
+    doc.candidate = without;
+    doc.artifacts.find(a => a.path === mapRel).sha256 = evidence.digestFile(path.join(dir, mapRel));
+    doc.coverage.map = snap.digest;
+    write(dir, manifestRel, JSON.stringify(doc, null, 2) + '\n');
+    const problems = evidence.validate(path.join(dir, manifestRel), { candidate: without, prd: '.prd/prd-v1.md' }, dir);
+    assert.ok(problems.some(p => /the candidate carries no \.prd\/prd-v1\.md/.test(p)), `a present commit missing a blob is a problem, not a limitation: ${JSON.stringify(problems)}`);
+    assert.ok(problems.some(p => /a substituted map/.test(p)), `the map is still reconciled with the candidate: ${JSON.stringify(problems)}`);
+    write(dir, mapRel, mapOriginal); write(dir, manifestRel, original);
+    write(dir, '.prd/prd-v1.md', prdText);
+  }
+
+  // 3. A deferred row's authorization was shape-checked and never resolved, so a
+  //    non-delivery could be backed by an authorization that does not exist.
+  {
+    const doc = JSON.parse(original);
+    doc.scenarios.find(s => s.id === 'S-03').authorization = 'A-99';
+    const req = doc.requirements.find(r => r.scenarios.includes('S-03'));
+    if (req && 'authorization' in req) req.authorization = 'A-99';
+    write(dir, manifestRel, JSON.stringify(doc, null, 2) + '\n');
+    const problems = problemsNow();
+    assert.ok(problems.some(p => /scenario S-03: authorization A-99 is not an authorization of the candidate's change record/.test(p)), `an invented authorization is refused: ${JSON.stringify(problems)}`);
+    // The independent validator and the local report now agree; before, `ready` said
+    // SCOPE_UNAUTHORIZED on this tree while `validate` said ok.
+    refuses(rt(dir, 'ready'), 1, /not ready/, 'the local report refuses the same evidence');
+    write(dir, manifestRel, original);
+  }
+  assert.equal(problemsNow().length, 0, 'the exported manifest still validates unchanged');
+}
+
+console.log('coverage evidence tests passed (T-83: undeclared link, missing PRD blob, invented authorization)');

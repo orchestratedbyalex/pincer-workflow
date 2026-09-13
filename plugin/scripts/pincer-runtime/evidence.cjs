@@ -349,11 +349,16 @@ function validateStrict(doc, { root, dirRel, checks, requirements: reqRows, opts
   const rows = new Map();
   if (!Array.isArray(doc.scenarios)) { problem('scenarios must be an array with one row per scenario of the inventory snapshot'); return; }
   const passed = id => { const c = checks.get(id); return Boolean(c) && c.result === 'passed'; };
+  for (const [sid, srow] of Object.entries(mapDoc.scenarios || {}))
+    for (const c of (srow && Array.isArray(srow.checks) ? srow.checks : []))
+      if (!mapDoc.checks[c]) problem(`the coverage snapshot links ${sid} to ${c}, which it does not declare`);
   const derive = (id, row) => {
     const scope = mapDoc.scope[id];
     if (scope) return scope.disposition;
     const linked = mapDoc.scenarios[id] ? mapDoc.scenarios[id].checks : [];
-    return linked.length && linked.every(c => !mapDoc.checks[c] || !mapDoc.checks[c].required || passed(c)) ? 'delivered' : 'blocked';
+    // A link to a check the map snapshot does not declare is not a satisfied
+    // obligation: it is an obligation nothing can have verified.
+    return linked.length && linked.every(c => mapDoc.checks[c] && (!mapDoc.checks[c].required || passed(c))) ? 'delivered' : 'blocked';
   };
   doc.scenarios.forEach((row, index) => {
     const label = `scenarios[${index}]`;
@@ -402,10 +407,17 @@ function validateStrict(doc, { root, dirRel, checks, requirements: reqRows, opts
   // Independent reconciliation with the committed candidate, when the repository is available.
   if (typeof doc.candidate !== 'string' || !HEX40.test(doc.candidate) || !changeId) return;
   const show = rel => tryGit(root, ['show', `${doc.candidate}:${rel}`]);
+  // Only a commit that does not resolve is "not available": a commit that is present
+  // but missing a blob is a problem with the evidence, and the map and the change
+  // record must still be reconciled against it.
+  if (tryGit(root, ['rev-parse', '--verify', `${doc.candidate}^{commit}`]).error) {
+    opts.limitations.push(`the candidate ${doc.candidate.slice(0, 7)} is not available in this repository; the snapshots were validated against themselves only`);
+    return;
+  }
   const prdShown = show(doc.prd);
-  if (prdShown.error) { opts.limitations.push(`the candidate ${doc.candidate.slice(0, 7)} is not available in this repository; the snapshots were validated against themselves only`); return; }
-  const parsed = requirements.parseInventory(prdShown.out, { prd: doc.prd });
-  if (!parsed.ok) problem(`the candidate's PRD does not parse strictly (${parsed.problems[0]})`);
+  const parsed = prdShown.error ? null : requirements.parseInventory(prdShown.out, { prd: doc.prd });
+  if (prdShown.error) problem(`the candidate carries no ${doc.prd}`);
+  else if (!parsed.ok) problem(`the candidate's PRD does not parse strictly (${parsed.problems[0]})`);
   else if (parsed.inventory.digest !== cov.inventory) {
     const d = requirements.difference(inv, requirements.snapshotOf(parsed.inventory));
     const extra = d.scenarios.added.length ? `the candidate's PRD defines ${d.scenarios.added.join(', ')}, which the manifest omits` : d.scenarios.removed.length ? `the manifest lists ${d.scenarios.removed.join(', ')}, which the candidate's PRD does not define` : d.scenarios.changed.length ? `${d.scenarios.changed.map(c => c.id).join(', ')} differ from the candidate's PRD` : 'the inventory differs';
@@ -430,6 +442,20 @@ function validateStrict(doc, { root, dirRel, checks, requirements: reqRows, opts
       else if (entry.inventory !== cov.inventory || entry.coverage !== cov.map) problem(`agreement ${entry.id} binds inventory ${String(entry.inventory).slice(0, 12)} and map ${String(entry.coverage).slice(0, 12)}, not the manifest's`);
       const auth = (rec.authorizations || []).find(a => a.id === cov.authorization);
       if (!auth || auth.digest !== cov.agreement) problem(`coverage.authorization ${cov.authorization} does not bind agreement ${cov.agreement.slice(0, 12)} in the candidate's change record`);
+      // A non-delivered row is only as good as the decision and the user authorization
+      // the candidate's own record carries — the same rule the local report applies.
+      const dispositions = require('./dispositions.cjs');
+      for (const [id, row] of rows) {
+        if (row.disposition !== 'deferred' && row.disposition !== 'removed') continue;
+        const decision = (rec.decisions || []).find(d => d.id === row.decision);
+        if (!decision) { problem(`scenario ${id}: decision ${row.decision} is not a decision of the candidate's change record`); continue; }
+        if (decision.status !== 'resolved') { problem(`scenario ${id}: decision ${row.decision} is ${decision.status} in the candidate's change record, not resolved`); continue; }
+        if (!dispositions.namesId(decision, id)) { problem(`scenario ${id}: decision ${row.decision} does not name ${id}`); continue; }
+        const named = (rec.authorizations || []).find(a => a.id === row.authorization);
+        if (!named) { problem(`scenario ${id}: authorization ${row.authorization} is not an authorization of the candidate's change record`); continue; }
+        const applicable = dispositions.applicableUserAuthorization(rec, named, row.decision);
+        if (!applicable.authorization) problem(`scenario ${id}: authorization ${row.authorization} does not carry a user decision for ${row.decision} (${applicable.reason})`);
+      }
     }
   }
 }
