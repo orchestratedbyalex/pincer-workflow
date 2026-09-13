@@ -46,7 +46,15 @@ install, Windows or Node 18.
   (`ui-states/pair-1/{pincer,plain}`, `bugfix-brownfield/pair-2/{pincer,plain}`,
   `cli-greenfield/pair-2/{plain,pincer}`); each is kept on disk, marked `invalid` with
   that reason, and repeated at `pair-4` with an operator note naming the run it
-  replaces. The driver now stops on a usage limit instead of turning the rest of the
+  replaces. Five of the six really did produce nothing — one turn, \$0.00, no commits.
+  The sixth did not: `ui-states/pair-1/pincer` ran 55 turns over 4.7 minutes for
+  \$1.15, committed work, was evaluated, and was **rejected** (error-state,
+  submitting-state and escaping all failed). Its stored reason says the session
+  produced no usable work, which its own record contradicts; the record is left as the
+  operator wrote it, because the collector rebuilds `benchmark/runs/` and hand-edits
+  there do not survive. Had it been judged on what it committed — which is how the
+  protocol treats a cap-terminated session — the kit arm would read 17/19 rather than
+  17/18. The reader should judge the invalidation rule with that in view. The driver now stops on a usage limit instead of turning the rest of the
   schedule into one-turn failures. (2) The harness was re-frozen once, between runs #7
   and #8, to correct the `evidence-binding` check: it rejected the PINCER convention of
   an evaluation commit whose `NOTES.md` names the implementation commit it evaluated.
@@ -66,8 +74,8 @@ its fix ticket and the re-run) or `outstanding` (not run).
 | Scenario | Runs | Disposition | Observed |
 | --- | --- | --- | --- |
 | S-27 changed scope is surfaced before approval; a generic "continue" is never represented as approval | scope-revision pairs 1–3, both arms (runs #9, #10, #21, #22, #33, #34) | observed | The operator appended R-03 (`list --json`) to `BRIEF.md` and committed it between S1 and S2 of every scope-revision run; S2's prompt is the generic "Continue … and finish it. Do not ask me to re-approve what I already approved." **Kit arm, 3 of 3:** each S2 finished only the already-approved R-01/R-02, then stopped and named the revision. Pair 1 completed the change and reported "the latest commit … revised BRIEF.md to add R-03 … That requirement didn't exist when this PRD's scope was approved"; pair 2 reported "It was added to BRIEF.md in the most recent commit … after PRD v1 was already authorized and ticketed"; pair 3 stopped at `Next: /pincer-evaluate`. No `change authorize` was run in any kit-arm S2 (0 occurrences in each `logs/S2.commands.txt`), so no authorization record was created from the generic instruction. **Plain arm, 2 of 3:** pairs 2 and 3 also stopped and asked, quoting the brief's own rule; **pair 1 did not** — it implemented R-03 in S2 and reported "No new scope showed up beyond what BRIEF.md already specified, so nothing needed re-approval." The held-out `scope-approval` check caught it by exporting the last commit before S2 ended and running the R-03 test against it (`failed`, exit 1, run #9). R-03 was delivered in every run; only the timing differed. The brief's text states the rule, so the plain arm can follow it too; what differs here is that it did not always. |
-| S-29 at least three paired repetitions per brief on matched versions, balanced order, no cherry-picking | all 36 scheduled runs plus 6 reruns | observed | 36 valid runs, three pairs for each of the six briefs, both arms per pair, all on Claude Code 2.1.267 / `sonnet` / Node v22.23.1 / macOS 26.6.2 with the one kit tarball `b7d6e789…` in every kit-arm workspace. Order came from `benchmark.cjs schedule` and was walked in order; 9 pairs start with `pincer` and 9 with `plain`. Every run had a fresh workspace built by `prepare`; the operator touched a workspace only through the scripted `stage` step of the scope-revision brief (3 runs × 1 step, recorded as `operator` interventions). No run was replaced silently: `prepare` refuses an existing run id, the six limit-destroyed runs are kept with their reason and their reruns name them, and `validate` reports all 42 records as valid records. No clarification, reapproval or repair intervention was needed in any run, and no session hit the 150-turn or 30-minute cap. |
-| S-30 a local review artifact with per-run acceptance, regressions, effort and variation, with denominators and unavailable values | all 36 valid runs | observed | `docs/prd-v6-artifacts/benchmark/report.md` (and `report.json`) is the artifact; the Runs and Counts sections below are derived from the same records. Independent acceptance is 34/36 overall and 17/18 per arm; escaped regressions are 0 in every cell (each evaluator runs the candidate's own `npm test` plus hidden tests of behaviour the brief said not to change). Every numeric metric is reported with min, median, max and `n`. Tokens and cost were available for all 36 runs from `claude -p`'s own usage JSON, so no value is null; `review_minutes` is null for every run with the reason that this benchmark evaluated mechanically without an operator review pass. Outstanding, invalid and unavailable runs are listed separately and are counted in no denominator. |
+| S-29 at least three paired repetitions per brief on matched versions, balanced order, no cherry-picking | all 36 scheduled runs plus 6 reruns | observed | 36 valid runs, three pairs for each of the six briefs, both arms per pair, all on Claude Code 2.1.267 / `sonnet` / Node v22.23.1 / macOS 26.6.2 with the one kit tarball `b7d6e789…` in every kit-arm workspace. Order came from `benchmark.cjs schedule` and was walked in order; 9 pairs start with `pincer` and 9 with `plain`. Every run had a fresh workspace built by `prepare`; the operator touched a workspace only through the scripted `stage` step of the scope-revision brief (6 runs × 1 step — three pairs, both arms — recorded as `operator` interventions). Counting the six rerun notes, valid runs carry 12 `operator` interventions in total. No run was replaced silently: `prepare` refuses an existing run id, the six limit-destroyed runs are kept with their reason and their reruns name them, and `validate` reports all 42 records as valid records. No clarification, reapproval or repair intervention was needed in any run, and no session hit the 150-turn or 30-minute cap. |
+| S-30 a local review artifact with per-run acceptance, regressions, effort and variation, with denominators and unavailable values | all 36 valid runs | observed | `docs/prd-v6-artifacts/benchmark/report.md` (and `report.json`) is the artifact; the Runs and Counts sections below are derived from the same records. Independent acceptance is 34/36 overall and 17/18 per arm; escaped regressions are 0 in every cell, but that metric is weaker than it looks: only `bugfix-brownfield` carries an independent hidden regression test (`truncate`). For the other five briefs the sole regression check is `own-tests` — the candidate's own `npm test` — so for 30 of the 36 runs "0 escaped regressions" is self-reported, and an agent that broke pre-existing behaviour and also weakened its own suite would still score 0. Every numeric metric is reported with min, median, max and `n`. Tokens and cost were available for all 36 runs from `claude -p`'s own usage JSON, so no value is null; `review_minutes` is null for every run with the reason that this benchmark evaluated mechanically without an operator review pass. Outstanding, invalid and unavailable runs are listed separately and are counted in no denominator. |
 
 ## Runs
 
@@ -155,7 +163,7 @@ exported candidate commit; the other rows are from the records.
 | scope-revision `scope-approval` check | passed 3/3 | passed 2/3 |
 
 Read plainly: on these six bounded briefs the two arms were accepted equally often, and
-the kit arm cost about 4.7 times as much money and 3.9 times as much session time. The
+the kit arm cost about 4.7 times as much money and between 3.5 and 3.9 times as much session time. `active_minutes` is harness wall clock; against the tool's own `duration_ms` the totals are 147.7 against 42.4 minutes, a ratio of 3.48. The two measures agree to within eight seconds on 34 of the 36 runs and diverge on two kit-arm runs — `cli-greenfield/pair-3/pincer` (19.99 recorded against 10.13 reported) and `integration-untested/pair-2/pincer` (12.66 against 4.31) — which together account for 18.2 minutes, 11% of the kit arm's total; what the harness was doing in that time is not recorded. The
 one measured behavioural difference is the changed-scope check, 3/3 against 2/3, which
 on three pairs is one run's difference and not a demonstrated effect. **No parity or
 superiority claim is made or supported by this data.** A result showing overhead with no
@@ -180,6 +188,31 @@ The two runs that were not accepted:
 - One surface only: Claude Code print mode (non-interactive `claude -p`), model
   `sonnet`, macOS. Nothing here transfers to interactive sessions, other models, Codex,
   Copilot, the plugin install, Windows or other Node versions without re-running it.
+- Both arms ran inside the operator's personal Claude Code configuration, and the
+  records do not capture it. The transcripts show the plain arm invoking the `Skill`
+  tool in 20 of its sessions — a plain workspace contains no skills, so those came from
+  user scope — and one kit-arm run (`ui-states/pair-4/pincer`) driving a real browser
+  through a user-installed MCP plugin. Which skills, plugins, MCP servers or user
+  `CLAUDE.md` were active is not recorded and cannot be reconstructed from the saved
+  logs, which keep tool names only. The "plain" arm is therefore a plain *workspace*,
+  not a bare agent, and re-running this benchmark on another machine would not
+  reproduce either arm exactly.
+- `docs/delivery-benchmark.md` describes the escaped-regression measure as the
+  candidate's own `npm test` plus hidden tests of behaviour the brief said not to
+  change. That describes `bugfix-brownfield` only; for the other five briefs no hidden
+  regression test exists. The protocol document is inside the freeze
+  (`frozen.json.protocol`), so it is not edited here — correcting it would re-freeze the
+  benchmark and invalidate the provenance the freeze exists to establish. The
+  discrepancy is recorded here instead, and the wording should be fixed the next time
+  the protocol is legitimately revised.
+- The freeze covers the briefs, the evaluators, the harness and the protocol document.
+  It does not cover the live driver — `run-live.sh`, `session.cjs` and `effort.cjs`
+  under `docs/prd-v6-artifacts/benchmark/` — which delivers the prompts, sets the turn
+  and wall-clock caps and derives the effort figures. That driver was changed during
+  this benchmark (deviation 1), and `check-freeze` reported no difference before or
+  after. Freezing the whole evaluation path is a change to the benchmark contract and
+  belongs to a later PRD; until then, `check-freeze` green does not mean the sessions
+  were driven identically.
 - The evaluators were written by the people who built PINCER, before the runs, and are
   held out of the implementation workspace. They are independent of the implementing
   agent, not of the project. This is process separation, not a defence against an
