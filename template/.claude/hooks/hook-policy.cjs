@@ -243,6 +243,10 @@ function guardEdits(tool, toolInput) {
 function isExactPincerCall(source) {
   const commands = shellCommands(source).filter(command => command.words.length);
   if (commands.length !== 1 || commands[0].separator) return false;
+  // An output redirection is a write, whatever runs in front of it: fall through to
+  // ticketShellMutation so its target is tested like any other path. Without this,
+  // adding a verb to the list below silently opened a new carrier for it.
+  if (commands[0].operators.some(op => op === '>' || op === '>>')) return false;
   const { executable, args } = commandParts(commands[0]);
   let words = [executable, ...args];
   if (['bash', 'sh', 'node'].includes(words[0])) words = words.slice(1);
@@ -338,7 +342,7 @@ function ticketShellMutation(source, depth = 0) {
       if (viaXargs && ['checkout', 'restore', 'clean'].includes(sub.name) && stdinPathspec) return true;
     }
     const hasTicket = words.some(ticketPath) || /(^|[\s'"`])tickets[\\/]T-[0-9]+[^\s'"`]*/.test(source) ||
-      words.some(runtimePath) || /(^|[\s'"`=])\.pincer(?:[\\/](?:runtime|backups)(?:[\\/]|[\s'"`]|$)|[\\/]?(?:[\s'"`]|$))/.test(source) || /(^|[\s'"`=])\.prd[\\/](?:changes|evidence[\\/]changes)([\\/]|[\s'"`]|$)/.test(source);
+      words.some(runtimePath) || /(^|[\s'"`=])\.pincer(?:[\\/](?:runtime|backups)(?:[\\/]|[\s'"`]|$)|[\\/]?(?:[\s'"`]|$))/.test(source) || /(^|[\s'"`=])\.prd[\\/](?:changes|evidence[\\/]changes|evidence[\\/]prd-v[0-9]+[\\/][0-9a-f]{40}[\\/]coverage)([\\/]|[\s'"`]|$)/.test(source);
     if (!hasTicket) continue;
     if (command.operators.some(op => op === '>' || op === '>>')) return true;
     if (['rm', 'mv', 'cp', 'install', 'truncate', 'touch', 'tee', 'ed', 'ex'].includes(executable)) return true;
