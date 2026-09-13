@@ -28,7 +28,7 @@ One commit per ticket, in build order:
 | T-74 | `3b37ae1` | `coverage` and `impact` commands, status schema 3 and resume schema 2 summaries |
 | T-75 | `417a28e` | playbooks, PRD template, `AGENTS.md`, hook policy, checklists, generated adapters and plugin, packed parity |
 | T-76 | `3ecb531` | the delivery benchmark: six frozen briefs, held-out evaluators, harness, protocol, fault suite |
-| T-77 | `57540f1` | 36 paired live runs, the trial record and its validator |
+| T-77 | `aed95af` | 36 paired live runs, the trial record and its validator |
 
 T-78 (this packet, the replay cases and the CI matrix) is the last ticket; its own commit
 follows this file.
