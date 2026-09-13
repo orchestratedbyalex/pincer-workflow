@@ -82,13 +82,13 @@ const applyIt = dir => rt(dir, 'migrate', '--apply', '--prd', '.prd/prd-v1.md');
   assert.match(p.stdout, /note      the binding's authorization text "user approved the breakdown in the planning session on 2026-09-05" is retained as legacy\.authorization_text \(unvalidated history\); it never authorizes execution/);
   assert.match(p.stdout, /tickets   no legacy receipts to import/);
   assert.match(p.stdout, /gitignore already ignores \.pincer\//);
-  assert.match(p.stdout, /index     \.pincer\/runtime\/index\.json: 1 candidate pointer\(s\) rewritten to candidate:prd-v1:<candidate>:<C-NN> \(attempt records untouched\)/);
+  assert.match(p.stdout, /index {5}\.pincer\/runtime\/index\.json: 1 candidate pointer\(s\) dropped/, 'the preview says the stale pointers are dropped');
   assert.match(p.stdout, /history   3 existing attempt\(s\) and any saved evaluation stay history \(HISTORICAL_EVIDENCE\) until verified again/);
   assert.match(p.stdout, /selection \.pincer\/runtime\/selection\.json → prd-v1/);
   assert.deepEqual(snapshot(dir), before, 'preview writes nothing');
   const a = applyIt(dir);
   assert.equal(a.status, 0, a.stdout + a.stderr);
-  assert.match(a.stdout, /^migrated \.prd\/prd-v1\.md → change prd-v1 \(schema 2 record, planned, converted from the v0\.5\.0 binding; base e59132b; 0 ticket\(s\) rewritten; 1 legacy receipt\(s\) as history; 1 candidate pointer\(s\) rewritten\)$/m);
+  assert.match(a.stdout, /^migrated \.prd\/prd-v1\.md → change prd-v1 \(schema 2 record, planned, converted from the v0\.5\.0 binding; base e59132b; 0 ticket\(s\) rewritten; 1 legacy receipt\(s\) as history; 1 candidate pointer\(s\) dropped\)$/m);
   assert.match(a.stdout, /backups: \.pincer\/backups\/\d{8}T\d{6}Z\/ \(2 file\(s\)\)/);
   assert.match(a.stderr, /planned with no authorization \(the v0\.5\.0 authorization text is history only\)/);
   const r = record(dir);
@@ -97,9 +97,12 @@ const applyIt = dir => rt(dir, 'migrate', '--apply', '--prd', '.prd/prd-v1.md');
   assert.equal(r.lifecycle.state, 'planned'); assert.equal(r.events[0].kind, 'migrate'); assert.match(r.events[0].note, /converted from the v0\.5\.0 binding/);
   assert.deepEqual(r.legacy, { receipts: binding.legacy_receipts, authorization_text: binding.authorization, migrated_from: 'binding', migrated: r.legacy.migrated });
   assert.deepEqual(r.authorizations, [], 'no authorization was inferred');
-  // Local state: pointers rewritten, records untouched, selection set, backups of the binding and index.
+  // Local state: the ticket pointers are rewritten and the stale candidate pointers
+  // dropped (a schema 1 attempt record can never satisfy the change-scoped candidate
+  // key, so the check is run again); records untouched, selection set, backups taken.
   const index = state.readIndex(dir).index;
-  assert.deepEqual(Object.keys(index.current).sort(), ['candidate:prd-v1:e8e55a7fdd4f359eff1cb3b9ba143edfe96af861:C-01', 'ticket:prd-v1:T-01', 'ticket:prd-v1:T-02']);
+  assert.deepEqual(Object.keys(index.current).sort(), ['ticket:prd-v1:T-01', 'ticket:prd-v1:T-02']);
+  assert.ok(fs.existsSync(path.join(dir, '.pincer/runtime/attempts')), 'the attempt records themselves are kept as history');
   for (const id of Object.values(index.current)) assert.equal(read(dir, `.pincer/runtime/attempts/${id}.json`), before[`.pincer/runtime/attempts/${id}.json`], `attempt ${id} untouched`);
   assert.equal(JSON.parse(read(dir, '.pincer/runtime/selection.json')).change, 'prd-v1');
   const backupDir = fs.readdirSync(path.join(dir, '.pincer/backups')).filter(n => n !== '20260911T202504Z')[0];
@@ -171,13 +174,24 @@ for (const point of ['validated', 'staged', 'manifest', 'rename:0', 'rename:2', 
     assert.equal(txn.pending(dir).committed.length, 1, `${point}: committed transaction pending`);
     const st = rt(dir, 'status', '--json');
     assert.equal(st.status, 4, `${point}: inspection refuses half-applied state`); assert.match(st.stdout, /STATE_INCOMPLETE/);
+    // T-85: execution must refuse while the transaction is unapplied. `recover`
+    // finishes it by renaming its staged files into place, over anything written
+    // since, so work done in this window is destroyed without warning.
+    for (const args of [['verify', 'T-01'], ['done', 'T-01'], ['check', 'C-01', '--candidate', git(dir, 'rev-parse', 'HEAD'), '--', 'true']]) {
+      const r = rt(dir, ...args);
+      assert.equal(r.status, 4, `${point}: ${args[0]} refuses while a committed transaction is unapplied (exit ${r.status})\n${r.stdout}${r.stderr}`);
+      assert.match(r.stdout + r.stderr, /STATE_INCOMPLETE/, `${point}: ${args[0]} names the code`);
+    }
+    const during = snapshot(dir);
+    for (const key of Object.keys(before)) if (key.startsWith('tickets/')) assert.equal(during[key], before[key], `${point}: ${key} was not written during the window`);
   }
   const rec = rt(dir, 'recover');
   assert.equal(rec.status, 0, rec.stderr);
   assert.equal(changes.scan(dir).mode, committed ? 'changes' : 'migrated', `${point}: recovered mode`);
   if (committed) {
     assert.equal(changes.validateRecord(record(dir), '.prd/changes/prd-v1.json'), null, `${point}: the record is consistent`);
-    assert.ok(state.readIndex(dir).index.current['candidate:prd-v1:e8e55a7fdd4f359eff1cb3b9ba143edfe96af861:C-01'], `${point}: pointers rewritten with the record`);
+    const current = state.readIndex(dir).index.current;
+    assert.ok(!Object.keys(current).some(k => /^candidate:/.test(k)), `${point}: the v0.5.0 candidate pointers are dropped, not renamed to a key no schema 1 record can satisfy`);
     assert.equal(JSON.parse(read(dir, '.pincer/runtime/selection.json')).change, 'prd-v1', `${point}: selection landed with the record`);
     assert.match(passes(applyIt(dir)), /^already migrated/, `${point}: reapply is a no-op`);
   } else {

@@ -98,6 +98,9 @@ async function runAttempt({ root, context, commands, timeoutSeconds, command = '
   let attempt, logDir, relLogDir;
   try {
     state.withLock(root, () => {
+      // Finish any committed transaction before writing: its staged files would
+      // otherwise be renamed over this attempt and its index pointer later.
+      require('./transaction.cjs').recoverPending(root);
       if (revalidate) context = revalidate();
       const key = state.contextKey(context);
       // Changes mode records (schema 2) carry the agreement digest; `mode` only

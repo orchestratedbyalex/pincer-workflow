@@ -5,7 +5,7 @@
 // `legacy.receipts` (history, never runtime evidence), converts a v0.5.0 schema 1
 // binding into a schema 2 record (same id, base and registration; the free-text
 // authorization retained as unvalidated history), rewrites the local candidate
-// pointers to the change-scoped key, ignores .pincer/, and selects the change in
+// pointers that no longer resolve, ignores .pincer/, and selects the change in
 // this worktree. The migrated change is planned with no authorization; existing
 // attempts and evaluations stay history until verified again. Conflicts fail
 // closed before the first write; repeated apply is a no-op.
@@ -84,8 +84,8 @@ function plan(root, { prd, change, authorization = null } = {}) {
     const read = state.readIndex(root);
     if (read.error) conflict('INPUT_INVALID', read.error);
     else {
-      const rewritten = Object.keys(read.index.current).filter(k => OLD_CANDIDATE_KEY.test(k)).map(k => [k, k.replace(OLD_CANDIDATE_KEY, `candidate:${id}:$1:$2`)]);
-      if (rewritten.length) index = { rewritten, doc: read.index };
+      const stale = Object.keys(read.index.current).filter(k => OLD_CANDIDATE_KEY.test(k));
+      if (stale.length) index = { stale, doc: read.index };
     }
   }
   const sel = changes.readSelection(root);
@@ -119,7 +119,7 @@ function renderPlan(p) {
   for (const t of p.tickets) lines.push(`  ticket    ${t.file}: remove ${[t.verified ? 'verified' : null, t.last_check ? 'last_check' : null].filter(Boolean).join(', ')} → legacy.receipts[${t.id}] (history, not runtime evidence)`);
   if (!p.tickets.length) lines.push('  tickets   no legacy receipts to import');
   lines.push(p.gitignore ? `  gitignore add \`${IGNORE_LINE}\`` : '  gitignore already ignores .pincer/');
-  if (p.index) lines.push(`  index     .pincer/runtime/index.json: ${p.index.rewritten.length} candidate pointer(s) rewritten to candidate:${p.change}:<candidate>:<C-NN> (attempt records untouched)`);
+  if (p.index) lines.push(`  index     .pincer/runtime/index.json: ${p.index.stale.length} candidate pointer(s) dropped — a v0.5.0 attempt record cannot satisfy the change-scoped key, so its check is run again (attempt records untouched, kept as history)`);
   lines.push(`  history   ${p.historical.attempts} existing attempt(s) and any saved evaluation stay history (HISTORICAL_EVIDENCE) until verified again; the change is planned with no authorization`);
   if (p.selection) lines.push(`  selection .pincer/runtime/selection.json → ${p.change} (this worktree only; a fresh clone selects explicitly)`);
   lines.push('  backups   .pincer/backups/<timestamp>/ for every changed authored file (tickets, .gitignore, the binding, the local index)');
@@ -186,7 +186,7 @@ function apply(root, options) {
       ctx.write(p.binding.file, record);
       if (p.index) {
         const doc = p.index.doc;
-        for (const [from, to] of p.index.rewritten) { doc.current[to] = doc.current[from]; delete doc.current[from]; }
+        for (const key of p.index.stale) delete doc.current[key];
         ctx.write(`${state.RUNTIME_DIR}/index.json`, doc);
       }
       if (p.selection) ctx.write(changes.SELECTION_FILE, { schema: 1, change: p.change, selected: ctx.now });

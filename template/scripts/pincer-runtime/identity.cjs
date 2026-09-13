@@ -48,6 +48,16 @@ function loadBinding(root, { prd } = {}) {
   const scan = require('./changes.cjs').scan(root);
   if (scan.mode === 'changes') return { code: 'CHANGES_MODE', problem: `${CHANGES_HINT}`, scan };
   if (scan.mode === 'invalid') return { code: scan.problems[0].code, problem: scan.problems[0].detail, scan };
+  // A committed transaction that was not fully applied is unsafe in every mode, not
+  // only in changes mode: `recover` finishes it by renaming its staged files into
+  // place, over anything written since. Changes mode raises this through
+  // changes.scan(); a migrated or legacy project reaches it here, and a migrated
+  // project is the one `migrate --apply` crashes in.
+  const pending = require('./transaction.cjs').pending(root);
+  if (pending.committed.length) {
+    const first = pending.committed[0];
+    return { code: 'STATE_INCOMPLETE', problem: `a committed transaction (${first.command || first.id}) was not fully applied; run: node scripts/pincer-runtime.cjs recover` };
+  }
   const files = listBindings(root);
   if (files.length === 0) {
     const hint = prd ? `register it with: node scripts/pincer-runtime.cjs register --prd ${prd}` : 'run register or migrate';

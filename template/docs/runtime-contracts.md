@@ -953,8 +953,10 @@ record, an incomplete transaction. Two sources are migrated:
 - from a schema 1 binding: the record it becomes (same change ID, `prd`, `base` and
   `registered`; `legacy.receipts` carried over; the binding's free-text `authorization`
   stored as `legacy.authorization_text`; `migrated_from: "binding"`), the local index
-  pointers rewritten from `candidate:<sha>:<C-NN>` to `candidate:<id>:<sha>:<C-NN>`,
-  and the selection it sets.
+  pointers under `candidate:<sha>:<C-NN>` dropped — a schema 1 attempt record's own key
+  never carries the change segment, so no such pointer could resolve after the migration
+  and the check is simply run again; the attempt records themselves are untouched and
+  stay as history — and the selection it sets.
 
 In both cases the preview states that the migrated change is `planned` with no
 authorization, that its existing attempts and evaluations stay as history
@@ -987,7 +989,7 @@ originals, and neither procedure deletes a file it has just restored.
   `.prd/changes/<id>.json` — it overwrites the schema 2 record, which lives at the same
   path, so nothing under `.prd/changes/` is deleted except, if present, the snapshot
   directory `.prd/changes/<id>/`; restore the backed-up `.pincer/runtime/index.json`
-  (the migration rewrote its candidate pointers) and remove
+  (the migration dropped its candidate pointers) and remove
   `.pincer/runtime/selection.json`; keep the rest of `.pincer/runtime/` so the old
   attempts and stored manifests remain. The project is migrated (v0.5.0) again with
   its original binding and history.
