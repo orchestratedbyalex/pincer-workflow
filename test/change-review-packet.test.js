@@ -17,7 +17,9 @@ const read = rel => fs.readFileSync(path.join(repo, rel), 'utf8');
 const exists = rel => fs.existsSync(path.join(repo, rel));
 const packet = read('docs/prd-v5-review-packet.md');
 const npmTest = JSON.parse(read('package.json')).scripts.test;
-const suites = [...npmTest.matchAll(/node (test\/[a-z-]+\.test\.js)/g)].map(m => m[1]);
+// [a-z0-9-]: a suite whose name carries a version digit (delivery-benchmark-v7)
+// would otherwise be invisible here, and the count would silently understate the chain.
+const suites = [...npmTest.matchAll(/node (test\/[a-z0-9-]+\.test\.js)/g)].map(m => m[1]);
 
 function section(n) {
   const m = packet.match(new RegExp(`\\n## ${n}\\. [^\\n]*\\n([\\s\\S]*?)(?=\\n## \\d+\\. |$)`));
