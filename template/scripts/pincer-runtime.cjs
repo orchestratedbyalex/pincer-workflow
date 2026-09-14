@@ -16,7 +16,7 @@
 //   node scripts/pincer-runtime.cjs change authorize <id> --agreement <digest> (--reference <text> --excerpt <text> | --delegated --basis A-NN --explanation <text>) [--decision D-NN]...
 //   node scripts/pincer-runtime.cjs change decide <id> --summary <text> [--id D-NN] | --resolve D-NN --reference <text> --excerpt <text>
 //   node scripts/pincer-runtime.cjs change activate|pause|resume|complete|reopen|cancel|supersede <id> [--reason <text>] [--note <text>] [--decision D-NN] [--with <id>]
-//   node scripts/pincer-runtime.cjs resume [--change <id>] [--json]
+//   node scripts/pincer-runtime.cjs resume [--change <id>] [--brief] [--json]
 //   node scripts/pincer-runtime.cjs coverage [--change <id>] [--json] · coverage scaffold --change <id> [--json] · coverage adopt --preview|--apply --change <id> [--agreement <digest>]
 //   node scripts/pincer-runtime.cjs impact [--change <id>] [--from G-NN|A-NN] [--json]
 //
@@ -77,7 +77,7 @@ function usage(message) {
     '       pincer-runtime.cjs change decide <id> --summary <text> [--id D-NN] | --resolve D-NN --reference <text> --excerpt <text>\n' +
     '       pincer-runtime.cjs change activate|resume|complete <id> · change pause <id> --reason <text> [--note <text>] · change reopen <id> --reason <text>\n' +
     '       pincer-runtime.cjs change cancel <id> --decision D-NN --reason <text> · change supersede <id> --with <id> --decision D-NN\n' +
-    '       pincer-runtime.cjs resume [--change <id>] [--json]   (the read-only report; `change resume` is the lifecycle operation)\n' +
+    '       pincer-runtime.cjs resume [--change <id>] [--brief] [--json]   (the read-only report; `change resume` is the lifecycle operation)\n' +
     '       pincer-runtime.cjs coverage [--change <id>] [--json] · coverage scaffold --change <id> [--json] · coverage adopt --preview|--apply --change <id> [--agreement <digest>]\n' +
     '       pincer-runtime.cjs impact [--change <id>] [--from G-NN|A-NN] [--json]\n');
   process.exit(EXIT.USAGE);
@@ -492,9 +492,18 @@ function cmdImpact(root, args) {
 
 // resume [--change <id>] [--json] — the read-only resume report (never the lifecycle operation).
 function cmdResume(root, args) {
-  const o = parseOptions(args, { switches: ['--json'], valued: ['--change'] });
+  const o = parseOptions(args, { switches: ['--json', '--brief'], valued: ['--change'] });
   if (o.positional.length) usage(`unexpected argument ${o.positional[0]}`);
   const result = resume.build(root, { change: o.change || null });
+  // --brief is a projection of the same computed report: same verdict, same next
+  // action, same blocker categories, fewer bytes (docs/runtime-contracts.md, "Brief
+  // resume"). It never recomputes a decision and never changes the exit code.
+  if (o.brief) {
+    const brief = resume.brief(result.json);
+    if (o.json) io.out(`${JSON.stringify(brief, null, 2)}\n`);
+    else io.out(resume.renderBrief(brief));
+    process.exit(result.exit);
+  }
   if (o.json) io.out(`${JSON.stringify(result.json, null, 2)}\n`);
   else io.out(result.text);
   process.exit(result.exit);

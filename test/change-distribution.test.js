@@ -92,7 +92,7 @@ for (const [platform, guidance] of Object.entries(layouts)) {
   passes(pincer(project, 'doctor'), `${platform} doctor after the journey`);
   // Every named command in the guidance exists in the runtime's usage text.
   const usage = run(project, process.execPath, ['scripts/pincer-runtime.cjs']).stderr;
-  for (const sub of ['change list', 'change show <id>', 'change select <id>', 'change revise <id>', 'change authorize <id>', 'change decide <id>', 'change activate|resume|complete <id>', 'change pause <id> --reason', 'change reopen <id> --reason', 'change cancel <id> --decision', 'change supersede <id> --with', 'resume [--change <id>] [--json]']) assert.ok(usage.includes(sub), `${platform}: runtime usage names ${sub}`);
+  for (const sub of ['change list', 'change show <id>', 'change select <id>', 'change revise <id>', 'change authorize <id>', 'change decide <id>', 'change activate|resume|complete <id>', 'change pause <id> --reason', 'change reopen <id> --reason', 'change cancel <id> --decision', 'change supersede <id> --with', 'resume [--change <id>] [--brief] [--json]']) assert.ok(usage.includes(sub), `${platform}: runtime usage names ${sub}`);
 }
 
 // Generated adapters are current and carry the same rule as the canonical playbooks.

@@ -893,8 +893,8 @@ it selects nothing, completes nothing, runs nothing and writes nothing.
 
 ## Resume report
 
-`resume [--change <id>] [--json]` is read-only inspection of the selected (or named)
-change for a fresh session; it is distinct from `change resume`, the lifecycle
+`resume [--change <id>] [--brief] [--json]` is read-only inspection of the selected
+(or named) change for a fresh session; it is distinct from `change resume`, the lifecycle
 operation. It launches no check, records no approval, changes no selection and writes
 no file; repeated runs are byte-identical apart from `generated`. Resume JSON schema 1:
 
@@ -937,6 +937,40 @@ command to run):
 6. everything done and ready but not `completed` → `change complete`;
 7. `completed` without a current evaluation → `/pincer:evaluate`;
 8. evaluated and current → `/pincer:release` (read-only audit).
+
+### Brief resume
+
+`resume --brief [--change <id>] [--json]` is a **projection of the report `resume`
+already computes**, for a fresh session that needs the next action without paying for
+every row to find it. It is not a second policy engine: `next` is the full report's
+own object, copied, and no verdict, readiness value or precedence rule is recomputed.
+It composes with `--change` and `--json`, keeps the full report's exit code, and
+writes nothing.
+
+Brief JSON envelope — `brief: 1` with `of` naming the schema it projects, so nothing
+reading resume JSON ever sees a new shape:
+
+```
+{ brief: 1, kind: "resume-brief", of: 2, generated, root, mode,
+  selection: { change | null, problem | null },
+  change: { id, prd, base, lifecycle } | null,
+  agreement: { current, verdict, authorized: { id, disposition } | null } | null,
+  coverage: { label, strict, structure, implementation } | null,
+  tickets: { total, by_status: { open, in_progress, done }, not_ready },
+  attempts: { total, running, current_failed },
+  candidate: { notes, candidate, evidence } | null,
+  blockers: { total, categories: [ { code, count } ] },
+  next: <the full report's next, verbatim>,
+  detail: { command, prd, tickets: [ paths ], omitted } }
+```
+
+Grouping may collapse **repetition**; it may never collapse a **category**. Every
+distinct blocker code of the full report appears in `blockers.categories` with its
+exact count, and `blockers.total`, `tickets.total` and `attempts.total` equal the full
+report's own lengths. `detail.omitted` states how many rows the brief did not print
+and `detail.command` is the exact command that prints them, so nothing is hidden —
+only deferred. The default `resume` human output and resume JSON schema 2 are
+unchanged.
 
 ## Migration and rollback
 

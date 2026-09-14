@@ -202,4 +202,72 @@ function render(r) {
   return `${lines.join('\n')}\n`;
 }
 
-module.exports = { SCHEMA, build, decide, render };
+// --- The brief projection (docs/runtime-contracts.md, "Brief resume") ----------------
+// A fresh session reads the full report to answer one question — what do I do next —
+// and pays for every ticket row, attempt row and repeated blocker detail to get it.
+// The brief keeps the answer and the counts and drops the repetition.
+//
+// It is a projection, not a second report: `next` is the full report's own object,
+// copied, and every distinct blocker code survives with its exact count. Grouping may
+// collapse repetition; it may never collapse a category, because a category is the
+// reason a gate will refuse. Nothing here recomputes a verdict, caches readiness or
+// decides an action, and `detail` names the command that prints every omitted row.
+const BRIEF = 1;
+const BRIEF_KIND = 'resume-brief';
+
+function brief(r) {
+  const counts = {};
+  for (const b of r.blockers) counts[b.code] = (counts[b.code] || 0) + 1;
+  const byStatus = { open: 0, in_progress: 0, done: 0 };
+  let notReady = 0;
+  for (const t of r.tickets) {
+    if (t.status in byStatus) byStatus[t.status]++;
+    if (!t.readiness.ready) notReady++;
+  }
+  const running = r.attempts.filter(a => a.outcome === 'running').length;
+  const currentFailed = r.attempts.filter(a => a.current && a.outcome !== 'passed').length;
+  const cov = r.coverage;
+  return {
+    brief: BRIEF, kind: BRIEF_KIND, of: SCHEMA,
+    generated: r.generated, root: r.root, mode: r.mode,
+    selection: r.selection,
+    change: r.change ? { id: r.change.id, prd: r.change.prd, base: r.change.base, lifecycle: r.change.lifecycle.state } : null,
+    agreement: r.agreement ? { current: r.agreement.current, verdict: r.agreement.verdict, authorized: r.agreement.authorized ? { id: r.agreement.authorized.id, disposition: r.agreement.authorized.disposition } : null } : null,
+    coverage: cov ? { label: cov.label, strict: cov.strict, structure: cov.strict && cov.structure ? cov.structure.complete : null, implementation: cov.strict && cov.implementation ? cov.implementation.scenarios : null } : null,
+    tickets: { total: r.tickets.length, by_status: byStatus, not_ready: notReady },
+    attempts: { total: r.attempts.length, running, current_failed: currentFailed },
+    candidate: r.candidate ? { notes: r.candidate.notes, candidate: r.candidate.candidate, evidence: r.candidate.evidence ? r.candidate.evidence.verdict : null } : null,
+    blockers: { total: r.blockers.length, categories: Object.keys(counts).map(code => ({ code, count: counts[code] })) },
+    next: r.next,
+    detail: {
+      command: `${RUNTIME} resume${r.change ? ` --change ${r.change.id}` : ''}`,
+      prd: r.references ? r.references.prd.path : null,
+      tickets: r.references ? r.references.tickets.map(t => t.file) : [],
+      omitted: r.tickets.length + r.attempts.length + Math.max(0, r.blockers.length - Object.keys(counts).length),
+    },
+  };
+}
+
+function renderBrief(b) {
+  const lines = [];
+  const short = s => (typeof s === 'string' ? s.slice(0, 12) : '—');
+  lines.push(`PINCER resume --brief · ${b.generated} · ${b.root}`);
+  if (!b.change) {
+    lines.push(`Selection  ${b.selection && b.selection.change ? b.selection.change : 'none'}${b.selection && b.selection.problem ? ` · ${b.selection.problem.code}: ${b.selection.problem.detail}` : ''}`);
+  } else {
+    const c = b.change, a = b.agreement;
+    lines.push(`Change     ${c.id} · ${c.prd} · base ${c.base.slice(0, 7)} · ${c.lifecycle}`);
+    lines.push(`Agreement  ${a.current ? short(a.current) : 'unavailable'} · ${a.verdict}${a.authorized ? ` · authorized ${a.authorized.id} (${a.authorized.disposition})` : ' · not authorized'}`);
+    if (b.coverage) lines.push(`Coverage   ${b.coverage.label}${b.coverage.strict ? ` · structure ${b.coverage.structure ? 'complete' : 'incomplete'} · implementation ${b.coverage.implementation.complete}/${b.coverage.implementation.total - b.coverage.implementation.dispositioned} scenarios` : ''}`);
+    const t = b.tickets;
+    lines.push(`Tickets    ${t.total} · ${t.by_status.done} done · ${t.by_status.in_progress} in progress · ${t.by_status.open} open · ${t.not_ready} not ready`);
+    lines.push(`Attempts   ${b.attempts.total}${b.attempts.running ? ` · ${b.attempts.running} running` : ''}${b.attempts.current_failed ? ` · ${b.attempts.current_failed} current not passed` : ''}`);
+    if (b.candidate) lines.push(`Candidate  ${b.candidate.notes === 'current' ? `current (${String(b.candidate.candidate).slice(0, 7)})` : b.candidate.notes}${b.candidate.evidence ? ` · evidence ${b.candidate.evidence}` : ''}`);
+  }
+  lines.push(`Blockers   ${b.blockers.total ? b.blockers.categories.map(x => `${x.code}${x.count > 1 ? ` ×${x.count}` : ''}`).join(' · ') : 'none'}`);
+  lines.push(`Next       ${b.next.action}: ${b.next.command}`);
+  lines.push(`Detail     ${b.detail.command}${b.detail.omitted ? ` (${b.detail.omitted} row(s) not shown)` : ''}${b.detail.prd ? ` · ${b.detail.prd}` : ''}`);
+  return `${lines.join('\n')}\n`;
+}
+
+module.exports = { SCHEMA, BRIEF, BRIEF_KIND, build, decide, render, brief, renderBrief };
