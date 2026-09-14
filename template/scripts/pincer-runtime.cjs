@@ -17,7 +17,7 @@
 //   node scripts/pincer-runtime.cjs change decide <id> --summary <text> [--id D-NN] | --resolve D-NN --reference <text> --excerpt <text>
 //   node scripts/pincer-runtime.cjs change activate|pause|resume|complete|reopen|cancel|supersede <id> [--reason <text>] [--note <text>] [--decision D-NN] [--with <id>]
 //   node scripts/pincer-runtime.cjs resume [--change <id>] [--json]
-//   node scripts/pincer-runtime.cjs coverage [--change <id>] [--json] · coverage adopt --preview|--apply --change <id> [--agreement <digest>]
+//   node scripts/pincer-runtime.cjs coverage [--change <id>] [--json] · coverage scaffold --change <id> [--json] · coverage adopt --preview|--apply --change <id> [--agreement <digest>]
 //   node scripts/pincer-runtime.cjs impact [--change <id>] [--from G-NN|A-NN] [--json]
 //
 // Exit codes: 0 ok · 1 failed/not ready/refused · 2 usage · 3 state busy ·
@@ -78,7 +78,7 @@ function usage(message) {
     '       pincer-runtime.cjs change activate|resume|complete <id> · change pause <id> --reason <text> [--note <text>] · change reopen <id> --reason <text>\n' +
     '       pincer-runtime.cjs change cancel <id> --decision D-NN --reason <text> · change supersede <id> --with <id> --decision D-NN\n' +
     '       pincer-runtime.cjs resume [--change <id>] [--json]   (the read-only report; `change resume` is the lifecycle operation)\n' +
-    '       pincer-runtime.cjs coverage [--change <id>] [--json] · coverage adopt --preview|--apply --change <id> [--agreement <digest>]\n' +
+    '       pincer-runtime.cjs coverage [--change <id>] [--json] · coverage scaffold --change <id> [--json] · coverage adopt --preview|--apply --change <id> [--agreement <digest>]\n' +
     '       pincer-runtime.cjs impact [--change <id>] [--from G-NN|A-NN] [--json]\n');
   process.exit(EXIT.USAGE);
 }
@@ -422,6 +422,22 @@ function cmdRegister(root, args) {
 // entry into strict coverage (docs/runtime-contracts.md, "Adoption and rollback").
 function cmdCoverage(root, args) {
   const [sub, ...rest] = args;
+  // coverage scaffold --change <id> [--json] — the read-only coverage draft
+  // (docs/runtime-contracts.md, "Coverage draft"). Writes nothing and launches nothing;
+  // the draft it prints is not a map and `coverage adopt` does not accept it.
+  if (sub === 'scaffold') {
+    const o = parseOptions(rest, { switches: ['--json'], valued: ['--change'] });
+    if (o.positional.length) usage(`unexpected argument ${o.positional[0]} (coverage scaffold takes --change <id> [--json])`);
+    if (!o.change) usage('coverage scaffold requires --change <id>');
+    const scaffold = require('./pincer-runtime/scaffold.cjs');
+    const resolved = changes.resolveSelected(root, { change: o.change });
+    if (resolved.code) fail('pincer', `${resolved.code}: ${resolved.problem}`, exitForCode(resolved.code));
+    const result = scaffold.build(root, resolved.record);
+    if (!result.ok) fail('pincer', `${result.code}: ${result.problems[0]}`, exitForCode(result.code));
+    if (o.json) io.out(`${JSON.stringify(result.draft, null, 2)}\n`);
+    else io.out(scaffold.render(result.draft));
+    process.exit(EXIT.OK);
+  }
   if (sub !== 'adopt') {
     // The read-only coverage report (docs/runtime-contracts.md, "Coverage and impact commands").
     const o = parseOptions(args, { switches: ['--json'], valued: ['--change'] });
