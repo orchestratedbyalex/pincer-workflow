@@ -334,7 +334,7 @@ const failedIds = result => result.checks.filter(c => c.result !== 'passed').map
 // --- The default path is offline, and the v6 edition is untouched -----------------------
 {
   // Nothing in the harness the suite drives can reach a model or a network.
-  for (const file of ['harness.cjs', 'briefs.cjs', 'schedule.cjs', 'effort.cjs', 'freeze.cjs', 'evaluator-kit.cjs']) {
+  for (const file of ['harness.cjs', 'briefs.cjs', 'schedule.cjs', 'effort.cjs', 'freeze.cjs', 'evaluator-kit.cjs', 'orchestrator.cjs']) {
     const source = fs.readFileSync(path.join(V7, file), 'utf8');
     for (const forbidden of ['node:http', 'node:https', 'node:net', 'fetch(', 'claude ']) {
       assert.ok(!source.includes(forbidden), `${file} does not use ${forbidden}`);

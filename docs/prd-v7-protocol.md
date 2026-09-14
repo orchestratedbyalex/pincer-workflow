@@ -77,7 +77,7 @@ A **cohort** is the set of runs sharing one frozen execution path. Its identity 
 `sha256` over, in this order:
 
 1. the protocol digest — this file;
-2. the harness digest — the named benchmark execution path (`briefs.cjs`, `schedule.cjs`, `harness.cjs`, `evaluator-kit.cjs` under `scripts/delivery-benchmark-v7/`), not every file that shares the directory;
+2. the harness digest — the named benchmark execution path (`briefs.cjs`, `schedule.cjs`, `harness.cjs`, `evaluator-kit.cjs`, `orchestrator.cjs` under `scripts/delivery-benchmark-v7/`), not every file that shares the directory;
 3. the brief digests — every file under `test/fixtures/delivery-benchmark-v7/briefs/<id>/`;
 4. the evaluator digests — the `evaluator/` subtree of each brief, recorded separately;
 5. the effort-collector digest;
@@ -310,7 +310,7 @@ tooling or product tickets.
 | Spending cap for live sessions | **outstanding** — no budget supplied | T-89, T-93, T-95 |
 | Wall-clock cap | **outstanding** | T-89, T-93, T-95 |
 | Two non-implementing reviewers | **outstanding** — none identified | T-95 |
-| Codex CLI availability and version | **outstanding** — to be verified at execution | T-93 |
+| Codex CLI availability and version | **pinned** — `codex-cli 0.153.4`, authenticated, verified on the supported host | T-93 |
 | Browser tooling for UI evaluation | **outstanding** — absence is `unavailable`, never acceptance | T-94, T-95 |
 
 The 72-run schedule is substantive spending and **must be costed before execution**.

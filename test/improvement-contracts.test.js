@@ -71,11 +71,17 @@ const freeze = require(path.join(repo, 'scripts/delivery-benchmark-v7/freeze.cjs
   // open, not that they are settled: settling them is the user's decision and the live
   // tickets stay open until it is made.
   const prereq = protocol.slice(protocol.indexOf('## 9.'), protocol.indexOf('## 10.'));
-  for (const item of ['Three pilot projects', 'Project access decision', 'Spending cap', 'Wall-clock cap', 'Two non-implementing reviewers', 'Codex CLI availability', 'Browser tooling']) {
+  for (const item of ['Three pilot projects', 'Project access decision', 'Spending cap', 'Wall-clock cap', 'Two non-implementing reviewers', 'Browser tooling']) {
     const row = prereq.split('\n').find(l => l.includes(item));
     assert.ok(row, `the protocol lists ${item} as a prerequisite`);
     assert.match(row, /\*\*outstanding\*\*/, `${item} is recorded as outstanding, not settled`);
   }
+  // The one prerequisite that was settleable without a person or a budget: T-98 verified
+  // the Codex CLI on the supported host, so its row names a version instead of deferring.
+  const codex = prereq.split('\n').find(l => l.includes('Codex CLI availability'));
+  assert.ok(codex, 'the protocol still carries the Codex CLI row');
+  assert.match(codex, /codex-cli \d+\.\d+\.\d+/, 'and it names the pinned version rather than deferring it');
+  assert.doesNotMatch(codex, /\*\*outstanding\*\*/, 'a verified prerequisite is not still outstanding');
   assert.match(prereq, /must be costed before execution/, 'the schedule must be costed before it runs');
   assert.match(prereq, /A smaller study requires an\s*explicit recorded scope revision/, 'a smaller study needs a recorded revision');
 

@@ -30,6 +30,7 @@ unfinished. Nothing in this packet should be read as evidence that they happened
 | T-95 | The comparison record: paired pilots, timed independent reviews, predeclared targets | `docs/prd-v7-comparison.md`, `docs/prd-v7-artifacts/comparison/`, `test/improvement-trial-records.test.js` |
 | T-96 | This packet, the replay cases and the integration gates | `docs/prd-v7-review-packet.md`, `docs/prd-v7-artifacts/replay.sh`, `test/improvement-review-packet.test.js` |
 | T-97 | Fix found while measuring: `REVISION_CHANGED` advised a command changes mode refuses | `template/scripts/pincer-runtime/readiness.cjs`, regression in `test/change-lifecycle.test.js` |
+| T-98 | Fix found before the first live run: the frozen driver placed and capped nothing, and the edition had no run loop | `scripts/delivery-benchmark-v7/live-driver.sh`, `scripts/delivery-benchmark-v7/orchestrator.cjs`, `test/benchmark-orchestrator.test.js` |
 
 ## 2. The two shipped product changes
 
@@ -133,7 +134,7 @@ and `test/fixtures/delivery-benchmark-v7/`; nothing under the v6 paths was edite
 Two historical records were touched, both mechanically and both recorded here.
 
 `docs/prd-v5-review-packet.md`'s full-suite row names the `npm test` chain and its
-validator asserts the count matches `package.json`. Eleven new suites made it stale, so
+validator asserts the count matches `package.json`. Twelve new suites made it stale, so
 the row was updated the way PRD v6 updated it before: the count and list are current,
 and the row says explicitly that the v6 and v7 suites were added later and **this v5
 record makes no claim about either set**. No v5 result, disposition or artifact changed.
