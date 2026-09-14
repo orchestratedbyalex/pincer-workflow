@@ -214,3 +214,39 @@ Files: `template/scripts/pincer-runtime/{requirements,coverage,dispositions,adop
 Outcome: 50 suites green locally through the pinned v0.5.0 kit; both generators in parity;
 CI not run on the branch and Node 18 unverified anywhere; nothing evaluated, merged or released.
 New pages: [[strict-coverage]], [[delivery-benchmark]], [[coverage-is-authored-and-bound]].
+
+## [2026-09-14] end | 0.6.0 released; wiki distilled from the v5+v6 evaluation, and the release found split across refs
+- What: applied the wiki update parked at the end of the evaluation session, now that its
+  precondition — the merge — is met: PR #1 landed `feat/prd-v6` on `main` at 06:51, the
+  version bump at 06:53, `npm publish` at 06:54. Rewrote [[briefing]] and
+  [[open-threads]]; updated [[runtime]] (Node floor, changes-mode status schema, the
+  T-79..T-86 fixes), [[distribution-channels]] (version history, CI matrix, the bump
+  gotcha), [[evidence-validator]] (schema 3 false `ok`s, consistency vs execution),
+  [[delivery-benchmark]] (the T-82 corrections), [[strict-coverage]] (T-84, T-83),
+  [[ticket-state-machine]], [[cli-installer]], [[template-kit]], [[candidate-evidence]],
+  [[single-source-template]], [[requirements-through-delivery]], [[revocable-receipts]],
+  [[release-audit-read-only]], [[explicit-change-lifecycle]] and [[index]]. New page:
+  [[one-next-action-precedence]].
+- Why: CLAUDE.md asks for a wiki `end` at task end, and the draft had been held back
+  because a wiki commit after the candidate makes status read `stale`. The merge released
+  that hold — and the version bump had already made status stale regardless.
+- Method: rather than trusting the parked draft, every wiki page was audited against the
+  repo at HEAD by 11 parallel agents, and each reported staleness was put to an
+  adversarial verifier whose default verdict was "refuted". 45 claims confirmed stale,
+  22 refuted — including three dead commit SHAs that the T-77 history rewrite renamed
+  (`5b0358b`→`e07faca`, `307792d`→`bdad2e0`), one of them in text written earlier in this
+  same session.
+- Found by checking the state instead of assuming it: (1) `npm version minor` ran without
+  `--no-git-tag-version` and without rebuilding, so `plugin/.claude-plugin/plugin.json`
+  stayed at 0.5.0 and `test/distribution.test.js` was red at HEAD — fixed by re-running
+  `scripts/build-plugin.sh`; (2) PR #1 merged the branch at the *candidate* `ce98abd`,
+  before the evaluate commit was pushed, so `main` carries v5+v6 code under PRD v4's
+  NOTES.md and the evaluation record is local-only; (3) the bump commit and tag `v0.6.0`
+  are local-only, so npm has 0.6.0 but no public ref does. The published tarball was
+  diffed against `git archive origin/main`: `bin/`, `template/`, README and LICENSE
+  byte-identical, `version` the only difference.
+- Outcome: full `npm test` green after the plugin rebuild — 51 suites, `NPM_TEST_EXIT=0`,
+  captured from the run and not through a pipe. The evaluated candidate `ce98abd` and its
+  record are unchanged; `status` reads `stale: candidate changed after evaluation:
+  package.json` and will until the next candidate. Remaining and all the user's: get
+  `350823e`, `566b553` and this commit onto `main`, and push the tag.

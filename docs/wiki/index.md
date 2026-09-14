@@ -1,6 +1,7 @@
 # Wiki index
 
 ## Decisions
+- [[one-next-action-precedence]] — rules 2 and 3 of the next-action precedence in one module; two views of the same state drift, so delete one (T-80, 2026-09-13)
 - [[coverage-is-authored-and-bound]] — one authored map, the PRD prose as the inventory, both inside the agreement digest; structure computed, adequacy judged (PRD v6)
 - [[explicit-change-lifecycle]] — PRD v5 (2026-09-12): retained change records, explicit per-worktree selection, agreement digests with user/delegated authorization, journaled lifecycle transitions, change-scoped evidence, `resume`
 - [[runtime-owned-verification]] — PRD v4 (2026-09-11): a Node runtime records source-bound attempts, exports evidence schema 2, migrates explicitly; done consumes the attempt
@@ -25,10 +26,14 @@
 - [[evidence-validator]] — pincer-evidence.cjs: schema 1 fields, failure classes, CLI, callers, packaging
 - [[github-pages-site]] — docs/index.html served by GitHub Pages from main:/docs; the 12-sheet walkthrough, provenance, sync rules
 
-## Built, awaiting evaluation
+## Evaluated and released as 0.6.0
 
-- [PRD v6](../../.prd/prd-v6.md) — complete requirement coverage, structural change impact and the independent delivery benchmark; built on `feat/prd-v6` (T-66..T-78), reviewed in [the v6 packet](../prd-v6-review-packet.md) and [the v6 trial](../trial-prd-v6.md)
-- [PRD v5](../../.prd/prd-v5.md) — change records, authorization and resume; built on `feat/prd-v5` (T-47..T-65), reviewed in [the v5 packet](../prd-v5-review-packet.md)
+Both PRDs were evaluated as one change on one candidate, `ce98abd` — v5 was never
+released and v6 builds directly on it. The record is `NOTES.md` plus
+`.prd/evidence/prd-v6/ce98abd…/`, which is **not yet on main** ([[open-threads]]).
+
+- [PRD v6](../../.prd/prd-v6.md) — complete requirement coverage, structural change impact and the independent delivery benchmark; T-66..T-78 plus fixes T-79..T-86, reviewed in [the v6 packet](../prd-v6-review-packet.md) and [the v6 trial](../trial-prd-v6.md)
+- [PRD v5](../../.prd/prd-v5.md) — change records, authorization and resume; T-47..T-65, reviewed in [the v5 packet](../prd-v5-review-packet.md); its dispositions are in NOTES.md rather than a manifest of its own
 
 ## Meta
 

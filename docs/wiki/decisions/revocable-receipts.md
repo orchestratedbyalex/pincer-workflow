@@ -49,6 +49,6 @@ would re-stamp). Then the committed evaluation still describes the tree; the age
 names the `git checkout -- tickets/…` command for the user and runs no `verify`,
 refreshes no receipt and commits nothing. Without it, the interactive trial showed a
 hand repair turning into a receipt-refresh commit that forced a second full
-evaluation. Observed live once (eligible case, Sonnet `-p`). Open: the wording does
-not say in which environment "run directly" counts; a Sonnet session bypassed a
-broken `PATH` and applied the exception ([[open-threads]]).
+evaluation. Observed live once (eligible case, Sonnet `-p`). The environment ambiguity — a Sonnet
+session bypassed a broken `PATH` and applied the exception — was **closed by T-29**
+(`96ca033`): the code playbook now specifies the environment the block must pass in.

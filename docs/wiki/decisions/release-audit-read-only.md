@@ -3,9 +3,12 @@
 **Decided 2026-09-06** (M0 tickets T-08, T-09). The release step audits, it
 never mutates.
 
-- `/pincer-release` reads `docs/release-checklist.md` (17 general items:
-  artifacts, receipts, notes currency, scoped commits, test gate, visual
-  evidence for UI, secrets, judgment notes). It runs the project's test and
+- `/pincer-release` reads `docs/release-checklist.md` (**21 items** as of PRD v6:
+  7 under "Change identity and state", 4 under "Scope and evidence", 5 under
+  "Review", 5 under "Handover and verdict" — artifacts, receipts, notes currency,
+  scoped commits, test gate, visual evidence for UI, secrets, judgment notes. It grew
+  past the original 17 with T-39, T-59 and the coverage work; count it, do not quote
+  a number). It runs the project's test and
   build commands **directly** and never calls `pincer-ticket.sh`. Any failure
   blocks PASS; judgment calls are named before the verdict.
 - The old checklist is split in two: `docs/dry-run-checklist.md` is the

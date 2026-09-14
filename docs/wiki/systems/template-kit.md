@@ -20,10 +20,13 @@ else is generated from ([[single-source-template]]).
 - `.claude/hooks/block-dangerous.sh` + `settings.json` — PreToolUse guardrail
   blocking absolute-path deletes, force-pushes, `curl | sh`, chmod 777, hard
   resets to origin; plus `.env` read-deny rules.
-- `.codex/`, `.github/` — GENERATED adapters (never hand-edit).
+- `.agents/skills/`, `.github/prompts/` — GENERATED adapters (never hand-edit),
+  written by `template/scripts/sync-prompts.sh`. `.codex/` is **hand-maintained**
+  (its README documents the sandbox/approval policy); the generator never touches it.
 - `scripts/sync-prompts.sh` — regenerates them; lives inside the template so
   installed repos can re-sync after editing their local playbooks.
-- `docs/dry-run-checklist.md` — the workflow's own test, audited by
+- `docs/release-checklist.md` — the 21 items `/pincer-release` audits.
+- `docs/dry-run-checklist.md` — the workflow's own test, NOT audited by
   /pincer-release.
 
 ## Invariants
