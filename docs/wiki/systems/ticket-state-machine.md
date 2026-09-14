@@ -7,7 +7,11 @@ counting the moment the check would fail again. Decisions: [[mechanical-done]],
 
 ## Files (all in template/, generated into plugin/ by build-plugin.sh)
 
-- `scripts/pincer-ticket-lib.sh` — shared awk-based helpers, sourced by both
+- `scripts/pincer-ticket-lib.sh` — **deleted by T-36** (`203a71a`) when PRD v4 moved
+  the lifecycle onto the Node runtime; `bin/pincer.js` now lists it in `OBSOLETE`.
+  Everything below describes what it did and where that logic now lives
+  (`pincer-runtime/{parse,lifecycle,status,readiness}.cjs` — see [[runtime]]).
+  It was the shared awk-based helpers, sourced by both
   scripts (installed in `PLATFORM_ROOTS.common`). Frontmatter get/set,
   ticket validation (`status` ∈ open|in_progress|done, `size` ∈ S|M|L, `prd:`
   path exists, acceptance checkbox syntax), `latest_prd`, `ticket_prd`,
@@ -29,8 +33,13 @@ counting the moment the check would fail again. Decisions: [[mechanical-done]],
     recorded as `interrupted`, never as passed), re-hashes the block after the
     run, then writes `last_check: … passed <hash>` plus `verified: <ts> <hash>`.
     A failure writes `last_check: … failed <hash>` and **deletes `verified:`**.
-  - `done T-NN`: re-runs `verify` unconditionally, then requires zero `- [ ]`
-    under Acceptance Criteria; sets `done`, stamps `finished:`. Running `done`
+  - `done T-NN` (**legacy mode only** — migrated and changes modes consume the
+    current passing attempt and never re-run, see [[runtime-owned-verification]]):
+    re-runs the check, then requires zero `- [ ]`
+    under Acceptance Criteria; sets `done`, stamps `finished:`. Not unconditional
+    and not in that order — `doneLegacy` refuses before running anything when there
+    is no `verified:` receipt or when the receipt hash does not match the current
+    check block. Running `done`
     on an already-done ticket is the re-check: a red run revokes the receipt
     while `status`/`finished` stay as history.
 - `scripts/pincer-status.sh` — read-only. Latest PRD + validation, tickets of
@@ -41,16 +50,21 @@ counting the moment the check would fail again. Decisions: [[mechanical-done]],
   `PINCER_BUILD_BUDGET_MIN` is set (no default budget), `Notes … current|stale:
   <reason>`, `Evidence <manifest> · ok|<reason>` when NOTES.md names one, and a
   `Next` line: invalid input → repair; draft PRD → narrow; failed/stale receipt
-  → code (re-verify); notes stale → evaluate; else release. Exits 1 on invalid
-  input.
-- `.claude/hooks/hook-policy.cjs` — one Node (≥18) module behind both hooks:
+  → code (re-verify); notes stale → evaluate; else release. **Exits 4 on invalid
+  input** (0 when inspection succeeded); `ready` is the one that exits 1, for
+  non-ready work.
+- `.claude/hooks/hook-policy.cjs` — one Node module behind both hooks (the kit's
+  floor is Node 22+; README says so for the plugin's structured hook parser):
   a shell lexer (`lexShell`, `commandParts` strips env/sudo/command prefixes,
   `gitSubcommand`), `dangerousReason` for block-dangerous (force push in any
   arg order, `reset --hard origin/…`, `rm -rf` on absolute/`~`/`$HOME` paths,
   `chmod 777|a+rwx`, `curl|sh`, `sh -c` nesting, `--dangerously-skip-permissions`),
   and the ticket guard (`stateFields`/`sameState`: Edit/Write/MultiEdit may
   not change `status|started|last_check|verified|finished`; Bash may not write
-  to ticket files unless it is an exact `pincer-ticket.sh` call). The old
+  to ticket files unless it is an exact `pincer-ticket.sh` **or
+  `pincer-runtime.cjs`** call — `isExactPincerCall` allows the verbs start, verify,
+  done, bind, register, migrate, recover, check and evidence, which is why T-81's
+  redirection hole mattered, see below). The old
   jq → python3 → grep fallback is gone; `block-dangerous.sh` and
   `ticket-guard.sh` just exec the module with `node`.
 - Tickets carry `prd: .prd/prd-vN.md` and `size:`; NOTES.md frontmatter
@@ -75,8 +89,9 @@ counting the moment the check would fail again. Decisions: [[mechanical-done]],
 - `test/behavioral-verification.test.js` (T-12) is the R-02 acceptance set:
   three controlled faults keep every identifier and must fail a behavioral
   check while an identifier grep still passes; each in a fresh fixture.
-- Portable across macOS/Linux as before (`shasum` fallback, two `date`
-  forms, temp-file+mv). Repo root = `$CLAUDE_PROJECT_DIR` → git → pwd.
+- Portability is now the Node runtime's problem: the `shasum` fallback and the two
+  `date` invocation forms went with the Bash library in T-36 (neither appears under
+  `template/` any more). Repo root = `$CLAUDE_PROJECT_DIR` → git → pwd.
 - Tests (`npm test`): `test/validation`, `verification`,
   `behavioral-verification`, `evidence` (validator failure classes),
   `candidate` (notes_current change classes, read-only audit), `recovery`,
@@ -85,7 +100,20 @@ counting the moment the check would fail again. Decisions: [[mechanical-done]],
   authorization block), `distribution` (generated parity + packed-tarball
   installs), plus the installer suites. `test/helpers.js` has `writeEvidence`
   and `writeNotes` fixtures. CI matrix in `.github/workflows/ci.yml`:
-  ubuntu/macos × Node 18/22.
+  ubuntu-latest/macos-latest × Node 22/24.
+- **The guard ignored redirection until T-81** (2026-09-13). `isExactPincerCall()`
+  decided a single runtime command with no separator was trusted and short-circuited
+  the shell-mutation check *without looking at the command's redirection operators*,
+  so `node scripts/pincer-runtime.cjs <allowlisted verb> > <protected path>` was
+  allowed — `evidence export > tickets/T-01.md` and `register >
+  .prd/changes/<id>.json` among them. PRD v5 widened the hole twice by allowlisting
+  `change` and `resume`, the two read-only reporters an agent naturally redirects into
+  a file. Any future allowlist addition has to be considered together with what a
+  redirect of it could overwrite.
+- Guard false positive to know about: a compound
+  `git add <protected path> && git commit -m "$(cat <<'EOF' … <email> EOF)"` is refused
+  because the lexer reads the `<…>` inside the heredoc as a redirect next to a
+  protected path. Split the add and the commit.
 
 Related: [[template-kit]], [[cli-installer]], [[distribution-channels]],
 [[release-audit-read-only]].

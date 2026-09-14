@@ -19,8 +19,10 @@ modules and [[runtime-owned-verification]] for the PRD v4 base it extends.
   re-verified on load. Ticks, ticket state, attempts and source edits never change it;
   editing the PRD or a ticket's text does.
 - **Authorization is the user's actual instruction against a digest** (`user`:
-  reference + excerpt; `delegated`: `--basis A-NN` + explanation, for check
-  improvements only). Verdict order `DECISION_REQUIRED → AUTHORIZATION_REQUIRED →
+  reference + excerpt; `delegated`: `--basis A-NN` naming an earlier authorization
+  whose chain ends in a `user` one, plus `--explanation`). The runtime imposes no
+  "check improvements only" restriction — the contract defines `delegated` generally,
+  and what it may cover is the reviewer's judgment, not a gate. Verdict order `DECISION_REQUIRED → AUTHORIZATION_REQUIRED →
   AGREEMENT_CHANGED → current`. v0.5.0 free text is imported as unvalidated
   `legacy.authorization_text`. A general "continue" instruction never authorizes new
   scope; an out-of-session agreement change is raised as a decision (T-62).

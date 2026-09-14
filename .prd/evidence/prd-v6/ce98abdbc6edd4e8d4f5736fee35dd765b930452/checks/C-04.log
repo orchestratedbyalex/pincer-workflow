@@ -1,0 +1,58 @@
+=== C-04 replay v5 ===
+pincer: note: registration grants no authorization; record the user's instruction with `change authorize` and select the change with `change select`
+pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization
+pincer: note: this records local provenance of the user's instruction, not authenticated identity; execution still needs the change selected and active
+pincer: note: the handoff note is authored text; status and resume show it but never derive readiness from it
+pincer: note: registration grants no authorization; record the user's instruction with `change authorize` and select the change with `change select`
+pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization
+pincer: note: this records local provenance of the user's instruction, not authenticated identity; execution still needs the change selected and active
+pincer: note: completed means implementation complete and ready for evaluation, not evaluated or released; commit the record before choosing the candidate
+pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization
+ok aba
+pincer: note: registration grants no authorization; record the user's instruction with `change authorize` and select the change with `change select`
+pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization
+pincer: note: this records local provenance of the user's instruction, not authenticated identity; execution still needs the change selected and active
+pincer: note: execution of prd-v1 is blocked (DECISION_REQUIRED) until the user's decision is recorded with: node scripts/pincer-runtime.cjs change decide prd-v1 --resolve D-01 --reference <text> --excerpt <text>
+pincer: note: the agreement is now 4d4f22bedabc and needs authorization: node scripts/pincer-runtime.cjs change authorize prd-v1 --agreement 4d4f22bedabc1f60b7e23729699b80eeaef3ea7d4cc37cfb7caf7e6166558d54 --decision D-01 …
+pincer: note: this records local provenance of the user's instruction, not authenticated identity; execution still needs the change selected and active
+ok revision
+pincer: note: registration grants no authorization; record the user's instruction with `change authorize` and select the change with `change select`
+pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization
+pincer: note: this records local provenance of the user's instruction, not authenticated identity; execution still needs the change selected and active
+pincer: note: this records local provenance of a delegation judgment, not authenticated identity; execution still needs the change selected and active
+ok delegated
+pincer: note: registration grants no authorization; record the user's instruction with `change authorize` and select the change with `change select`
+pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization
+pincer: note: this records local provenance of the user's instruction, not authenticated identity; execution still needs the change selected and active
+pincer: note: registration grants no authorization; record the user's instruction with `change authorize` and select the change with `change select`
+pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization
+pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization
+ok wrong-change
+pincer: note: registration grants no authorization; record the user's instruction with `change authorize` and select the change with `change select`
+pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization
+pincer: note: this records local provenance of the user's instruction, not authenticated identity; execution still needs the change selected and active
+pincer: note: completed means implementation complete and ready for evaluation, not evaluated or released; commit the record before choosing the candidate
+pincer: note: registration grants no authorization; record the user's instruction with `change authorize` and select the change with `change select`
+pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization
+pincer: note: this records local provenance of the user's instruction, not authenticated identity; execution still needs the change selected and active
+pincer: note: completed means implementation complete and ready for evaluation, not evaluated or released; commit the record before choosing the candidate
+pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization
+ok shared-c01
+pincer: note: registration grants no authorization; record the user's instruction with `change authorize` and select the change with `change select`
+pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization
+pincer: note: this records local provenance of the user's instruction, not authenticated identity; execution still needs the change selected and active
+docs/prd-v5-artifacts/replay.sh: line 153: 59768 Killed: 9               node "$op" "$PWD" pause prd-v1 --reason "handoff" --crash staged > /dev/null 2>&1
+pincer: reclaiming stale lock left by pid 59768 (change pause prd-v1, started 2026-09-13T20:39:33Z); the process is no longer running
+docs/prd-v5-artifacts/replay.sh: line 153: 60105 Killed: 9               node "$op" "$PWD" pause prd-v1 --reason "handoff" --crash rename:0 > /dev/null 2>&1
+pincer: reclaiming stale lock left by pid 60105 (change pause prd-v1, started 2026-09-13T20:39:33Z); the process is no longer running
+ok crash
+pincer: note: registration grants no authorization; record the user's instruction with `change authorize` and select the change with `change select`
+pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization
+pincer: note: this records local provenance of the user's instruction, not authenticated identity; execution still needs the change selected and active
+pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization
+ok no-selection
+pincer: note: registration grants no authorization; record the user's instruction with `change authorize` and select the change with `change select`
+pincer: note: selection is metadata only — no checkout, stash, reset or commit was made, and selecting grants no authorization
+pincer: note: this records local provenance of the user's instruction, not authenticated identity; execution still needs the change selected and active
+ok conflict
+exit=0

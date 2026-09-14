@@ -15,8 +15,18 @@ embeds the version in plugin.json), commit, `git tag -a vX.Y.Z`, push
 `--follow-tags`, publish.
 Release flow: edit template → run both generators → bump → rebuild plugin →
 commit + tag → push → `npm publish` (see gotchas above). Versions: 0.1.0
-(2026-09-01), 0.2.0 (2026-09-02, ticket state machine), 0.2.1 (2026-09-02, Codex install hint — wrong, Codex had already dropped custom prompts), 0.2.2 (2026-09-02, Codex adapter re-done as `.agents/skills/` skills), 0.2.3 (published 2026-09-04, canonical `.claude/` kit ships on all platforms; playbook says AGENTS.md not CLAUDE.md). Users update with
+(2026-09-01), 0.2.0 (2026-09-02, ticket state machine), 0.2.1 (2026-09-02, Codex install hint — wrong, Codex had already dropped custom prompts), 0.2.2 (2026-09-02, Codex adapter re-done as `.agents/skills/` skills), 0.2.3 (2026-09-04, canonical `.claude/` kit ships on all platforms; playbook says AGENTS.md not CLAUDE.md), 0.3.0 (2026-09-08), 0.4.0 (2026-09-09, PRD v2/v3), 0.4.1 (2026-09-11), 0.5.0 (2026-09-11, PRD v4 runtime), 0.6.0 (2026-09-14, PRD v5+v6 — `engines` raised to `>=22`, which is why the level is minor). Users update with
 `npx pincer-workflow@latest update` ([[cli-installer]], [[never-clobber-updates]]).
+
+**`npm version <level>` on its own breaks the build.** It bumps `package.json` and
+nothing else, and `test/distribution.test.js` asserts
+`plugin/.claude-plugin/plugin.json` carries the same version — so the suite goes red
+and the marketplace channel advertises the previous version while the kit files are
+the new one. This happened at 0.6.0: the bump ran plain, `plugin.json` stayed at
+0.5.0, and the break was found only when the suite was re-run afterwards. `plugin/`
+is not in `files`, so npm itself shipped correctly; the damage is confined to the
+plugin channel and the gate. Always `--no-git-tag-version`, rebuild, then commit and
+tag by hand.
 
 ## 2. Claude Code plugin (Claude-native)
 
@@ -53,11 +63,14 @@ they say the kit "does not currently install a Codex hook adapter" (Codex
 gained hook support in 2026; porting `hook-policy.cjs` is an open thread).
 Copilot: tool-approval settings. Everywhere: /pincer-release audits git
 artifacts after the fact — platform-independent by design
-([[release-audit-read-only]]). Hooks require Node ≥18 (`hook-policy.cjs`).
+([[release-audit-read-only]]). Hooks require Node (`hook-policy.cjs`); the package floor is `>=22`.
 
 ## CI (M0, 2026-09-06)
 
-`.github/workflows/ci.yml` runs `npm test` on ubuntu and macos × Node 18 and
-22. `test/distribution.test.js` is the generated-parity gate: it catches a
-`template/` edit whose adapters or plugin were not regenerated, which the old
-smoke test never did.
+`.github/workflows/ci.yml` runs `npm test` on ubuntu-latest and macos-latest ×
+Node 22 and 24 (`fetch-depth: 0` — the review-packet suites need every cited ticket
+commit reachable, which a shallow clone has none of). Node 18 and 20 were dropped
+with the `engines: >=22` raise; they are end of life, not untested.
+`test/distribution.test.js` is the generated-parity gate: it catches a
+`template/` edit whose adapters or plugin were not regenerated — and a version bump
+that did not rebuild `plugin/` — which the old smoke test never did.

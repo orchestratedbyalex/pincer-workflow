@@ -1,7 +1,9 @@
 # runtime — template/scripts/pincer-runtime.cjs and pincer-runtime/
 
 The Node runtime introduced by PRD v4 (2026-09-11, T-29..T-43, branch `feat/prd-v4`).
-Dependency-free CommonJS, Node ≥18, the only writer of ticket lifecycle state, of
+Dependency-free CommonJS, Node ≥22 (`engines` raised in `e07faca`; 18 and 20 are end of
+life, and the raise did not fix the truncation it was credited with — T-79), the only
+writer of ticket lifecycle state, of
 attempts under `.pincer/runtime/`, of change bindings under `.prd/changes/` and of
 exported candidate evidence. `pincer-ticket.sh` and `pincer-status.sh` are thin
 wrappers that `exec node …/pincer-runtime.cjs "$@"`; `pincer-ticket-lib.sh` is gone.
@@ -97,7 +99,9 @@ Decision: [[runtime-owned-verification]]. Extends [[ticket-state-machine]],
   digests across layouts and the plugin and exercises the installed copies.
   `test/fixtures/`: `local-service.cjs`, `hold-lock.cjs`, `grandchild.sh`.
 - The repo itself is NOT migrated (PRD v4 §9 dogfooding); its own tickets used the
-  pinned v0.4.1 kit from `1cb5ab4` in the session scratchpad.
+  pinned released **v0.5.0** kit (tag `v0.5.0`) in the session scratchpad. v0.4.1 from
+  `1cb5ab4` was the rule while PRD v4 was being built; PRD v5 and v6 both moved it to
+  v0.5.0 and both forbid migrating this repository mid-implementation.
 
 ## PRD v5 additions (feat/prd-v5, 2026-09-11/12, T-47..T-65)
 
@@ -145,7 +149,8 @@ records" … "Worktrees", pinned by `test/change-contracts.test.js`.
 - Attempts: schema 2 in changes mode (`context.agreement`); candidate keys
   `candidate:<change>:<sha>:<C-NN>`; schema 1 records → `HISTORICAL_EVIDENCE`.
 - `status.cjs` was split into `gather` + `gatherBody(ctx)` + `gatherChanges`;
-  changes-mode JSON is schema 2 (`selection`, `changes`, `change.lifecycle/agreement/
+  changes-mode JSON is **schema 3** (`gather()` sets it whenever the mode is changes)
+  (`selection`, `changes`, `change.lifecycle/agreement/
   view`, `candidate.locator/evaluation`).
 - Test fixtures: `test/fixtures/txn-writer.cjs`, `change-op.cjs` (crash/hold seams via
   `hooks`), `test/fixtures/prd-v5/` (released v0.5.0 records).
@@ -182,3 +187,55 @@ records" … "Worktrees", pinned by `test/change-contracts.test.js`.
   is raised with `change decide` and the agent stops; a generic "continue" never
   authorizes new scope. Residual: Sonnet still recorded an A-02 from the generic
   instruction before raising the decision (runtime blocked on the open decision).
+
+## Evaluation fixes (feat/prd-v6, 2026-09-13, T-79..T-86)
+
+Eight tickets closing the defects the v5+v6 evaluation confirmed. They are runtime
+behaviour, not v6 features — [[strict-coverage]] covers what v6 added.
+
+- `io.cjs` (T-79) — **every CLI write goes through `io.out`/`io.err`, which write the
+  file descriptor synchronously.** `process.stdout` is asynchronous when it is a pipe
+  and the CLI uses `process.exit()` as its return statement, so before this any report
+  larger than one pipe buffer was truncated at exactly 65,536 bytes and still exited 0
+  with an empty stderr — `snapshot --json` is 237 KB here and arrived as 64 KB of
+  invalid JSON. Identical on Node 18, 20, 22 and 24, so the `engines: >=22` raise in
+  `e07faca` did not fix it and the contract sentence that commit added is withdrawn.
+  `EAGAIN`/`EINTR` retry; `EPIPE`/`EBADF` return silently so `pincer status | head -3`
+  and `… 1>&-` stay quiet and keep their own exit code. `test/runtime-output.test.js`
+  asserts nothing outside `io.cjs` writes to a standard stream.
+  **Do not "fix" an exit path by turning `process.exit(N)` into `process.exitCode = N`:**
+  the exits are the CLI's return statements and the code below each one is the next
+  branch of the same function, several of which write.
+- `routing.cjs` (T-80) — rules 2 and 3 of the next-action precedence in one module;
+  any new report that renders a next action must consume it. See
+  [[one-next-action-precedence]].
+- Ticket guard (T-81) — `isExactPincerCall()` short-circuited the shell-mutation check
+  without looking at redirection operators, so
+  `node scripts/pincer-runtime.cjs <allowlisted verb> > <protected path>` was allowed.
+  v5 widened it by allowlisting `change` and `resume` — the two read-only reporters an
+  agent naturally redirects into a file. See [[ticket-state-machine]].
+- `transaction` guard in migrated mode (T-85) — `identity.loadBinding` now consults
+  `transaction.pending` and `runner.runAttempt` calls `transaction.recoverPending`
+  before taking the lock. Before this, a killed `migrate --apply` left execution
+  unguarded and the `recover` that `status` itself recommended destroyed everything
+  done since, without warning. Changes mode always had the guard; migrated mode is the
+  mode `migrate --apply` runs in, so it was the only mode that could lose work.
+- Schema 3 validation (T-83) — three false `ok`s closed in the independent validator:
+  a scenario whose linked check is absent from the map snapshot was vacuously
+  `delivered`; an unreadable PRD blob was reported "not available in this repository"
+  (false when the commit is present) and took the reconciliation down with it; a
+  deferred/removed row's `authorization` was shape-checked but never resolved in the
+  candidate's committed change record. See [[evidence-validator]].
+- `parse.cjs` scenario continuation (T-84) — a blank line inside a scenario list item
+  ended its continuation, so later paragraphs were attributed to the parent
+  requirement. Inverting such a paragraph left the scenario digest unchanged, and
+  `impact` then reported the scenario and its linked tickets and checks as unaffected.
+- Packet validators (T-86) — each packet suite had the check the other had dropped:
+  the v5 ticket-commit loop asserted no minimum match count and never tied a commit to
+  its ticket (rewriting all nineteen citations to the base commit still passed), and
+  the v6 suite asserted a total citation count across all thirty scenario rows rather
+  than one per row (so a scenario could cite no suite at all).
+- Trial record (T-82) — six statements the 42 saved `record.json` files do not support
+  were corrected, including the escaped-regression claim, the undisclosed ambient agent
+  configuration both arms ran under, and two runs whose recorded minutes exceed the
+  tool's own session duration. See [[delivery-benchmark]].

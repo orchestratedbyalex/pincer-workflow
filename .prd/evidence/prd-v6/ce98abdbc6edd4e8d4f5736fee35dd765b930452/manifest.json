@@ -1,0 +1,357 @@
+{
+  "schema": 1,
+  "prd": ".prd/prd-v6.md",
+  "base": "9bcf8df4e7fbc46f298dd9cb11f1e806388d2967",
+  "candidate": "ce98abdbc6edd4e8d4f5736fee35dd765b930452",
+  "created": "2026-09-13T21:41:29Z",
+  "environment": {
+    "os": "macOS 26.6.2 (darwin 25.6.0)",
+    "node": "v22.23.1 (suites also run on v24.21.0; CI covers 22 and 24 on ubuntu and macOS)",
+    "tools": [
+      "npm 11.19.0",
+      "git 2.50.1",
+      "GitHub Actions (CI matrix)",
+      "ten review subagents over the combined diff plus two adversarial verifiers per finding"
+    ],
+    "limitations": [
+      "npm audit cannot run: no dependencies and no lockfile (C-10 unverified, not required)",
+      "no UI in this repository; visual review is not applicable",
+      "this repository is deliberately not migrated (PRD v5 section 9, PRD v6 section 3), so its own evidence is an authored schema 1 manifest written with the pinned released v0.5.0 kit; schema 2 and schema 3 evidence are demonstrated in fixtures and the replay cases",
+      "live observation covers Claude Code print mode with Sonnet on macOS only; interactive mode, Codex, Copilot, the plugin install and Windows are untested live",
+      "no live trial adopted strict coverage: the benchmark briefs are single-change tasks and adoption is opt-in, so the strict path is covered by the suites and the replay cases, not by a live session",
+      "the stale-lock reclaim window in state.cjs was reported by review and could not be reproduced (20x8 and 25x32 concurrent writers, all clean); it is carried as an open thread, not as a verified defect",
+      "the escaped-regression measure of the delivery benchmark is the candidate own npm test for five of six briefs; docs/delivery-benchmark.md describes it more broadly and is inside the freeze, so the discrepancy is recorded in docs/trial-prd-v6.md rather than corrected",
+      "this manifest is the evaluation of the selected PRD, v6. The candidate also carries PRD v5 (T-47..T-65), whose per-requirement dispositions are recorded in NOTES.md and mapped per scenario in docs/prd-v5-review-packet.md, not in a second manifest: the runtime admits only the named manifest own listed artifacts as a post-candidate change, so a second manifest would make this evaluation read stale. PRD v5 therefore has an authored and reviewed disposition record but not a validator-checked one."
+    ]
+  },
+  "coverage_review": "Every R-01..R-10 of .prd/prd-v6.md maps to its tickets and to C-01 (the 51-suite chain, which carries the fault-injection cases for each scenario), C-07 (the CI matrix on this candidate) and C-11 (the review record). docs/prd-v6-review-packet.md carries the per-scenario table, and its validator now binds those citations to the repository rather than to prose (T-86): a ticket citation must be that ticket's own commit, and every scenario row must cite a tagged suite. This candidate was reviewed by ten subagents over disjoint areas, each finding reproduced before it was reported and the fourteen most severe adversarially verified by two independent refuters; thirty-two findings were raised, thirteen confirmed, one refuted, and eight fix tickets (T-79..T-86) close every confirmed defect with a regression test that was mutation-checked against its own fix. Whether those suites are adequate proof of the runtime is my judgment as evaluator: they drive real subprocesses and assert on real on-disk state, and the mutation testing recorded in C-11 is the basis for that judgment.",
+  "requirements": [
+    {
+      "id": "R-01",
+      "disposition": "delivered",
+      "tickets": [
+        "T-66",
+        "T-67",
+        "T-84"
+      ],
+      "checks": [
+        "C-01",
+        "C-07",
+        "C-11"
+      ],
+      "note": "every paragraph of a multi-paragraph scenario now belongs to that scenario, so changed scenario behaviour changes its digest (T-84)"
+    },
+    {
+      "id": "R-02",
+      "disposition": "delivered",
+      "tickets": [
+        "T-68"
+      ],
+      "checks": [
+        "C-01",
+        "C-07",
+        "C-11"
+      ]
+    },
+    {
+      "id": "R-03",
+      "disposition": "delivered",
+      "tickets": [
+        "T-69"
+      ],
+      "checks": [
+        "C-01",
+        "C-07",
+        "C-11"
+      ]
+    },
+    {
+      "id": "R-04",
+      "disposition": "delivered",
+      "tickets": [
+        "T-71",
+        "T-84"
+      ],
+      "checks": [
+        "C-01",
+        "C-07",
+        "C-11"
+      ],
+      "note": "affected is scenario-derived by the frozen contract; per-scenario attribution is restored by T-84"
+    },
+    {
+      "id": "R-05",
+      "disposition": "delivered",
+      "tickets": [
+        "T-70"
+      ],
+      "checks": [
+        "C-01",
+        "C-07",
+        "C-11"
+      ]
+    },
+    {
+      "id": "R-06",
+      "disposition": "delivered",
+      "tickets": [
+        "T-72"
+      ],
+      "checks": [
+        "C-01",
+        "C-07",
+        "C-11"
+      ]
+    },
+    {
+      "id": "R-07",
+      "disposition": "delivered",
+      "tickets": [
+        "T-73",
+        "T-83"
+      ],
+      "checks": [
+        "C-01",
+        "C-07",
+        "C-11"
+      ],
+      "note": "the independent validator refuses an undeclared check link, a candidate whose PRD blob is unreadable, and an invented authorization (T-83)"
+    },
+    {
+      "id": "R-08",
+      "disposition": "delivered",
+      "tickets": [
+        "T-69",
+        "T-75",
+        "T-81"
+      ],
+      "checks": [
+        "C-01",
+        "C-07",
+        "C-11"
+      ],
+      "note": "adoption is explicit and old runtimes reject the new schemas; the ticket guard no longer lets an allowlisted verb carry a shell write into the newly protected paths (T-81)"
+    },
+    {
+      "id": "R-09",
+      "disposition": "delivered",
+      "tickets": [
+        "T-74",
+        "T-75",
+        "T-77",
+        "T-79",
+        "T-80"
+      ],
+      "checks": [
+        "C-01",
+        "C-07",
+        "C-11"
+      ],
+      "note": "the reports are complete through a pipe (T-79) and route to a command the runtime accepts in every lifecycle state (T-80)"
+    },
+    {
+      "id": "R-10",
+      "disposition": "delivered",
+      "tickets": [
+        "T-76",
+        "T-77",
+        "T-82"
+      ],
+      "checks": [
+        "C-01",
+        "C-07",
+        "C-11"
+      ],
+      "note": "the benchmark ran and every number recomputes from the saved records; the trial record now states what those runs do and do not establish (T-82)"
+    }
+  ],
+  "checks": [
+    {
+      "id": "C-01",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "npm test",
+      "timestamp": "2026-09-13T21:41:29Z",
+      "artifacts": [
+        ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-01.log"
+      ]
+    },
+    {
+      "id": "C-02",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "bash template/scripts/sync-prompts.sh && git diff --exit-code -- template/.agents template/.github",
+      "timestamp": "2026-09-13T21:41:29Z",
+      "artifacts": [
+        ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-02.log"
+      ]
+    },
+    {
+      "id": "C-03",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "bash scripts/build-plugin.sh && git diff --exit-code -- plugin",
+      "timestamp": "2026-09-13T21:41:29Z",
+      "artifacts": [
+        ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-03.log"
+      ]
+    },
+    {
+      "id": "C-04",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "bash docs/prd-v5-artifacts/replay.sh all",
+      "timestamp": "2026-09-13T21:41:29Z",
+      "artifacts": [
+        ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-04.log"
+      ]
+    },
+    {
+      "id": "C-05",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "bash docs/prd-v6-artifacts/replay.sh all",
+      "timestamp": "2026-09-13T21:41:29Z",
+      "artifacts": [
+        ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-05.log"
+      ]
+    },
+    {
+      "id": "C-06",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "node scripts/delivery-benchmark/benchmark.cjs check-freeze",
+      "timestamp": "2026-09-13T21:41:29Z",
+      "artifacts": [
+        ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-06.log"
+      ]
+    },
+    {
+      "id": "C-07",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "gh run view 34781414193 --json jobs",
+      "timestamp": "2026-09-13T21:41:29Z",
+      "artifacts": [
+        ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-07.log"
+      ]
+    },
+    {
+      "id": "C-08",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "git log -p 9bcf8df..HEAD | <secret and PII pattern scan>",
+      "timestamp": "2026-09-13T21:41:29Z",
+      "artifacts": [
+        ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-08.log"
+      ]
+    },
+    {
+      "id": "C-09",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "git ls-files | grep -i env",
+      "timestamp": "2026-09-13T21:41:29Z",
+      "artifacts": [
+        ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-09.log"
+      ]
+    },
+    {
+      "id": "C-10",
+      "kind": "command",
+      "required": false,
+      "result": "unverified",
+      "command": "npm audit --omit=dev",
+      "timestamp": "2026-09-13T21:41:29Z",
+      "artifacts": [
+        ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-10.log"
+      ],
+      "note": "npm audit cannot run: the package declares no dependencies and carries no lockfile, so there is nothing to audit (ENOLOCK). Every require in template/scripts/** is node: or a relative sibling, which test/distribution.test.js checks."
+    },
+    {
+      "id": "C-11",
+      "kind": "review",
+      "required": true,
+      "result": "passed",
+      "timestamp": "2026-09-13T21:41:29Z",
+      "artifacts": [
+        ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/review/code-quality.md"
+      ],
+      "note": "the ten-reviewer pass over the combined diff and the adversarial verification of its findings"
+    },
+    {
+      "id": "C-12",
+      "kind": "review",
+      "required": true,
+      "result": "passed",
+      "timestamp": "2026-09-13T21:41:29Z",
+      "artifacts": [
+        ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/review/assessment-disposition.md"
+      ],
+      "note": "the three findings of the 13 September assessment, each reproduced independently; F-02 refuted with evidence"
+    }
+  ],
+  "visual_review": {
+    "applicable": false,
+    "reason": "this repository ships a CLI runtime and Markdown playbooks; there is no user interface to capture"
+  },
+  "artifacts": [
+    {
+      "path": ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-01.log",
+      "sha256": "f6170aa9bd51ea128d56de08498b1868ceb93b40c7746be4af2678b1082cb9c4"
+    },
+    {
+      "path": ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-02.log",
+      "sha256": "8564e1f692923c827ce84f081aed559c29709352d017824d36ae2a83dfd5676d"
+    },
+    {
+      "path": ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-03.log",
+      "sha256": "4ef0b55a10bd40ca8c31d8732c665edfc99e909f7cde75a748562b3cfbebfded"
+    },
+    {
+      "path": ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-04.log",
+      "sha256": "85a3e996dc5c2cf14ee2eafd41addc3b1f5fcd67c5560e74b499cb62d34e5a37"
+    },
+    {
+      "path": ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-05.log",
+      "sha256": "7b0bb656d39572d99c735f289bda6b9c287c38a00468acfe9b05b379ffa5dd07"
+    },
+    {
+      "path": ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-06.log",
+      "sha256": "817eb1b40ec6b9b4ed30c4ddcb70e1834f75bc39ff2fe224ebe4dc9728eb5578"
+    },
+    {
+      "path": ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-07.log",
+      "sha256": "926eb5bdfc04c8da6959fea02ef8f18dd1b5041068be08318486d97be0032536"
+    },
+    {
+      "path": ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-08.log",
+      "sha256": "b96de306631e4be4be22b440547a8bff116fe9769a33f23e44f87c6d2239bdb4"
+    },
+    {
+      "path": ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-09.log",
+      "sha256": "22bd753a0d59f53c7b37808d0782f8b225fb00872700e8eb964621b9a10b88eb"
+    },
+    {
+      "path": ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/checks/C-10.log",
+      "sha256": "2caa20b3e9317ccd817125fcb14014c9ccaf93706d748f58e36aefdd17ff4f09"
+    },
+    {
+      "path": ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/review/code-quality.md",
+      "sha256": "8d8e0d383316c42cc6ad374c3c3340ec5ced44ac14f69ea92c8506c8ebccce4c"
+    },
+    {
+      "path": ".prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/review/assessment-disposition.md",
+      "sha256": "f4922b7768a325ab11daa1e2daa59015b2e4af3acdbd97cb5ff1938860fb16b3"
+    }
+  ]
+}

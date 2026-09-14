@@ -19,7 +19,8 @@
   fabricated evidence. `test/behavioral-verification.test.js` is the acceptance set:
   three controlled faults with identifiers retained, each in a fresh fixture.
 - **Profile.** `profile: small | standard` in PRD frontmatter, validated by
-  `validate_prd` (anything else is rejected), missing means standard, printed on the
+  `validatePrd` in `pincer-runtime/parse.cjs` (the shell `validate_prd` went with the
+  Bash library in T-36; anything else is rejected), missing means standard, printed on the
   status PRD line. Small = bounded scope, low risk, known behavior, easy verification;
   few lines alone do not qualify. No hard ticket cap, no default timebox.
 - **One authorization rule.** An identical `## Authorization rule` block sits at the end
@@ -47,5 +48,9 @@ authenticated approval in M1/M2; this is the bounded bridge.
 ## Limits
 
 Wording tests protect adapter contracts only; agent behavior is observed in trials
-(`docs/trial-*.md`). Mapping completeness is a recorded reviewer judgment, not a
-mechanical engine ([[candidate-evidence]], [[ticket-state-machine]]).
+(`docs/trial-*.md`). Mapping completeness was a recorded reviewer judgment rather than
+a mechanical engine — **PRD v6 changed that for changes that adopt strict coverage**,
+where the runtime validates the authored map against the PRD's parsed scenario inventory
+and reports structure mechanically. What stays a judgment is *adequacy*: whether a check
+really establishes its scenario ([[strict-coverage]], [[candidate-evidence]],
+[[ticket-state-machine]]).
