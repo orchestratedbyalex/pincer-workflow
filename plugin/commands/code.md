@@ -38,7 +38,10 @@ previously authorized work. Read the `Runtime` line before the first ticket. `ch
 `.prd/changes/`) → run `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs resume` and follow its `Next`
 line: it names the selected change, its lifecycle state, the agreement and the
 authorization verdict, the blockers in order and the exact next command, all from the
-files on disk. Select the change to work on (`node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs change
+files on disk. `resume --brief` is the same report projected to counts and one next
+action — the same verdict and the same `Next` line, with every blocker category kept
+and its `Detail` line naming the command that prints the rows it grouped. Prefer it
+when you are orienting, and read the full report when a blocker needs its detail. Select the change to work on (`node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs change
 select <id>`; selection is local metadata and touches no source), activate it
 (`change activate <id>`; refused until the user's authorization is recorded with
 `change authorize` and no consequential decision is open) and resume a paused change
