@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "kind": "pilot",
+  "id": "pilot-02-brownfield-preserved",
+  "recorded": "2026-09-14T00:00:00Z",
+  "status": "outstanding",
+  "observed": false,
+  "fixture": false,
+  "outstanding_reason": "the three pilot projects are not selected, project access for the two brownfield projects is not decided, and no spending or wall-clock cap has been supplied (docs/prd-v7-protocol.md, section 9)",
+  "project": "(to be selected: an existing project with pre-existing user edits)",
+  "project_kind": "brownfield",
+  "preexisting_edits": true,
+  "intent": "An existing project with genuine intended work and pre-existing uncommitted user edits whose preservation is recorded and checked after the work. Same journey as pilot-01.",
+  "provenance": {
+    "kit": null,
+    "kit_source": "pincer-workflow 0.6.0, tag v0.6.0 (commit 694241c), to be installed from a packed tarball",
+    "base": null,
+    "tool_version": null,
+    "model": null
+  },
+  "stages": {
+    "install": {
+      "state": "outstanding",
+      "reason": "not yet run: the three pilot projects are not selected, project access for the two brownfield projects is not decided, and no spending or wall-clock cap has been supplied (docs/prd-v7-protocol.md, section 9)"
+    },
+    "adopt": {
+      "state": "outstanding",
+      "reason": "not yet run: the three pilot projects are not selected, project access for the two brownfield projects is not decided, and no spending or wall-clock cap has been supplied (docs/prd-v7-protocol.md, section 9)"
+    },
+    "authorize": {
+      "state": "outstanding",
+      "reason": "not yet run: the three pilot projects are not selected, project access for the two brownfield projects is not decided, and no spending or wall-clock cap has been supplied (docs/prd-v7-protocol.md, section 9)"
+    },
+    "implement": {
+      "state": "outstanding",
+      "reason": "not yet run: the three pilot projects are not selected, project access for the two brownfield projects is not decided, and no spending or wall-clock cap has been supplied (docs/prd-v7-protocol.md, section 9)"
+    },
+    "revise": {
+      "state": "outstanding",
+      "reason": "not yet run: the three pilot projects are not selected, project access for the two brownfield projects is not decided, and no spending or wall-clock cap has been supplied (docs/prd-v7-protocol.md, section 9)"
+    },
+    "pause": {
+      "state": "outstanding",
+      "reason": "not yet run: the three pilot projects are not selected, project access for the two brownfield projects is not decided, and no spending or wall-clock cap has been supplied (docs/prd-v7-protocol.md, section 9)"
+    },
+    "recover": {
+      "state": "outstanding",
+      "reason": "not yet run: the three pilot projects are not selected, project access for the two brownfield projects is not decided, and no spending or wall-clock cap has been supplied (docs/prd-v7-protocol.md, section 9)"
+    },
+    "evaluate": {
+      "state": "outstanding",
+      "reason": "not yet run: the three pilot projects are not selected, project access for the two brownfield projects is not decided, and no spending or wall-clock cap has been supplied (docs/prd-v7-protocol.md, section 9)"
+    }
+  },
+  "interventions": [],
+  "preservation": {
+    "paths": [],
+    "verified": false,
+    "note": "the paths that must survive are recorded when the project is selected"
+  }
+}
