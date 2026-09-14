@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "kind": "comparison",
+  "id": "comparison-v7",
+  "recorded": "2026-09-14T00:00:00Z",
+  "status": "outstanding",
+  "observed": false,
+  "fixture": false,
+  "outstanding_reason": "T-95 has not run: the 72-run schedule is not costed or authorized, no spending or wall-clock cap has been supplied, the three pilot projects are not selected, and no non-implementing reviewers have been identified (docs/prd-v7-protocol.md, section 9)",
+  "provenance": {
+    "kit": null,
+    "kit_source": "the v7 candidate, to be packed once T-96 identifies it",
+    "base": null,
+    "tool_version": null,
+    "model": null
+  },
+  "pairs": [
+    {
+      "task": "pilot-01 greenfield task, repeated on a matched disposable snapshot",
+      "order": "baseline-first",
+      "baseline": {
+        "kit": null,
+        "observed": false,
+        "reason": "not yet run: T-95 has not run: the 72-run schedule is not costed or authorized, no spending or wall-clock cap has been supplied, the three pilot projects are not selected, and no non-implementing reviewers have been identified (docs/prd-v7-protocol.md, section 9)"
+      },
+      "improved": {
+        "kit": null,
+        "observed": false,
+        "reason": "not yet run: T-95 has not run: the 72-run schedule is not costed or authorized, no spending or wall-clock cap has been supplied, the three pilot projects are not selected, and no non-implementing reviewers have been identified (docs/prd-v7-protocol.md, section 9)"
+      }
+    },
+    {
+      "task": "pilot-02 brownfield task with pre-existing edits, repeated on a matched snapshot",
+      "order": "improved-first",
+      "baseline": {
+        "kit": null,
+        "observed": false,
+        "reason": "not yet run: T-95 has not run: the 72-run schedule is not costed or authorized, no spending or wall-clock cap has been supplied, the three pilot projects are not selected, and no non-implementing reviewers have been identified (docs/prd-v7-protocol.md, section 9)"
+      },
+      "improved": {
+        "kit": null,
+        "observed": false,
+        "reason": "not yet run: T-95 has not run: the 72-run schedule is not costed or authorized, no spending or wall-clock cap has been supplied, the three pilot projects are not selected, and no non-implementing reviewers have been identified (docs/prd-v7-protocol.md, section 9)"
+      }
+    },
+    {
+      "task": "pilot-03 brownfield task, repeated on a matched snapshot",
+      "order": "baseline-first",
+      "baseline": {
+        "kit": null,
+        "observed": false,
+        "reason": "not yet run: T-95 has not run: the 72-run schedule is not costed or authorized, no spending or wall-clock cap has been supplied, the three pilot projects are not selected, and no non-implementing reviewers have been identified (docs/prd-v7-protocol.md, section 9)"
+      },
+      "improved": {
+        "kit": null,
+        "observed": false,
+        "reason": "not yet run: T-95 has not run: the 72-run schedule is not costed or authorized, no spending or wall-clock cap has been supplied, the three pilot projects are not selected, and no non-implementing reviewers have been identified (docs/prd-v7-protocol.md, section 9)"
+      }
+    }
+  ],
+  "reviews": [],
+  "targets": [
+    {
+      "target": "halve the avoidable workflow operations on the paired pilots",
+      "result": "outstanding",
+      "reason": "the three paired pilots have not run; T-95 has not run: the 72-run schedule is not costed or authorized, no spending or wall-clock cap has been supplied, the three pilot projects are not selected, and no non-implementing reviewers have been identified (docs/prd-v7-protocol.md, section 9)"
+    },
+    {
+      "target": "reduce median short-task cost and active session time without lower observed acceptance or weakened invariants",
+      "result": "outstanding",
+      "reason": "the 72-run comparison has not run; T-95 has not run: the 72-run schedule is not costed or authorized, no spending or wall-clock cap has been supplied, the three pilot projects are not selected, and no non-implementing reviewers have been identified (docs/prd-v7-protocol.md, section 9)"
+    }
+  ],
+  "runs": {
+    "scheduled": 72,
+    "completed": 0,
+    "invalid": 0,
+    "outstanding": 72
+  }
+}
