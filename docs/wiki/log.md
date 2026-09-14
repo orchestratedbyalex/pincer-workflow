@@ -263,3 +263,20 @@ docs/prd-v7-artifacts/*; 11 new suites in package.json.
 Outcome: engineering done and green; every live observation (T-89, T-93, T-95) is
 outstanding pending project access, a costed spending cap and two non-implementing
 reviewers. 10 of 30 scenarios are outstanding and the packet says so.
+
+## [2026-09-14] end | PRD v7 merged; T-98 fixed the benchmark driver before its first run
+The v7 branch merged as PR #3 (`ae796d6`) with the full CI matrix green. Reviewing the
+merged edition against "what happens if someone actually runs this" found that
+`live-driver.sh` validated `--workspace` and `--wall-clock-minutes` and then used
+neither, and that v7 had no run loop at all — so the loop, and everything it would
+enforce, would have lived in an unfrozen file. T-98 fixed the driver, added
+`orchestrator.cjs` as a named frozen input, and re-minted the cohort openly
+(`eef74402…` → `6de061ec…`) while zero runs existed. A fourth defect surfaced only under
+test: the cap watchdog's `sleep` held the caller's stdout, which would have blocked every
+successful run for the full cap.
+Files: scripts/delivery-benchmark-v7/{live-driver.sh,orchestrator.cjs,freeze-spec.cjs},
+test/benchmark-orchestrator.test.js, test/fixtures/delivery-benchmark-v7/frozen.json,
+docs/prd-v7-protocol.md, tickets/T-98, wiki.
+Outcome: 63 suites green, T-98 done with a real receipt, Codex pinned at 0.153.4. No live
+session has run and none was paid for; the spending, project and reviewer decisions remain
+the user's.
