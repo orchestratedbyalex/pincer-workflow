@@ -405,4 +405,35 @@ console.log('change lifecycle tests passed');
   assert.match(passes(rt(dir, 'change', 'complete', 'prd-v1')), /^completed change prd-v1: active → completed/m, 'a schema 2 change completes without coverage gates');
   assert.equal(record(dir).schema, 2);
 }
+// --- PRD v7 T-97: the REVISION_CHANGED remedy must name a command changes mode runs ---
+// The released kit advised `register --rebind, then verify` in every mode, and changes
+// mode refuses that command outright. A reason that routes the reader to a refusal is
+// the defect class T-80 closed for the coverage report; found by the v7 baseline
+// observation (docs/prd-v7-pilots.md, section 2.4).
+{
+  const dir = fixture();
+  passes(rt(dir, 'change', 'activate', 'prd-v1'), 'activate');
+  passes(rt(dir, 'start', 'T-01'), 'start');
+  write(dir, 'tickets/T-01-example.md', read(dir, 'tickets/T-01-example.md').replace('- [ ] expected behavior', '- [x] expected behavior'));
+  passes(rt(dir, 'verify', 'T-01'), 'verify');
+  passes(rt(dir, 'done', 'T-01'), 'done');
+  commit(dir, 'T-01 done');
+  // Move the PRD revision the passing attempt ran under.
+  write(dir, '.prd/prd-v1.md', `${read(dir, '.prd/prd-v1.md')}\nAn added paragraph of scope.\n`);
+  const j = JSON.parse(passes(rt(dir, 'status', '--json'), 'status --json'));
+  assert.ok(j.tickets.flatMap(t => t.readiness.reasons).some(r => r.code === 'REVISION_CHANGED'), 'the moved revision is reported');
+  // The remedy is rendered on the human WARN line; the JSON carries code and detail.
+  const human = passes(rt(dir, 'status'), 'status');
+  const warn = human.split('\n').find(l => /REVISION_CHANGED/.test(l));
+  assert.ok(warn, `a REVISION_CHANGED line is printed:\n${human}`);
+  assert.match(warn, /change revise, record its authorization, then verify/, 'changes mode names the command it actually runs');
+  assert.doesNotMatch(warn, /--rebind/, 'and never the one it refuses');
+  // The refusal the old advice walked into, verbatim, so this stays a real counterexample.
+  refuses(rt(dir, 'register', '--prd', '.prd/prd-v1.md', '--rebind'), 1, /--rebind is not supported for change records/, 'register --rebind in changes mode');
+  // The remedy it names is accepted.
+  passes(rt(dir, 'change', 'revise', 'prd-v1'), 'the recommended change revise runs');
+  // Migrated mode keeps the released wording, where `register --rebind` is the real
+  // repair: test/runtime-status.test.js drives that fixture and pins /rebind/ there.
+}
+
 console.log('change lifecycle tests passed (schema 2 completion ignores coverage maps)');

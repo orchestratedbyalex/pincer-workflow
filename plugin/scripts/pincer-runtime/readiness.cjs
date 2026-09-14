@@ -70,7 +70,12 @@ function migratedTicketReadiness({ text, fields, timeout, attempt, legacyReceipt
     default: return { ready: false, reasons: [reason('ATTEMPT_ERROR', `attempt ${id} has unknown outcome ${JSON.stringify(attempt.outcome)}`, 'verify')] };
   }
   if (current.prdRevision && attempt.context && attempt.context.prd_revision !== current.prdRevision) {
-    reasons.push(reason('REVISION_CHANGED', 'the PRD revision changed since the passing attempt', 'register --rebind, then verify'));
+    // The remedy is mode-specific. `register --rebind` is the v0.4.1/v0.5.0 repair and
+    // changes mode refuses it outright (AGREEMENT_CHANGED: "--rebind is not supported
+    // for change records"), so naming it there sends the reader to a command the
+    // runtime will not run — the defect class T-80 closed for the coverage report.
+    reasons.push(reason('REVISION_CHANGED', 'the PRD revision changed since the passing attempt',
+      mode === 'changes' ? 'change revise, record its authorization, then verify' : 'register --rebind, then verify'));
   }
   if (attempt.check && attempt.check.digest !== parse.checkDigest(text, timeout)) {
     reasons.push(reason('CHECK_CHANGED', 'the Verification block or timeout changed since the passing attempt', 'verify'));
