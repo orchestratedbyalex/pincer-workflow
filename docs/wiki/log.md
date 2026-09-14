@@ -250,3 +250,16 @@ New pages: [[strict-coverage]], [[delivery-benchmark]], [[coverage-is-authored-a
   record are unchanged; `status` reads `stale: candidate changed after evaluation:
   package.json` and will until the next candidate. Remaining and all the user's: get
   `350823e`, `566b553` and this commit onto `main`, and push the tag.
+
+## [2026-09-14] end | PRD v7 implemented as far as it can go without spending
+Built the two product surfaces (`coverage scaffold`, `resume --brief`) as read-only
+projections, the frozen v7 protocol and preservation matrix, the effort record and
+execution freeze, the v7 benchmark edition (8 briefs, 72-run schedule), the observation
+record validators, six replay cases and the review packet. T-97 was created and fixed
+from a defect the baseline measurement reproduced.
+Files: template/scripts/pincer-runtime/scaffold.cjs, resume.cjs, readiness.cjs;
+scripts/delivery-benchmark-v7/*; docs/prd-v7-{protocol,pilots,preservation,platforms,comparison,review-packet}.md;
+docs/prd-v7-artifacts/*; 11 new suites in package.json.
+Outcome: engineering done and green; every live observation (T-89, T-93, T-95) is
+outstanding pending project access, a costed spending cap and two non-implementing
+reviewers. 10 of 30 scenarios are outstanding and the packet says so.
