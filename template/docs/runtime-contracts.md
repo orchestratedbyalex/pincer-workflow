@@ -893,8 +893,8 @@ it selects nothing, completes nothing, runs nothing and writes nothing.
 
 ## Resume report
 
-`resume [--change <id>] [--json]` is read-only inspection of the selected (or named)
-change for a fresh session; it is distinct from `change resume`, the lifecycle
+`resume [--change <id>] [--brief] [--json]` is read-only inspection of the selected
+(or named) change for a fresh session; it is distinct from `change resume`, the lifecycle
 operation. It launches no check, records no approval, changes no selection and writes
 no file; repeated runs are byte-identical apart from `generated`. Resume JSON schema 1:
 
@@ -937,6 +937,40 @@ command to run):
 6. everything done and ready but not `completed` → `change complete`;
 7. `completed` without a current evaluation → `/pincer-evaluate`;
 8. evaluated and current → `/pincer-release` (read-only audit).
+
+### Brief resume
+
+`resume --brief [--change <id>] [--json]` is a **projection of the report `resume`
+already computes**, for a fresh session that needs the next action without paying for
+every row to find it. It is not a second policy engine: `next` is the full report's
+own object, copied, and no verdict, readiness value or precedence rule is recomputed.
+It composes with `--change` and `--json`, keeps the full report's exit code, and
+writes nothing.
+
+Brief JSON envelope — `brief: 1` with `of` naming the schema it projects, so nothing
+reading resume JSON ever sees a new shape:
+
+```
+{ brief: 1, kind: "resume-brief", of: 2, generated, root, mode,
+  selection: { change | null, problem | null },
+  change: { id, prd, base, lifecycle } | null,
+  agreement: { current, verdict, authorized: { id, disposition } | null } | null,
+  coverage: { label, strict, structure, implementation } | null,
+  tickets: { total, by_status: { open, in_progress, done }, not_ready },
+  attempts: { total, running, current_failed },
+  candidate: { notes, candidate, evidence } | null,
+  blockers: { total, categories: [ { code, count } ] },
+  next: <the full report's next, verbatim>,
+  detail: { command, prd, tickets: [ paths ], omitted } }
+```
+
+Grouping may collapse **repetition**; it may never collapse a **category**. Every
+distinct blocker code of the full report appears in `blockers.categories` with its
+exact count, and `blockers.total`, `tickets.total` and `attempts.total` equal the full
+report's own lengths. `detail.omitted` states how many rows the brief did not print
+and `detail.command` is the exact command that prints them, so nothing is hidden —
+only deferred. The default `resume` human output and resume JSON schema 2 are
+unchanged.
 
 ## Migration and rollback
 
@@ -1556,12 +1590,64 @@ are unchanged.
 | --- | --- | --- | --- |
 | `coverage` | `[--change <id>] [--json]` | nothing | the phase-specific coverage report of the selected (or named) change; exit 0 when the report was computed (complete or not), 4 when the inputs cannot be read |
 | `impact` | `[--change <id>] [--from G-NN \| A-NN] [--json]` | nothing | structural differences between the current authored inputs and a retained agreement; exit 0 when computed (`unchanged`, `changed` or `unavailable`), 4 on invalid input |
+| `coverage scaffold` | `--change <id> [--json]` | nothing | the read-only coverage draft ("Coverage draft"); exit 0 when a draft was produced, 4 when the inputs cannot be read |
 | `coverage adopt` | `--preview \| --apply --change <id> [--agreement <digest>]` | apply: the backup, the schema 3 record, the adoption snapshot | preview writes nothing; exit 0 / 1 (conflict) / 4 (invalid state) |
 | `check` | `C-NN --candidate <sha>` (strict) | an attempt | the declared command; `--timeout` and `-- <command>` are `CHECK_UNDECLARED` in a strict change |
 
 `coverage` and `impact` launch no check, record no approval, change no selection and
 write no file; repeated runs are byte-identical apart from `generated`. Their human
 output and their JSON name the same IDs, codes and next action.
+
+### Coverage draft
+
+`coverage scaffold --change <id> [--json]` projects the validated inventory, the
+change's tickets and any authored map into one reviewable **draft**. It exists to
+remove transcription, not judgment: authoring `.prd/coverage/<id>.json` means copying
+every live scenario, every ticket role and every check declaration out of documents
+the runtime has already parsed, and that copying is all this removes.
+
+The draft **decides nothing**. It never invents a link, a check command, a ticket role
+or a scope disposition; an entry it cannot resolve from authored content stays
+`unresolved`. A ticket's own `Implements:`/`Scenarios:` claim and its Verification
+text are reported under `candidates` with the ticket's file, as material to read —
+never promoted into `scenarios` or `checks`. IDs on those lines that the inventory
+does not define are not reported at all, because a ticket naming other tickets is not
+a scenario claim.
+
+Draft envelope — `draft: 1`, and deliberately **no `schema` key**, so `readMap`
+refuses it with `COVERAGE_INVALID: unsupported coverage map schema undefined`:
+
+```
+{ draft: 1, kind: "coverage-draft", change, prd,
+  inventory: { digest, requirements, scenarios },
+  authored: { map: <path> | null, digest | null },
+  scenarios: { "S-NN": { requirement, state, tickets: [], checks: [] } },
+  scope:     { "S-NN": { disposition, decision, prior, note, state } },
+  tickets:   { "T-NN": { role, rationale, state } },
+  checks:    { "C-NN": { kind, required, command, timeout, cwd, obligation, note, state } },
+  candidates: { tickets: { "T-NN": { file, objective, implements: [], scenarios: [], verification } } },
+  unresolved: [ { code, id, detail } ],
+  next: { action, command } }
+```
+
+`state` is `authored` for content read from the existing map and `unresolved`
+otherwise. Every live inventory scenario appears exactly once across `scenarios` and
+`scope`. Authored rows the inventory no longer defines are **preserved and flagged**
+(`SCENARIO_STALE`), never dropped: removing an obligation is a decision with its own
+disposition and authorization. Unresolved codes are `SCENARIO_UNLINKED`,
+`CHECK_UNDECLARED`, `TICKET_UNCLASSIFIED`, `SCENARIO_STALE` and `TICKET_FOREIGN`.
+
+The draft body carries no timestamp, so two calls on identical authored inputs are
+byte-identical. Scaffolding writes no file, launches no check, changes no selection,
+adopts nothing and records no approval; a malformed, unsupported, symlinked or
+out-of-root map is refused with exit 4 before any draft is printed, because silently
+dropping authored content is the one failure this command must not have.
+
+A draft is **not a coverage map and confers no readiness**. The route is unchanged:
+author `.prd/coverage/<id>.json` by hand, review the links, `coverage` validates it,
+`coverage adopt --preview|--apply` adopts it, and `change authorize` records the
+user's instruction covering the new agreement. Editing the inputs afterwards still
+yields `AGREEMENT_CHANGED`.
 
 Coverage JSON schema 1:
 

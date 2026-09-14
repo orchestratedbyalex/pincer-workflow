@@ -1,6 +1,7 @@
 # Wiki index
 
 ## Decisions
+- [[read-only-projections]] — the two v7 surfaces are projections of computed state; the draft's missing `schema` key is the guard
 - [[one-next-action-precedence]] — rules 2 and 3 of the next-action precedence in one module; two views of the same state drift, so delete one (T-80, 2026-09-13)
 - [[coverage-is-authored-and-bound]] — one authored map, the PRD prose as the inventory, both inside the agreement digest; structure computed, adequacy judged (PRD v6)
 - [[explicit-change-lifecycle]] — PRD v5 (2026-09-12): retained change records, explicit per-worktree selection, agreement digests with user/delegated authorization, journaled lifecycle transitions, change-scoped evidence, `resume`
@@ -16,6 +17,7 @@
 
 ## Systems
 - [[strict-coverage]] — PRD v6: the PRD as inventory, the authored map, agreement binding, declared checks, evidence schema 3, the coverage and impact reports
+- [[v7-measured-friction]] — the v7 measurement tooling, what the baseline measured, and what an operator-driven measurement cannot show
 - [[delivery-benchmark]] — six frozen briefs, held-out evaluators, the run harness and what the 36 paired runs showed
 - [[runtime]] — template/scripts/pincer-runtime.cjs + pincer-runtime/: modules, commands, exit codes, gotchas
 

@@ -37,7 +37,17 @@ discovered consequential choice is surfaced before implementation.
      in the ticket Objective. Resolve missing coverage and conflicting criteria with
      the user before implementation; do not start with an unmapped required scenario. On a change with change records, author the map once as
      `.prd/coverage/<change id>.json` (coverage map schema 1, "Coverage map" in
-     `docs/runtime-contracts.md`): one `scenarios` row per `S-NN` naming its
+     `docs/runtime-contracts.md`). Start from
+     `node scripts/pincer-runtime.cjs coverage scaffold --change <change id>`: it prints
+     a read-only draft listing every live scenario exactly once with its requirement,
+     every ticket with its objective, its own `Implements:` claim and its Verification
+     text, and an `Unresolved` list of what is still unauthored. It writes nothing,
+     adopts nothing and decides nothing — it removes the transcription, not the
+     judgment, so a ticket's claim is material to check rather than a link, and no check
+     command, ticket role or scope disposition is ever invented. The draft is not a map:
+     it carries no `schema` key and `coverage adopt` refuses it. You author the real map
+     yourself, working through the draft's unresolved entries:
+     one `scenarios` row per `S-NN` naming its
      implementing tickets and declared checks, every ticket of the change in
      `tickets` as `implements` or `enables` (with a rationale), each check declared
      once in `checks` with its kind, `required` flag and, for a command, the exact

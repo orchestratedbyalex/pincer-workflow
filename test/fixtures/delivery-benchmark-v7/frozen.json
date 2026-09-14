@@ -1,0 +1,145 @@
+{
+  "schema": 1,
+  "cohort": "eef74402a588bc767bf5406f67f58f870273ec4b30a419e5fa959a12d5362d05",
+  "inputs": {
+    "protocol": "18cb38c397cda60fa70c2aeeb5224b43a5f500692699464eee096e0eacc0a8d2",
+    "harness": "207b027a863e7c08e2e1b9e12e95a36a36a4ea2549c043650e84b00b32306f2b",
+    "collector": "a392063c49841c806dfd1ce07336156ce3c9abda2dfcd0d57ce53eaac1f79403",
+    "driver": "ff06d9ef6d5a3049d557ca799f4038fb2a5ced85a9b07220f87263b9be458dfa",
+    "briefs": "67d22b6b06205ed854a1df6bffaaf90d5fea510b5574cd4d30389e3bc33d4f65",
+    "evaluators": "b12c4a0c2a3434d1d5803349de17d5b1b49140de7a43183f1ce3b59c991f58cb",
+    "caps": "7c48ae64c96d13f6037a810cf3346db1f5f58a5b084573a090d5a541fcbe6294",
+    "configuration": "15b7af6291b230dcc4d1ca75995e7381d543e7947930e22d43a871dca7663480"
+  },
+  "order": [
+    "protocol",
+    "harness",
+    "briefs",
+    "evaluators",
+    "collector",
+    "driver",
+    "caps",
+    "configuration"
+  ],
+  "briefs": {
+    "brownfield-maintenance": {
+      "digest": "4eb73a848a1e722d6d95b7c04a32150efb12ba169dd0d3fbb6b5db3a717741a4",
+      "evaluator": "f0020254fb20c5f64a718292e1321774a570bcb7f7d54d288e1acbf868fcbe70",
+      "files": {
+        "test/fixtures/delivery-benchmark-v7/briefs/brownfield-maintenance/base.cjs": "5591e413211fe16c5f4c6c815b224b3fe6107a0c1c9f918252dfadd8a2fd3939",
+        "test/fixtures/delivery-benchmark-v7/briefs/brownfield-maintenance/brief.md": "6580d5857fa8134e478c5c187806370af9b5c9f8eff9a09a9c211cee935c59d4",
+        "test/fixtures/delivery-benchmark-v7/briefs/brownfield-maintenance/controls.cjs": "b9e95a0eb0fafbebbdf42effb582c5efff4b62a2761aec6678ef69128a6b477e",
+        "test/fixtures/delivery-benchmark-v7/briefs/brownfield-maintenance/evaluator/describe.test.cjs": "400bf81ee4020524854f3c48496e3c316ea00938e7d2b847449c983d4ac1559f",
+        "test/fixtures/delivery-benchmark-v7/briefs/brownfield-maintenance/evaluator/evaluate.cjs": "97eb212b0fbbf3fbbdf8afacd662124a52261e3c7f93cf9731b8f00b7ea076de",
+        "test/fixtures/delivery-benchmark-v7/briefs/brownfield-maintenance/evaluator/merge.test.cjs": "fc705120d56344f29fd0e1a7d3002f3c35beeb7cb0f01b473d2a80ae66a66b58",
+        "test/fixtures/delivery-benchmark-v7/briefs/brownfield-maintenance/evaluator/preserved.test.cjs": "c5ee4f4072b1533a6aa112b83cbc08c322cd87241f8bb28aab5aee8521b7fde6"
+      }
+    },
+    "bugfix-brownfield": {
+      "digest": "862b6c16f90737cbee2851eee01cc9dcf604459c320b7ea3145d8e663317cb89",
+      "evaluator": "37e19ebdc0b3952186b418f33c450f9f130a815870b07f0ac4f04f684a7e5ab4",
+      "files": {
+        "test/fixtures/delivery-benchmark-v7/briefs/bugfix-brownfield/base.cjs": "ac9fea74af9bbc0767f71592286b12b6b8cb434dfd1ab64e2b6e414d2ccf9291",
+        "test/fixtures/delivery-benchmark-v7/briefs/bugfix-brownfield/brief.md": "11aebbe8d13dc90577db17855851dac88bd457b8670ca5f4fa3ed42d0bc9bdce",
+        "test/fixtures/delivery-benchmark-v7/briefs/bugfix-brownfield/controls.cjs": "ac99d3c01510c39015c81b6134a7ddf2aba7a27b4a6c448a87df6f03652036f2",
+        "test/fixtures/delivery-benchmark-v7/briefs/bugfix-brownfield/evaluator/boundary.test.cjs": "428e9805612aca5386ab8d10192477588943119929f4e29e736a39da00a3095b",
+        "test/fixtures/delivery-benchmark-v7/briefs/bugfix-brownfield/evaluator/evaluate.cjs": "c84d90d26aac74989fbfaf9535662d60a84b754527536a7de72f99ce3cda66f9",
+        "test/fixtures/delivery-benchmark-v7/briefs/bugfix-brownfield/evaluator/preserved.test.cjs": "958fd5a1fe19af90624279e4fc3ced489d8e797e6e899ab49fa0ad211865367b"
+      }
+    },
+    "cli-greenfield": {
+      "digest": "59babd5f0a4f7d37b79e5dc2ffeb3d15c0840c5d188b94e5247d1bfa29c1c431",
+      "evaluator": "b795e5143c018de967f2e406982d4e1bdb9ea6541a2f8a9168c962b4e83009ca",
+      "files": {
+        "test/fixtures/delivery-benchmark-v7/briefs/cli-greenfield/base.cjs": "8e2cae51456bfa1bf6cb41c8c9cb32231d3b967341f76810823284c0e45adbe8",
+        "test/fixtures/delivery-benchmark-v7/briefs/cli-greenfield/brief.md": "6d9a98d1956e8269e410f1bf5de20d331a081cf791868216cf6d153bd28965cb",
+        "test/fixtures/delivery-benchmark-v7/briefs/cli-greenfield/controls.cjs": "e7129a584214338f0dbf92af911e70e86a1b95ebba69683ba85971958dd537e3",
+        "test/fixtures/delivery-benchmark-v7/briefs/cli-greenfield/evaluator/evaluate.cjs": "63e7046fd03c978ce89978f3bda7fe431efd54e03083eace83173e4b8bd72ba8",
+        "test/fixtures/delivery-benchmark-v7/briefs/cli-greenfield/evaluator/slug.test.cjs": "2468bac69beb3ded25ddccd9081511ab68e9849f8d45c94df739f58dca2e8dec"
+      }
+    },
+    "handoff-two-changes": {
+      "digest": "187a7fb81233074d4730d108dbfd8ce9e3725c51d3e9660a4cdf44c637d51a21",
+      "evaluator": "a220337d1eaf77d73422d5bbaefef26bb134414824b3c07a37dfd40a1a969255",
+      "files": {
+        "test/fixtures/delivery-benchmark-v7/briefs/handoff-two-changes/base.cjs": "ab415d49624832491326a5f2dae776524d5dad9c2aa936c38314361c2d632a55",
+        "test/fixtures/delivery-benchmark-v7/briefs/handoff-two-changes/brief.md": "f57da2c9066dc02c3a6e082426776ed2beaa23ab2eaf13ac4c729bcf0b3cea61",
+        "test/fixtures/delivery-benchmark-v7/briefs/handoff-two-changes/controls.cjs": "e703f7da800592be7f618a1e2750ecd7af4c1500afe112b1ada9eb1fc322e9b3",
+        "test/fixtures/delivery-benchmark-v7/briefs/handoff-two-changes/evaluator/evaluate.cjs": "c3eceddfb2d182fa7f875b8eb4602f59fbde7240502236a00eaaff5961aba48f",
+        "test/fixtures/delivery-benchmark-v7/briefs/handoff-two-changes/evaluator/format.test.cjs": "d18c8b5f9a4445f54d544e3af17cc124b253c957fe7d511d10081a3cfae3faa0",
+        "test/fixtures/delivery-benchmark-v7/briefs/handoff-two-changes/evaluator/parse.test.cjs": "6c705edb0dd25950100343cbf348ed381768daef41476a5f8fa164d532651541"
+      }
+    },
+    "integration-untested": {
+      "digest": "57eee14ccdba4fa2d43f062d13f7c6c0688a9ccc7cbac82ebb78bdcc21b6f147",
+      "evaluator": "fad4e1266757ab5a9ecdd5cd72b7975b1f902f0a0b6fb9035d436e65bdd92a0c",
+      "files": {
+        "test/fixtures/delivery-benchmark-v7/briefs/integration-untested/base.cjs": "15e6b617385437c7b6e6289b8c8ae83670c19a36f6bc0d4beefb9cc200161662",
+        "test/fixtures/delivery-benchmark-v7/briefs/integration-untested/brief.md": "7d4ba58e71093547d11ffa180f2f206a2f586de7c05cf5b0a686d010b4581d7a",
+        "test/fixtures/delivery-benchmark-v7/briefs/integration-untested/controls.cjs": "4efe840ea5f8090bea867f1fddf3943d56b151393b00d6c9ab3a6a6fd0742026",
+        "test/fixtures/delivery-benchmark-v7/briefs/integration-untested/evaluator/evaluate.cjs": "1a86325dbbc1f4f102fc68347b814c8bfeb2a61814af8b82ca67d3991ec58ec9",
+        "test/fixtures/delivery-benchmark-v7/briefs/integration-untested/evaluator/exhaustion.test.cjs": "98415c213e7e749e78726d0dc84ce5c6cc60f856c4798d28f0513c82d6ddae8c",
+        "test/fixtures/delivery-benchmark-v7/briefs/integration-untested/evaluator/no-retry.test.cjs": "eabc18b7c753e9668b1019946dedbc055aed7ff3e1c716a8b0b72f300964aceb",
+        "test/fixtures/delivery-benchmark-v7/briefs/integration-untested/evaluator/retries.test.cjs": "7ea3644be2d0ee180f4bd74e0fad46b6769c5367ca41ea5fc0609918ca8f60fc"
+      }
+    },
+    "revision-recovery": {
+      "digest": "0745f480b82145ad5675048866cf04511ca3beb06098135b29fd9531daaa6500",
+      "evaluator": "d6f1a056e66af5c2dcef9f87d387d6776d84b24c7ac6b6d9407347c21a1b0c1e",
+      "files": {
+        "test/fixtures/delivery-benchmark-v7/briefs/revision-recovery/base.cjs": "6a4b0a79cfe00e1c58474e6ccdd2f84f40ffe3e5febd6fb047fb917af2336d80",
+        "test/fixtures/delivery-benchmark-v7/briefs/revision-recovery/brief.md": "cc84d4ad93b4d1519004ef26f7441f099fc6590dd43325566e05bdfbce12a9d7",
+        "test/fixtures/delivery-benchmark-v7/briefs/revision-recovery/controls.cjs": "e24feed3f3fb571506c2d16e8458d52b7ebc5cb52ea0ac0af87f46e9ed1b1f94",
+        "test/fixtures/delivery-benchmark-v7/briefs/revision-recovery/evaluator/evaluate.cjs": "96d66d0f1fbef96c62fdf3a2d55e2637ec8f7fe56afa5762232a135a39931918",
+        "test/fixtures/delivery-benchmark-v7/briefs/revision-recovery/evaluator/explain.test.cjs": "48f6d08547fd194b1040dc72d2bd2cdececb3c06ee9c8058d2e98ee447834fcb",
+        "test/fixtures/delivery-benchmark-v7/briefs/revision-recovery/evaluator/matching.test.cjs": "0c7e53877a9c4f1b2b0aceb394378c9f2216aff0cef084c682649d3e8a9c7c06",
+        "test/fixtures/delivery-benchmark-v7/briefs/revision-recovery/evaluator/priority.test.cjs": "3a5412b031392a891a7f74b6e0285fd6e31b2d06b49fac3a01d50ba1c252a121"
+      }
+    },
+    "scope-revision": {
+      "digest": "4043dfbc432ea9d938cb6e0cf3c25690c49656c57d5f1f48497f39fb5ea1231a",
+      "evaluator": "73c0fe2fe05ac6b8219529eb91db78192c1046c2b78f9dde3112505f13971cb9",
+      "files": {
+        "test/fixtures/delivery-benchmark-v7/briefs/scope-revision/base.cjs": "18ffe24f70b69f150909abe00f744a1a8e9ef4cd106217db6a8fa27e1ac998a7",
+        "test/fixtures/delivery-benchmark-v7/briefs/scope-revision/brief.md": "a909b23e004ae598c92c1a9702a95fc999fa2244983b276925568c09d5320c88",
+        "test/fixtures/delivery-benchmark-v7/briefs/scope-revision/controls.cjs": "10dc70102e54ffcfc7b60065b79a74e68102b80bee209a254ec19e870d74617d",
+        "test/fixtures/delivery-benchmark-v7/briefs/scope-revision/evaluator/counts.test.cjs": "f6f573d369c21b7904c9edf73a193291ef2bc8a1bd5d6af3e51ab49b195df236",
+        "test/fixtures/delivery-benchmark-v7/briefs/scope-revision/evaluator/evaluate.cjs": "bc9b096e62069e0f67daef2d911a6896c72637992c12ba638951d19d0dc0d13f",
+        "test/fixtures/delivery-benchmark-v7/briefs/scope-revision/evaluator/revised.test.cjs": "c3d0650c0691efd193930998d6e180a5ad26ec8d291b17d6d9238307c4e8379b"
+      }
+    },
+    "ui-states": {
+      "digest": "df8ca627198403ff7f705579ad7fcffb7a515cf0421690cc2d11a1c1ba3a2d96",
+      "evaluator": "0af9d12a7dbba8cd41cbe1f9cc81e063c80d06f13bed0265bad2ccc329e28ca2",
+      "files": {
+        "test/fixtures/delivery-benchmark-v7/briefs/ui-states/base.cjs": "a56e0b2b2b5ea330f0cda79b5b42a466763e7d397f9a0223bc98c8916c685295",
+        "test/fixtures/delivery-benchmark-v7/briefs/ui-states/brief.md": "93be5e24b0f83efacd8f7b3109ffccd3872d4f8184e74903c6d058d175c485cd",
+        "test/fixtures/delivery-benchmark-v7/briefs/ui-states/controls.cjs": "bf51ad7a8a38c44d034fb4d874d2285262348bcc2535bdbc4dc28859e3abbbc4",
+        "test/fixtures/delivery-benchmark-v7/briefs/ui-states/evaluator/empty.test.cjs": "a4dafd14b95279bf0a945278456d5b5f459595158619c5e055b7827645d1bbde",
+        "test/fixtures/delivery-benchmark-v7/briefs/ui-states/evaluator/errors.test.cjs": "d084e37ace367332f4e745a3c4b6882a7e98c3323b3920d67cfb37532d4d6a4a",
+        "test/fixtures/delivery-benchmark-v7/briefs/ui-states/evaluator/escaping.test.cjs": "e5465105cdb83988c1be10e6ae6047bdf1fd19ba697c9e608aedc2ab4df4a29b",
+        "test/fixtures/delivery-benchmark-v7/briefs/ui-states/evaluator/evaluate.cjs": "ab3de279a6a35c460986c8f3bbfd6fad63aa90036fc67693c52066fd098987b5"
+      }
+    }
+  },
+  "caps": {
+    "turns_per_session": 150,
+    "wall_clock_minutes": 30
+  },
+  "configuration": {
+    "digest": "15b7af6291b230dcc4d1ca75995e7381d543e7947930e22d43a871dca7663480",
+    "configuration": {
+      "model": "sonnet",
+      "tool": "claude-code",
+      "cwd_kind": "scratch",
+      "permission_mode": "bypassPermissions",
+      "max_turns": 150,
+      "wall_clock_minutes": 30
+    },
+    "env_names": [
+      "HOME",
+      "PATH"
+    ],
+    "rejected": []
+  }
+}
