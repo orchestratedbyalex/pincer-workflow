@@ -1,0 +1,3 @@
+ed1a3a3249f35791785d09d2f16a88a72626e2ec 2026-09-12 21:49:55 +0200 Make status client robust to timeouts, retries, and 4xx/5xx
+927e3f7847e1bf4aaf47847289fb7a22b7a344e5 2026-09-12 21:47:37 +0200 Task brief
+bf9455014a53e4ec33973ad77af7f6a0b2792296 2026-09-12 21:47:37 +0200 status-client 0.3.0 (no tests)

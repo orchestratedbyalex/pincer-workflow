@@ -1,0 +1,108 @@
+{
+  "schema": 1,
+  "run": "cli-greenfield/pair-1/plain",
+  "brief": "cli-greenfield",
+  "arm": "plain",
+  "pair": 1,
+  "order": 4,
+  "created": "2026-09-12T12:53:48.393Z",
+  "status": "valid",
+  "reason": null,
+  "environment": {
+    "model": "sonnet",
+    "tool": "claude-code",
+    "tool_version": "2.1.267",
+    "node": "v22.23.1",
+    "os": "darwin 25.6.0",
+    "kit": null,
+    "caps": {
+      "turns_per_session": 150,
+      "wall_clock_minutes": 30
+    }
+  },
+  "workspace": {
+    "base": "e8e0593e3c895ee9295e7be788775f055df2dbfc",
+    "project_base": "e8e0593e3c895ee9295e7be788775f055df2dbfc",
+    "candidate": "3df295d718d85db349e0554c0c988605c8e59a80",
+    "unrelated_edits": {}
+  },
+  "sessions": [
+    {
+      "name": "S1",
+      "prompt": "Read BRIEF.md in this repository and implement what it asks for, committing your work as you go. Work autonomously; when you are done, stop and summarize what you built and how you verified it.",
+      "started": "2026-09-12T12:53:48.513Z",
+      "ended": "2026-09-12T12:56:09.401Z",
+      "exit": 0,
+      "transcript": "logs/S1.json"
+    }
+  ],
+  "interventions": [],
+  "effort": {
+    "setup_minutes": 0,
+    "review_minutes": null,
+    "active_minutes": 2.35,
+    "elapsed_minutes": 2.35,
+    "tokens": {
+      "input": 832127,
+      "output": 12702
+    },
+    "cost_usd": 0.4672,
+    "unavailable": {
+      "tokens": null,
+      "cost_usd": null
+    }
+  },
+  "evaluation": {
+    "evaluator": {
+      "brief": "cli-greenfield",
+      "digest": "054dbd0f0728adc725c9d8fdd4997c4ef9ca9b0330d7bb6b1f109b8a582ad042"
+    },
+    "at": "2026-09-12T19:11:29.775Z",
+    "candidate": "3df295d718d85db349e0554c0c988605c8e59a80",
+    "outcome": "accepted",
+    "checks": [
+      {
+        "id": "add-list",
+        "title": "add and list round trip, numbering, empty list",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: bin/todo.js exists\nok 1 - bin/todo.js exists\n  ---\n  duration_ms: 0.4255\n  type: 'test'\n  ...\n# Subtest: empty list\nok 2 - empty list\n  ---\n  duration_ms: 31.640791\n  type: 'test'\n  ...\n# Subtest: add joins words and numbers items\nok 3 - add joins words and numbers items\n  ---\n  duration_ms: 86.005125\n  type: 'test'\n  ...\n1..3\n# tests 3\n# suites 0\n# pass 3\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 150.363917"
+      },
+      {
+        "id": "done-marks",
+        "title": "done marks an item; a missing item is refused without changing the file",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: done marks the item and list shows it\nok 1 - done marks the item and list shows it\n  ---\n  duration_ms: 133.6445\n  type: 'test'\n  ...\n# Subtest: a missing item is refused and the file is unchanged\nok 2 - a missing item is refused and the file is unchanged\n  ---\n  duration_ms: 69.100542\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 235.26"
+      },
+      {
+        "id": "errors",
+        "title": "usage errors exit 2; a corrupt file is refused and left untouched",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: usage errors\nok 1 - usage errors\n  ---\n  duration_ms: 58.789334\n  type: 'test'\n  ...\n# Subtest: a corrupt file is refused for every command and left untouched\nok 2 - a corrupt file is refused for every command and left untouched\n  ---\n  duration_ms: 81.918375\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 174.741833"
+      },
+      {
+        "id": "own-tests",
+        "title": "the candidate's own npm test passes",
+        "kind": "regression",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: add appends an item and prints confirmation\nok 1 - add appends an item and prints confirmation\n  ---\n  duration_ms: 23.613334\n  type: 'test'\n  ...\n# Subtest: add joins words with a single space\nok 2 - add joins words with a single space\n  ---\n  duration_ms: 31.322208\n  type: 'test'\n  ...\n# Subtest: add increments item numbers across calls\nok 3 - add increments item numbers across calls\n  ---\n  duration_ms: 63.305875\n  type: 'test'\n  ...\n# Subtest: add with no text prints usage to stderr and exits 2\nok 4 - add with no text prints usage to stderr and exits 2\n  ---\n  duration_ms: 24.108917\n  type: 'test'\n  ...\n# Subtest: list prints no items for an empty or missing file\nok 5 - list prints no items for an empty or missing file\n  ---\n  duration_ms: 22.219125\n  type: 'test'\n  ...\n# Subtest: list prints open and done items in order\nok 6 - list prints open and done items in order\n  ---\n  duration_ms: 87.946042\n  type: 'test'\n  ...\n# Subtest: done marks an item done and prints confirmation\nok 7 - done marks an item done and prints confirmation\n  ---\n  duration_ms: 41.979917\n  type: 'test'\n  ...\n# Subtest: done on an already-done item succeeds again\nok 8 - done on an already-done item succeeds again\n  ---\n  duration_ms: 64.648584\n  type: 'test'\n  ...\n# Subtest: done with a nonexistent item number fails without changing the file\nok 9 - done with a nonexistent item number fails without changing the file\n  ---\n  duration_ms: 49.30625\n  type: 'test'\n  ...\n# Subtest: an invalid JSON file makes every command fail without changing the file\nok 10 - an invalid JSON file makes every command fail without changing the file\n  ---\n  duration_ms: 65.271041\n  type: 'test'\n  ...\n# Subtest: an unknown command prints usage to stderr and exits 2\nok 11 - an unknown command prints usage to stderr and exits 2\n  ---\n  duration_ms: 29.438292\n  type: 'test'\n  ...\n# Subtest: running with no command prints usage to stderr and exits 2\nok 12 - running with no command prints usage to stderr and exits 2\n  ---\n  duration_ms: 30.306042\n  type: 'test'\n  ...\n# Subtest: defaults to todo.json in the current directory when TODO_FILE is unset\nok 13 - defaults to todo.json in the current directory when TODO_FILE is unset\n  ---\n  duration_ms: 29.509958\n  type: 'test'\n  ...\n1..13\n# tests 13\n# suites 0\n# pass 13\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 600.662"
+      },
+      {
+        "id": "evidence-binding",
+        "title": "evidence in the candidate names this candidate (or the candidate its evaluation commit sits on)",
+        "kind": "evidence",
+        "result": "passed",
+        "exit": 0,
+        "detail": "no evidence names another candidate"
+      }
+    ],
+    "regressions": 0,
+    "log": "evaluation.log"
+  }
+}

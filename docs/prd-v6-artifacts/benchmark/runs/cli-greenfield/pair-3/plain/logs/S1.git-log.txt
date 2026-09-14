@@ -1,0 +1,3 @@
+3a56d99380cae1f8621de131b6e343d41308e81c 2026-09-12 22:59:50 +0200 Implement todo CLI with add/list/done commands
+ed9b7228ca68ceee39892c9ad375625ffdcbffda 2026-09-12 22:58:04 +0200 Task brief
+0c7253192f23be20bbcca677b0426c88ca1a5802 2026-09-12 22:58:04 +0200 Empty project

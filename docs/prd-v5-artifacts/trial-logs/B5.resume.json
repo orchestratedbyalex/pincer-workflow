@@ -1,0 +1,191 @@
+{
+  "schema": 1,
+  "runtime": 2,
+  "generated": "2026-09-12T01:02:51Z",
+  "root": "<scratchpad>/trial/scope2",
+  "mode": "changes",
+  "selection": {
+    "change": "prd-v1",
+    "problem": null
+  },
+  "change": {
+    "id": "prd-v1",
+    "prd": ".prd/prd-v1.md",
+    "prd_revision": "5c8043031e18ff69aee14c90bb3ef28e9218c2a45325cd24a3746d53cd7b5791",
+    "base": "47fa7ca0584bf387338bed6f3e909d1fd84d93ae",
+    "registered": "2026-09-12T00:26:39Z",
+    "sequence": 7,
+    "lifecycle": {
+      "state": "active",
+      "since": "2026-09-12T01:01:47Z",
+      "reason": null,
+      "note": null,
+      "superseded_by": null
+    },
+    "view": {
+      "head": "c85d237d71fafb14d95d2440a8112c4e5734b0e9",
+      "branch": "scope-rerun",
+      "base_is_ancestor": true,
+      "dirty": [
+        ".prd/changes/prd-v1.json",
+        "CHANGELOG.md",
+        ".prd/changes/prd-v1/agreements/G-02.json",
+        "scratch/todo.txt"
+      ]
+    }
+  },
+  "agreement": {
+    "current": "e22544d31a7a1ef38358b2ef6bea391fa94cef7daee9658041ea1ceb1bba9488",
+    "authorized": {
+      "id": "A-02",
+      "agreement": "G-02",
+      "digest": "e22544d31a7a1ef38358b2ef6bea391fa94cef7daee9658041ea1ceb1bba9488",
+      "disposition": "user",
+      "recorded": "2026-09-12T01:01:44Z",
+      "reference": "user message in this conversation",
+      "excerpt": "Do not ask me to re-approve scope I already approved.",
+      "constraints": null
+    },
+    "verdict": "DECISION_REQUIRED",
+    "difference": null,
+    "decisions": {
+      "open": [
+        {
+          "id": "D-01",
+          "summary": "AGREEMENT_CHANGED found on resume (not made this session): PRD v1 revised to add R-03 'list --json' and ticket T-04. Per AGENTS.md/pincer-code, this needs explicit confirmation naming the content, not a general 'don't re-ask' instruction.",
+          "raised": "2026-09-12T01:02:44Z"
+        }
+      ],
+      "resolved": []
+    }
+  },
+  "references": {
+    "prd": {
+      "path": ".prd/prd-v1.md",
+      "title": "Notes CLI: add and list"
+    },
+    "snapshot": ".prd/changes/prd-v1/agreements/G-02.json",
+    "tickets": [
+      {
+        "id": "T-01",
+        "file": "tickets/T-01-add-and-list.md",
+        "objective": "Implement `add <text>` and `list` in `src/notes.js` so `test/notes.test.js` passes."
+      },
+      {
+        "id": "T-02",
+        "file": "tickets/T-02-document-usage.md",
+        "objective": "Document `add` and `list` in README.md."
+      },
+      {
+        "id": "T-04",
+        "file": "tickets/T-04-json-output.md",
+        "objective": "Add `list --json` to `src/notes.js` so `test/json.test.js` passes."
+      }
+    ]
+  },
+  "tickets": [
+    {
+      "id": "T-01",
+      "file": "tickets/T-01-add-and-list.md",
+      "status": "done",
+      "size": "S",
+      "depends_on": [],
+      "started": "2026-09-12T00:27:44Z",
+      "finished": "2026-09-12T00:28:11Z",
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          {
+            "code": "EVIDENCE_MISSING",
+            "detail": "no runtime attempt recorded"
+          }
+        ],
+        "next": "verify"
+      },
+      "latest_attempt": null,
+      "legacy_receipt": null
+    },
+    {
+      "id": "T-02",
+      "file": "tickets/T-02-document-usage.md",
+      "status": "open",
+      "size": "S",
+      "depends_on": [
+        "T-01"
+      ],
+      "started": null,
+      "finished": null,
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          {
+            "code": "DEPENDENCY_BLOCKED",
+            "detail": "blocked by T-01"
+          }
+        ],
+        "next": "finish the dependency"
+      },
+      "latest_attempt": null,
+      "legacy_receipt": null
+    },
+    {
+      "id": "T-04",
+      "file": "tickets/T-04-json-output.md",
+      "status": "open",
+      "size": "S",
+      "depends_on": [
+        "T-01"
+      ],
+      "started": null,
+      "finished": null,
+      "readiness": {
+        "ready": false,
+        "reasons": [
+          {
+            "code": "DEPENDENCY_BLOCKED",
+            "detail": "blocked by T-01"
+          }
+        ],
+        "next": "finish the dependency"
+      },
+      "latest_attempt": null,
+      "legacy_receipt": null
+    }
+  ],
+  "attempts": [],
+  "candidate": {
+    "notes": "missing",
+    "reason": "missing (no evaluation recorded in .prd/evidence/changes/prd-v1.json)",
+    "candidate": null,
+    "base": null,
+    "evidence": null,
+    "local_attempts": "available",
+    "newer_attempts": [],
+    "reasons": [
+      {
+        "code": "EVIDENCE_MISSING",
+        "detail": "missing (no evaluation recorded in .prd/evidence/changes/prd-v1.json)"
+      }
+    ],
+    "locator": ".prd/evidence/changes/prd-v1.json",
+    "evaluation": null
+  },
+  "handoff": null,
+  "blockers": [
+    {
+      "code": "DECISION_REQUIRED",
+      "detail": "decision D-01 is open (AGREEMENT_CHANGED found on resume (not made this session): PRD v1 revised to add R-03 'list --json' and ticket T-04. Per AGENTS.md/pincer-code, this needs explicit confirmation naming the content, not a general 'don't re-ask' instruction.); record the user's decision with: node scripts/pincer-runtime.cjs change decide prd-v1 --resolve D-01 --reference <text> --excerpt <text>"
+    },
+    {
+      "code": "EVIDENCE_MISSING",
+      "detail": "T-01: no runtime attempt recorded"
+    }
+  ],
+  "next": {
+    "action": "record the user's decision",
+    "command": "node scripts/pincer-runtime.cjs change decide prd-v1 --resolve D-01 --reference <text> --excerpt <text>",
+    "ticket": null,
+    "check": null,
+    "rule": 4
+  }
+}

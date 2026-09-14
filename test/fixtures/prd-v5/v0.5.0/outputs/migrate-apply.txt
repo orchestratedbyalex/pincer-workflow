@@ -1,0 +1,2 @@
+migrated .prd/prd-v1.md → change prd-v1 (revision 68c1ed3d0030, base e59132b, 1 ticket(s) rewritten)
+backups: .pincer/backups/20260911T202504Z/ (1 file(s)); rollback per docs/runtime-contracts.md

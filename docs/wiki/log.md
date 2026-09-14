@@ -161,3 +161,56 @@ Outcome: npm publish still pending (needs the user's OTP); next is `/pincer-narr
 - Why: release flow after the PASS audit of candidate 1a7fb78.
 - Correction: the registry shows v0.4.1 published at 2026-09-11T08:14Z, so earlier notes calling it unpublished were wrong.
 - Outcome: nothing in flight; next work is the PRD v4 §10 follow-ups.
+
+## [2026-09-11] end | PRD v5 drafted: change lifecycle, authorization, and resume
+- What: created `.prd/prd-v5.md` against local v0.5.0 (`9bcf8df`), with R-01..R-10, S-01..S-32, seven dependency-ordered implementation packages, migration constraints, and a later-review packet.
+- Why: the user requested a clear PRD for the next lifecycle/resume increment after the v4 fixes. A targeted rerun of the prior three reproductions rejected incomplete attempts and altered logs, and bounded the one-second background-child timeout to 1.22 s.
+- Decisions proposed: selection is local to each worktree; lifecycle and verification readiness are separate; completed means implementation ready for evaluation; agreement changes require explicit authorization or a recorded existing-delegation disposition; no automatic Git source changes.
+- Outcome: draft only; no implementation, ticket creation, migration, or release action. Checked document identifiers, local links, and whitespace; no runtime changes or full-suite rerun for this documentation task.
+
+## [2026-09-11] end | PRD v5 decomposed into T-47..T-61
+- What: created 15 open tickets with explicit PRD associations, dependencies, acceptance criteria and planned verification suites; `docs/prd-v5-ticket-map.md` records build order and all 32 scenario owners. PRD v5 status is now ticketed.
+- Why: the user explicitly requested tickets for the v5 work. This is decomposition for their implementation and later review, not a request to start coding or migrate the distribution repository.
+- Validation: the existing parser validated the repository ticket set and each new ticket; dependency references and acyclicity, initial open state, absence of receipt fields, complete scenario coverage, local links and whitespace checks passed. Planned implementation tests were not created or run.
+- Outcome: start T-47 using a pinned released kit. No prior tickets, runtime files, generated outputs, commits, registration, migration, or release actions changed in this task.
+
+## [2026-09-11] end | PRD v5 T-47..T-56 implemented on feat/prd-v5
+What: contract freeze + released fixtures (T-47), transactions (T-48), schema 2 change records (T-49), selection (T-50), agreements (T-51), authorization/decisions (T-52), lifecycle transitions (T-53), command gates (T-54), change-scoped attempts (T-55), evaluation locator (T-56); ten new `test/change-*.test.js` suites in `npm test`.
+Why: PRD v5 (preserve changes, authorization, resume context); each ticket verified with the pinned v0.5.0 kit and committed as `T-NN: …`.
+Files: template/scripts/pincer-runtime/{transaction,changes,agreement,authorization,transitions,gates,locator}.cjs, status/lifecycle/runner/state/readiness/evidence edits, template/docs/runtime-contracts.md, test/fixtures/prd-v5/, test/helpers.js (bindV050).
+Outcome: T-57..T-61 remain (resume report, migration, adapters, live trials, review packet). Mid-implementation checkpoint; the branch is not evaluated.
+
+## [2026-09-12] end | PRD v5 implemented on feat/prd-v5: T-57..T-62 done, trials, review packet, PRD built
+- What: resume report (T-57), migration to changes mode (T-58), playbooks/guards/installer/adapters (T-59), live handoff trials with a v0.5.0 baseline (T-60, `docs/trial-prd-v5.md`, `docs/prd-v5-artifacts/`), review packet with eight executable replay cases (T-61, `docs/prd-v5-review-packet.md`, `replay.sh`), playbook fix from trial finding 1 (T-62). PRD set to `built`.
+- Why: PRD v5 (retained change records, explicit selection, agreement-bound authorization, lifecycle transactions, resume) is complete and ready for the user's evaluation; nothing merged, bumped or published.
+- Files: template/scripts/pincer-runtime/{resume,migrate}.cjs, template/.claude/commands/*, template/AGENTS.md, template/docs/*, bin/pincer.js, test/change-*.test.js, docs/trial-prd-v5.md, docs/prd-v5-review-packet.md, docs/prd-v5-artifacts/, tickets/T-57..T-62.
+- Outcome: full `npm test` green through the pinned v0.5.0 kit; generators in parity; CI outstanding for the branch. Trials: S-30 both project types pass; S-31 changed-scope block held (agent residual disclosed), interruption recovered; S-32 baseline needed 2 binding deletions and 2 re-typed approvals where the runtime needed none.
+
+## [2026-09-12] end | Review findings on built PRD v5 fixed: T-63 gate revalidation under the lock, T-64 validated followers, T-65 rollback split
+The user's review of `feat/prd-v5` at `1a5cbc5` found two P1s and one P2; each became a follow-up ticket closed through the pinned v0.5.0 kit (commits `d43168c`, `7d94c58`, `dcbcfbe`), no done ticket edited.
+T-63: `runner.runAttempt` takes `revalidate`/`announce`; verify/check re-run `gates.guard` under the lock before the running record (fixture `test/fixtures/attempt-race.cjs`, gate suite S-24 block, contract pins). T-64: `locator.followers` computes allowed post-candidate paths from valid locators + validated manifests; `requireCandidateView` uses it (evaluations suite R-07 block). T-65: contract rollback split into legacy and binding procedures; both rollback tests follow them literally.
+Packet sections 1, 2, 4, 6, 10 updated; wiki runtime/decision/briefing updated; full `npm test` re-run after the fixes (result in the packet's verification record).
+Outcome: PRD v5 still `built`, awaiting the user's re-review, evaluation, CI push and release.
+
+## [2026-09-12] end | PRD v6 and implementation breakdown created
+- What: `.prd/prd-v6.md` (ticketed), 13 open tickets T-66..T-78 and `docs/prd-v6-ticket-map.md`; 10 requirements and 30 scenarios with primary owners, checks and dependency order.
+- Why: the user selected complete requirement coverage and change impact, with an independent delivery benchmark, and requested tickets.
+- Decisions: PRD prose owns definitions; a strict authored map owns links and candidate check declarations; adoption is explicit and agreement-bound; export/release reconcile the full candidate inventory; semantic adequacy remains a review judgment. Benchmark: six briefs, three paired repetitions each, 36 runs with independently frozen evaluators and honest failures/limitations.
+- Validation: existing parser accepts the PRD and all new tickets; full ticket-set validation passes; planning checks confirm unique R/S IDs, all scenario owners, valid local links, ordered acyclic dependencies and open/unchecked state without receipts. Runtime tests were not rerun for this documentation-only task.
+- Outcome: v6 runtime implementation begins with T-66; no code, migration, evaluation, merge or publication performed. V5 release/re-review gates remain separate.
+
+## [2026-09-12] end | PRD v6 implemented: strict coverage, impact and the delivery benchmark
+Built T-66..T-78 on `feat/prd-v6` (base `07b2210`): the PRD's own prose is the inventory,
+`.prd/coverage/<id>.json` is the one authored map, both live inside the agreement digest,
+`coverage`/`impact` are read-only reports, strict `check C-NN` runs only the declaration,
+and evidence schema 3 derives every row from the map snapshot. Adoption is opt-in and
+backed up; unadopted projects are untouched.
+Also: a six-brief, 36-run paired delivery benchmark with held-out evaluators
+(`docs/trial-prd-v6.md`) — acceptance 17/18 per arm, kit arm ~4.7x cost, the only
+difference being changed-scope handling (3/3 vs 2/3); and the review packet with eight
+executable replay cases (`docs/prd-v6-review-packet.md`).
+Files: `template/scripts/pincer-runtime/{requirements,coverage,dispositions,adopt,phases,impact,checks}.cjs`,
+14 new suites, `scripts/delivery-benchmark/`, `test/fixtures/delivery-benchmark/`, `docs/prd-v6-artifacts/`.
+Outcome: 50 suites green locally through the pinned v0.5.0 kit; both generators in parity;
+CI not run on the branch and Node 18 unverified anywhere; nothing evaluated, merged or released.
+New pages: [[strict-coverage]], [[delivery-benchmark]], [[coverage-is-authored-and-bound]].

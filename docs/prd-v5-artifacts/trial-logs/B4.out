@@ -1,0 +1,10 @@
+Working tree is clean, no stray files touched.
+
+PRD v1 (Notes CLI) is fully built. Picking up where it was paused:
+
+1. Recorded authorization A-02 for the changed agreement (R-03/`list --json` + T-04, which the operator had already added to the PRD) using your instruction in this session as the reference — no re-approval asked.
+2. Resumed the change, re-verified T-01 (its stale evidence needed a fresh passing attempt).
+3. Implemented `list --json` / `list --xml` in `src/notes.js`, then ran T-02 (README usage docs) and T-04 (json output) through their full start → verify → done → commit cycles.
+4. Completed the change and marked PRD v1 `status: built`.
+
+All committed: `Authorize change prd-v1 (G-02/A-02)`, `Resume change prd-v1`, `T-02: document usage`, `T-04: json output`, `Complete PRD v1`, `PRD v1: built`. Next step per the workflow is `/pincer-evaluate`.

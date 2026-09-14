@@ -1,0 +1,225 @@
+{
+  "schema": 1,
+  "runtime": 2,
+  "generated": "2026-09-12T01:00:05Z",
+  "root": "<scratchpad>/trial/scope",
+  "mode": "changes",
+  "selection": {
+    "change": "prd-v1",
+    "problem": null
+  },
+  "change": {
+    "id": "prd-v1",
+    "prd": ".prd/prd-v1.md",
+    "prd_revision": "5c8043031e18ff69aee14c90bb3ef28e9218c2a45325cd24a3746d53cd7b5791",
+    "base": "47fa7ca0584bf387338bed6f3e909d1fd84d93ae",
+    "registered": "2026-09-12T00:26:39Z",
+    "sequence": 7,
+    "lifecycle": {
+      "state": "completed",
+      "since": "2026-09-12T00:59:48Z",
+      "reason": null,
+      "note": null,
+      "superseded_by": null
+    },
+    "view": {
+      "head": "e66b93eab36d2dbc022ed8c0d2e18a3f06e8e0e3",
+      "branch": "scope-rerun",
+      "base_is_ancestor": true,
+      "dirty": []
+    }
+  },
+  "agreement": {
+    "current": "e22544d31a7a1ef38358b2ef6bea391fa94cef7daee9658041ea1ceb1bba9488",
+    "authorized": {
+      "id": "A-02",
+      "agreement": "G-02",
+      "digest": "e22544d31a7a1ef38358b2ef6bea391fa94cef7daee9658041ea1ceb1bba9488",
+      "disposition": "user",
+      "recorded": "2026-09-12T00:55:55Z",
+      "reference": "user message, this session, 2026-09-12",
+      "excerpt": "Continue the work on change prd-v1 where it was left off ... Do not ask me to re-approve scope I already approved.",
+      "constraints": null
+    },
+    "verdict": "current",
+    "difference": null,
+    "decisions": {
+      "open": [],
+      "resolved": []
+    }
+  },
+  "references": {
+    "prd": {
+      "path": ".prd/prd-v1.md",
+      "title": "Notes CLI: add and list"
+    },
+    "snapshot": ".prd/changes/prd-v1/agreements/G-02.json",
+    "tickets": [
+      {
+        "id": "T-01",
+        "file": "tickets/T-01-add-and-list.md",
+        "objective": "Implement `add <text>` and `list` in `src/notes.js` so `test/notes.test.js` passes."
+      },
+      {
+        "id": "T-02",
+        "file": "tickets/T-02-document-usage.md",
+        "objective": "Document `add` and `list` in README.md."
+      },
+      {
+        "id": "T-04",
+        "file": "tickets/T-04-json-output.md",
+        "objective": "Add `list --json` to `src/notes.js` so `test/json.test.js` passes."
+      }
+    ]
+  },
+  "tickets": [
+    {
+      "id": "T-01",
+      "file": "tickets/T-01-add-and-list.md",
+      "status": "done",
+      "size": "S",
+      "depends_on": [],
+      "started": "2026-09-12T00:27:44Z",
+      "finished": "2026-09-12T00:28:11Z",
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "next": null
+      },
+      "latest_attempt": {
+        "id": "000004-20260912T005914Z-9f6cb6",
+        "sequence": 4,
+        "outcome": "passed",
+        "started": "2026-09-12T00:59:14Z",
+        "finished": "2026-09-12T00:59:14Z"
+      },
+      "legacy_receipt": null
+    },
+    {
+      "id": "T-02",
+      "file": "tickets/T-02-document-usage.md",
+      "status": "done",
+      "size": "S",
+      "depends_on": [
+        "T-01"
+      ],
+      "started": "2026-09-12T00:58:40Z",
+      "finished": "2026-09-12T00:58:56Z",
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "next": null
+      },
+      "latest_attempt": {
+        "id": "000003-20260912T005848Z-85fc43",
+        "sequence": 3,
+        "outcome": "passed",
+        "started": "2026-09-12T00:58:48Z",
+        "finished": "2026-09-12T00:58:48Z"
+      },
+      "legacy_receipt": null
+    },
+    {
+      "id": "T-04",
+      "file": "tickets/T-04-json-output.md",
+      "status": "done",
+      "size": "S",
+      "depends_on": [
+        "T-01"
+      ],
+      "started": "2026-09-12T00:59:16Z",
+      "finished": "2026-09-12T00:59:38Z",
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "next": null
+      },
+      "latest_attempt": {
+        "id": "000005-20260912T005919Z-9e5148",
+        "sequence": 5,
+        "outcome": "passed",
+        "started": "2026-09-12T00:59:19Z",
+        "finished": "2026-09-12T00:59:25Z"
+      },
+      "legacy_receipt": null
+    }
+  ],
+  "attempts": [
+    {
+      "ticket": "T-01",
+      "check": null,
+      "id": "000001-20260912T005617Z-0f567e",
+      "outcome": "failed",
+      "started": "2026-09-12T00:56:17Z",
+      "finished": "2026-09-12T00:56:17Z",
+      "current": false
+    },
+    {
+      "ticket": "T-01",
+      "check": null,
+      "id": "000002-20260912T005834Z-cf6431",
+      "outcome": "passed",
+      "started": "2026-09-12T00:58:34Z",
+      "finished": "2026-09-12T00:58:34Z",
+      "current": false
+    },
+    {
+      "ticket": "T-01",
+      "check": null,
+      "id": "000004-20260912T005914Z-9f6cb6",
+      "outcome": "passed",
+      "started": "2026-09-12T00:59:14Z",
+      "finished": "2026-09-12T00:59:14Z",
+      "current": true
+    },
+    {
+      "ticket": "T-02",
+      "check": null,
+      "id": "000003-20260912T005848Z-85fc43",
+      "outcome": "passed",
+      "started": "2026-09-12T00:58:48Z",
+      "finished": "2026-09-12T00:58:48Z",
+      "current": true
+    },
+    {
+      "ticket": "T-04",
+      "check": null,
+      "id": "000005-20260912T005919Z-9e5148",
+      "outcome": "passed",
+      "started": "2026-09-12T00:59:19Z",
+      "finished": "2026-09-12T00:59:25Z",
+      "current": true
+    }
+  ],
+  "candidate": {
+    "notes": "missing",
+    "reason": "missing (no evaluation recorded in .prd/evidence/changes/prd-v1.json)",
+    "candidate": null,
+    "base": null,
+    "evidence": null,
+    "local_attempts": "available",
+    "newer_attempts": [],
+    "reasons": [
+      {
+        "code": "EVIDENCE_MISSING",
+        "detail": "missing (no evaluation recorded in .prd/evidence/changes/prd-v1.json)"
+      }
+    ],
+    "locator": ".prd/evidence/changes/prd-v1.json",
+    "evaluation": null
+  },
+  "handoff": null,
+  "blockers": [
+    {
+      "code": "EVIDENCE_MISSING",
+      "detail": "missing (no evaluation recorded in .prd/evidence/changes/prd-v1.json)"
+    }
+  ],
+  "next": {
+    "action": "evaluate the candidate",
+    "command": "/pincer-evaluate (missing (no evaluation recorded in .prd/evidence/changes/prd-v1.json))",
+    "ticket": null,
+    "check": null,
+    "rule": 7
+  }
+}

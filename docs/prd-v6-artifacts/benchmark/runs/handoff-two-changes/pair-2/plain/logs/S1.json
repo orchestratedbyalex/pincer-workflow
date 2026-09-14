@@ -1,0 +1,43 @@
+{
+  "session_id": "b1162608-4730-47b1-8ddc-d42159b7a450",
+  "num_turns": 22,
+  "duration_ms": 121024,
+  "duration_api_ms": 117557,
+  "total_cost_usd": 0.4299231999999999,
+  "usage": {
+    "input_tokens": 38,
+    "cache_creation_input_tokens": 37877,
+    "cache_read_input_tokens": 913746,
+    "output_tokens": 9559,
+    "output_tokens_details": {
+      "thinking_tokens": 2865
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 37877,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 389,
+        "cache_read_input_tokens": 56143,
+        "cache_creation_input_tokens": 265,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 265
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "is_error": false,
+  "subtype": "success",
+  "result": "Both changes are committed and the working tree is clean. Status for a later session, readable from the repo alone:\n\n**Change A (add/list)** — `bin/notes.js` + `test/add.test.js`\n- A1 (`add <text…>`): **done**, committed as `576e667`. Handles the missing-text usage/exit-2 case and the corrupt-`notes.json` error path (shared helpers `loadNotes`/`saveNotes`/`notesFilePath`).\n- A2 (`list`): **not implemented**, deliberately left for a later session. There's no `list` case in the `switch` in `bin/notes.js` yet — falls through to the generic usage/exit-2 default.\n\n**Change B (clear)** — `bin/notes.js` + `test/clear.test.js`\n- B1 (`clear`, with `--dry-run`): **done and fully tested**, committed as `c947754`. Reuses the shared load/save helpers from A1.\n\nAll 9 tests pass via `npm test` (`node --test`). Next session can pick up A2 by adding a `list` case to `bin/notes.js` and a `test/list.test.js`, following the same pattern as the two existing command implementations."
+}

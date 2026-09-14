@@ -2,7 +2,6 @@
 
 - [2026-09-11] The runtime trial covered Claude Code `-p` + Sonnet only; Codex, Copilot, plugin and Windows are untested for the runtime (`docs/trial-2026-09-11-prd-v4.md`); CI has since run the suites on ubuntu and Node 18 ([[runtime]])
 - [2026-09-11] `pincer-ticket-lib.sh` is no longer shipped but `pincer update` leaves the old copy in installed projects; decide whether the installer should remove obsolete files ([[cli-installer]])
-- [2026-09-11] Follow-up PRDs from PRD v4 §10: explicit lifecycle/resume, mechanical requirement coverage and impact, platform parity and measured delivery quality ([[runtime-owned-verification]])
 
 - [2026-09-08] R-05 "new consequential decision during narrow" and the interrupt-and-resume scenario were never observed live (R-06 failed recheck was, on 2026-09-10) ([[candidate-evidence]])
 - [2026-09-08] The PRD v1 evaluation (legacy NOTES.md, no evidence manifest) survives only in git history before `6518cfb`; the v1 evidence gap is by design ([[candidate-evidence]])
@@ -12,3 +11,16 @@
 - [2026-09-02] Codex supports hooks now; port `hook-policy.cjs` as a Codex hook adapter (README wording already corrected) ([[distribution-channels]])
 - [2026-09-02] Codex: the `$pincer-plan` → `$pincer-release` chain is untested on Codex ([[cli-installer]])
 - [2026-09-04] Copilot: `/pincer-*` prompt-file chain in VS Code untested end to end ([[distribution-channels]])
+- [2026-09-11] Sandbox limit observed: `node <file> <long argv>` SIGKILLed in the Claude Code Bash tool; feedback drafted; CI is unaffected ([[runtime]])
+- [2026-09-12] PRD v5 is built on `feat/prd-v5` but not evaluated, merged or released: `/pincer-evaluate` (pinned v0.5.0 kit, schema 2 manifest under `.prd/evidence/prd-v5/`), then release, are the user's calls; CI has not run on the branch (not pushed), so Node 18/Linux are unverified for v5 ([[explicit-change-lifecycle]])
+- [2026-09-12] Generic-continue residual, re-tested by v6 S-27: across six live scope-revision runs no session recorded an authorization from the generic instruction (kit arm 3/3 surfaced the revision, plain arm 2/3). The v5 residual was not reproduced, but a runtime-side guard (refuse a `user` authorization whose excerpt matches no revised content) is still unbuilt ([[strict-coverage]])
+- [2026-09-12] Review packet deviation 6 needs a reviewer's confirmation: execution against an unreadable selected record is refused as `SELECTION_INVALID` (exit 1) naming `HISTORY_INVALID`, while inspection exits 4 ([[runtime]])
+- [2026-09-12] Claude Code ticket guard false positive: a compound `git add .prd/changes/… && git commit -m "$(cat <<'EOF' … <noreply@…> EOF)"` is refused (the lexer reads `<…>` in the heredoc as a redirect next to a protected path); split add and commit, or fix the lexer ([[ticket-state-machine]])
+- [2026-09-12] Trial-fixture lesson: `"test": "node --test test/"` fails on Node 22.23 (bare directory arg); use `node --test`. Pre-authoring a later ticket's test file makes an earlier ticket's `npm test` check unpassable ([[runtime]])
+- [2026-09-12] After T-64, a second change's evaluation being assembled on a shared candidate (artifacts written, manifest not yet exported) makes the first change's readiness transiently `stale: working tree has changes outside the candidate's evidence` until the export and commit; conservative by design, but worth a note in the evaluate playbook if it confuses a trial ([[runtime]])
+
+
+- [2026-09-12] PRD v6 is built on `feat/prd-v6` but not evaluated, merged or released, and CI has never run on the branch — Node 18 has not run this code anywhere. Decide the order of the v5 and v6 evaluations before merging either ([[strict-coverage]])
+- [2026-09-12] The delivery benchmark showed no acceptance advantage and ~4x cost for the kit arm on six bounded single-change briefs (n=3 per cell). Whether the workflow pays off needs briefs with real multi-session continuity, which this set does not have ([[delivery-benchmark]])
+- [2026-09-12] No live run has ever adopted strict coverage: the v6 briefs are single-change tasks, so `coverage adopt`, the strict check path and evidence schema 3 are covered only by suites and the replay cases ([[strict-coverage]])
+- [2026-09-12] `npm test` is now ~10 minutes, dominated by `delivery-benchmark`. If that becomes a problem, split the chain into a fast suite and a slow one rather than dropping the fault-injection coverage ([[delivery-benchmark]])

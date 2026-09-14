@@ -1,0 +1,15 @@
+PINCER resume · 2026-09-12T08:26:48Z · /fixture
+Change     prd-v1 · .prd/prd-v1.md · revision 166c3b155df5 · base f90442a · registered 2026-09-12T08:26:46Z · sequence 4
+Lifecycle  completed since 2026-09-12T08:26:47Z
+View       HEAD 603fbd6 · branch main · base is an ancestor · dirty 0 path(s)
+Agreement  ee27abef2aab · authorized as G-01 by A-01 (user, 2026-09-12T08:26:46Z)
+Authorization current — "go ahead with T-01 as written" (planning session 2026-09-12)
+Decisions  none
+References PRD .prd/prd-v1.md ("Example PRD") · authorized snapshot .prd/changes/prd-v1/agreements/G-01.json · tickets T-01 (tickets/T-01-example.md)
+  T-01  Example
+Tickets    T-01 done ready
+Attempts   T-01 000001-20260912T082647Z-0808ba passed (current); C-01 000002-20260912T082647Z-2f6492 passed (current)
+Candidate  .prd/evidence/changes/prd-v1.json: current (73aebd8090ef6dcb52bcd8b6269e61cc192f9a2c) · evidence ok
+Handoff (authored) none
+Blockers   none
+Next       read-only release audit: /pincer-release

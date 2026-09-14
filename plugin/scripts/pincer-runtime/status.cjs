@@ -2,7 +2,9 @@
 // PINCER runtime — status (docs/runtime-contracts.md, "Readiness and reason
 // codes"). Gathers the artifacts on disk, computes readiness once, and renders
 // the human report (line for line the v0.4.1 format plus a `Runtime` line) or
-// the status JSON. Read-only: never executes a check, never writes.
+// the status JSON. Read-only: never executes a check, never writes. In changes
+// mode (schema 2 records) the report covers the locally selected change, or the
+// one named with --change, and never picks a change on its own.
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -12,6 +14,11 @@ const source = require('./source.cjs');
 const state = require('./state.cjs');
 const readiness = require('./readiness.cjs');
 const evidence = require('./evidence.cjs');
+const changes = require('./changes.cjs');
+const transaction = require('./transaction.cjs');
+const agreement = require('./agreement.cjs');
+const authorization = require('./authorization.cjs');
+const locator = require('./locator.cjs');
 const { tryGit } = require('./fsutil.cjs');
 
 const RUNTIME = 1;
@@ -108,24 +115,42 @@ function evidenceLine(root, prd) {
 }
 
 // --- Gather ------------------------------------------------------------------
-function gather(root, { budget } = {}) {
+function gather(root, { budget, change = null } = {}) {
   const now = Math.floor(Date.now() / 1000);
   const out = { lines: [], warnings: [], exit: 0, json: { schema: 1, runtime: RUNTIME, generated: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'), root, mode: 'legacy', change: null, prd: null, tickets: [], history: 0, candidate: null, reasons: [], next: null } };
   const line = s => out.lines.push(s);
   const j = out.json;
   line(`PINCER status · ${new Date().toISOString().replace(/:\d{2}\.\d{3}Z$/, 'Z')} · ${root}`);
 
+  // A committed-but-unapplied transaction (a migration or transition killed
+  // mid-rename) is reported in every mode and never interpreted or repaired here.
+  const pendingTxn = transaction.pending(root);
+  if (pendingTxn.committed.length) {
+    const t = pendingTxn.committed[0];
+    const detail = `a committed transaction (${t.command || t.id}) was not fully applied; run: node scripts/pincer-runtime.cjs recover`;
+    j.mode = changes.scan(root).mode;
+    if (j.mode === 'changes') { j.schema = 3; j.runtime = changes.RUNTIME_STRICT; j.selection = { change: null, problem: null }; j.changes = []; }
+    line(`WARN     STATE_INCOMPLETE: ${detail}`);
+    j.reasons.push({ code: 'STATE_INCOMPLETE', detail });
+    j.next = 'node scripts/pincer-runtime.cjs recover';
+    line(`Next     ${j.next}`);
+    out.exit = 4; return out;
+  }
   // Mode and selected PRD.
   const bindingResult = identity.loadBinding(root);
+  if (bindingResult.code === 'CHANGES_MODE') return gatherChanges(root, out, { budget, now, change });
+  if (change) { line(`WARN     --change applies to change records only (this project is ${bindingResult.code ? 'not in changes mode' : 'migrated'})`); line('Next     inspect with status without --change'); out.exit = 4; return out; }
   let mode = 'legacy', binding = null, prd = null, prdResult = null;
   if (bindingResult.binding && !bindingResult.code) {
     mode = 'migrated'; binding = bindingResult.binding; prd = binding.prd; prdResult = bindingResult.prd;
-  } else if (bindingResult.code === 'REVISION_CHANGED' || bindingResult.code === 'INPUT_INVALID') {
+  } else if ((bindingResult.code === 'REVISION_CHANGED' || bindingResult.code === 'INPUT_INVALID') && bindingResult.binding) {
     mode = 'migrated'; binding = bindingResult.binding; prd = binding.prd;
     const v = parse.validatePrd(root, prd);
     if (!v.ok) { line(`WARN     invalid PRD: ${v.file || prd}: ${v.problems[0]}`); line('Next     repair PRD input before continuing'); out.exit = 4; return out; }
     prdResult = v;
-  } else if (['MALFORMED', 'AMBIGUOUS', 'UNSUPPORTED_SCHEMA'].includes(bindingResult.code)) {
+  } else if (['MALFORMED', 'AMBIGUOUS', 'UNSUPPORTED_SCHEMA', 'INPUT_INVALID'].includes(bindingResult.code)) {
+    // Unreadable or mixed records: neither legacy nor migrated (never a fallback).
+    j.mode = 'invalid';
     line(`WARN     invalid change binding: ${bindingResult.problem}`);
     line('Next     repair .prd/changes/ before continuing (remove or restore the binding; see docs/runtime-contracts.md)');
     j.reasons.push({ code: 'INPUT_INVALID', detail: bindingResult.problem });
@@ -136,6 +161,7 @@ function gather(root, { budget } = {}) {
     prd = latest.prd; prdResult = latest.prdResult;
   }
   j.mode = mode;
+  j.coverage = { strict: false, label: 'unverified', reason: mode === 'legacy' ? 'legacy project (no change record); strict coverage needs change records' : 'v0.5.0 binding (migrated mode); migrate to change records, then adopt' };
   const prdStatus = prdResult ? prdResult.fields.status : '';
   if (!prd) line('PRD      none');
   else {
@@ -152,7 +178,20 @@ function gather(root, { budget } = {}) {
   } else {
     line(`Runtime  legacy · no change binding${prd ? ` · migrate with node scripts/pincer-runtime.cjs migrate --preview --prd ${prd}` : ''}`);
   }
+  const result = gatherBody(root, out, { mode, binding, prd, prdResult, bindingResult, budget, now });
+  // Old modes label their coverage unverified in the human report too.
+  const at = result.lines.findIndex(l => l.startsWith('Notes    '));
+  if (at !== -1) result.lines.splice(at, 0, `Coverage unverified · ${j.coverage.reason}`);
+  return result;
+}
 
+// Tickets, candidate and next action for the selected PRD. `ctx.decideNext`, when
+// given, replaces the default next-action rule (changes mode).
+function gatherBody(root, out, ctx) {
+  const { mode, binding, prd, prdResult, bindingResult, budget, now } = ctx;
+  const line = s => out.lines.push(s);
+  const j = out.json;
+  const prdStatus = prdResult ? prdResult.fields.status : '';
   // Tickets: reject malformed input instead of guessing.
   const set = parse.validateTicketSet(root);
   if (!set.ok) {
@@ -177,12 +216,13 @@ function gather(root, { budget } = {}) {
 
   // Current inputs for migrated readiness (computed once; read-only).
   let current = {}, sourceProblems = [], manifestNow = null;
-  if (mode === 'migrated') {
+  const runtimeMode = mode !== 'legacy';
+  if (runtimeMode) {
     manifestNow = source.snapshot(root);
     sourceProblems = manifestNow.problems;
     current = { prdRevision: binding.prd_revision, sourceDigest: manifestNow.digest };
   }
-  const indexRead = mode === 'migrated' && state.exists(root) ? state.readIndex(root) : { index: null };
+  const indexRead = runtimeMode && state.exists(root) ? state.readIndex(root) : { index: null };
   if (indexRead.error) { line(`WARN     invalid runtime state: ${indexRead.error}`); line('Next     repair or remove .pincer/runtime (see docs/runtime-contracts.md); run recover for a diagnosis'); j.reasons.push({ code: 'INPUT_INVALID', detail: indexRead.error }); out.exit = 4; return out; }
   const byId = new Map(tickets.map(t => [t.fields.ticket, t]));
   const readinessOf = new Map();
@@ -199,7 +239,7 @@ function gather(root, { budget } = {}) {
         if (before) changedPaths = source.diffManifests(before, manifestNow);
       }
       const legacyReceipt = (binding.legacy_receipts && binding.legacy_receipts[t.fields.ticket]) || (t.fields.verified || t.fields.last_check ? { verified: t.fields.verified, last_check: t.fields.last_check } : null);
-      r = readiness.migratedTicketReadiness({ text: t.text, fields: t.fields, timeout: t.timeout, attempt, legacyReceipt, current, sourceProblems, changedPaths, contextKey: key, pointedId: indexRead.index ? indexRead.index.current[key] || null : null });
+      r = readiness.migratedTicketReadiness({ text: t.text, fields: t.fields, timeout: t.timeout, attempt, legacyReceipt, current, sourceProblems, changedPaths, contextKey: key, pointedId: indexRead.index ? indexRead.index.current[key] || null : null, mode, strict: Boolean(binding && binding.strict) });
       r.attempt = attempt;
     }
     readinessOf.set(t.file, r);
@@ -209,7 +249,7 @@ function gather(root, { budget } = {}) {
   let nOpen = 0, nProg = 0, nDone = 0, firstStart = null, localMissing = 0;
   // Without local runtime state (a fresh clone) done tickets rely on the saved
   // candidate evidence; they are not re-verify work until verified here.
-  const localUnavailable = mode === 'migrated' && !state.exists(root);
+  const localUnavailable = runtimeMode && !state.hasIndex(root);
   const inProg = [], reverify = [];
   let nextOpen = null;
   const rows = [];
@@ -223,7 +263,7 @@ function gather(root, { budget } = {}) {
     if (mode === 'legacy' && st !== 'done' && f.last_check && !/ passed /.test(` ${f.last_check} `)) {
       out.warnings.push(`  WARN ${id} latest verification: ${f.last_check} — re-run verify`);
     }
-    if (mode === 'migrated' && st !== 'done' && r.attempt && !r.ready) {
+    if (runtimeMode && st !== 'done' && r.attempt && !r.ready) {
       // Unticked criteria are expected while work is in progress; anything else
       // (a failed, stale or superseded attempt) is a warning here too.
       const blocking = r.reasons.find(x => x.code !== 'CRITERIA_UNTICKED');
@@ -274,18 +314,24 @@ function gather(root, { budget } = {}) {
     }
   }
 
-  // Candidate.
-  const notes = prd ? notesCurrent(root, prd) : { text: 'missing', state: 'missing' };
-  line(`Notes    NOTES.md: ${notes.text}`);
-  const ev = evidenceLine(root, prd);
+  // Candidate: NOTES.md in legacy and migrated mode; the change's evaluation
+  // locator in changes mode (NOTES.md is then a compatibility summary).
+  const notes = ctx.notes ? ctx.notes() : prd ? notesCurrent(root, prd) : { text: 'missing', state: 'missing' };
+  if (ctx.notes) {
+    const compat = prd && fs.existsSync(path.join(root, 'NOTES.md')) ? notesCurrent(root, prd).text : 'missing';
+    line(`Notes    NOTES.md: ${compat} (compatibility summary; the evaluation locator decides)`);
+    line(`Evaluation ${ctx.locatorFile}: ${notes.text}`);
+  } else line(`Notes    NOTES.md: ${notes.text}`);
+  const ev = ctx.evidence ? ctx.evidence() : evidenceLine(root, prd);
   if (ev) line(`Evidence ${ev.manifest} · ${ev.ok ? 'ok' : ev.reason}`);
   j.candidate = {
     notes: notes.state, reason: notes.state === 'current' ? null : notes.text,
     candidate: notes.candidate || (notes.fields && notes.fields.candidate) || null, base: notes.base || (notes.fields && notes.fields.base) || null,
-    evidence: ev ? { manifest: ev.manifest, schema: ev.schema, provenance: ev.schema === 2 ? 'runtime' : ev.schema === 1 ? 'legacy' : null, verdict: ev.ok ? 'ok' : ev.reason } : null,
-    local_attempts: mode === 'migrated' ? (state.exists(root) ? 'available' : 'unavailable') : 'not applicable (legacy mode)',
+    evidence: ev ? { manifest: ev.manifest, schema: ev.schema, provenance: ev.schema >= 2 ? 'runtime' : ev.schema === 1 ? 'legacy' : null, verdict: ev.ok ? 'ok' : ev.reason } : null,
+    local_attempts: runtimeMode ? (state.hasIndex(root) ? 'available' : 'unavailable') : 'not applicable (legacy mode)',
     newer_attempts: [],
     reasons: notes.state === 'current' ? [] : [{ code: notes.state === 'missing' ? 'EVIDENCE_MISSING' : 'CANDIDATE_STALE', detail: notes.text }],
+    ...(ctx.notes ? { locator: ctx.locatorFile, evaluation: notes.entry ? { candidate: notes.entry.candidate, base: notes.entry.base, manifest: notes.entry.manifest, recorded: notes.entry.recorded, agreement: notes.entry.agreement } : null } : {}),
   };
   // Provenance and newer local attempts (contract "Evidence schema 2"): a newer
   // nonpassing attempt for the same check and candidate on the same source inputs
@@ -293,9 +339,9 @@ function gather(root, { budget } = {}) {
   // state only the saved record can be validated.
   const newerBlockers = [];
   if (ev && ev.ok) {
-    if (ev.schema !== 2) line('Provenance legacy (schema 1, authored command results)');
-    else if (!state.exists(root)) {
-      line('Provenance runtime (schema 2) · local verification history unavailable; saved candidate evidence validated only');
+    if (ev.schema < 2) line('Provenance legacy (schema 1, authored command results)');
+    else if (!state.hasIndex(root)) {
+      line(`Provenance runtime (schema ${ev.schema}) · local verification history unavailable; saved candidate evidence validated only`);
     } else {
       let manifestDoc = null;
       try { manifestDoc = JSON.parse(fs.readFileSync(path.resolve(root, ev.manifest), 'utf8')); } catch { manifestDoc = null; }
@@ -307,7 +353,7 @@ function gather(root, { budget } = {}) {
         // Every attempt newer than the exported one counts: a same-source
         // nonpassing attempt blocks until the candidate is re-exported, even
         // when a later attempt passed again.
-        const key = state.contextKey({ kind: 'candidate', candidate: cand, check: check.id });
+        const key = state.contextKey({ kind: 'candidate', change: binding.change, candidate: cand, check: check.id, mode });
         const newer = idx ? state.listAttempts(root, key).filter(a => a.sequence > check.attempt.sequence && a.outcome !== 'passed') : [];
         for (const latest of newer) {
           const sameSource = latest.source && latest.source.before === check.attempt.source_before;
@@ -319,7 +365,7 @@ function gather(root, { budget } = {}) {
           } else details.push(`${check.id} ${latest.outcome} (${latest.id}, different source: historical)`);
         }
       }
-      line(`Provenance runtime (schema 2) · local attempts ${details.length ? details.join('; ') : 'consistent with the exported checks'}`);
+      line(`Provenance runtime (schema ${ev.schema}) · local attempts ${details.length ? details.join('; ') : 'consistent with the exported checks'}`);
       j.candidate.reasons.push(...newerBlockers);
     }
   }
@@ -328,7 +374,7 @@ function gather(root, { budget } = {}) {
   let next;
   if (!prd) next = '/pincer-plan <brief> — no PRD yet';
   else if (unresolved > 0) next = 'resolve PRD association with pincer-ticket.sh bind T-NN .prd/prd-vN.md before continuing';
-  else if (bindingResult.code === 'REVISION_CHANGED') next = `node scripts/pincer-runtime.cjs register --prd ${prd} --rebind — the PRD content changed since registration; readiness for the old revision no longer applies`;
+  else if (bindingResult && bindingResult.code === 'REVISION_CHANGED') next = `node scripts/pincer-runtime.cjs register --prd ${prd} --rebind — the PRD content changed since registration; readiness for the old revision no longer applies`;
   else if (sourceProblems.length) next = `repair the source view: ${sourceProblems[0].code} ${sourceProblems[0].detail}`;
   else if (prdStatus === 'draft') next = '/pincer-narrow — current PRD is draft; earlier tickets and notes do not complete it';
   else if (tickets.length === 0) next = '/pincer-narrow — PRD exists, no tickets yet';
@@ -341,12 +387,122 @@ function gather(root, { budget } = {}) {
   } else if (newerBlockers.length) {
     next = `/pincer-code — a newer local attempt is not passing for ${newerBlockers.map(b => b.detail.split(':')[0]).join(', ')}; repair, re-run the check and /pincer-evaluate before release`;
   } else next = '/pincer-release — evaluation matches the current PRD and candidate; audit the artifacts';
+  const computed = { defaultNext: next, inProg, nOpen, nextOpen, reverify, notes, prdStatus, newerBlockers, unresolved, sourceProblems, nDone, tickets: tickets.length, allReady: tickets.length > 0 && nOpen === 0 && nProg === 0 && reverify.length === 0 && unresolved === 0 };
+  // The gathered view is available to the next-action rule (strict coverage reads it).
+  out.gathered = { mode, binding, prd, prdResult, tickets, computeReadiness, notes, unresolved, inProg, nOpen, reverify, computed };
+  if (ctx.decideNext) next = ctx.decideNext(computed);
   line(`Next     ${next}`);
   j.next = next;
   for (const t of j.tickets) for (const r of t.readiness.reasons) j.reasons.push({ code: r.code, detail: `${t.id}: ${r.detail}` });
   for (const r of j.candidate.reasons) j.reasons.push(r);
   if (unresolved > 0) out.exit = 4;
-  out.gathered = { mode, binding, prd, prdResult, tickets, computeReadiness, notes, unresolved, inProg, nOpen, reverify };
+  out.gathered = { mode, binding, prd, prdResult, tickets, computeReadiness, notes, unresolved, inProg, nOpen, reverify, computed };
+  return out;
+}
+
+// Changes mode (schema 2 records): status JSON schema 2 over the selected change
+// (or the one named with --change, without selecting it). Without a local
+// selection nothing is selected — never the highest PRD or the only record.
+function gatherChanges(root, out, { budget, now, change }) {
+  const j = out.json;
+  const line = s => out.lines.push(s);
+  j.schema = 3; j.runtime = changes.RUNTIME_STRICT; j.mode = 'changes';
+  const resolved = changes.resolveSelected(root, { change });
+  const loaded = resolved.loaded;
+  const selection = resolved.selection;
+  j.selection = selection ? { change: selection.change, problem: null } : { change: null, problem: resolved.selectionProblem ? { code: resolved.selectionProblem.code, detail: resolved.selectionProblem.problem } : null };
+  j.changes = [...loaded.records.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([id, e]) => { const v = loaded.problems.length ? null : authorization.verdict(root, e.record); return { ...changes.summarize(id, e), selected: Boolean(selection && selection.change === id), authorization: v ? v.verdict : null, agreement: v ? v.current : null }; });
+  const retained = j.changes.map(c => c.id).join(', ') || 'none';
+  if (loaded.problems.length && (resolved.code || !resolved.record)) {
+    for (const p of loaded.problems) { line(`WARN     invalid change records: ${p.code}: ${p.detail}`); j.reasons.push({ code: p.code, detail: p.detail }); }
+    j.next = loaded.problems[0].code === 'STATE_INCOMPLETE' ? 'node scripts/pincer-runtime.cjs recover' : 'repair .prd/changes/ by hand before continuing (see docs/runtime-contracts.md, "Change records")';
+    line(`Next     ${j.next}`);
+    out.exit = 4; return out;
+  }
+  if (resolved.code) {
+    // No selection, a dangling one, or an unknown --change: report, never choose.
+    const problem = { code: resolved.code, detail: resolved.problem };
+    j.reasons.push(problem);
+    if (resolved.code === 'SELECTION_INVALID' || resolved.code === 'SELECTION_REQUIRED') j.selection = { change: selection ? selection.change : null, problem };
+    line('PRD      none selected');
+    line(resolved.code === 'SELECTION_REQUIRED' ? 'Runtime  changes · no selection · change select <id>' : `Runtime  changes · ${resolved.code}: ${resolved.problem}`);
+    line(`Changes  ${j.changes.length} retained: ${j.changes.map(c => `${c.id} (${c.state})`).join(', ') || 'none'}`);
+    const set = parse.validateTicketSet(root);
+    if (set.ok) { j.history = set.files.length; if (set.files.length) line(`History  ${set.files.length} ticket(s); none belongs to a selected change`); }
+    line('Tickets  none (no change selected)');
+    line('Notes    none (no change selected)');
+    j.candidate = null;
+    j.next = resolved.code === 'SELECTION_REQUIRED' ? `node scripts/pincer-runtime.cjs change select <id> — select the change to work on (retained: ${retained}${j.changes.length ? '' : '; register one first'})`
+      : resolved.code === 'SELECTION_INVALID' ? `node scripts/pincer-runtime.cjs change select <id> — the selection is not usable (retained: ${retained})`
+        : `${resolved.code}: ${resolved.problem}`;
+    line(`Next     ${j.next}`);
+    if (['MALFORMED', 'INPUT_INVALID'].includes(resolved.code)) out.exit = 4;
+    out.gathered = { mode: 'changes', binding: null, prd: null, prdResult: null, tickets: [], computeReadiness: null, notes: null, unresolved: 0, inProg: [], nOpen: 0, reverify: [] };
+    return out;
+  }
+  const record = resolved.record;
+  const id = resolved.id;
+  const v = changes.view(root, record);
+  const prdResult = v.prdResult;
+  const prd = record.prd;
+  const prdStatus = prdResult.ok ? prdResult.fields.status : '?';
+  const binding = { change: id, prd, prd_revision: prdResult.ok ? parse.prdDigest(prdResult.text) : null, base: record.base, legacy_receipts: record.legacy.receipts, strict: changes.isStrict(record) };
+  // The current agreement (read-only): the digest of the authored inputs now, and
+  // which recorded entry it equals, if any.
+  const agreed = prdResult.ok ? agreement.compute(root, record) : { code: 'INPUT_INVALID', problem: prdResult.problems[0] };
+  const entry = agreed.code ? null : agreement.entryFor(record, agreed.digest);
+  const latest = agreement.latestEntry(record);
+  let difference = null;
+  if (!agreed.code && !entry && latest) { const snap = agreement.readSnapshot(root, record, latest); if (!snap.code) difference = agreement.difference(snap.snapshot, agreed); }
+  const auth = authorization.verdict(root, record, agreed);
+  j.change = { id, prd, prd_revision: binding.prd_revision, base: record.base, sequence: record.sequence, lifecycle: { ...record.lifecycle }, agreement: { current: agreed.code ? null : agreed.digest, recorded: entry ? entry.id : null, latest: latest ? { id: latest.id, digest: latest.digest, recorded: latest.recorded } : null, difference, authorized: auth.authorized ? { id: auth.authorized.id, agreement: auth.authorized.agreement, digest: auth.authorized.digest, disposition: auth.authorized.disposition, recorded: auth.authorized.recorded } : null, verdict: auth.verdict, verdict_detail: auth.detail, open_decisions: auth.open }, view: { head: v.head, branch: v.branch, base_is_ancestor: v.base_is_ancestor, dirty: v.dirty } };
+  if (prdResult.ok) { line(`PRD      ${prd} · status: ${prdStatus} · profile: ${prdResult.profile} · date: ${prdResult.fields.date || ''}`); j.prd = { path: prd, status: prdStatus, profile: prdResult.profile, date: prdResult.fields.date || null }; }
+  else line(`PRD      ${prd} · invalid: ${prdResult.problems[0]}`);
+  const agreementText = agreed.code ? 'agreement unavailable' : `agreement ${short(agreed.digest)}${entry ? ` (${entry.id})` : latest ? ` (≠ ${latest.id}: ${agreement.renderDifference(difference || { same: false, prd_changed: false, tickets_added: [], tickets_removed: [], tickets_changed: [], decisions_added: [], decisions_removed: [] })})` : ' (not recorded)'}`;
+  line(`Runtime  changes · ${resolved.explicit ? 'inspecting' : 'selected'} ${id} · ${record.lifecycle.state} · ${agreementText} · authorization ${auth.verdict}${auth.authorized ? ` (${auth.authorized.id})` : ''} · base ${record.base.slice(0, 7)}`);
+  line(`Changes  ${j.changes.length} retained: ${j.changes.map(c => `${c.id} (${c.state}${c.selected ? ', selected' : ''})`).join(', ')}`);
+  line(`View     HEAD ${v.head ? v.head.slice(0, 7) : 'none'} · branch ${v.branch || 'detached'} · base ${v.base_is_ancestor ? 'is an ancestor' : 'is NOT an ancestor'} · dirty ${v.dirty.length} path(s)${v.dirty.length ? `: ${v.dirty.slice(0, 5).join(', ')}${v.dirty.length > 5 ? ` (+${v.dirty.length - 5})` : ''}` : ''}`);
+  if (record.lifecycle.reason || record.lifecycle.note) line(`Handoff (authored) ${record.lifecycle.reason ? `reason: ${record.lifecycle.reason}` : ''}${record.lifecycle.reason && record.lifecycle.note ? ' · ' : ''}${record.lifecycle.note ? `note: ${record.lifecycle.note}` : ''}`);
+  for (const p of v.problems) { line(`WARN     ${p.code}: ${p.detail}`); j.reasons.push(p); }
+  if (!prdResult.ok) { line('Next     repair the PRD input before continuing'); j.next = 'repair the PRD input before continuing'; out.exit = 4; return out; }
+  const running = transaction.runningAttempts(root, id);
+  // Strict coverage summary (docs/runtime-contracts.md, "Coverage and impact commands"):
+  // computed once the tickets are gathered (below), consumed by the Coverage line,
+  // the JSON and the next action. A change without the capability is labeled unverified.
+  const phases = require('./phases.cjs');
+  let coverageReport = null;
+  const coverageOf = gathered => { if (!coverageReport) coverageReport = phases.compute(root, record, { gathered, verdict: auth }); return coverageReport; };
+  const decideNext = computed => {
+    const cmd = sub => `node scripts/pincer-runtime.cjs change ${sub} ${id}`;
+    const st = record.lifecycle.state;
+    if (running.length) return `attempt ${running[0].id} of this change is running: wait for it, or run node scripts/pincer-runtime.cjs recover if its owner died`;
+    if (changes.TERMINAL.includes(st)) return `change ${id} is ${st}${record.lifecycle.superseded_by ? ` by ${record.lifecycle.superseded_by}` : ''}: inspect it with ${cmd('show')}; execution needs a new change (register one and reference this record)`;
+    if (v.problems.length) return `${v.problems[0].code}: ${v.problems[0].detail}`;
+    if (computed.unresolved > 0 || computed.sourceProblems.length) return computed.defaultNext;
+    if (auth.verdict !== 'current' && !agreed.code) return `${auth.verdict}: ${auth.detail}`;
+    if (changes.isStrict(record) && out.gathered) {
+      const cov = coverageOf(out.gathered);
+      const gap = cov.structure.problems[0];
+      if (gap) return `${gap.code}: ${gap.detail} — see: node scripts/pincer-runtime.cjs coverage`;
+    }
+    if (st === 'planned') return `${cmd('activate')} — activate the change before executing tickets`;
+    if (st === 'paused') return `${cmd('resume')} — the change is paused${record.lifecycle.reason ? ` (${record.lifecycle.reason})` : ''}; resume it before executing tickets`;
+    if (st === 'active' && computed.allReady && computed.prdStatus !== 'draft') return `${cmd('complete')} — every ticket is done and ready; complete the change before choosing the candidate`;
+    return computed.defaultNext;
+  };
+  gatherBody(root, out, { mode: 'changes', binding, prd, prdResult, bindingResult: null, budget, now, decideNext, notes: () => locator.current(root, record), evidence: () => locator.evidenceLine(root, record), locatorFile: locator.file(id) });
+  if (out.gathered) {
+    out.gathered.record = record;
+    const cov = coverageOf(out.gathered);
+    j.coverage = { ...phases.summary(cov), next: cov.blockers[0] ? `${cov.blockers[0].code}: ${cov.blockers[0].detail}` : null };
+    const coverageLine = phases.summaryLine(cov, record);
+    const at = out.lines.findIndex(l => l.startsWith('Notes    '));
+    out.lines.splice(at === -1 ? out.lines.length : at, 0, coverageLine);
+    if (changes.isStrict(record)) for (const p of cov.structure.problems) if (!j.reasons.some(r => r.code === p.code && r.detail === p.detail)) j.reasons.push({ code: p.code, detail: p.detail });
+  } else j.coverage = { strict: changes.isStrict(record), label: changes.isStrict(record) ? 'strict' : 'unverified', reason: changes.isStrict(record) ? null : 'strict coverage not adopted', structure: null, implementation: null, candidate: null, next: null };
+  // Reasons in gate order: repository view first, then the authorization verdict, then the rest.
+  const front = [...v.problems, ...(auth.verdict !== 'current' && !agreed.code ? [{ code: auth.verdict, detail: auth.detail }] : [])];
+  j.reasons = [...front, ...j.reasons.filter(r => !front.includes(r))];
   return out;
 }
 

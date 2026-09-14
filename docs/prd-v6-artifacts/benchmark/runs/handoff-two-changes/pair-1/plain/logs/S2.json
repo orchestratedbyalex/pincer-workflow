@@ -1,0 +1,43 @@
+{
+  "session_id": "2f1e8d70-5f6a-4058-8e60-532cd9cdca3f",
+  "num_turns": 17,
+  "duration_ms": 61600,
+  "duration_api_ms": 59373,
+  "total_cost_usd": 0.27856939999999997,
+  "usage": {
+    "input_tokens": 24,
+    "cache_creation_input_tokens": 30553,
+    "cache_read_input_tokens": 552697,
+    "output_tokens": 4577,
+    "output_tokens_details": {
+      "thinking_tokens": 1109
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 30553,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 127,
+        "cache_read_input_tokens": 54152,
+        "cache_creation_input_tokens": 366,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 366
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "is_error": false,
+  "subtype": "success",
+  "result": "Both changes described in BRIEF.md are now complete:\n\n- **Change A** (add and list): A1 `add` was already done; I added A2 `list`, committed as `02db4e1`.\n- **Change B** (clear): B1 was already complete, including `--dry-run` — nothing left there.\n\nAll 11 tests pass (`npm test`). The repo is now fully caught up with the brief."
+}

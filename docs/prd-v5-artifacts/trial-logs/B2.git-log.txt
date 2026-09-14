@@ -1,0 +1,8 @@
+3170a5f Complete PRD v2
+7e6f03d T-03: clear
+b3e308c Register PRD v2 as change feature-b
+78d51e8 Pause change prd-v1
+6ed000f T-01: add and list
+d990024 Activate PRD v1
+bdee8e3 Authorize PRD v1
+b61a8d0 Register PRD v1

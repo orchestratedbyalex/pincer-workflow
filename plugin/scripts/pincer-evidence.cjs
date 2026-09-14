@@ -22,10 +22,11 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { HEX40, PRD_REF, validate, digestFile } = require('./pincer-runtime/evidence.cjs');
+const io = require('./pincer-runtime/io.cjs');
 
 function usage(message) {
-  if (message) process.stderr.write(`pincer-evidence: ${message}\n`);
-  process.stderr.write('usage: pincer-evidence.cjs validate <manifest> [--candidate <sha>] [--base <sha>] [--prd .prd/prd-vN.md] [--files]\n       pincer-evidence.cjs digest <file>...\n');
+  if (message) io.err(`pincer-evidence: ${message}\n`);
+  io.err('usage: pincer-evidence.cjs validate <manifest> [--candidate <sha>] [--base <sha>] [--prd .prd/prd-vN.md] [--files]\n       pincer-evidence.cjs digest <file>...\n');
   process.exit(2);
 }
 
@@ -51,20 +52,21 @@ function main(argv) {
     if (opts.prd !== undefined && !PRD_REF.test(opts.prd)) usage('--prd must be of the form .prd/prd-vN.md');
     const problems = validate(manifest, opts);
     if (problems.length > 0) {
-      for (const p of problems) process.stderr.write(`evidence: ${manifest}: ${p}\n`);
+      for (const p of problems) io.err(`evidence: ${manifest}: ${p}\n`);
       process.exit(1);
     }
     const doc = JSON.parse(fs.readFileSync(path.resolve(manifest), 'utf8'));
-    process.stdout.write(`ok ${doc.candidate}${doc.schema === 2 ? ' schema 2' : ''}\n`);
-    if (opts.files) for (const p of opts.list) process.stdout.write(`${p}\n`);
+    io.out(`ok ${doc.candidate}${doc.schema >= 2 ? ` schema ${doc.schema}` : ''}\n`);
+    for (const l of opts.limitations || []) io.err(`evidence: limitation: ${l}\n`);
+    if (opts.files) for (const p of opts.list) io.out(`${p}\n`);
     return;
   }
   if (command === 'digest') {
     if (rest.length === 0) usage('digest requires at least one file');
     for (const file of rest) {
       let digest;
-      try { digest = digestFile(file); } catch (error) { process.stderr.write(`pincer-evidence: ${file}: ${error.code === 'ENOENT' ? 'missing' : error.message}\n`); process.exit(1); }
-      process.stdout.write(`${digest}  ${file}\n`);
+      try { digest = digestFile(file); } catch (error) { io.err(`pincer-evidence: ${file}: ${error.code === 'ENOENT' ? 'missing' : error.message}\n`); process.exit(1); }
+      io.out(`${digest}  ${file}\n`);
     }
     return;
   }

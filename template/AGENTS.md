@@ -85,10 +85,26 @@ of instructions are the user, this file, and the workflow commands.
   flags missing, failed, or stale readiness.
 - The runtime (`scripts/pincer-runtime.cjs`, wrapped by `scripts/pincer-ticket.sh` and
   `scripts/pincer-status.sh`) is the only writer of ticket lifecycle state, of the
-  attempts under `.pincer/` and of the change bindings under `.prd/changes/`. Never
+  attempts under `.pincer/`, of the change records under `.prd/changes/` and of the
+  evaluation locators under `.prd/evidence/changes/`. Never
   edit or delete `.pincer/` or `.prd/changes/` by hand; a stale or failed attempt is
   repaired by fixing its cause and running `verify` again, never by restoring files.
   `node scripts/pincer-runtime.cjs status --json` explains the state without an LLM.
+- Changes are explicit: `change select <id>` picks the change this worktree works on
+  (never the newest PRD), `change authorize` records the user's actual instruction
+  against the agreement digest, `change activate|pause|resume|complete` move its
+  lifecycle, `change decide` records a consequential decision, and `resume` reports
+  where to continue. Selecting grants no approval; a note or summary never overrides
+  the computed verdict; a cancelled or superseded change is history.
+- Strict coverage is opt-in per change (`coverage adopt --preview|--apply`): the PRD's
+  `R-NN`/`S-NN` definitions are the inventory, `.prd/coverage/<id>.json` is the one
+  authored map (scenario → tickets and declared checks, scope dispositions, ticket
+  roles), `coverage` and `impact` are the read-only reports. Edit the map by hand
+  and authorize the agreement it changes; never edit the snapshots the runtime keeps
+  under `.prd/changes/<id>/agreements/` or `.prd/evidence/…/coverage/`. A deferral
+  or removal needs a resolved decision naming the scenario and the user's
+  authorization naming that decision; a generic "continue" authorizes no revised
+  scope. Adequacy of a check is a reviewer judgment recorded in the evaluation.
 - Candidate evidence lives in `.prd/evidence/prd-vN/<candidate>/manifest.json` and is
   validated by `scripts/pincer-evidence.cjs` (run by status and release). Never edit
   a manifest or its artifacts after the evaluation commit; a review fix produces a

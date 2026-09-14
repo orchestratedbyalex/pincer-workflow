@@ -1,0 +1,27 @@
+cd "<scratchpad>/trial/baseline" && scripts/pincer-status.sh
+cd "<scratchpad>/trial/baseline" && ls -la .prd/ tickets/ .prd/changes 2>&1; echo "---"; cat .prd/prd-v1.md 2>&1 | head -50
+cd "<scratchpad>/trial/baseline" && ls -la .prd/ tickets/
+cd "<scratchpad>/trial/baseline" && ls src/ test/ 2>&1; echo "---"; cat src/notes.js 2>&1; echo "---test---"; cat test/notes.test.js 2>&1; echo "---readme---"; cat README.md 2>&1; echo "---pkg---"; cat package.json 2>&1
+cd "<scratchpad>/trial/baseline" && node scripts/pincer-runtime.cjs register --prd .prd/prd-v1.md --authorization "go ahead with both tickets as written"
+cd "<scratchpad>/trial/baseline" && git status --short && cat .gitignore
+cd "<scratchpad>/trial/baseline" && git add .prd/changes/ .gitignore && git status --short
+cd "<scratchpad>/trial/baseline" && git commit -m "$(cat <<'EOF'
+Register PRD v1
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/baseline" && scripts/pincer-ticket.sh start T-01
+[Write] <scratchpad>/trial/baseline/src/notes.js
+cd "<scratchpad>/trial/baseline" && scripts/pincer-ticket.sh verify T-01
+cd "<scratchpad>/trial/baseline" && git diff -- src/notes.js
+[Edit] <scratchpad>/trial/baseline/tickets/T-01-add-and-list.md
+cd "<scratchpad>/trial/baseline" && scripts/pincer-ticket.sh done T-01
+cd "<scratchpad>/trial/baseline" && git status --short
+cd "<scratchpad>/trial/baseline" && git add src/notes.js tickets/T-01-add-and-list.md && git diff --cached --stat
+cd "<scratchpad>/trial/baseline" && git commit -m "$(cat <<'EOF'
+T-01: add and list
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"

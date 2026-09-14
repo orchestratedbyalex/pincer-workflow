@@ -1,0 +1,100 @@
+{
+  "schema": 2,
+  "prd": ".prd/prd-v1.md",
+  "base": "5d3ec528a1baac4a1bb095069f94aad18a06cb4d",
+  "candidate": "e8e55a7fdd4f359eff1cb3b9ba143edfe96af861",
+  "created": "2026-09-11T20:25:05Z",
+  "environment": {
+    "os": "darwin 25.6.0",
+    "node": "v22.23.1",
+    "tools": [
+      "git"
+    ],
+    "limitations": [
+      "fixture project; no UI"
+    ]
+  },
+  "coverage_review": "R-01 maps to T-01, T-02 and C-01; C-02 is the reviewer record.",
+  "requirements": [
+    {
+      "id": "R-01",
+      "disposition": "delivered",
+      "tickets": [
+        "T-01",
+        "T-02"
+      ],
+      "checks": [
+        "C-01",
+        "C-02"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "id": "C-01",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "test \"$(cat value.txt)\" = good",
+      "timestamp": "2026-09-11T20:25:05Z",
+      "artifacts": [
+        ".prd/evidence/prd-v1/e8e55a7fdd4f359eff1cb3b9ba143edfe96af861/checks/C-01.log"
+      ],
+      "provenance": "runtime",
+      "attempt": {
+        "id": "000003-20260911T202505Z-3abd63",
+        "sequence": 3,
+        "outcome": "passed",
+        "exit_code": 0,
+        "started": "2026-09-11T20:25:05Z",
+        "finished": "2026-09-11T20:25:05Z",
+        "source_before": "4b9fc4647839a57a4af34ff7e975c1584b068c4cbb3a7d6b5c13b048576e1ed7",
+        "source_after": "4b9fc4647839a57a4af34ff7e975c1584b068c4cbb3a7d6b5c13b048576e1ed7",
+        "check_digest": "0e0b9ee1e5cc884e75390a811c8d855994a6ae90174f38ea47f5a3470fa8392f",
+        "runner": {
+          "shell": "/bin/bash",
+          "args": [
+            "-eo",
+            "pipefail",
+            "-c"
+          ],
+          "version": "GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)"
+        },
+        "cwd": ".",
+        "log_sha256": "e4698189d9b45e68d214e3e9c8268cebb741f8df672e6bd8d24d34f86fdf9f4a",
+        "truncated": false
+      }
+    },
+    {
+      "id": "C-02",
+      "kind": "review",
+      "required": true,
+      "result": "passed",
+      "timestamp": "2026-09-11T12:00:00Z",
+      "artifacts": [
+        ".prd/evidence/prd-v1/e8e55a7fdd4f359eff1cb3b9ba143edfe96af861/review/code-quality.md"
+      ],
+      "note": "reviewer record",
+      "provenance": "authored"
+    }
+  ],
+  "visual_review": {
+    "applicable": false,
+    "reason": "fixture has no UI"
+  },
+  "artifacts": [
+    {
+      "path": ".prd/evidence/prd-v1/e8e55a7fdd4f359eff1cb3b9ba143edfe96af861/checks/C-01.log",
+      "sha256": "e4698189d9b45e68d214e3e9c8268cebb741f8df672e6bd8d24d34f86fdf9f4a"
+    },
+    {
+      "path": ".prd/evidence/prd-v1/e8e55a7fdd4f359eff1cb3b9ba143edfe96af861/review/code-quality.md",
+      "sha256": "a9f955bdb661656391d288186724ef544dd2ceefd147d8c463c03353c879fe56"
+    }
+  ],
+  "change": {
+    "id": "prd-v1",
+    "prd_revision": "68c1ed3d003057d9b3f10fd484129c0a080bf3875425f4861b4f2eb59132f355",
+    "base": "e59132bca5e6298192bc696c5f0d6a0dd8c2d711"
+  }
+}

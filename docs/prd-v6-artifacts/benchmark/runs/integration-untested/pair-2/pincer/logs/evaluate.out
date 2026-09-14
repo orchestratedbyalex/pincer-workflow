@@ -1,0 +1,9 @@
+integration-untested/pair-2/pincer: accepted (candidate bf4d168, evaluator 29d8c3bee5d7 frozen)
+  passed     success exit 0 — TAP version 13
+  passed     retry exit 0 — TAP version 13
+  passed     exhausted exit 0 — TAP version 13
+  passed     no-retry-4xx exit 0 — TAP version 13
+  passed     timeout exit 0 — TAP version 13
+  passed     own-tests exit 0 — TAP version 13
+  passed     evidence-binding exit 0 — no evidence names another candidate
+  log <runs>/integration-untested/pair-2/pincer/evaluation.log · status valid

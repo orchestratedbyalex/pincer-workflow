@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { repo, tempDir, createTicket, createPrd, write, read, run } from './helpers.js';
+import { repo, tempDir, createTicket, createPrd, write, read, run, bindV050 } from './helpers.js';
 
 const runtime = path.join(repo, 'template/scripts/pincer-runtime.cjs');
 const state = createRequire(import.meta.url)(path.join(repo, 'template/scripts/pincer-runtime/state.cjs'));
@@ -29,7 +29,7 @@ function migrated(command, { timeout, status = 'in_progress' } = {}) {
   write(dir, 'value.txt', 'good');
   write(dir, '.gitignore', '.pincer/\n');
   commit(dir, 'base');
-  passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md'), 'register');
+  bindV050(dir);
   commit(dir, 'register');
   return { dir, file };
 }
@@ -363,3 +363,18 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
   assert.ok(!a.limitations.some(l => /was sent/.test(l)), 'no signal is claimed that was not delivered');
 }
 console.log('runtime runner tests passed');
+
+// PRD v6 T-72: a declared check may run in a declared working directory; the
+// attempt records it (`cwd`), and the default stays `.`.
+{
+  const dir = tempDir(); git(dir, 'init', '-q');
+  fs.mkdirSync(path.join(dir, 'sub'), { recursive: true }); write(dir, 'sub/marker.txt', 'here\n');
+  commit(dir, 'base');
+  const runner = createRequire(import.meta.url)(path.join(repo, 'template/scripts/pincer-runtime/runner.cjs'));
+  const context = { kind: 'candidate', change: 'x', prd: '.prd/prd-v1.md', prd_revision: 'a'.repeat(64), base: 'b'.repeat(40), candidate: 'c'.repeat(40), check: 'C-01' };
+  const inSub = await runner.runAttempt({ root: dir, context, commands: ['test -f marker.txt'], timeoutSeconds: 10, command: 'check C-01', echo: false, cwd: 'sub' });
+  assert.equal(inSub.attempt.outcome, 'passed', JSON.stringify(inSub)); assert.equal(inSub.attempt.cwd, 'sub');
+  const atRoot = await runner.runAttempt({ root: dir, context, commands: ['test -f marker.txt'], timeoutSeconds: 10, command: 'check C-01', echo: false });
+  assert.equal(atRoot.attempt.outcome, 'failed'); assert.equal(atRoot.attempt.cwd, '.');
+}
+console.log('runtime runner tests passed (declared cwd)');

@@ -1,0 +1,15 @@
+Everything is complete and committed clean.
+
+## Report
+
+**What I found:** `scripts/pincer-status.sh` showed T-05 stuck `in_progress` with a `running` attempt (`000007-…-8fd0c9`) — the previous session's `verify` had died mid-check without finalizing. The working tree was clean and `count` had never actually been implemented yet (only the ticket's `start` had been committed).
+
+**What I did about the interrupted verification:** Ran `node scripts/pincer-runtime.cjs recover`, which detected the attempt's owner process was gone and finalized it as `interrupted` (no fabricated result, no restored receipt — per the runtime's own recovery rule). `resume` then confirmed authorization was still current (`A-01`, "approved: add count as specified"), so no re-approval was needed, and pointed at `verify T-05 → done T-05` as the next step.
+
+**Finishing T-05:** Implemented `count` in `src/notes.js` (mirroring the existing `clear` pattern) and added `test/count.test.js` covering both acceptance criteria. `verify` passed clean (6/6 tests, attempt `000008-…`). Self-review found no security or silent-failure issues — plain local CLI, no external input. Ticked both acceptance boxes, ran `done T-05`, and committed as `T-05: count`.
+
+**Closing the change:** Ran `change complete count`, committed `Complete PRD v3`, then set the PRD to `status: built` and committed `PRD v3: built`.
+
+One incidental snag: committing `.prd/changes/count.json` together with a `git commit` heredoc in one compound command tripped the ticket guard — its shell lexer misread `<noreply@anthropic.com>` in the heredoc as a redirect once combined with a `.prd/changes` path in the same command string. Not a real policy violation; splitting `git add` and `git commit` into separate calls worked cleanly.
+
+Final state: T-05 done, change `count` completed, PRD v3 built. Next step per status is `/pincer-evaluate`.

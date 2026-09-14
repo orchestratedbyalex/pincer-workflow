@@ -1,0 +1,9 @@
+ui-states/pair-4/plain: accepted (candidate e54a8e8, evaluator c87783739541 frozen)
+  passed     validator exit 0 — TAP version 13
+  passed     empty-state exit 0 — TAP version 13
+  passed     error-state exit 0 — TAP version 13
+  passed     submitting-state exit 0 — TAP version 13
+  passed     escaping exit 0 — TAP version 13
+  passed     own-tests exit 0 — TAP version 13
+  passed     evidence-binding exit 0 — no evidence names another candidate
+  log <runs>/ui-states/pair-4/plain/evaluation.log · status valid

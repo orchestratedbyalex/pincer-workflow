@@ -15,7 +15,7 @@
 # Migrated projects record attempts under .pincer/runtime/ and `done` consumes
 # the current passing attempt. Exit codes follow docs/runtime-contracts.md.
 command -v node >/dev/null 2>&1 || {
-  echo 'pincer-ticket: Node.js 18+ is required — the runtime is scripts/pincer-runtime.cjs' >&2
+  echo 'pincer-ticket: Node.js 22+ is required — the runtime is scripts/pincer-runtime.cjs' >&2
   exit 4
 }
 case "${1:-}" in

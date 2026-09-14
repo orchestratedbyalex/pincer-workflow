@@ -1,0 +1,17 @@
+{
+  "code": "INVENTORY_INVALID",
+  "files": {
+    "duplicate-requirement.md": "duplicate definition R-01 at line 12",
+    "duplicate-scenario.md": "duplicate definition S-01 at line 11",
+    "orphan-scenario.md": "orphan scenario S-01 at line 8",
+    "orphan-after-heading.md": "orphan scenario S-02 at line 14",
+    "empty-scenario.md": "empty definition S-01 at line 10",
+    "empty-requirement.md": "unsupported requirement definition syntax at line 8; use \"### R-NN — Title\"",
+    "requirement-without-scenario.md": "requirement R-02 at line 12 has no scenario",
+    "unclosed-fence.md": "unclosed fence opened at line 12",
+    "tilde-fence.md": "tilde fences are unsupported (line 12)",
+    "unsupported-scenario.md": "unsupported scenario definition syntax at line 10; use \"- **S-NN:** text\"",
+    "unsupported-requirement.md": "unsupported requirement definition syntax at line 8; use \"### R-NN — Title\"",
+    "no-definitions.md": "no requirement definitions"
+  }
+}

@@ -1,0 +1,6 @@
+45372eb T-01: add and list
+6f87c7b Authorize PRD v1 (delegated): narrow T-01 verification scope
+59e723a Authorize PRD v1
+30a64d7 Register PRD v1
+b2d6e35 kit, PRD v1 and v2, tickets T-01..T-03
+70b03ff project before the kit

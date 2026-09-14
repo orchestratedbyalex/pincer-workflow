@@ -1,6 +1,8 @@
 # Wiki index
 
 ## Decisions
+- [[coverage-is-authored-and-bound]] — one authored map, the PRD prose as the inventory, both inside the agreement digest; structure computed, adequacy judged (PRD v6)
+- [[explicit-change-lifecycle]] — PRD v5 (2026-09-12): retained change records, explicit per-worktree selection, agreement digests with user/delegated authorization, journaled lifecycle transitions, change-scoped evidence, `resume`
 - [[runtime-owned-verification]] — PRD v4 (2026-09-11): a Node runtime records source-bound attempts, exports evidence schema 2, migrates explicitly; done consumes the attempt
 
 - [[single-source-template]] — template/ is canonical; adapters and plugin are generated, committed, never hand-edited
@@ -12,6 +14,8 @@
 - [[requirements-through-delivery]] — stable `R-NN` IDs plan→narrow→evaluate, `Proves:` behavioral checks, `profile: small|standard`, one shared authorization rule, guarded ticket recovery (PRD v2)
 
 ## Systems
+- [[strict-coverage]] — PRD v6: the PRD as inventory, the authored map, agreement binding, declared checks, evidence schema 3, the coverage and impact reports
+- [[delivery-benchmark]] — six frozen briefs, held-out evaluators, the run harness and what the 36 paired runs showed
 - [[runtime]] — template/scripts/pincer-runtime.cjs + pincer-runtime/: modules, commands, exit codes, gotchas
 
 - [[cli-installer]] — bin/pincer.js: init/update/doctor, the .pincer.json manifest, copy logic
@@ -20,6 +24,11 @@
 - [[ticket-state-machine]] — pincer-ticket.sh (start/verify/done + receipts), pincer-status.sh, ticket-guard.sh hook, the /pincer-status command
 - [[evidence-validator]] — pincer-evidence.cjs: schema 1 fields, failure classes, CLI, callers, packaging
 - [[github-pages-site]] — docs/index.html served by GitHub Pages from main:/docs; the 12-sheet walkthrough, provenance, sync rules
+
+## Built, awaiting evaluation
+
+- [PRD v6](../../.prd/prd-v6.md) — complete requirement coverage, structural change impact and the independent delivery benchmark; built on `feat/prd-v6` (T-66..T-78), reviewed in [the v6 packet](../prd-v6-review-packet.md) and [the v6 trial](../trial-prd-v6.md)
+- [PRD v5](../../.prd/prd-v5.md) — change records, authorization and resume; built on `feat/prd-v5` (T-47..T-65), reviewed in [the v5 packet](../prd-v5-review-packet.md)
 
 ## Meta
 

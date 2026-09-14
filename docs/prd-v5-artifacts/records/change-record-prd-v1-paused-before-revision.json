@@ -1,0 +1,108 @@
+{
+  "schema": 2,
+  "runtime": 2,
+  "change": "prd-v1",
+  "prd": ".prd/prd-v1.md",
+  "base": "47fa7ca0584bf387338bed6f3e909d1fd84d93ae",
+  "registered": "2026-09-12T00:26:39Z",
+  "sequence": 4,
+  "lifecycle": {
+    "state": "paused",
+    "since": "2026-09-12T00:29:21Z",
+    "reason": "Switching to feature-b (PRD v2, T-03) at user request",
+    "note": "prd-v1 paused mid-build: T-01 done, T-02 open (no attempt recorded yet). Resume with 'node scripts/pincer-runtime.cjs change resume prd-v1' then continue /pincer-code from T-02.",
+    "superseded_by": null
+  },
+  "agreements": [
+    {
+      "id": "G-01",
+      "digest": "a90a889a85dcfe8c71189cfdee897aa9cf4d40e123ee497318fcee10deb50ef9",
+      "prd_revision": "13439981d194d529fac904c86bd7adc69037fbbed9d33cb9d59693e1ec5b941b",
+      "breakdown": "94b805a1d8d5c3aeb75127b2319b2116976c7dd35f9fcf0d7efc86cfdbaa48c1",
+      "tickets": [
+        "T-01",
+        "T-02"
+      ],
+      "decisions": [],
+      "snapshot": ".prd/changes/prd-v1/agreements/G-01.json",
+      "recorded": "2026-09-12T00:27:17Z"
+    }
+  ],
+  "authorizations": [
+    {
+      "id": "A-01",
+      "agreement": "G-01",
+      "digest": "a90a889a85dcfe8c71189cfdee897aa9cf4d40e123ee497318fcee10deb50ef9",
+      "disposition": "user",
+      "reference": "user message in this conversation",
+      "excerpt": "go ahead with both tickets as written",
+      "constraints": null,
+      "basis": null,
+      "explanation": null,
+      "decisions": [],
+      "recorded": "2026-09-12T00:27:17Z"
+    }
+  ],
+  "decisions": [],
+  "events": [
+    {
+      "sequence": 1,
+      "kind": "register",
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-12T00:26:39Z",
+      "reason": null,
+      "agreement": null,
+      "authorization": null,
+      "decision": null,
+      "replacement": null,
+      "note": null
+    },
+    {
+      "sequence": 2,
+      "kind": "authorize",
+      "from": "planned",
+      "to": "planned",
+      "at": "2026-09-12T00:27:17Z",
+      "reason": null,
+      "agreement": "G-01",
+      "authorization": "A-01",
+      "decision": null,
+      "replacement": null,
+      "note": null
+    },
+    {
+      "sequence": 3,
+      "kind": "activate",
+      "from": "planned",
+      "to": "active",
+      "at": "2026-09-12T00:27:22Z",
+      "reason": null,
+      "agreement": "G-01",
+      "authorization": "A-01",
+      "decision": null,
+      "replacement": null,
+      "note": null
+    },
+    {
+      "sequence": 4,
+      "kind": "pause",
+      "from": "active",
+      "to": "paused",
+      "at": "2026-09-12T00:29:21Z",
+      "reason": "Switching to feature-b (PRD v2, T-03) at user request",
+      "agreement": null,
+      "authorization": null,
+      "decision": null,
+      "replacement": null,
+      "note": "prd-v1 paused mid-build: T-01 done, T-02 open (no attempt recorded yet). Resume with 'node scripts/pincer-runtime.cjs change resume prd-v1' then continue /pincer-code from T-02."
+    }
+  ],
+  "evaluations": [],
+  "legacy": {
+    "receipts": {},
+    "authorization_text": null,
+    "migrated_from": null,
+    "migrated": null
+  }
+}

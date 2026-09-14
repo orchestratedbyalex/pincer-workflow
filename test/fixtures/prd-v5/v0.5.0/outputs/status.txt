@@ -1,0 +1,10 @@
+PINCER status · 2026-09-11T20:25Z · /fixture
+PRD      .prd/prd-v1.md · status: built · profile: standard · date: 2026-09-05
+Runtime  change prd-v1 · revision 68c1ed3d0030 · base e59132b
+Tickets  2 total · 2 done · 0 in progress · 0 open
+  T-01  done         S  started 20:25 · finished 20:25 (0m)
+  T-02  done         S  started 20:25 · finished 20:25 (0m)
+Notes    NOTES.md: current (e8e55a7fdd4f359eff1cb3b9ba143edfe96af861)
+Evidence .prd/evidence/prd-v1/e8e55a7fdd4f359eff1cb3b9ba143edfe96af861/manifest.json · ok
+Provenance runtime (schema 2) · local attempts consistent with the exported checks
+Next     /pincer-release — evaluation matches the current PRD and candidate; audit the artifacts

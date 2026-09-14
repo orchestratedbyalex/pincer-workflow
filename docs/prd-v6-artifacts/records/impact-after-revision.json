@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "runtime": 3,
+  "generated": "2026-09-12T21:59:19Z",
+  "root": "<project>",
+  "change": "prd-v1",
+  "baseline": {
+    "agreement": "G-01",
+    "authorization": "A-01",
+    "recorded": "2026-09-12T21:59:13Z",
+    "digest": "bbe3a5fbb3f9b08b2c141e484a04cf7e35e1ba5c114a3ad511301e7011b4d3fd"
+  },
+  "current": {
+    "digest": "3d164ef6523884eec133076f3b763ac7c0054056d0e1c60381fdf8128a628f88",
+    "inventory": "d1460e439da3444269c69e641eaf2c4e470827f36d9f137c3ea41dde4fdbfd07",
+    "coverage": "e388ad9495a2036db37a13fa617f9c74c3bb447d6e37030f7224cc5dda701ad9"
+  },
+  "verdict": "changed",
+  "reason": null,
+  "requirements": {
+    "added": [],
+    "removed": [],
+    "changed": [
+      {
+        "id": "R-02",
+        "parts": [
+          "scenarios"
+        ]
+      }
+    ],
+    "unchanged": [
+      "R-01"
+    ]
+  },
+  "scenarios": {
+    "added": [
+      "S-04"
+    ],
+    "removed": [],
+    "changed": [],
+    "unchanged": [
+      "S-01",
+      "S-02",
+      "S-03"
+    ]
+  },
+  "links": {
+    "added": [],
+    "removed": [],
+    "changed": []
+  },
+  "scope": {
+    "added": [],
+    "removed": [],
+    "changed": []
+  },
+  "checks": {
+    "added": [],
+    "removed": [],
+    "changed": []
+  },
+  "tickets": {
+    "added": [],
+    "removed": [],
+    "changed": []
+  },
+  "affected": {
+    "scenarios": [
+      {
+        "id": "S-04",
+        "because": [
+          "scenario added"
+        ]
+      }
+    ],
+    "tickets": [],
+    "checks": [],
+    "dependents": []
+  },
+  "unscoped": {
+    "prd": false,
+    "detail": "the PRD revision changed together with its definitions; review the prose outside the definitions too"
+  },
+  "freshness": {
+    "note": "a narrow impact is not permission to reuse evidence whose source identity changed"
+  }
+}

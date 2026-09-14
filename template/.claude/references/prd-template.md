@@ -41,10 +41,17 @@ and never renumbered: a revision keeps existing IDs and adds new ones. Tickets
 name the IDs they implement and evaluation dispositions every ID.
 
 #### R-01 — short title
-- Scenario: an observable acceptance scenario (given / when / then, or a command
-  and its expected output). Add one line per scenario.
-- Failure path: what invalid input or the relevant failure produces.
-- Preserve: existing behavior this must not change (brownfield).
+- **S-01:** an observable acceptance scenario (given / when / then, or a command
+  and its expected output). One bold `S-NN` item per scenario, defined under its
+  requirement heading; every requirement has at least one.
+- **S-02:** Failure path: what invalid input or the relevant failure produces.
+- **S-03:** Preserve: existing behavior this must not change (brownfield).
+
+Scenario IDs are stable like requirement IDs. The runtime reads exactly this
+grammar (a `##`..`####` heading `R-NN — title`, bold `- **S-NN:** text` items
+under it, continuation lines indented); mentions in prose, tables and fenced
+examples define nothing. On a change with strict coverage the parsed inventory is
+what the coverage map and the evaluation must cover completely.
 
 When the user supplied a PRD, keep its meaning and its existing requirement IDs.
 If its structure needs adapting to this template, add a `Requirement mapping`

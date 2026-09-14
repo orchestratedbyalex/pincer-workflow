@@ -1,0 +1,8 @@
+handoff-two-changes/pair-2/plain: accepted (candidate 07a007b, evaluator 4e12933f4797 frozen)
+  passed     a1-add exit 0 — TAP version 13
+  passed     a2-list exit 0 — TAP version 13
+  passed     b1-clear exit 0 — TAP version 13
+  passed     session-boundary exit 0 — at c947754 (end of S1): A1 passes, A2 fails, B1 passes — A was set aside half-done and B completed, as instructed
+  passed     own-tests exit 0 — TAP version 13
+  passed     evidence-binding exit 0 — no evidence names another candidate
+  log <runs>/handoff-two-changes/pair-2/plain/evaluation.log · status valid

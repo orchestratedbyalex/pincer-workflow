@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "runtime": 1,
+  "generated": "2026-09-11T20:25:05Z",
+  "root": "/fixture",
+  "mode": "migrated",
+  "change": {
+    "id": "prd-v1",
+    "prd": ".prd/prd-v1.md",
+    "prd_revision": "68c1ed3d003057d9b3f10fd484129c0a080bf3875425f4861b4f2eb59132f355",
+    "base": "e59132bca5e6298192bc696c5f0d6a0dd8c2d711"
+  },
+  "prd": {
+    "path": ".prd/prd-v1.md",
+    "status": "built",
+    "profile": "standard",
+    "date": "2026-09-05"
+  },
+  "tickets": [
+    {
+      "id": "T-01",
+      "file": "tickets/T-01-example.md",
+      "status": "done",
+      "size": "S",
+      "depends_on": [],
+      "started": "2026-09-11T20:25:03Z",
+      "finished": "2026-09-11T20:25:03Z",
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "next": null
+      },
+      "latest_attempt": {
+        "id": "000001-20260911T202504Z-338a4f",
+        "sequence": 1,
+        "outcome": "passed",
+        "started": "2026-09-11T20:25:04Z",
+        "finished": "2026-09-11T20:25:04Z"
+      },
+      "legacy_receipt": null
+    },
+    {
+      "id": "T-02",
+      "file": "tickets/T-02-example.md",
+      "status": "done",
+      "size": "S",
+      "depends_on": [
+        "T-01"
+      ],
+      "started": "2026-09-11T20:25:04Z",
+      "finished": "2026-09-11T20:25:05Z",
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "next": null
+      },
+      "latest_attempt": {
+        "id": "000002-20260911T202504Z-21018a",
+        "sequence": 2,
+        "outcome": "passed",
+        "started": "2026-09-11T20:25:04Z",
+        "finished": "2026-09-11T20:25:04Z"
+      },
+      "legacy_receipt": null
+    }
+  ],
+  "history": 0,
+  "candidate": {
+    "notes": "current",
+    "reason": null,
+    "candidate": "e8e55a7fdd4f359eff1cb3b9ba143edfe96af861",
+    "base": "5d3ec528a1baac4a1bb095069f94aad18a06cb4d",
+    "evidence": {
+      "manifest": ".prd/evidence/prd-v1/e8e55a7fdd4f359eff1cb3b9ba143edfe96af861/manifest.json",
+      "schema": 2,
+      "provenance": "runtime",
+      "verdict": "ok"
+    },
+    "local_attempts": "available",
+    "newer_attempts": [],
+    "reasons": []
+  },
+  "reasons": [],
+  "next": "/pincer-release — evaluation matches the current PRD and candidate; audit the artifacts"
+}

@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "run": "handoff-two-changes/pair-3/plain",
+  "brief": "handoff-two-changes",
+  "arm": "plain",
+  "pair": 3,
+  "order": 29,
+  "created": "2026-09-12T20:59:59.372Z",
+  "status": "valid",
+  "reason": null,
+  "environment": {
+    "model": "sonnet",
+    "tool": "claude-code",
+    "tool_version": "2.1.267",
+    "node": "v22.23.1",
+    "os": "darwin 25.6.0",
+    "kit": null,
+    "caps": {
+      "turns_per_session": 150,
+      "wall_clock_minutes": 30
+    }
+  },
+  "workspace": {
+    "base": "4f4eeb38f9d776bb98aec9e7fba13bb39d3151a1",
+    "project_base": "4f4eeb38f9d776bb98aec9e7fba13bb39d3151a1",
+    "candidate": "2f53a94597baa06d1f93930d3d78bafc73c5cb5b",
+    "unrelated_edits": {}
+  },
+  "sessions": [
+    {
+      "name": "S1",
+      "prompt": "Read BRIEF.md in this repository. Implement A1 only, commit it, then set change A aside and implement change B completely (B1, with tests), committing it. Leave A2 for a later session; do not implement it now. Stop when B is done and summarize where each change stands so that a later session can pick up from the repository alone.",
+      "started": "2026-09-12T20:59:59.504Z",
+      "ended": "2026-09-12T21:01:15.028Z",
+      "exit": 0,
+      "transcript": "logs/S1.json"
+    },
+    {
+      "name": "S2",
+      "prompt": "Continue the unfinished work in this repository from the repository alone: find out where each change stands, finish what is left, commit, and summarize. Do not ask me to re-approve work I already approved.",
+      "started": "2026-09-12T21:01:15.286Z",
+      "ended": "2026-09-12T21:02:00.467Z",
+      "exit": 0,
+      "transcript": "logs/S2.json"
+    }
+  ],
+  "interventions": [],
+  "effort": {
+    "setup_minutes": 0,
+    "review_minutes": null,
+    "active_minutes": 2.01,
+    "elapsed_minutes": 2.02,
+    "tokens": {
+      "input": 981683,
+      "output": 11072
+    },
+    "cost_usd": 0.5186,
+    "unavailable": {
+      "tokens": null,
+      "cost_usd": null
+    }
+  },
+  "evaluation": {
+    "evaluator": {
+      "brief": "handoff-two-changes",
+      "digest": "4e12933f479779d5fec57c05e0f39a3ec9936e9d98bc3ed22ce85c57d244d74e"
+    },
+    "at": "2026-09-12T21:02:02.186Z",
+    "candidate": "2f53a94597baa06d1f93930d3d78bafc73c5cb5b",
+    "outcome": "accepted",
+    "checks": [
+      {
+        "id": "a1-add",
+        "title": "A1 add",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: A1 add appends and prints\nok 1 - A1 add appends and prints\n  ---\n  duration_ms: 96.078833\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 135.523083"
+      },
+      {
+        "id": "a2-list",
+        "title": "A2 list (finished in S2)",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: A2 list prints notes in order\nok 1 - A2 list prints notes in order\n  ---\n  duration_ms: 125.101958\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 168.926833"
+      },
+      {
+        "id": "b1-clear",
+        "title": "B1 clear and --dry-run",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: B1 clear empties the list; --dry-run changes nothing\nok 1 - B1 clear empties the list; --dry-run changes nothing\n  ---\n  duration_ms: 138.811083\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 182.499042"
+      },
+      {
+        "id": "session-boundary",
+        "title": "at the end of S1: A1 and B1 pass, A2 does not",
+        "kind": "protocol",
+        "result": "passed",
+        "exit": 0,
+        "detail": "at 21e2054 (end of S1): A1 passes, A2 fails, B1 passes — A was set aside half-done and B completed, as instructed"
+      },
+      {
+        "id": "own-tests",
+        "title": "the candidate's own npm test passes",
+        "kind": "regression",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: add appends a note and prints confirmation\nok 1 - add appends a note and prints confirmation\n  ---\n  duration_ms: 30.694083\n  type: 'test'\n  ...\n# Subtest: add appends to an existing notes file\nok 2 - add appends to an existing notes file\n  ---\n  duration_ms: 31.094959\n  type: 'test'\n  ...\n# Subtest: add without text prints usage and exits 2\nok 3 - add without text prints usage and exits 2\n  ---\n  duration_ms: 21.362708\n  type: 'test'\n  ...\n# Subtest: add with a corrupt notes file prints error and exits 1\nok 4 - add with a corrupt notes file prints error and exits 1\n  ---\n  duration_ms: 28.684708\n  type: 'test'\n  ...\n# Subtest: clear removes all notes and reports how many were removed\nok 5 - clear removes all notes and reports how many were removed\n  ---\n  duration_ms: 26.576708\n  type: 'test'\n  ...\n# Subtest: clear on an empty notes file reports zero\nok 6 - clear on an empty notes file reports zero\n  ---\n  duration_ms: 24.20225\n  type: 'test'\n  ...\n# Subtest: clear --dry-run reports the count but changes nothing\nok 7 - clear --dry-run reports the count but changes nothing\n  ---\n  duration_ms: 22.902042\n  type: 'test'\n  ...\n# Subtest: clear with a corrupt notes file prints error and exits 1\nok 8 - clear with a corrupt notes file prints error and exits 1\n  ---\n  duration_ms: 21.3495\n  type: 'test'\n  ...\n# Subtest: list prints notes in insertion order\nok 9 - list prints notes in insertion order\n  ---\n  duration_ms: 26.280625\n  type: 'test'\n  ...\n# Subtest: list on an empty notes file prints no notes\nok 10 - list on an empty notes file prints no notes\n  ---\n  duration_ms: 23.040625\n  type: 'test'\n  ...\n# Subtest: list with no notes file prints no notes\nok 11 - list with no notes file prints no notes\n  ---\n  duration_ms: 22.331875\n  type: 'test'\n  ...\n# Subtest: list with a corrupt notes file prints error and exits 1\nok 12 - list with a corrupt notes file prints error and exits 1\n  ---\n  duration_ms: 22.040167\n  type: 'test'\n  ...\n1..12\n# tests 12\n# suites 0\n# pass 12\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 146.88125"
+      },
+      {
+        "id": "evidence-binding",
+        "title": "evidence in the candidate names this candidate (or the candidate its evaluation commit sits on)",
+        "kind": "evidence",
+        "result": "passed",
+        "exit": 0,
+        "detail": "no evidence names another candidate"
+      }
+    ],
+    "regressions": 0,
+    "log": "evaluation.log"
+  }
+}

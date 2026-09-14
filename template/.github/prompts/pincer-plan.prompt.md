@@ -93,8 +93,13 @@ concrete scope and architecture; do not repeat an approval already given for the
    In Requirements, assign stable `R-NN` IDs within the selected PRD: a revision
    keeps existing IDs and adds new ones, never renumbers. Every requirement has
    observable acceptance scenarios, the relevant failure paths, and the existing
-   behavior it must preserve — `/pincer-narrow` maps each scenario to a ticket and
-   a check, and `/pincer-evaluate` dispositions every ID.
+   behavior it must preserve, each written as a bold `- **S-NN:** …` item under its
+   requirement heading (the template's grammar; the runtime parses exactly these
+   definitions into the inventory that strict coverage tracks, and a requirement
+   without a scenario is invalid there) — `/pincer-narrow` maps each scenario to a
+   ticket and a check in the coverage map, and `/pincer-evaluate` dispositions every
+   ID. A supplied PRD keeps its own uppercase IDs (`REQ-1`, `AC-3`); only its
+   definition syntax is adapted, and the mapping table records what changed.
 2. Include optional sections when risk or the product context warrants them.
 3. Save to the next unused `.prd/prd-v{N}.md` (create `.prd/` if needed), with `N`
    matching the filename and frontmatter:
@@ -121,6 +126,9 @@ material choice not already authorized, and prepare the concrete proposal before
 asking. A decision the user delegated (for example "pick the architecture") does not
 need another approval when you exercise it, but a newly discovered consequential
 choice is surfaced before implementation. Record the authorization basis and the
-scope it covers in the PRD or the handover. An agent-written record or a status
+scope it covers in the PRD or the handover, and on a project with change records as
+a `change authorize` record (the user's words as the excerpt, or a `--delegated`
+disposition with its basis). An agent-written record or a status
 field is not authenticated human approval. When resuming without the context that
-granted authorization, do not invent it — ask.
+granted authorization, do not invent it — read the `resume` report; an authorization
+it reports as `current` needs no repeat approval, and any other verdict is asked.

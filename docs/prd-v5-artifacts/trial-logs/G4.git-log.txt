@@ -1,0 +1,8 @@
+2e5d194 PRD v3: built
+8f9692c Complete PRD v3
+ac59a75 T-05: count
+4d465b9 operator: T-05 started
+5ddc140 operator: register, authorize and activate change count
+2096ac1 operator: PRD v3 (count) and ticket T-05
+8b587ed PRD v1: built
+ea80d69 Complete PRD v1

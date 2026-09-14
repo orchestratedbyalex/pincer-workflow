@@ -1,0 +1,12 @@
+Clean tree, no dirty state, and the workflow reports the next step correctly.
+
+**Report — feature-b complete**
+
+- Paused `prd-v1` (reason: switching to feature-b; handoff note pointing to T-02 as next), committed.
+- Registered `feature-b` for PRD v2, recorded your approval ("yes, add clear as specified") as authorization A-01, selected and activated it.
+- Implemented T-03 (`clear` in `src/notes.js`): empties the store; `clear extra` exits 1 with a one-line message.
+- **Assumption recorded:** `npm test` (`node --test test/`) was failing to resolve the test directory as an environment/Node quirk unrelated to the ticket — reproduced even in an isolated scratch directory on the same Node build. Fixed by changing the script to `node --test` (auto-discovery), which runs the identical suite and passes. This was necessary because I couldn't mark T-03 done with a failing verification command; flagging it here rather than asking, per your instruction.
+- Verified (4/4 tests pass), closed T-03, committed as `T-03: clear`.
+- Completed the `feature-b` change and set PRD v2 to `status: built`, each committed separately.
+
+Status now shows `feature-b` completed, all its tickets done, tree clean. Next step per the workflow is `/pincer-evaluate`.

@@ -1,0 +1,7 @@
+cli-greenfield/pair-1/pincer: accepted (candidate f9f1e2f, evaluator 054dbd0f0728 frozen)
+  passed     add-list exit 0 — TAP version 13
+  passed     done-marks exit 0 — TAP version 13
+  passed     errors exit 0 — TAP version 13
+  passed     own-tests exit 0 — TAP version 13
+  passed     evidence-binding exit 0 — no evidence names another candidate
+  log <runs>/cli-greenfield/pair-1/pincer/evaluation.log · status valid

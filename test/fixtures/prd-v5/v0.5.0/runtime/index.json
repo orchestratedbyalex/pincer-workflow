@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "sequence": 3,
+  "current": {
+    "ticket:prd-v1:T-01": "000001-20260911T202504Z-338a4f",
+    "ticket:prd-v1:T-02": "000002-20260911T202504Z-21018a",
+    "candidate:e8e55a7fdd4f359eff1cb3b9ba143edfe96af861:C-01": "000003-20260911T202505Z-3abd63"
+  },
+  "running": []
+}

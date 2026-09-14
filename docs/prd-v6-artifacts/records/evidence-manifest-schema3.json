@@ -1,0 +1,192 @@
+{
+  "schema": 3,
+  "prd": ".prd/prd-v1.md",
+  "base": "b39366f849cbf1fd93bb52545ad3339da0da2d0a",
+  "candidate": "f90eba40482a02a946550ac5a4246302ff72763d",
+  "created": "2026-09-12T21:59:17Z",
+  "environment": {
+    "os": "darwin 25.6.0",
+    "node": "v22.23.1",
+    "tools": [
+      "bash",
+      "git",
+      "node"
+    ],
+    "limitations": []
+  },
+  "coverage_review": "Every scenario of the inventory is linked; C-01 exercises S-01 and S-02 by reading the value, C-02 is the wording review of S-03.",
+  "requirements": [
+    {
+      "id": "R-01",
+      "disposition": "delivered",
+      "tickets": [
+        "T-01"
+      ],
+      "checks": [
+        "C-01"
+      ],
+      "scenarios": [
+        "S-01",
+        "S-02"
+      ],
+      "decision": null,
+      "authorization": null,
+      "note": null
+    },
+    {
+      "id": "R-02",
+      "disposition": "delivered",
+      "tickets": [
+        "T-02"
+      ],
+      "checks": [
+        "C-02"
+      ],
+      "scenarios": [
+        "S-03"
+      ],
+      "decision": null,
+      "authorization": null,
+      "note": null
+    }
+  ],
+  "checks": [
+    {
+      "id": "C-01",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "test \"$(cat value.txt)\" = good",
+      "timestamp": "2026-09-12T21:59:17Z",
+      "artifacts": [
+        ".prd/evidence/prd-v1/f90eba40482a02a946550ac5a4246302ff72763d/checks/C-01.log"
+      ],
+      "provenance": "runtime",
+      "attempt": {
+        "id": "000003-20260912T215916Z-41fa42",
+        "sequence": 3,
+        "outcome": "passed",
+        "exit_code": 0,
+        "started": "2026-09-12T21:59:16Z",
+        "finished": "2026-09-12T21:59:17Z",
+        "source_before": "77996bce586550a4024b027655017fc43c4372e286db909982ef349e4208ab49",
+        "source_after": "77996bce586550a4024b027655017fc43c4372e286db909982ef349e4208ab49",
+        "check_digest": "c67f0a4421eca7996c8f71832ad993d396a9cc71b3f30561d180738ae2240d36",
+        "runner": {
+          "shell": "/bin/bash",
+          "args": [
+            "-eo",
+            "pipefail",
+            "-c"
+          ],
+          "version": "GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)"
+        },
+        "cwd": ".",
+        "log_sha256": "e4698189d9b45e68d214e3e9c8268cebb741f8df672e6bd8d24d34f86fdf9f4a",
+        "truncated": false
+      },
+      "declared": "c67f0a4421eca7996c8f71832ad993d396a9cc71b3f30561d180738ae2240d36"
+    },
+    {
+      "id": "C-02",
+      "result": "passed",
+      "timestamp": "2026-09-12T22:00:00Z",
+      "artifacts": [
+        ".prd/evidence/prd-v1/f90eba40482a02a946550ac5a4246302ff72763d/review/s03.md"
+      ],
+      "kind": "review",
+      "required": true,
+      "provenance": "authored",
+      "declared": "f6a4c51e737b5602ab29e7ac6c461291eb49b1ddd3e64f5e3835b7a9ce87a4a8"
+    }
+  ],
+  "visual_review": {
+    "applicable": false,
+    "reason": "no UI"
+  },
+  "artifacts": [
+    {
+      "path": ".prd/evidence/prd-v1/f90eba40482a02a946550ac5a4246302ff72763d/checks/C-01.log",
+      "sha256": "e4698189d9b45e68d214e3e9c8268cebb741f8df672e6bd8d24d34f86fdf9f4a"
+    },
+    {
+      "path": ".prd/evidence/prd-v1/f90eba40482a02a946550ac5a4246302ff72763d/coverage/inventory.json",
+      "sha256": "de3582bee9fe22b6dfdf2143fca51434cf99ceb0542f3a6337f24aa5b42e6524"
+    },
+    {
+      "path": ".prd/evidence/prd-v1/f90eba40482a02a946550ac5a4246302ff72763d/coverage/map.json",
+      "sha256": "df38ce2e91a131372e60f8658fcef3ad9583ae4eed30832f9e91eff8c0877ebf"
+    },
+    {
+      "path": ".prd/evidence/prd-v1/f90eba40482a02a946550ac5a4246302ff72763d/review/s03.md",
+      "sha256": "31aa9cd68edca9b988bf77bfe165284033bcf391b3f0555820cfc07627b66f16"
+    }
+  ],
+  "change": {
+    "id": "prd-v1",
+    "prd_revision": "fd0aab193ab753a4bf5b37188c9d1d6d8d116651e8784c37ae4e05097fdb85b3",
+    "base": "b39366f849cbf1fd93bb52545ad3339da0da2d0a"
+  },
+  "coverage": {
+    "agreement": "bbe3a5fbb3f9b08b2c141e484a04cf7e35e1ba5c114a3ad511301e7011b4d3fd",
+    "authorization": "A-01",
+    "inventory": "001a4782d33d071b08b02a8a6d471cfdc83c1f4fb24941543ad73480344fc425",
+    "map": "e388ad9495a2036db37a13fa617f9c74c3bb447d6e37030f7224cc5dda701ad9",
+    "snapshots": {
+      "inventory": ".prd/evidence/prd-v1/f90eba40482a02a946550ac5a4246302ff72763d/coverage/inventory.json",
+      "map": ".prd/evidence/prd-v1/f90eba40482a02a946550ac5a4246302ff72763d/coverage/map.json"
+    }
+  },
+  "scenarios": [
+    {
+      "id": "S-01",
+      "requirement": "R-01",
+      "disposition": "delivered",
+      "tickets": [
+        "T-01"
+      ],
+      "checks": [
+        "C-01"
+      ],
+      "decision": null,
+      "authorization": null,
+      "note": null
+    },
+    {
+      "id": "S-02",
+      "requirement": "R-01",
+      "disposition": "delivered",
+      "tickets": [
+        "T-01"
+      ],
+      "checks": [
+        "C-01"
+      ],
+      "decision": null,
+      "authorization": null,
+      "note": null
+    },
+    {
+      "id": "S-03",
+      "requirement": "R-02",
+      "disposition": "delivered",
+      "tickets": [
+        "T-02"
+      ],
+      "checks": [
+        "C-02"
+      ],
+      "decision": null,
+      "authorization": null,
+      "note": null
+    }
+  ],
+  "adequacy": {
+    "verdict": "adequate",
+    "note": "the command check reads the real file and the review names the S-03 wording it checked"
+  },
+  "delivery": {
+    "original": true,
+    "agreed": true
+  }
+}

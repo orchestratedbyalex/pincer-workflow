@@ -9,6 +9,7 @@ const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { nowIso, atomicWrite, readJson } = require('./fsutil.cjs');
+const io = require('./io.cjs');
 
 const RUNTIME_DIR = '.pincer/runtime';
 const INDEX_SCHEMA = 1;
@@ -34,6 +35,9 @@ function ensureLayout(root) {
   return p;
 }
 const exists = root => fs.existsSync(paths(root).dir);
+// Local attempt history exists once an index was written; a selection alone (a fresh
+// clone that ran `change select`) is not attempt history.
+const hasIndex = root => fs.existsSync(paths(root).index);
 
 const emptyIndex = () => ({ schema: INDEX_SCHEMA, sequence: 0, current: {}, running: [] });
 function validateIndex(doc) {
@@ -73,7 +77,7 @@ class StateBusy extends Error {
 // Acquire the exclusive lock: mkdir is atomic; a lock whose owner pid is dead on
 // this host is reclaimed with a diagnostic; a live or foreign-host owner is never
 // stolen. Returns a release function.
-function acquireLock(root, { waitMs, command = 'runtime', log = message => process.stderr.write(`${message}\n`) } = {}) {
+function acquireLock(root, { waitMs, command = 'runtime', log = message => io.err(`${message}\n`) } = {}) {
   const p = ensureLayout(root);
   const bound = waitMs ?? (Number(process.env.PINCER_LOCK_WAIT_MS) > 0 ? Number(process.env.PINCER_LOCK_WAIT_MS) : LOCK_WAIT_MS);
   const deadline = Date.now() + bound;
@@ -124,7 +128,12 @@ function withLock(root, fn, options) {
 
 const compactTimestamp = () => nowIso().replace(/[-:]/g, '');
 const attemptId = sequence => `${String(sequence).padStart(6, '0')}-${compactTimestamp()}-${crypto.randomBytes(3).toString('hex')}`;
-const contextKey = context => (context.kind === 'candidate' ? `candidate:${context.candidate}:${context.check}` : `ticket:${context.change}:${context.ticket}`);
+// Context keys (docs/runtime-contracts.md, "Attempts"): ticket keys are change-scoped
+// in every runtime mode; candidate keys gain the change in changes mode (schema 2
+// records) so two changes sharing a check ID and a candidate never share a pointer.
+const contextKey = context => (context.kind === 'candidate'
+  ? (context.mode === 'changes' || context.agreement ? `candidate:${context.change}:${context.candidate}:${context.check}` : `candidate:${context.candidate}:${context.check}`)
+  : `ticket:${context.change}:${context.ticket}`);
 
 const OUTCOMES = ['running', 'passed', 'failed', 'interrupted', 'timed_out', 'error'];
 const SHA256 = /^[0-9a-f]{64}$/;
@@ -140,13 +149,19 @@ function validateAttempt(a, key, pointedId) {
   const digestOrNull = v => v === null || (typeof v === 'string' && SHA256.test(v));
   if (!obj(a)) return 'record is not a JSON object';
   const bad = [];
-  if (a.schema !== 1) bad.push('schema');
-  if (a.runtime !== 1) bad.push('runtime');
+  // Schema 1 (migrated mode), schema 2 (changes mode: the agreement digest is part
+  // of the context) and schema 3 (strict coverage: inventory and coverage digests
+  // too) share every other field.
+  if (![1, 2, 3].includes(a.schema)) bad.push('schema');
+  if (a.runtime !== a.schema) bad.push('runtime');
   if (!str(a.id)) bad.push('id');
   if (!Number.isInteger(a.sequence) || a.sequence < 1) bad.push('sequence');
   const c = a.context;
   if (!obj(c) || !['ticket', 'candidate'].includes(c.kind) || !str(c.change) || !str(c.prd) || !str(c.prd_revision) || !str(c.base)
-    || (c.kind === 'ticket' ? !str(c.ticket) || !str(c.ticket_digest) : !str(c.candidate) || !str(c.check))) bad.push('context');
+    || (c.kind === 'ticket' ? !str(c.ticket) || !str(c.ticket_digest) : !str(c.candidate) || !str(c.check))
+    || (a.schema === 1 ? 'agreement' in c || 'inventory' in c || 'coverage' in c
+      : !(typeof c.agreement === 'string' && SHA256.test(c.agreement))
+        || (a.schema === 2 ? 'inventory' in c || 'coverage' in c : !(typeof c.inventory === 'string' && SHA256.test(c.inventory) && typeof c.coverage === 'string' && SHA256.test(c.coverage))))) bad.push('context');
   if (!obj(a.check) || typeof a.check.digest !== 'string' || !SHA256.test(a.check.digest) || typeof a.check.display !== 'string'
     || !Number.isInteger(a.check.timeout_seconds) || a.check.timeout_seconds <= 0) bad.push('check');
   if (!OUTCOMES.includes(a.outcome)) bad.push('outcome');
@@ -231,10 +246,14 @@ function latestAttempt(root, key, index) {
 function recover(root, options = {}) {
   return withLock(root, () => {
     const p = paths(root);
+    // Committed-but-unapplied transactions are completed and uncommitted staging
+    // is discarded before anything else is read (docs/runtime-contracts.md,
+    // "Transactions and recovery"); required lazily to avoid a module cycle.
+    const transactions = require('./transaction.cjs').recoverPending(root);
     const read = readIndex(root);
     if (read.error) { const e = new Error(read.error); e.code = 'INVALID'; throw e; }
     const index = read.index;
-    const report = { finalized: [], live: [], foreign: [], missing: [], journal: [] };
+    const report = { finalized: [], live: [], foreign: [], missing: [], journal: [], transactions };
     const stillRunning = [];
     for (const id of index.running) {
       const attempt = readAttempt(root, id).attempt;
@@ -274,6 +293,9 @@ function recover(root, options = {}) {
     if (fs.existsSync(p.journal)) {
       for (const name of fs.readdirSync(p.journal)) {
         const file = path.join(p.journal, name);
+        let stat = null;
+        try { stat = fs.lstatSync(file); } catch { continue; }
+        if (stat.isDirectory()) continue; // transaction staging is handled above; an unreadable manifest stays for inspection
         try { fs.rmSync(file, { force: true }); report.journal.push(`${RUNTIME_DIR}/journal/${name}`); } catch { /* ignore */ }
       }
     }
@@ -287,6 +309,6 @@ function recover(root, options = {}) {
 
 module.exports = {
   RUNTIME_DIR, INDEX_SCHEMA, LOCK_WAIT_MS, StateBusy,
-  paths, ensureLayout, exists, emptyIndex, readIndex, writeIndex, isAlive,
+  paths, ensureLayout, exists, hasIndex, emptyIndex, readIndex, writeIndex, isAlive,
   acquireLock, withLock, attemptId, contextKey, validateAttempt, inspectArtifacts, writeAttempt, readAttempt, listAttempts, latestAttempt, recover,
 };

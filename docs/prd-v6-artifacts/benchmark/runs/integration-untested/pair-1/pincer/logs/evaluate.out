@@ -1,0 +1,9 @@
+integration-untested/pair-1/pincer: rejected (candidate 60f1c78, evaluator 29d8c3bee5d7 frozen)
+  passed     success exit 0 — TAP version 13
+  passed     retry exit 0 — TAP version 13
+  passed     exhausted exit 0 — TAP version 13
+  passed     no-retry-4xx exit 0 — TAP version 13
+  passed     timeout exit 0 — TAP version 13
+  passed     own-tests exit 0 — TAP version 13
+  failed     evidence-binding exit 1 — NOTES.md names candidate 173c096, evaluated 60f1c78
+  log <runs>/integration-untested/pair-1/pincer/evaluation.log · status valid

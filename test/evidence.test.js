@@ -92,7 +92,7 @@ function rejects(label, options, pattern, args = []) {
 
 rejects('missing manifest', { after: dir => fs.rmSync(path.join(dir, DIR, 'manifest.json')) }, /missing/);
 rejects('malformed JSON', { raw: '{"schema": 1,' }, /malformed/);
-rejects('unknown schema', { doc: manifest({ schema: 3 }) }, /unknown evidence schema 3/);
+rejects('unknown schema', { doc: manifest({ schema: 4 }) }, /unknown evidence schema 4/);
 rejects('unknown top-level key', { doc: manifest({ extra: true }) }, /unknown top-level key "extra"/);
 rejects('missing artifact', { after: dir => fs.rmSync(path.join(dir, LOG)) }, /C-01\.log: missing/);
 rejects('tampered artifact', { after: dir => write(dir, LOG, 'edited after evaluation') }, /digest mismatch/);

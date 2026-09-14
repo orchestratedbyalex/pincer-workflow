@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "run": "cli-greenfield/pair-2/pincer",
+  "brief": "cli-greenfield",
+  "arm": "pincer",
+  "pair": 2,
+  "order": 16,
+  "created": "2026-09-12T13:48:38.214Z",
+  "status": "invalid",
+  "reason": "account usage limit reached; the operator terminated the session (SIGTERM, exit 143) while stopping the driver",
+  "environment": {
+    "model": "sonnet",
+    "tool": "claude-code",
+    "tool_version": "2.1.267",
+    "node": "v22.23.1",
+    "os": "darwin 25.6.0",
+    "kit": {
+      "source": "tarball pincer-workflow-0.5.0.tgz",
+      "digest": "b7d6e7894ae4093e69d24b74ab80b693aa6c2e587218388ec8b6b93e35bc0cee"
+    },
+    "caps": {
+      "turns_per_session": 150,
+      "wall_clock_minutes": 30
+    }
+  },
+  "workspace": {
+    "base": "c222811e26cdae6fe250a7995b78e5259f404e52",
+    "project_base": "29f7256919d159c696890aa28b56a02f32367b18",
+    "candidate": null,
+    "unrelated_edits": {}
+  },
+  "sessions": [
+    {
+      "name": "S1",
+      "prompt": "Read BRIEF.md in this repository and implement what it asks for, committing your work as you go. Work autonomously; when you are done, stop and summarize what you built and how you verified it.",
+      "started": "2026-09-12T13:48:38.333Z",
+      "ended": "2026-09-12T19:10:57.903Z",
+      "exit": 143,
+      "transcript": null
+    }
+  ],
+  "interventions": [],
+  "effort": {
+    "setup_minutes": null,
+    "review_minutes": null,
+    "active_minutes": null,
+    "elapsed_minutes": null,
+    "tokens": null,
+    "cost_usd": null,
+    "unavailable": {
+      "tokens": "not recorded",
+      "cost_usd": "not recorded"
+    }
+  },
+  "evaluation": null
+}

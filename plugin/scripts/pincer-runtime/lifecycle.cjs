@@ -16,6 +16,7 @@ const runner = require('./runner.cjs');
 const { sanitizeText, inlineSecretLine } = require('./sanitize.cjs');
 const { nowIso } = require('./fsutil.cjs');
 const statusModule = require('./status.cjs');
+const gates = require('./gates.cjs');
 
 const EXIT = { OK: 0, FAILED: 1, INVALID: 4 };
 class Refusal extends Error {
@@ -77,10 +78,24 @@ function usablePrd(root, t) {
   if (!statusModule.usablePrd(assoc.prdResult)) die(`${assoc.prd}: PRD is draft; complete the authorized breakdown before starting (expected ticketed or built)`, { prefix: 'pincer' });
   return assoc;
 }
-function modeFor(root, prd) {
+// The mode of the ticket's PRD. In changes mode the command passes the shared
+// guard (docs/runtime-contracts.md, "Command gates") before anything is written
+// or launched; the guard's binding carries the change, current agreement and
+// legacy receipts for readiness, attempts and closure.
+const gateExit = code => (code === 'STATE_BUSY' ? 3 : ['INPUT_INVALID', 'INVENTORY_INVALID', 'COVERAGE_INVALID', 'MALFORMED', 'UNSUPPORTED_SCHEMA', 'HISTORY_INVALID', 'STATE_INCOMPLETE'].includes(code) ? EXIT.INVALID : EXIT.FAILED);
+function modeFor(root, prd, { command, ticket } = {}) {
   const bind = identity.loadBinding(root, { prd });
   if (bind.binding && !bind.code) return { mode: 'migrated', binding: bind.binding };
   if (bind.code === 'CHANGE_REQUIRED') return { mode: 'legacy' };
+  if (bind.code === 'CHANGES_MODE') {
+    try {
+      const g = gates.guard(root, { command, ticket: ticket ? { file: ticket.file, fields: ticket.fields } : null, prd });
+      return { mode: 'changes', binding: g.binding, guard: g };
+    } catch (error) {
+      if (error && error.refusal) die(`${error.code}: ${error.message}`, { prefix: 'pincer', exit: gateExit(error.code), code: error.code });
+      throw error;
+    }
+  }
   die(`${bind.code}: ${bind.problem}`, { prefix: 'pincer', exit: EXIT.INVALID, code: bind.code });
   return null;
 }
@@ -101,7 +116,7 @@ function migratedReadiness(root, t, binding, inputs) {
     if (before) changedPaths = source.diffManifests(before, inputs.manifest);
   }
   const legacyReceipt = (binding.legacy_receipts && binding.legacy_receipts[t.id]) || (t.fields.verified || t.fields.last_check ? { verified: t.fields.verified, last_check: t.fields.last_check } : null);
-  const r = readiness.migratedTicketReadiness({ text: t.text, fields: t.fields, timeout: t.timeout, attempt, legacyReceipt, current: inputs.current, sourceProblems: inputs.manifest.problems, changedPaths, contextKey: key, pointedId: inputs.index ? inputs.index.current[key] || null : null });
+  const r = readiness.migratedTicketReadiness({ text: t.text, fields: t.fields, timeout: t.timeout, attempt, legacyReceipt, current: inputs.current, sourceProblems: inputs.manifest.problems, changedPaths, contextKey: key, pointedId: inputs.index ? inputs.index.current[key] || null : null, mode: binding.mode || 'migrated', strict: Boolean(binding.strict) });
   r.attempt = attempt;
   return r;
 }
@@ -125,14 +140,14 @@ function bind(root, input, ref) {
 function start(root, input, { quiet = false } = {}) {
   const t = resolve(root, input);
   const assoc = usablePrd(root, t);
-  const { mode, binding } = modeFor(root, assoc.prd);
+  const { mode, binding } = modeFor(root, assoc.prd, { command: 'start', ticket: t });
   const st = t.fields.status;
   if (st === 'in_progress') {
     if (!t.fields.prd) writeTicket(root, t.file, fmSet(t.text, 'prd', assoc.prd));
     return { out: quiet ? '' : `${t.id} already in progress (started ${t.fields.started || ''})\n`, mode, binding };
   }
   if (st === 'done') die(`${t.id} is already done`);
-  const inputs = mode === 'migrated' ? currentInputs(root, binding) : null;
+  const inputs = mode !== 'legacy' ? currentInputs(root, binding) : null;
   for (const dep of parse.dependencies(t.fields)) {
     const df = parse.ticketFile(root, dep);
     if (df.problem) die(df.problem);
@@ -168,8 +183,12 @@ function executeLegacy(root, block) {
 async function verify(root, input, { write = process.stdout, error = process.stderr } = {}) {
   const t0 = resolve(root, input);
   const assoc = usablePrd(root, t0);
-  const { mode, binding } = modeFor(root, assoc.prd);
-  if (t0.fields.status === 'open') { const s = start(root, t0.id); write.write(s.out); }
+  const { mode, binding } = modeFor(root, assoc.prd, { command: 'verify', ticket: t0 });
+  if (t0.fields.status === 'open') {
+    // A verify on an open ticket starts it; in changes mode that needs an active change.
+    if (mode === 'changes') modeFor(root, assoc.prd, { command: 'start', ticket: t0 });
+    const s = start(root, t0.id); write.write(s.out);
+  }
   const t = load(root, t0.file, t0.id);
   if (mode === 'legacy') return verifyLegacy(root, t, write, error);
   return verifyMigrated(root, t, binding, write, error);
@@ -215,11 +234,14 @@ async function verifyMigrated(root, t, binding, write, error) {
   const commands = parse.verificationCommands(t.text);
   const secretLine = inlineSecretLine(commands);
   if (secretLine) die(`${t.file}: Verification block line ${secretLine} assigns a secret-like literal; reference it from the environment instead (the block is recorded as display text)`, { exit: EXIT.INVALID, code: 'INPUT_INVALID' });
-  write.write(`── ${id} verification ──\n`);
-  for (const c of commands) write.write(`  $ ${sanitizeText(c).text}\n`);
-  const context = { kind: 'ticket', change: binding.change, prd: binding.prd, prd_revision: binding.prd_revision, base: binding.base, ticket: id, ticket_digest: parse.ticketDigest(t.text) };
-  const result = await runner.runAttempt({ root, context, commands, timeoutSeconds: t.timeout, command: `verify ${id}` });
-  if (result.code) die(`${result.code}: ${result.problem}`, { prefix: 'pincer', exit: result.code === 'STATE_BUSY' ? 3 : EXIT.INVALID, code: result.code });
+  const announce = () => { write.write(`── ${id} verification ──\n`); for (const c of commands) write.write(`  $ ${sanitizeText(c).text}\n`); };
+  const contextFor = b => ({ kind: 'ticket', change: b.change, prd: b.prd, prd_revision: b.prd_revision, base: b.base, ticket: id, ticket_digest: parse.ticketDigest(t.text), ...(b.agreement ? { agreement: b.agreement } : {}), ...(b.strict ? { inventory: b.inventory, coverage: b.coverage } : {}) });
+  // In changes mode the guard runs again under the runner's lock (docs/runtime-contracts.md,
+  // "Command gates"): a transition, revision or authorization committed since the
+  // pre-launch evaluation refuses the attempt or is the agreement it records.
+  const revalidate = binding.mode === 'changes' ? () => contextFor(gates.guard(root, { command: 'verify', ticket: { file: t.file, fields: t.fields } }).binding) : null;
+  const result = await runner.runAttempt({ root, context: contextFor(binding), commands, timeoutSeconds: t.timeout, command: `verify ${id}`, revalidate, announce });
+  if (result.code) die(`${result.code}: ${result.problem}`, { prefix: 'pincer', exit: result.refused ? gateExit(result.code) : result.code === 'STATE_BUSY' ? 3 : EXIT.INVALID, code: result.code });
   const a = result.attempt;
   const logs = `${state.RUNTIME_DIR}/attempts/${a.id}/`;
   if (a.outcome === 'passed') {
@@ -238,7 +260,7 @@ async function done(root, input, io = {}) {
   const write = io.write || process.stdout, error = io.error || process.stderr;
   const t = resolve(root, input);
   const assoc = usablePrd(root, t);
-  const { mode, binding } = modeFor(root, assoc.prd);
+  const { mode, binding } = modeFor(root, assoc.prd, { command: 'done', ticket: t });
   const id = t.id, st = t.fields.status;
   if (st !== 'in_progress' && st !== 'done') die(`${id} is '${st}' — run 'scripts/pincer-ticket.sh verify ${id}' first`);
   if (mode === 'legacy') return doneLegacy(root, t, write, error);

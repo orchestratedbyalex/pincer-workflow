@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "run": "ui-states/pair-3/plain",
+  "brief": "ui-states",
+  "arm": "plain",
+  "pair": 3,
+  "order": 36,
+  "created": "2026-09-12T21:42:26.644Z",
+  "status": "valid",
+  "reason": null,
+  "environment": {
+    "model": "sonnet",
+    "tool": "claude-code",
+    "tool_version": "2.1.267",
+    "node": "v22.23.1",
+    "os": "darwin 25.6.0",
+    "kit": null,
+    "caps": {
+      "turns_per_session": 150,
+      "wall_clock_minutes": 30
+    }
+  },
+  "workspace": {
+    "base": "c9f8833c983e455d9201fe004e9a62ec4e4b660e",
+    "project_base": "c9f8833c983e455d9201fe004e9a62ec4e4b660e",
+    "candidate": "0beb371c2108419071429eae40492b5d773444e7",
+    "unrelated_edits": {}
+  },
+  "sessions": [
+    {
+      "name": "S1",
+      "prompt": "Read BRIEF.md in this repository and implement what it asks for, committing your work as you go. Work autonomously; when you are done, stop and summarize what you built and how you verified it.",
+      "started": "2026-09-12T21:42:26.779Z",
+      "ended": "2026-09-12T21:43:52.845Z",
+      "exit": 0,
+      "transcript": "logs/S1.json"
+    }
+  ],
+  "interventions": [],
+  "effort": {
+    "setup_minutes": 0,
+    "review_minutes": null,
+    "active_minutes": 1.43,
+    "elapsed_minutes": 1.43,
+    "tokens": {
+      "input": 775720,
+      "output": 7497
+    },
+    "cost_usd": 0.3859,
+    "unavailable": {
+      "tokens": null,
+      "cost_usd": null
+    }
+  },
+  "evaluation": {
+    "evaluator": {
+      "brief": "ui-states",
+      "digest": "c8778373954188f27dbed487ac80ae9a2d89d426f1e322d6b8cdd79ece6a306e"
+    },
+    "at": "2026-09-12T21:43:53.660Z",
+    "candidate": "0beb371c2108419071429eae40492b5d773444e7",
+    "outcome": "accepted",
+    "checks": [
+      {
+        "id": "validator",
+        "title": "validate returns the specified messages",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: valid input returns {}\nok 1 - valid input returns {}\n  ---\n  duration_ms: 0.40075\n  type: 'test'\n  ...\n# Subtest: missing email\nok 2 - missing email\n  ---\n  duration_ms: 0.078958\n  type: 'test'\n  ...\n# Subtest: blank email\nok 3 - blank email\n  ---\n  duration_ms: 0.033875\n  type: 'test'\n  ...\n# Subtest: email without @\nok 4 - email without @\n  ---\n  duration_ms: 0.02975\n  type: 'test'\n  ...\n# Subtest: missing password\nok 5 - missing password\n  ---\n  duration_ms: 0.030167\n  type: 'test'\n  ...\n# Subtest: short password\nok 6 - short password\n  ---\n  duration_ms: 0.039667\n  type: 'test'\n  ...\n# Subtest: both invalid\nok 7 - both invalid\n  ---\n  duration_ms: 0.053417\n  type: 'test'\n  ...\n1..7\n# tests 7\n# suites 0\n# pass 7\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 31.864542"
+      },
+      {
+        "id": "empty-state",
+        "title": "labels, ids, names, no summary, Sign up button",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: empty state\nok 1 - empty state\n  ---\n  duration_ms: 0.617167\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 30.164542"
+      },
+      {
+        "id": "error-state",
+        "title": "aria-invalid, aria-describedby, error elements and the alert summary",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: error state\nok 1 - error state\n  ---\n  duration_ms: 0.663917\n  type: 'test'\n  ...\n# Subtest: one error leaves the other field clean\nok 2 - one error leaves the other field clean\n  ---\n  duration_ms: 0.081209\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 32.309833"
+      },
+      {
+        "id": "submitting-state",
+        "title": "aria-busy, disabled button, Signing up…",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: submitting state\nok 1 - submitting state\n  ---\n  duration_ms: 0.562666\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 32.91825"
+      },
+      {
+        "id": "escaping",
+        "title": "values are HTML-escaped",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: values are escaped\nok 1 - values are escaped\n  ---\n  duration_ms: 0.492292\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 31.102458"
+      },
+      {
+        "id": "own-tests",
+        "title": "the candidate's own npm test passes",
+        "kind": "regression",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: renders a form\nok 1 - renders a form\n  ---\n  duration_ms: 0.40675\n  type: 'test'\n  ...\n# Subtest: default state has labeled inputs and no error markup\nok 2 - default state has labeled inputs and no error markup\n  ---\n  duration_ms: 0.114166\n  type: 'test'\n  ...\n# Subtest: renders current values in the value attribute\nok 3 - renders current values in the value attribute\n  ---\n  duration_ms: 0.095959\n  type: 'test'\n  ...\n# Subtest: HTML-escapes values\nok 4 - HTML-escapes values\n  ---\n  duration_ms: 0.04075\n  type: 'test'\n  ...\n# Subtest: a field with an error gets aria-invalid, aria-describedby, and an error message\nok 5 - a field with an error gets aria-invalid, aria-describedby, and an error message\n  ---\n  duration_ms: 0.394375\n  type: 'test'\n  ...\n# Subtest: a field without an error has no aria-invalid and no error element\nok 6 - a field without an error has no aria-invalid and no error element\n  ---\n  duration_ms: 0.057917\n  type: 'test'\n  ...\n# Subtest: shows an error summary linking to each invalid field when there are errors\nok 7 - shows an error summary linking to each invalid field when there are errors\n  ---\n  duration_ms: 0.098708\n  type: 'test'\n  ...\n# Subtest: omits the error summary when there are no errors\nok 8 - omits the error summary when there are no errors\n  ---\n  duration_ms: 0.036917\n  type: 'test'\n  ...\n# Subtest: submitting state disables the button and marks the form busy\nok 9 - submitting state disables the button and marks the form busy\n  ---\n  duration_ms: 0.180583\n  type: 'test'\n  ...\n# Subtest: non-submitting state has an enabled button\nok 10 - non-submitting state has an enabled button\n  ---\n  duration_ms: 0.20075\n  type: 'test'\n  ...\n# Subtest: valid input returns no errors\nok 11 - valid input returns no errors\n  ---\n  duration_ms: 0.575167\n  type: 'test'\n  ...\n# Subtest: missing email returns email message\nok 12 - missing email returns email message\n  ---\n  duration_ms: 0.068083\n  type: 'test'\n  ...\n# Subtest: blank email returns email message\nok 13 - blank email returns email message\n  ---\n  duration_ms: 0.037208\n  type: 'test'\n  ...\n# Subtest: email without @ returns invalid email message\nok 14 - email without @ returns invalid email message\n  ---\n  duration_ms: 0.033916\n  type: 'test'\n  ...\n# Subtest: missing password returns password message\nok 15 - missing password returns password message\n  ---\n  duration_ms: 0.035667\n  type: 'test'\n  ...\n# Subtest: short password returns length message\nok 16 - short password returns length message\n  ---\n  duration_ms: 0.030875\n  type: 'test'\n  ...\n# Subtest: both fields invalid returns both messages\nok 17 - both fields invalid returns both messages\n  ---\n  duration_ms: 0.3805\n  type: 'test'\n  ...\n# Subtest: no arguments treats both fields as missing\nok 18 - no arguments treats both fields as missing\n  ---\n  duration_ms: 0.118042\n  type: 'test'\n  ...\n1..18\n# tests 18\n# suites 0\n# pass 18\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 38.3055"
+      },
+      {
+        "id": "evidence-binding",
+        "title": "evidence in the candidate names this candidate (or the candidate its evaluation commit sits on)",
+        "kind": "evidence",
+        "result": "passed",
+        "exit": 0,
+        "detail": "no evidence names another candidate"
+      }
+    ],
+    "regressions": 0,
+    "log": "evaluation.log"
+  }
+}

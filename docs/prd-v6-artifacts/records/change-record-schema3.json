@@ -1,0 +1,128 @@
+{
+  "schema": 3,
+  "runtime": 3,
+  "change": "prd-v1",
+  "prd": ".prd/prd-v1.md",
+  "base": "b39366f849cbf1fd93bb52545ad3339da0da2d0a",
+  "registered": "2026-09-12T21:59:13Z",
+  "sequence": 5,
+  "lifecycle": {
+    "state": "completed",
+    "since": "2026-09-12T21:59:16Z",
+    "reason": null,
+    "note": null,
+    "superseded_by": null
+  },
+  "agreements": [
+    {
+      "id": "G-01",
+      "digest": "bbe3a5fbb3f9b08b2c141e484a04cf7e35e1ba5c114a3ad511301e7011b4d3fd",
+      "prd_revision": "fd0aab193ab753a4bf5b37188c9d1d6d8d116651e8784c37ae4e05097fdb85b3",
+      "breakdown": "38c987570052ef0ceb0f39c8ef72ec96fb502bfca92e4844c77eee03db69ad5e",
+      "inventory": "001a4782d33d071b08b02a8a6d471cfdc83c1f4fb24941543ad73480344fc425",
+      "coverage": "e388ad9495a2036db37a13fa617f9c74c3bb447d6e37030f7224cc5dda701ad9",
+      "tickets": [
+        "T-01",
+        "T-02"
+      ],
+      "decisions": [],
+      "snapshot": ".prd/changes/prd-v1/agreements/G-01.json",
+      "recorded": "2026-09-12T21:59:13Z"
+    }
+  ],
+  "authorizations": [
+    {
+      "id": "A-01",
+      "agreement": "G-01",
+      "digest": "bbe3a5fbb3f9b08b2c141e484a04cf7e35e1ba5c114a3ad511301e7011b4d3fd",
+      "disposition": "user",
+      "reference": "user message",
+      "excerpt": "approved: the map and both tickets as written",
+      "constraints": null,
+      "basis": null,
+      "explanation": null,
+      "decisions": [],
+      "recorded": "2026-09-12T21:59:14Z"
+    }
+  ],
+  "decisions": [],
+  "events": [
+    {
+      "sequence": 1,
+      "kind": "register",
+      "from": null,
+      "to": "planned",
+      "at": "2026-09-12T21:59:13Z",
+      "reason": null,
+      "agreement": null,
+      "authorization": null,
+      "decision": null,
+      "replacement": null,
+      "note": null
+    },
+    {
+      "sequence": 2,
+      "kind": "adopt",
+      "from": "planned",
+      "to": "planned",
+      "at": "2026-09-12T21:59:13Z",
+      "reason": null,
+      "agreement": "G-01",
+      "authorization": null,
+      "decision": null,
+      "replacement": null,
+      "note": null
+    },
+    {
+      "sequence": 3,
+      "kind": "authorize",
+      "from": "planned",
+      "to": "planned",
+      "at": "2026-09-12T21:59:14Z",
+      "reason": null,
+      "agreement": "G-01",
+      "authorization": "A-01",
+      "decision": null,
+      "replacement": null,
+      "note": null
+    },
+    {
+      "sequence": 4,
+      "kind": "activate",
+      "from": "planned",
+      "to": "active",
+      "at": "2026-09-12T21:59:14Z",
+      "reason": null,
+      "agreement": "G-01",
+      "authorization": "A-01",
+      "decision": null,
+      "replacement": null,
+      "note": null
+    },
+    {
+      "sequence": 5,
+      "kind": "complete",
+      "from": "active",
+      "to": "completed",
+      "at": "2026-09-12T21:59:16Z",
+      "reason": null,
+      "agreement": "G-01",
+      "authorization": "A-01",
+      "decision": null,
+      "replacement": null,
+      "note": null
+    }
+  ],
+  "evaluations": [],
+  "legacy": {
+    "receipts": {},
+    "authorization_text": null,
+    "migrated_from": null,
+    "migrated": null
+  },
+  "coverage": {
+    "map": ".prd/coverage/prd-v1.json",
+    "adopted": "2026-09-12T21:59:13Z",
+    "agreement": "G-01"
+  }
+}

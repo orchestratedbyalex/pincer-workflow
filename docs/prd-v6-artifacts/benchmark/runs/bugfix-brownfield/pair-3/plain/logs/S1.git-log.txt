@@ -1,0 +1,3 @@
+75545dfc14b147186dae9e0db3be978cd37d08fe 2026-09-12 22:35:53 +0200 Fix slugify to collapse separator runs and trim edges
+fffe769e62eaff70102a8c902ddbc721a0451fc7 2026-09-12 22:34:24 +0200 Task brief
+6fd016b3fadb3a2de94420a7773731d7b7dc422a 2026-09-12 22:34:24 +0200 strutil 1.2.0

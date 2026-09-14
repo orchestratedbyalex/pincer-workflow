@@ -1,0 +1,103 @@
+cd "$(pwd)" && scripts/pincer-status.sh 2>&1
+git status
+node scripts/pincer-runtime.cjs change select prd-v1 2>&1
+node scripts/pincer-runtime.cjs resume 2>&1
+scripts/pincer-status.sh 2>&1
+git show 9128a9e --stat; echo ---; git show 9128a9e -- .prd/prd-v1.md | head -200
+node scripts/pincer-runtime.cjs change authorize --help 2>&1; echo ---; node scripts/pincer-runtime.cjs --help 2>&1 | head -100
+git log --all --oneline | head -30
+git branch -a -v; echo ---; git log --oneline --all --source | head -30; echo ---; git show-ref
+node scripts/pincer-runtime.cjs change authorize prd-v1 \
+  --agreement e22544d31a7a1ef38358b2ef6bea391fa94cef7daee9658041ea1ceb1bba9488 \
+  --reference "user message, this session, 2026-09-12" \
+  --excerpt "Continue the work on change prd-v1 where it was left off ... Do not ask me to re-approve scope I already approved." \
+  2>&1
+git status --short; echo ---; git diff --stat
+git add .prd/changes/prd-v1.json .prd/changes/prd-v1/agreements/G-02.json
+git commit -m "$(cat <<'EOF'
+Authorize change prd-v1 (G-02/A-02)
+
+Records the user's instruction to continue prd-v1 as authorization
+for the agreement that added R-03 (list --json) and ticket T-04.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+git status --short
+node scripts/pincer-runtime.cjs change resume prd-v1 2>&1
+git status --short
+node scripts/pincer-runtime.cjs resume 2>&1
+git add .prd/changes/prd-v1.json
+git commit -m "$(cat <<'EOF'
+Resume change prd-v1
+
+Continues the build under the newly recorded authorization A-02.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+scripts/pincer-ticket.sh verify T-01 2>&1
+ls test/; echo ---; cat tickets/T-01-add-and-list.md; echo ---T02---; cat tickets/T-02-document-usage.md; echo ---T04---; cat tickets/T-04-json-output.md
+node scripts/pincer-runtime.cjs ready T-04 2>&1; echo ---; node scripts/pincer-runtime.cjs ready T-02 2>&1; echo ---; node scripts/pincer-runtime.cjs ready T-01 2>&1; echo ---srcnotes---; cat src/notes.js
+sed -n '1,400p' scripts/pincer-ticket.sh | grep -n "verify\|done\|EVIDENCE" | head -60
+cat test/json.test.js; echo ---; cat test/notes.test.js; echo ---; cat test/clear.test.js
+grep -n "DEPENDENCY_BLOCKED\|function ready\|dependsOn\|depends_on" scripts/pincer-runtime.cjs | head -60
+find . -name "pincer-runtime.cjs" -not -path "*/node_modules/*"; 
+wc -l scripts/pincer-runtime.cjs; grep -c "DEPENDENCY_BLOCKED" scripts/pincer-runtime.cjs
+grep -rn "DEPENDENCY_BLOCKED" --include="*.js" --include="*.cjs" . | grep -v node_modules
+sed -n '240,300p' scripts/pincer-runtime/status.cjs
+[Edit] <scratchpad>/trial/scope/src/notes.js
+[Edit] <scratchpad>/trial/scope/src/notes.js
+scripts/pincer-ticket.sh verify T-01 2>&1
+scripts/pincer-status.sh 2>&1
+scripts/pincer-ticket.sh start T-02 2>&1
+[Edit] <scratchpad>/trial/scope/README.md
+scripts/pincer-ticket.sh verify T-02 2>&1
+[Edit] <scratchpad>/trial/scope/tickets/T-02-document-usage.md
+scripts/pincer-ticket.sh done T-02 2>&1
+git status --short; echo ---diff---; git diff -- README.md
+ls -la scratch 2>&1; echo ---; cat .gitignore 2>&1; echo ---; git check-ignore -v CHANGELOG.md scratch 2>&1
+git add README.md tickets/T-02-document-usage.md
+git diff --cached --stat
+git commit -m "$(cat <<'EOF'
+T-02: document usage
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+scripts/pincer-ticket.sh start T-04 2>&1
+scripts/pincer-ticket.sh verify T-01 2>&1 | tail -5
+scripts/pincer-ticket.sh start T-04 2>&1
+scripts/pincer-ticket.sh verify T-04 2>&1 | tail -10
+git diff -- src/notes.js
+[Edit] <scratchpad>/trial/scope/tickets/T-04-json-output.md
+scripts/pincer-ticket.sh done T-04 2>&1
+git status --short
+git add src/notes.js tickets/T-04-json-output.md
+git diff --cached --stat
+git commit -m "$(cat <<'EOF'
+T-04: json output
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+scripts/pincer-status.sh 2>&1
+node scripts/pincer-runtime.cjs change complete prd-v1 2>&1
+git status --short
+git add .prd/changes/prd-v1.json
+git commit -m "$(cat <<'EOF'
+Complete PRD v1
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+[Edit] <scratchpad>/trial/scope/.prd/prd-v1.md
+git add .prd/prd-v1.md
+git status --short
+git commit -m "$(cat <<'EOF'
+PRD v1: built
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+scripts/pincer-status.sh 2>&1; echo ---; git status --short

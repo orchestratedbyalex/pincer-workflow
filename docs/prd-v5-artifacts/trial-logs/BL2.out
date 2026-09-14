@@ -1,0 +1,9 @@
+T-03 is implemented, verified, and committed. Final report:
+
+**PRD v1 registration:** Its change binding (`.prd/changes/prd-v1.json`, authorization `"go ahead with both tickets as written"`) was removed from the working tree — the runtime allows only one active change binding per worktree, so switching PRDs requires `--replace`. The file itself is not gone: it's preserved verbatim in git history at commit `f3d80d2` (`git show f3d80d2:.prd/changes/prd-v1.json` to view or restore it). PRD v1's ticket progress is untouched — `T-01` (done) and `T-02` (open) still reference `.prd/prd-v1.md` and their state is unchanged. To resume PRD v1 later, re-run `node scripts/pincer-runtime.cjs register --prd .prd/prd-v1.md --replace --authorization "go ahead with both tickets as written"`.
+
+**PRD v2:** Registered as the active change binding (commit `c8801fd`, "Register PRD v2") with your quoted approval `"yes, add clear as specified"` as its authorization.
+
+**T-03:** Implemented `clear` in `src/notes.js` and added `test/clear.test.js`; started → verified (`npm test`, 4/4 passing) → done, committed as `f7f4590` ("T-03: clear").
+
+Assumption made: PRD v2 has only one ticket (T-03), which is now done, but I left `prd-v2.md`'s status as `ticketed` rather than advancing it to `built` or running `/pincer-evaluate`, since you asked me to stop after T-03 with this report.

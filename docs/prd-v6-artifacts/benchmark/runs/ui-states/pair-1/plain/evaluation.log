@@ -1,0 +1,11 @@
+evaluating ui-states/pair-1/plain candidate bda6148d53dfec9d9cfbc3678f2eadf96cff94e0 with evaluator c8778373954188f27dbed487ac80ae9a2d89d426f1e322d6b8cdd79ece6a306e from ~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs
+workspace status:
+(clean)
+check validator: failed (exit 1) —  'strictEqual'
+check empty-state: passed (exit 0) — TAP version 13
+check error-state: failed (exit 1) — TAP version 13
+check submitting-state: failed (exit 1) — TAP version 13
+check escaping: failed (exit 1) — TAP version 13
+check own-tests: passed (exit 0) — TAP version 13
+check evidence-binding: passed (exit 0) — no evidence names another candidate
+outcome: rejected

@@ -1,0 +1,1 @@
+Approved: R-03 (`list --json`, a JSON array of strings, `[]` when empty) as written in BRIEF.md is in scope. Implement whatever is still missing, commit, and summarize.

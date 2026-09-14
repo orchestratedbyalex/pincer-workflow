@@ -113,14 +113,19 @@ function exercisesRuntime(project, label) {
   assert.match(passes(sh('scripts/pincer-ticket.sh', 'done', 'T-01'), `${label}: legacy done`), /T-01 done/);
   git('add', '-A'); git('-c', 'user.name=t', '-c', 'user.email=t@example.invalid', 'commit', '-q', '-m', 'done');
   assert.match(passes(node('scripts/pincer-runtime.cjs', 'migrate', '--preview', '--prd', '.prd/prd-v1.md'), `${label}: migrate preview`), /migration plan/);
-  assert.match(passes(node('scripts/pincer-runtime.cjs', 'migrate', '--apply', '--prd', '.prd/prd-v1.md'), `${label}: migrate apply`), /^migrated/m);
+  assert.match(passes(node('scripts/pincer-runtime.cjs', 'migrate', '--apply', '--prd', '.prd/prd-v1.md'), `${label}: migrate apply`), /^migrated .* \(schema 2 record, planned/m);
+  git('add', '-A'); git('-c', 'user.name=t', '-c', 'user.email=t@example.invalid', 'commit', '-q', '-m', 'migrated');
   assert.match(passes(node('scripts/pincer-runtime.cjs', 'register', '--prd', '.prd/prd-v1.md'), `${label}: register`), /^unchanged change prd-v1/m);
-  assert.match(passes(sh('scripts/pincer-ticket.sh', 'verify', 'T-01'), `${label}: migrated verify`), /attempt 000001-/);
+  const shown = JSON.parse(passes(node('scripts/pincer-runtime.cjs', 'change', 'show', 'prd-v1', '--json'), `${label}: change show`));
+  passes(node('scripts/pincer-runtime.cjs', 'change', 'authorize', 'prd-v1', '--agreement', shown.agreement.current, '--reference', 'fixture session', '--excerpt', 'go ahead'), `${label}: authorize`);
+  passes(node('scripts/pincer-runtime.cjs', 'change', 'activate', 'prd-v1'), `${label}: activate`);
+  assert.match(passes(sh('scripts/pincer-ticket.sh', 'verify', 'T-01'), `${label}: changes-mode verify`), /attempt 000001-/);
   const status = JSON.parse(passes(node('scripts/pincer-runtime.cjs', 'status', '--json'), `${label}: status --json`));
-  assert.equal(status.mode, 'migrated', label);
+  assert.equal(status.mode, 'changes', label);
   assert.equal(status.tickets[0].latest_attempt.outcome, 'passed', label);
-  assert.match(passes(sh('scripts/pincer-status.sh'), `${label}: migrated status`), /^Runtime  change prd-v1/m);
+  assert.match(passes(sh('scripts/pincer-status.sh'), `${label}: changes-mode status`), /^Runtime  changes · selected prd-v1 · active/m);
   assert.equal(node('scripts/pincer-runtime.cjs', 'ready', 'T-01').status, 0, `${label}: ready`);
+  assert.match(passes(node('scripts/pincer-runtime.cjs', 'resume'), `${label}: resume report`), /^Next       /m);
 }
 
 for (const [platform, layout] of Object.entries(layouts)) {

@@ -1,0 +1,207 @@
+{
+  "schema": 1,
+  "runtime": 3,
+  "generated": "2026-09-12T21:59:14Z",
+  "root": "<project>",
+  "mode": "changes",
+  "change": "prd-v1",
+  "strict": true,
+  "label": "strict",
+  "reason": null,
+  "inventory": {
+    "digest": "001a4782d33d071b08b02a8a6d471cfdc83c1f4fb24941543ad73480344fc425",
+    "requirements": [
+      {
+        "id": "R-01",
+        "title": "Read the value",
+        "line": 10,
+        "end": 13,
+        "scenarios": [
+          "S-01",
+          "S-02"
+        ]
+      },
+      {
+        "id": "R-02",
+        "title": "Report the value",
+        "line": 15,
+        "end": 17,
+        "scenarios": [
+          "S-03"
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "S-01",
+        "requirement": "R-01",
+        "line": 12,
+        "end": 12
+      },
+      {
+        "id": "S-02",
+        "requirement": "R-01",
+        "line": 13,
+        "end": 13
+      },
+      {
+        "id": "S-03",
+        "requirement": "R-02",
+        "line": 17,
+        "end": 17
+      }
+    ]
+  },
+  "map": {
+    "path": ".prd/coverage/prd-v1.json",
+    "digest": "e388ad9495a2036db37a13fa617f9c74c3bb447d6e37030f7224cc5dda701ad9",
+    "checks": [
+      {
+        "id": "C-01",
+        "kind": "command",
+        "required": true,
+        "declared": "c67f0a4421eca7996c8f71832ad993d396a9cc71b3f30561d180738ae2240d36"
+      },
+      {
+        "id": "C-02",
+        "kind": "review",
+        "required": true,
+        "declared": "f6a4c51e737b5602ab29e7ac6c461291eb49b1ddd3e64f5e3835b7a9ce87a4a8"
+      }
+    ]
+  },
+  "agreement": {
+    "current": "bbe3a5fbb3f9b08b2c141e484a04cf7e35e1ba5c114a3ad511301e7011b4d3fd",
+    "reviewed": {
+      "agreement": "G-01",
+      "authorization": "A-01",
+      "digest": "bbe3a5fbb3f9b08b2c141e484a04cf7e35e1ba5c114a3ad511301e7011b4d3fd"
+    },
+    "verdict": "current"
+  },
+  "baseline": {
+    "agreements": [
+      "G-01"
+    ],
+    "scenarios": [
+      "S-01",
+      "S-02",
+      "S-03"
+    ]
+  },
+  "structure": {
+    "complete": true,
+    "problems": []
+  },
+  "implementation": {
+    "complete": false,
+    "scenarios": {
+      "S-01": {
+        "scope": "in-scope",
+        "requirement": "R-01",
+        "implementation": "unfinished",
+        "tickets": [
+          {
+            "id": "T-01",
+            "status": "open",
+            "ready": false,
+            "code": "EVIDENCE_MISSING",
+            "detail": "no runtime attempt recorded — verify"
+          }
+        ],
+        "checks": [
+          "C-01"
+        ],
+        "detail": "T-01 is open, not done"
+      },
+      "S-02": {
+        "scope": "in-scope",
+        "requirement": "R-01",
+        "implementation": "unfinished",
+        "tickets": [
+          {
+            "id": "T-01",
+            "status": "open",
+            "ready": false,
+            "code": "EVIDENCE_MISSING",
+            "detail": "no runtime attempt recorded — verify"
+          }
+        ],
+        "checks": [
+          "C-01"
+        ],
+        "detail": "T-01 is open, not done"
+      },
+      "S-03": {
+        "scope": "in-scope",
+        "requirement": "R-02",
+        "implementation": "unfinished",
+        "tickets": [
+          {
+            "id": "T-02",
+            "status": "open",
+            "ready": false,
+            "code": "EVIDENCE_MISSING",
+            "detail": "no runtime attempt recorded — verify"
+          }
+        ],
+        "checks": [
+          "C-02"
+        ],
+        "detail": "T-02 is open, not done"
+      }
+    },
+    "problems": [
+      {
+        "code": "LIFECYCLE_BLOCKED",
+        "detail": "S-01: T-01 is open, not done",
+        "ids": [
+          "S-01",
+          "T-01"
+        ]
+      },
+      {
+        "code": "LIFECYCLE_BLOCKED",
+        "detail": "S-03: T-02 is open, not done",
+        "ids": [
+          "S-03",
+          "T-02"
+        ]
+      }
+    ],
+    "limitations": []
+  },
+  "candidate": {
+    "evaluated": false,
+    "candidate": null,
+    "manifest": null,
+    "delivery": null,
+    "adequacy": null,
+    "scenarios": {},
+    "problems": [
+      {
+        "code": "EVIDENCE_MISSING",
+        "detail": "candidate: not evaluated",
+        "ids": []
+      }
+    ]
+  },
+  "scope": [],
+  "blockers": [
+    {
+      "code": "LIFECYCLE_BLOCKED",
+      "detail": "S-01: T-01 is open, not done"
+    },
+    {
+      "code": "LIFECYCLE_BLOCKED",
+      "detail": "S-03: T-02 is open, not done"
+    }
+  ],
+  "next": {
+    "action": "finish T-01",
+    "command": "scripts/pincer-ticket.sh start T-01 → verify T-01 → done T-01",
+    "ticket": "T-01",
+    "check": null,
+    "decision": null
+  }
+}

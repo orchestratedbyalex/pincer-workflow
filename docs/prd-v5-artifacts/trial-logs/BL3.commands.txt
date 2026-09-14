@@ -1,0 +1,73 @@
+cd "<scratchpad>/trial/baseline" && scripts/pincer-status.sh
+cd "<scratchpad>/trial/baseline" && echo "--- .prd ---" && ls -la .prd && echo "--- .prd/changes ---" && ls -la .prd/changes 2>/dev/null && echo "--- tickets ---" && ls -la tickets && echo "--- .pincer ---" && find .pincer -maxdepth 3 -type f 2>/dev/null
+cd "<scratchpad>/trial/baseline" && ls -la .prd && echo "--- tickets ---" && ls -la tickets
+cd "<scratchpad>/trial/baseline" && find .prd/changes -type f
+cd "<scratchpad>/trial/baseline" && node scripts/pincer-runtime.cjs status --json 2>&1 | head -100
+cd "<scratchpad>/trial/baseline" && node scripts/pincer-runtime.cjs --help 2>&1 | head -60
+cd "<scratchpad>/trial/baseline" && wc -l scripts/pincer-runtime.cjs
+cd "<scratchpad>/trial/baseline" && wc -l scripts/pincer-runtime/identity.cjs scripts/pincer-runtime/status.cjs scripts/pincer-runtime/lifecycle.cjs
+cd "<scratchpad>/trial/baseline" && git show f3d80d2 --stat && echo "---" && git show f3d80d2 -- .prd/changes/ 2>&1 | head -50
+cd "<scratchpad>/trial/baseline" && git show f3d80d2 | head -80
+cd "<scratchpad>/trial/baseline" && git show c8801fd | head -100
+cd "<scratchpad>/trial/baseline" && wc -l .claude/hooks/hook-policy.cjs
+cd "<scratchpad>/trial/baseline" && node scripts/pincer-runtime.cjs register --prd .prd/prd-v1.md --replace --authorization "go ahead with both tickets as written"
+cd "<scratchpad>/trial/baseline" && git status --short
+cd "<scratchpad>/trial/baseline" && git add .prd/changes/prd-v1.json .prd/changes/prd-v2.json && git commit -m "$(cat <<'EOF'
+Register PRD v1
+
+Switches the active change binding from PRD v2 back to PRD v1 to
+finish its remaining ticket (T-02, still open). PRD v2's ticket
+progress (T-03 done) is untouched, and its authorization record
+remains in git history at commit c8801fd.
+
+Authorization: "go ahead with both tickets as written" (originally
+recorded at commit f3d80d2)
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/baseline" && scripts/pincer-status.sh
+cd "<scratchpad>/trial/baseline" && scripts/pincer-ticket.sh verify T-01
+cd "<scratchpad>/trial/baseline" && scripts/pincer-ticket.sh start T-02
+cd "<scratchpad>/trial/baseline" && ls
+[Edit] <scratchpad>/trial/baseline/README.md
+cd "<scratchpad>/trial/baseline" && scripts/pincer-ticket.sh verify T-02
+cd "<scratchpad>/trial/baseline" && git diff -- README.md
+[Edit] <scratchpad>/trial/baseline/tickets/T-02-document-usage.md
+cd "<scratchpad>/trial/baseline" && scripts/pincer-ticket.sh done T-02
+cd "<scratchpad>/trial/baseline" && git status --short
+cd "<scratchpad>/trial/baseline" && git add README.md tickets/T-02-document-usage.md && git diff --cached
+cd "<scratchpad>/trial/baseline" && git commit -m "$(cat <<'EOF'
+T-02: document usage
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/baseline" && scripts/pincer-status.sh
+cd "<scratchpad>/trial/baseline" && scripts/pincer-ticket.sh verify T-01
+cd "<scratchpad>/trial/baseline" && scripts/pincer-status.sh
+[Edit] <scratchpad>/trial/baseline/.prd/prd-v1.md
+cd "<scratchpad>/trial/baseline" && git add .prd/prd-v1.md && git commit -m "$(cat <<'EOF'
+PRD v1: built
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/baseline" && node scripts/pincer-runtime.cjs register --prd .prd/prd-v2.md --replace --authorization "yes, add clear as specified"
+cd "<scratchpad>/trial/baseline" && git status --short && scripts/pincer-status.sh
+cd "<scratchpad>/trial/baseline" && scripts/pincer-ticket.sh verify T-03
+cd "<scratchpad>/trial/baseline" && git add .prd/changes/prd-v1.json .prd/changes/prd-v2.json && git commit -m "$(cat <<'EOF'
+Register PRD v2
+
+Restores PRD v2 as the active change binding now that PRD v1 is
+built (T-01, T-02 done). PRD v1's authorization and ticket history
+remain in git history at commits f7f4590/9b1a2e6; this repeats the
+same swap done at commit c8801fd, reused for the same reason.
+
+Authorization: "yes, add clear as specified" (originally recorded
+at commit c8801fd)
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/baseline" && git status --short && echo "---" && scripts/pincer-status.sh

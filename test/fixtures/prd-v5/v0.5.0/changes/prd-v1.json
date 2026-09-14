@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "change": "prd-v1",
+  "prd": ".prd/prd-v1.md",
+  "prd_revision": "68c1ed3d003057d9b3f10fd484129c0a080bf3875425f4861b4f2eb59132f355",
+  "base": "e59132bca5e6298192bc696c5f0d6a0dd8c2d711",
+  "registered": "2026-09-11T20:25:04Z",
+  "authorization": "user approved the breakdown in the planning session on 2026-09-05",
+  "runtime": 1,
+  "legacy_receipts": {
+    "T-01": {
+      "verified": "2026-09-11T20:25:03Z a5cb1d78599d",
+      "last_check": "2026-09-11T20:25:03Z passed a5cb1d78599d"
+    }
+  }
+}

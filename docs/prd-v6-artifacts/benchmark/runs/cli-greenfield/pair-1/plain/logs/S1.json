@@ -1,0 +1,43 @@
+{
+  "session_id": "a9d438fe-83e6-496f-84cd-eece6ef5f592",
+  "num_turns": 19,
+  "duration_ms": 138921,
+  "duration_api_ms": 135168,
+  "total_cost_usd": 0.467224,
+  "usage": {
+    "input_tokens": 30,
+    "cache_creation_input_tokens": 45717,
+    "cache_read_input_tokens": 786380,
+    "output_tokens": 12702,
+    "output_tokens_details": {
+      "thinking_tokens": 5510
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 45717,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 349,
+        "cache_read_input_tokens": 63687,
+        "cache_creation_input_tokens": 561,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 561
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "is_error": false,
+  "subtype": "success",
+  "result": "Committed as `3df295d`.\n\n**Built:** `bin/todo.js` — a dependency-free Node CLI implementing `add`, `list`, and `done`, storing items as JSON at `TODO_FILE` or `./todo.json`. Handles missing/empty files, invalid-JSON files (error + exit 1, file untouched), missing-arg usage errors (exit 2), unknown commands (exit 2), and out-of-range `done` targets (exit 1, file untouched).\n\n**Verified:**\n- TDD: wrote `test/todo.test.js` (13 tests via `node --test`, spawning the CLI as a subprocess against temp files) first, confirmed all 13 failed (no `bin/todo.js` existed), then implemented until all 13 passed.\n- `npm test` passes cleanly.\n- Manual smoke test in a scratch directory covering the full command sequence (add, list, done, nonexistent item, corrupted JSON, unknown command) — output matched the brief exactly.\n- Updated `README.md` with a commands section as required."
+}

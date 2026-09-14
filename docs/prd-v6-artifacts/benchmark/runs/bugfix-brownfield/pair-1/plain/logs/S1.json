@@ -1,0 +1,43 @@
+{
+  "session_id": "ca5ac520-18eb-4150-a4ba-7f6afa91b2c8",
+  "num_turns": 22,
+  "duration_ms": 94954,
+  "duration_api_ms": 91760,
+  "total_cost_usd": 0.4109040000000001,
+  "usage": {
+    "input_tokens": 42,
+    "cache_creation_input_tokens": 37325,
+    "cache_read_input_tokens": 980500,
+    "output_tokens": 6542,
+    "output_tokens_details": {
+      "thinking_tokens": 1837
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 37325,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 581,
+        "cache_read_input_tokens": 55547,
+        "cache_creation_input_tokens": 309,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 309
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "is_error": false,
+  "subtype": "success",
+  "result": "All 8 tests pass, and `git status` confirms the working tree only shows the pre-existing, untouched uncommitted edits (CHANGELOG.md \"Ideas\" section, `scratch/`).\n\n## Summary\n\n**Root cause:** `slugify` in `lib/slugify.js` used `.replace(/[^a-z0-9]/g, '-')`, which replaces each non-alphanumeric character *individually*. A run of separators (e.g. `,  ` in `'Hello,  World!'`) produced one dash per character instead of one dash for the whole run, and there was no trimming, so leading/trailing separators left stray dashes.\n\n**Fix** (`lib/slugify.js`): changed the regex to `[^a-z0-9]+` (matches whole runs) and added `.replace(/^-+|-+$/g, '')` to trim leading/trailing dashes.\n\n**Tests added** (`test/strutil.test.js`): the reported case (`'Hello,  World!'` → `'hello-world'`), leading/trailing separator trimming, all-separator input → `''`, and empty string → `''`.\n\n**Changelog:** added an entry under \"Unreleased\" describing the fix, staged as a separate hunk so the pre-existing uncommitted \"Ideas\" section addition stayed untouched and uncommitted.\n\n**Verification:** ran `node --test test/strutil.test.js` — all 8 tests pass. Confirmed via `git status`/`git diff` that the commit (`a428773`) contains only `lib/slugify.js`, `test/strutil.test.js`, and the single new CHANGELOG line — the unrelated CHANGELOG \"Ideas\" edit and `scratch/todo.txt` remain exactly as they were, uncommitted."
+}

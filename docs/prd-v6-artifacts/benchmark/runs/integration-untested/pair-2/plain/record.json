@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "run": "integration-untested/pair-2/plain",
+  "brief": "integration-untested",
+  "arm": "plain",
+  "pair": 2,
+  "order": 19,
+  "created": "2026-09-12T19:47:37.702Z",
+  "status": "valid",
+  "reason": null,
+  "environment": {
+    "model": "sonnet",
+    "tool": "claude-code",
+    "tool_version": "2.1.267",
+    "node": "v22.23.1",
+    "os": "darwin 25.6.0",
+    "kit": null,
+    "caps": {
+      "turns_per_session": 150,
+      "wall_clock_minutes": 30
+    }
+  },
+  "workspace": {
+    "base": "927e3f7847e1bf4aaf47847289fb7a22b7a344e5",
+    "project_base": "927e3f7847e1bf4aaf47847289fb7a22b7a344e5",
+    "candidate": "ed1a3a3249f35791785d09d2f16a88a72626e2ec",
+    "unrelated_edits": {}
+  },
+  "sessions": [
+    {
+      "name": "S1",
+      "prompt": "Read BRIEF.md in this repository and implement what it asks for, committing your work as you go. Work autonomously; when you are done, stop and summarize what you built and how you verified it.",
+      "started": "2026-09-12T19:47:37.836Z",
+      "ended": "2026-09-12T19:50:02.939Z",
+      "exit": 0,
+      "transcript": "logs/S1.json"
+    }
+  ],
+  "interventions": [],
+  "effort": {
+    "setup_minutes": 0,
+    "review_minutes": null,
+    "active_minutes": 2.42,
+    "elapsed_minutes": 2.42,
+    "tokens": {
+      "input": 796852,
+      "output": 9618
+    },
+    "cost_usd": 0.3977,
+    "unavailable": {
+      "tokens": null,
+      "cost_usd": null
+    }
+  },
+  "evaluation": {
+    "evaluator": {
+      "brief": "integration-untested",
+      "digest": "29d8c3bee5d7958ffc1ef98fa214d71b2d70e85d5c93efc3341cc55cae1e0b7c"
+    },
+    "at": "2026-09-12T19:50:05.493Z",
+    "candidate": "ed1a3a3249f35791785d09d2f16a88a72626e2ec",
+    "outcome": "accepted",
+    "checks": [
+      {
+        "id": "success",
+        "title": "a 200 resolves the body with one request",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: 200 resolves with one request\nok 1 - 200 resolves with one request\n  ---\n  duration_ms: 8.097458\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 47.986584"
+      },
+      {
+        "id": "retry",
+        "title": "two 503s then 200 resolves after three requests",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: 503, 503, 200 resolves after three requests\nok 1 - 503, 503, 200 resolves after three requests\n  ---\n  duration_ms: 213.11475\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 252.088167"
+      },
+      {
+        "id": "exhausted",
+        "title": "three 503s reject UPSTREAM with attempts 3",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: three 503s reject UPSTREAM with attempts 3 and exactly three requests\nok 1 - three 503s reject UPSTREAM with attempts 3 and exactly three requests\n  ---\n  duration_ms: 212.313542\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 252.329875"
+      },
+      {
+        "id": "no-retry-4xx",
+        "title": "a 404 rejects REJECTED after one request",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: 404 rejects REJECTED after one request\nok 1 - 404 rejects REJECTED after one request\n  ---\n  duration_ms: 8.046417\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 47.638042"
+      },
+      {
+        "id": "timeout",
+        "title": "a hanging server rejects TIMEOUT within the budget",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: a hanging server rejects TIMEOUT within (retries + 1) × timeout plus a margin\nok 1 - a hanging server rejects TIMEOUT within (retries + 1) × timeout plus a margin\n  ---\n  duration_ms: 708.13175\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 749.671875"
+      },
+      {
+        "id": "own-tests",
+        "title": "the candidate's own npm test passes",
+        "kind": "regression",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: resolves with parsed JSON body on a 2xx response\nok 1 - resolves with parsed JSON body on a 2xx response\n  ---\n  duration_ms: 7.896\n  type: 'test'\n  ...\n# Subtest: retries after a 5xx response and resolves on subsequent success\nok 2 - retries after a 5xx response and resolves on subsequent success\n  ---\n  duration_ms: 102.425167\n  type: 'test'\n  ...\n# Subtest: rejects with an UPSTREAM ClientError after exhausting retries on repeated 5xx\nok 3 - rejects with an UPSTREAM ClientError after exhausting retries on repeated 5xx\n  ---\n  duration_ms: 206.940542\n  type: 'test'\n  ...\n# Subtest: rejects immediately with a REJECTED ClientError on a 4xx response, without retrying\nok 4 - rejects immediately with a REJECTED ClientError on a 4xx response, without retrying\n  ---\n  duration_ms: 2.184709\n  type: 'test'\n  ...\n# Subtest: rejects with a TIMEOUT ClientError when every attempt hangs past the timeout\nok 5 - rejects with a TIMEOUT ClientError when every attempt hangs past the timeout\n  ---\n  duration_ms: 204.961\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 564.634625"
+      },
+      {
+        "id": "evidence-binding",
+        "title": "evidence in the candidate names this candidate (or the candidate its evaluation commit sits on)",
+        "kind": "evidence",
+        "result": "passed",
+        "exit": 0,
+        "detail": "no evidence names another candidate"
+      }
+    ],
+    "regressions": 0,
+    "log": "evaluation.log"
+  }
+}

@@ -1,0 +1,9 @@
+ui-states/pair-4/pincer: rejected (candidate 0db66b1, evaluator c87783739541 frozen)
+  failed     validator exit 1 — not ok 3 - blank email
+  passed     empty-state exit 0 — TAP version 13
+  passed     error-state exit 0 — TAP version 13
+  passed     submitting-state exit 0 — TAP version 13
+  passed     escaping exit 0 — TAP version 13
+  passed     own-tests exit 0 — TAP version 13
+  passed     evidence-binding exit 0 — NOTES.md: 0db66b1 is the evaluation commit of b4a77dd (6 evaluation file(s))
+  log <runs>/ui-states/pair-4/pincer/evaluation.log · status valid

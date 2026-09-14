@@ -1,0 +1,1 @@
+Read BRIEF.md in this repository. Implement R-01 only (with its tests), commit it, and then stop: R-02 is for a later session. Summarize what you did.

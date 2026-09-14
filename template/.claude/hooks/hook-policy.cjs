@@ -160,12 +160,15 @@ function dangerousReason(source, depth = 0) {
 }
 
 const TICKET_PATH = /(^|[\\/])tickets[\\/]T-[0-9]+[^\\/]*\.md$/;
-// Runtime-owned state: local attempts under .pincer/ and change bindings under
-// .prd/changes/ are written only by pincer-runtime.cjs.
+// Runtime-owned state: local attempts under .pincer/, change records under
+// .prd/changes/ (with their agreement snapshots), evaluation locators under
+// .prd/evidence/changes/ and the inventory/map snapshots a strict evaluation writes
+// under .prd/evidence/prd-vN/<candidate>/coverage/ are written only by
+// pincer-runtime.cjs. The coverage map .prd/coverage/<id>.json is authored by hand.
 // The runtime owns .pincer/runtime/ and .pincer/backups/ (and the directory as a
 // whole); .pincer/drafts/ is the agent's own scratch space for evidence drafts.
 const RUNTIME_PATH = /(^|[\\/])\.pincer(?:[\\/](?:runtime|backups)(?:[\\/]|$)|[\\/]?$)/;
-const BINDING_PATH = /(^|[\\/])\.prd[\\/]changes([\\/]|$)/;
+const BINDING_PATH = /(^|[\\/])\.prd[\\/](?:changes|evidence[\\/]changes|evidence[\\/]prd-v[0-9]+[\\/][0-9a-f]{40}[\\/]coverage)([\\/]|$)/;
 const PROTECTED = ['status', 'started', 'last_check', 'verified', 'finished'];
 
 function ticketPath(value) {
@@ -212,7 +215,7 @@ function applyEdit(content, oldText, newText, replaceAll = false) {
 function guardEdits(tool, toolInput) {
   const file = toolInput.file_path;
   if (typeof file !== 'string') block(`${tool} payload must contain a string file_path.`);
-  if (runtimePath(file)) block('runtime state (.pincer/) and change bindings (.prd/changes/) are written only by pincer-runtime.cjs.');
+  if (runtimePath(file)) block('runtime state (.pincer/), change records (.prd/changes/), evaluation locators and coverage snapshots (.prd/evidence/…/coverage/) are written only by pincer-runtime.cjs; the coverage map .prd/coverage/<id>.json is yours to edit.');
   if (!ticketPath(file)) return;
   const before = existingContent(file);
   if (tool === 'Write') {
@@ -240,11 +243,15 @@ function guardEdits(tool, toolInput) {
 function isExactPincerCall(source) {
   const commands = shellCommands(source).filter(command => command.words.length);
   if (commands.length !== 1 || commands[0].separator) return false;
+  // An output redirection is a write, whatever runs in front of it: fall through to
+  // ticketShellMutation so its target is tested like any other path. Without this,
+  // adding a verb to the list below silently opened a new carrier for it.
+  if (commands[0].operators.some(op => op === '>' || op === '>>')) return false;
   const { executable, args } = commandParts(commands[0]);
   let words = [executable, ...args];
   if (['bash', 'sh', 'node'].includes(words[0])) words = words.slice(1);
   if (/pincer-runtime\.cjs$/.test(words[0] || '')) {
-    return ['start', 'verify', 'done', 'bind', 'register', 'migrate', 'recover', 'check', 'evidence'].includes(words[1]);
+    return ['start', 'verify', 'done', 'bind', 'register', 'migrate', 'recover', 'check', 'evidence', 'change', 'resume'].includes(words[1]);
   }
   if (!/pincer-ticket\.sh$/.test(words[0] || '')) return false;
   const action = words[1];
@@ -335,7 +342,7 @@ function ticketShellMutation(source, depth = 0) {
       if (viaXargs && ['checkout', 'restore', 'clean'].includes(sub.name) && stdinPathspec) return true;
     }
     const hasTicket = words.some(ticketPath) || /(^|[\s'"`])tickets[\\/]T-[0-9]+[^\s'"`]*/.test(source) ||
-      words.some(runtimePath) || /(^|[\s'"`=])\.pincer(?:[\\/](?:runtime|backups)(?:[\\/]|[\s'"`]|$)|[\\/]?(?:[\s'"`]|$))/.test(source) || /(^|[\s'"`=])\.prd[\\/]changes([\\/]|[\s'"`]|$)/.test(source);
+      words.some(runtimePath) || /(^|[\s'"`=])\.pincer(?:[\\/](?:runtime|backups)(?:[\\/]|[\s'"`]|$)|[\\/]?(?:[\s'"`]|$))/.test(source) || /(^|[\s'"`=])\.prd[\\/](?:changes|evidence[\\/]changes|evidence[\\/]prd-v[0-9]+[\\/][0-9a-f]{40}[\\/]coverage)([\\/]|[\s'"`]|$)/.test(source);
     if (!hasTicket) continue;
     if (command.operators.some(op => op === '>' || op === '>>')) return true;
     if (['rm', 'mv', 'cp', 'install', 'truncate', 'touch', 'tee', 'ed', 'ex'].includes(executable)) return true;

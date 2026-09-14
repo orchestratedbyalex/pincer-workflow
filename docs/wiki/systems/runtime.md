@@ -98,3 +98,87 @@ Decision: [[runtime-owned-verification]]. Extends [[ticket-state-machine]],
   `test/fixtures/`: `local-service.cjs`, `hold-lock.cjs`, `grandchild.sh`.
 - The repo itself is NOT migrated (PRD v4 §9 dogfooding); its own tickets used the
   pinned v0.4.1 kit from `1cb5ab4` in the session scratchpad.
+
+## PRD v5 additions (feat/prd-v5, 2026-09-11/12, T-47..T-65)
+
+Changes mode (schema 2 records under `.prd/changes/`) sits next to legacy and migrated
+(v0.5.0 schema 1 binding) modes; `identity.loadBinding` returns `CHANGES_MODE` and
+callers branch. Contract: `template/docs/runtime-contracts.md` sections "Change
+records" … "Worktrees", pinned by `test/change-contracts.test.js`.
+
+- `transaction.cjs` — `run(root, {command, hooks}, fn)`: lock, `recoverPending`,
+  `ctx.read/text/write/expect/idle/refuse`, staging under `journal/txn-*/` with a
+  `manifest.json` commit point, idempotent redo; `pending()` for read-only
+  `STATE_INCOMPLETE`; `boundedText` (2000 chars). `state.recover` calls
+  `recoverPending` first.
+- `changes.cjs` — record validation (`validateRecord`, projection `replay`), `scan`
+  (mode), `loadRecords` (ownership, supersession chains, snapshot verification,
+  pending txn), `register` (schema 2), selection (`readSelection`, `select`,
+  `resolveSelected` with `--change`), `view` (HEAD/branch/base ancestry/dirty),
+  `ticketOwner`, list/show rendering.
+- `agreement.cjs` — projection version 1, `compute`, snapshots
+  `.prd/changes/<id>/agreements/G-NN.json` (`readSnapshot` recomputes digests),
+  structural `difference`, `revise`, `appendAgreement`.
+- `authorization.cjs` — `verdict` (current | DECISION_REQUIRED |
+  AUTHORIZATION_REQUIRED | AGREEMENT_CHANGED), `authorize` (user/delegated, idempotent,
+  records G-NN in the same event), `decide` (raise/resolve).
+- `transitions.cjs` — the seven lifecycle ops as single transactions; `complete`
+  runs `status.render` under the lock for ticket readiness.
+- `gates.cjs` — `guard` for start/done/verify/check/export (order: records →
+  selection → WRONG_CHANGE → LIFECYCLE_BLOCKED → BASE_MISMATCH → verdict); returns the
+  `binding` (with `agreement`, `mode: 'changes'`) that `lifecycle.cjs` and the runner use.
+  For `verify`/`check` the guard runs twice: `runner.runAttempt({ revalidate, announce })`
+  calls `revalidate()` under the worktree lock right before the `running` record is
+  written and takes the context from it (T-63, review finding 1: a `change pause`
+  committed between the pre-lock guard and the lock used to let a verification pass);
+  `announce` prints the header only once the record exists so refusals stay silent.
+  Race seam: `test/fixtures/attempt-race.cjs <root> <injected args> -- <command>`
+  wraps `runner.runAttempt` to run an injected runtime command first.
+- `locator.cjs` — `.prd/evidence/changes/<id>.json`, appended by `evidence export`;
+  `current()` replaces `notesCurrent` in changes mode. `followers(root, candidate)`
+  is the computed set of paths that may differ from the candidate: `NOTES.md`, valid
+  locators, and the listed files of manifests that validate (with digests) for that
+  candidate; never a directory or filename pattern (T-64, review finding 2: an
+  unlisted `.js` under another PRD's evidence dir plus a malformed locator left
+  `ready` at 0). `requireCandidateView` (check/export) adds only the PRD's own
+  `.prd/evidence/prd-vN/<candidate>/` while it is assembled.
+- Attempts: schema 2 in changes mode (`context.agreement`); candidate keys
+  `candidate:<change>:<sha>:<C-NN>`; schema 1 records → `HISTORICAL_EVIDENCE`.
+- `status.cjs` was split into `gather` + `gatherBody(ctx)` + `gatherChanges`;
+  changes-mode JSON is schema 2 (`selection`, `changes`, `change.lifecycle/agreement/
+  view`, `candidate.locator/evaluation`).
+- Test fixtures: `test/fixtures/txn-writer.cjs`, `change-op.cjs` (crash/hold seams via
+  `hooks`), `test/fixtures/prd-v5/` (released v0.5.0 records).
+- `resume.cjs` — `resume [--change] [--json]`: the fresh-session report (change, view,
+  agreement, references, tickets, attempts, candidate, authored handoff labeled
+  `authored: true`, blockers, one `next` with `rule` 1–8). The handoff reason/note are
+  shown while paused and cleared by `change resume`.
+- `migrate.cjs` (rewritten) — sources: legacy tickets, v0.5.0 binding, an existing
+  record; one transaction; backups under `.pincer/backups/<ts>/` include the binding
+  and `index.json`; pointer rewrite `candidate:<sha>:C-NN` → `candidate:<id>:<sha>:C-NN`;
+  the migrated change is `planned`/unauthorized; the binding's free text becomes
+  `legacy.authorization_text` (unvalidated). `bin/pincer.js doctor` reports
+  "migration to change records available". Rollback is one procedure per source
+  (T-65, review finding 3): from a binding, restoring the backup overwrites the
+  record at the same path (never delete it afterwards), restore `index.json`, remove
+  the selection, keep attempts; from legacy, restore tickets/.gitignore, delete the
+  record, remove `.pincer/`.
+- Gate order pinned by `gates.ORDER`: `INPUT_INVALID … STATE_INCOMPLETE →
+  SELECTION_REQUIRED/INVALID → WRONG_CHANGE → LIFECYCLE_BLOCKED → BASE_MISMATCH →
+  DECISION_REQUIRED → AUTHORIZATION_REQUIRED → AGREEMENT_CHANGED`. An unreadable
+  *selected* record refuses execution as `SELECTION_INVALID` (exit 1) naming
+  `HISTORY_INVALID`; inspection of it exits 4 (review packet deviation 6).
+- Crash semantics (`change-op.cjs --crash <point>`): before `manifest` the old state is
+  intact and status is normal (the journal is discarded by the next transaction or
+  `recover`); at `manifest`/`rename:0` status exits 4 `STATE_INCOMPLETE` and `recover`
+  completes the transition; at `cleanup` nothing is pending.
+- Review material: `docs/prd-v5-review-packet.md` (traceability R-01..R-10 / S-01..S-32
+  with `S-NN` tags in the test sources), `docs/prd-v5-artifacts/replay.sh <case>`
+  (eight executable review cases on a scratch project built from `template/`; run by
+  `test/change-review-packet.test.js`), `docs/prd-v5-artifacts/records/` (sanitized
+  change record, agreement snapshots, blocked/current resume JSON), `docs/trial-prd-v5.md`
+  + `docs/prd-v5-artifacts/trial-logs/` (validated by `test/change-trial-record.test.js`).
+- Playbook rule from the trial (T-62): an `AGREEMENT_CHANGED` the session did not cause
+  is raised with `change decide` and the agent stops; a generic "continue" never
+  authorizes new scope. Residual: Sonnet still recorded an A-02 from the generic
+  instruction before raising the decision (runtime blocked on the open decision).

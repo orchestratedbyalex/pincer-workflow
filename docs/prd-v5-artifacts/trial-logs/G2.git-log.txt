@@ -1,0 +1,8 @@
+1983b19 PRD v2: built
+af05413 Complete PRD v2
+ba48d8c T-03: clear
+4a3aeb9 Authorize feature-b
+8f8f498 Register PRD v2 (change feature-b)
+6bf3f76 Pause prd-v1: switching to feature-b
+45372eb T-01: add and list
+6f87c7b Authorize PRD v1 (delegated): narrow T-01 verification scope

@@ -1,0 +1,81 @@
+{
+  "schema": 2,
+  "change": "prd-v1",
+  "agreement": "G-01",
+  "digest": "bbe3a5fbb3f9b08b2c141e484a04cf7e35e1ba5c114a3ad511301e7011b4d3fd",
+  "projection": "pincer agreement 2\nchange prd-v1\nprd .prd/prd-v1.md fd0aab193ab753a4bf5b37188c9d1d6d8d116651e8784c37ae4e05097fdb85b3\ninventory 001a4782d33d071b08b02a8a6d471cfdc83c1f4fb24941543ad73480344fc425\ncoverage .prd/coverage/prd-v1.json e388ad9495a2036db37a13fa617f9c74c3bb447d6e37030f7224cc5dda701ad9\nticket T-01 4e3c5a27c2a2a030b43e9f07804b3f48c9bd4264f0a9d6280a54044bf0e6a567\nticket T-02 f38d2cfb81b261a9c75587232684a3bf222cdb3302c840b26ffd2bbe0793d4be\n",
+  "prd": {
+    "path": ".prd/prd-v1.md",
+    "revision": "fd0aab193ab753a4bf5b37188c9d1d6d8d116651e8784c37ae4e05097fdb85b3",
+    "text": "---\nversion: 1\ndate: 2026-09-12\n---\n# PRD v1: report the value\n\n## 4. Requirements\n\n### R-01 — Read the value\n\n- **S-01:** `cat value.txt` prints `good`.\n- **S-02:** A missing value file is reported, not ignored.\n\n### R-02 — Report the value\n\n- **S-03:** The report names the value and its source.\n"
+  },
+  "inventory": {
+    "digest": "001a4782d33d071b08b02a8a6d471cfdc83c1f4fb24941543ad73480344fc425",
+    "projection": "pincer inventory 1\nprd .prd/prd-v1.md\nrequirement R-01 bb7030b9312144ab036d85a3785c4bb69a0df323103d9a0ab7bb4b90df1ddf49\nrequirement R-02 396ac717098756e7deca7285ee42533a1876a56a09075e3394cc4a7a3685f783\nscenario S-01 R-01 c606446892789366e2d988e4e396b918daaea3306518ce15e5ec4d6135dd7705\nscenario S-02 R-01 1e998e10f2720e76f86c5fa19ed3e7e2b57afe5643c5b629eb1f7b08c42fee90\nscenario S-03 R-02 04294be1f203eb4c924f45b03532d7f94e718b799fc708e0b0d5fc26e05870a8\n",
+    "requirements": {
+      "R-01": {
+        "title": "Read the value",
+        "text": "Read the value",
+        "digest": "bb7030b9312144ab036d85a3785c4bb69a0df323103d9a0ab7bb4b90df1ddf49",
+        "line": 10,
+        "end": 13,
+        "scenarios": [
+          "S-01",
+          "S-02"
+        ]
+      },
+      "R-02": {
+        "title": "Report the value",
+        "text": "Report the value",
+        "digest": "396ac717098756e7deca7285ee42533a1876a56a09075e3394cc4a7a3685f783",
+        "line": 15,
+        "end": 17,
+        "scenarios": [
+          "S-03"
+        ]
+      }
+    },
+    "scenarios": {
+      "S-01": {
+        "requirement": "R-01",
+        "text": "`cat value.txt` prints `good`.",
+        "digest": "c606446892789366e2d988e4e396b918daaea3306518ce15e5ec4d6135dd7705",
+        "line": 12,
+        "end": 12
+      },
+      "S-02": {
+        "requirement": "R-01",
+        "text": "A missing value file is reported, not ignored.",
+        "digest": "1e998e10f2720e76f86c5fa19ed3e7e2b57afe5643c5b629eb1f7b08c42fee90",
+        "line": 13,
+        "end": 13
+      },
+      "S-03": {
+        "requirement": "R-02",
+        "text": "The report names the value and its source.",
+        "digest": "04294be1f203eb4c924f45b03532d7f94e718b799fc708e0b0d5fc26e05870a8",
+        "line": 17,
+        "end": 17
+      }
+    }
+  },
+  "coverage": {
+    "path": ".prd/coverage/prd-v1.json",
+    "digest": "e388ad9495a2036db37a13fa617f9c74c3bb447d6e37030f7224cc5dda701ad9",
+    "text": "{\"change\":\"prd-v1\",\"checks\":{\"C-01\":{\"command\":\"test \\\"$(cat value.txt)\\\" = good\",\"cwd\":null,\"kind\":\"command\",\"note\":null,\"obligation\":null,\"required\":true,\"timeout\":60},\"C-02\":{\"command\":null,\"cwd\":null,\"kind\":\"review\",\"note\":null,\"obligation\":\"read the report wording against S-03\",\"required\":true,\"timeout\":null}},\"prd\":\".prd/prd-v1.md\",\"scenarios\":{\"S-01\":{\"checks\":[\"C-01\"],\"tickets\":[\"T-01\"]},\"S-02\":{\"checks\":[\"C-01\"],\"tickets\":[\"T-01\"]},\"S-03\":{\"checks\":[\"C-02\"],\"tickets\":[\"T-02\"]}},\"schema\":1,\"scope\":{},\"tickets\":{\"T-01\":{\"rationale\":null,\"role\":\"implements\"},\"T-02\":{\"rationale\":null,\"role\":\"implements\"}}}\n"
+  },
+  "tickets": {
+    "T-01": {
+      "file": "tickets/T-01-example.md",
+      "digest": "4e3c5a27c2a2a030b43e9f07804b3f48c9bd4264f0a9d6280a54044bf0e6a567",
+      "text": "---\nticket: T-01\nsize: S\nprd: .prd/prd-v1.md\ndepends_on: []\n---\n\n## Objective\nExample\n\n## Context\n- Implements: T-01\n\n## Acceptance Criteria\n- [ ] expected behavior\n\n## Verification\n```bash\ntest \"$(cat value.txt)\" = good\n```\n"
+    },
+    "T-02": {
+      "file": "tickets/T-02-example.md",
+      "digest": "f38d2cfb81b261a9c75587232684a3bf222cdb3302c840b26ffd2bbe0793d4be",
+      "text": "---\nticket: T-02\nsize: S\nprd: .prd/prd-v1.md\ndepends_on: [T-01]\n---\n\n## Objective\nExample\n\n## Context\n- Implements: T-02\n\n## Acceptance Criteria\n- [ ] expected behavior\n\n## Verification\n```bash\ntrue\n```\n"
+    }
+  },
+  "decisions": {},
+  "recorded": "2026-09-12T21:59:13Z"
+}

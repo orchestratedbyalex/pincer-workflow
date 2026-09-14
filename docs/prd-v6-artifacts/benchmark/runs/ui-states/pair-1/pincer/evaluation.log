@@ -1,0 +1,14 @@
+evaluating ui-states/pair-1/pincer candidate 8526876a691158586fbe68e178a55650e3e64741 with evaluator c8778373954188f27dbed487ac80ae9a2d89d426f1e322d6b8cdd79ece6a306e from ~/Documents/dev/personal/pincer-workflow/test/fixtures/delivery-benchmark/briefs
+workspace status:
+ M src/form.js
+ M test/form.test.js
+ M tickets/T-02-render-accessible-states.md
+
+check validator: passed (exit 0) — TAP version 13
+check empty-state: passed (exit 0) — TAP version 13
+check error-state: failed (exit 1) — TAP version 13
+check submitting-state: failed (exit 1) — TAP version 13
+check escaping: failed (exit 1) — TAP version 13
+check own-tests: passed (exit 0) — TAP version 13
+check evidence-binding: passed (exit 0) — no evidence names another candidate
+outcome: rejected

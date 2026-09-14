@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { repo, tempDir, createTicket, createPrd, write, read, step, run, statusScript, ticketScript as ticketScriptPath, writeEvidence, writeNotes } from './helpers.js';
+import { repo, tempDir, createTicket, createPrd, write, read, step, run, statusScript, ticketScript as ticketScriptPath, writeEvidence, writeNotes, bindV050 } from './helpers.js';
 
 const runtime = path.join(repo, 'template/scripts/pincer-runtime.cjs');
 const rt = (dir, ...args) => run(dir, process.execPath, [runtime, ...args]);
@@ -147,7 +147,7 @@ const snapshot = dir => JSON.stringify(fs.readdirSync(dir, { recursive: true }).
   const dir = tempDir(); git(dir, 'init', '-q'); createPrd(dir);
   const file = createTicket(dir); passes(step(dir, 'verify')); passes(step(dir, 'done'));
   write(dir, '.gitignore', '.pincer/\n'); commit(dir, 'done');
-  passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md'));
+  bindV050(dir);
   const text = passes(human(dir));
   assert.match(text, /^Runtime  change prd-v1 · revision [0-9a-f]{12} · base [0-9a-f]{7}$/m);
   const j = json(dir);
@@ -190,7 +190,7 @@ const snapshot = dir => JSON.stringify(fs.readdirSync(dir, { recursive: true }).
   const base = commit(dir, 'base');
   createPrd(dir); createTicket(dir, { command: 'test -f value.txt' }); write(dir, 'value.txt', 'good');
   commit(dir, 'prd and ticket');
-  passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md')); commit(dir, 'register');
+  bindV050(dir); commit(dir, 'register');
   passes(run(dir, 'bash', [ticketScriptPath, 'start', 'T-01'])); passes(run(dir, 'bash', [ticketScriptPath, 'verify', 'T-01'])); passes(run(dir, 'bash', [ticketScriptPath, 'done', 'T-01']));
   commit(dir, 'T-01 done');
   write(dir, '.prd/prd-v1.md', read(dir, '.prd/prd-v1.md').replace('ticketed', 'built'));
@@ -257,7 +257,7 @@ const snapshot = dir => JSON.stringify(fs.readdirSync(dir, { recursive: true }).
     const dir = tempDir(); git(dir, 'init', '-q'); createPrd(dir);
     const file = createTicket(dir, { command: 'echo "API_KEY=fixture-secret-marker"; test -f value.txt', criteria: '- [x] ok' });
     write(dir, 'value.txt', 'good'); write(dir, 'src/app.js', '1\n'); write(dir, '.gitignore', '.pincer/\n'); commit(dir, 'base');
-    passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md')); commit(dir, 'register');
+    bindV050(dir); commit(dir, 'register');
     passes(run(dir, 'bash', [ticketScriptPath, 'start', 'T-01'])); passes(run(dir, 'bash', [ticketScriptPath, 'verify', 'T-01'])); commit(dir, 'started');
     return { dir, file };
   };
@@ -292,3 +292,16 @@ const snapshot = dir => JSON.stringify(fs.readdirSync(dir, { recursive: true }).
   }
 }
 console.log('runtime status tests passed');
+
+// PRD v6 T-74: status JSON is schema 3 in changes mode with a coverage summary; the
+// legacy and migrated forms stay schema 1 and label coverage unverified.
+{
+  const dir = tempDir(); git(dir, 'init', '-q'); createPrd(dir); createTicket(dir); write(dir, '.gitignore', '.pincer/\n'); commit(dir, 'base');
+  const legacy = JSON.parse(passes(rt(dir, 'status', '--json')));
+  assert.equal(legacy.schema, 1); assert.deepEqual(legacy.coverage, { strict: false, label: 'unverified', reason: 'legacy project (no change record); strict coverage needs change records' });
+  assert.match(passes(human(dir)), /^Coverage unverified · legacy project/m);
+  passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md')); passes(rt(dir, 'change', 'select', 'prd-v1'));
+  const changesMode = JSON.parse(passes(rt(dir, 'status', '--json')));
+  assert.equal(changesMode.schema, 3); assert.equal(changesMode.runtime, 3); assert.equal(changesMode.coverage.label, 'unverified');
+}
+console.log('runtime status tests passed (coverage summary)');

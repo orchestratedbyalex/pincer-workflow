@@ -32,10 +32,19 @@ discovered consequential choice is surfaced before implementation.
    - Build the requirement map: for every `R-NN` in the PRD and each of its
      scenarios, name the ticket that owns the implementation and the executable
      check that exercises it, or an explicit review method when no executable check
-     exists. Record the IDs in each ticket's Context as `Implements: R-NN, R-MM`.
-     Enabling work that implements no requirement states its purpose in the ticket
-     Objective. Resolve missing coverage and conflicting criteria with the user
-     before implementation; do not start with an unmapped required scenario.
+     exists. Record the IDs in each ticket's Context as `Implements: R-NN, R-MM`
+     (a navigation aid). Enabling work that implements no requirement states its purpose
+     in the ticket Objective. Resolve missing coverage and conflicting criteria with
+     the user before implementation; do not start with an unmapped required scenario. On a change with change records, author the map once as
+     `.prd/coverage/<change id>.json` (coverage map schema 1, "Coverage map" in
+     `${CLAUDE_PLUGIN_ROOT}/docs/runtime-contracts.md`): one `scenarios` row per `S-NN` naming its
+     implementing tickets and declared checks, every ticket of the change in
+     `tickets` as `implements` or `enables` (with a rationale), each check declared
+     once in `checks` with its kind, `required` flag and, for a command, the exact
+     command line and timeout, and a `scope` entry (`deferred` or `removed`) for a
+     scenario this change will not deliver, naming the decision that records the
+     user's choice. The map is authored work you edit by hand; the runtime never
+     rewrites it, and it validates it against the PRD's definitions.
    - Every ticket gets a runnable command in its Verification block — a fenced `bash`
      block that exits 0 only when the ticket is done. `${CLAUDE_PLUGIN_ROOT}/scripts/pincer-ticket.sh verify`
      runs it verbatim and stamps the receipt that `done` requires, so it must be
@@ -85,12 +94,31 @@ existing authorization for the same scope and order.
    once it is resolved — only when step 4 surfaced a newly discovered consequential
    choice or a scope change the PRD does not cover. Then register the change when the
    `Runtime` status line says `legacy` and no ticket of this PRD carries legacy
-   receipts: `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs register --prd .prd/prd-vN.md --authorization "<the user's approval, quoted>"`,
-   then stage `.prd/changes/` and `.gitignore` (registration adds `.pincer/` to it) and
-   commit them as `Register PRD vN`. The authorization
-   text records the user's own words; running the command proves nothing by itself. A
-   project whose tickets carry legacy receipts is migrated from `/pincer:code` after a
-   preview, never here. Finish with:
+   receipts, or `changes` (the project already keeps change records):
+   `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs register --prd .prd/prd-vN.md` writes the change
+   record `.prd/changes/prd-vN.json` (retaining every earlier change); stage
+   `.prd/changes/` and `.gitignore` (registration adds `.pincer/` to it) and commit them
+   as `Register PRD vN`. Then record the user's actual approval against the agreement
+   the record binds — `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs change show prd-vN --json`
+   prints the agreement digest — with
+   `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs change authorize prd-vN --agreement <digest> --reference "<where the user said it>" --excerpt "<the user's approval, quoted>"`,
+   select it for this worktree (`node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs change select prd-vN`)
+   and commit `.prd/changes/` as `Authorize PRD vN`. When the map was authored, adopt
+   strict coverage explicitly: `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs coverage adopt --preview --change prd-vN`
+   shows the inventory, the map digest and the agreement it records (it refuses an
+   incomplete map, naming the scenario or ticket); `--apply` writes the schema 3
+   record with a backup and grants nothing — record the user's approval of that
+   agreement with `change authorize` (the same instruction, if it named this
+   breakdown; a delegated disposition needs its basis) and commit `.prd/coverage/`
+   and `.prd/changes/` as `Adopt strict coverage for PRD vN`. A scenario the user
+   deferred or removed is a decision: `change decide --summary "<the choice>"`,
+   `--resolve D-NN` with the user's words naming the scenario, the `scope` entry in
+   the map, then `change authorize … --decision D-NN`. Never record a disposition
+   the user did not state; `coverage` reports `SCOPE_UNAUTHORIZED` until it is. The excerpt records the user's own
+   words; running the command proves nothing by itself, and a registration, a PRD
+   status or a passing check never becomes an authorization. A project whose tickets
+   carry legacy receipts, or that still holds a v0.5.0 binding (`Runtime  change <id> ·
+   revision …`), is migrated from `/pincer:code` after a preview, never here. Finish with:
    "Tickets ready in `tickets/`. Run `/pincer:code` to start implementing."
 
 ## Authorization rule (shared by plan, narrow, code and evaluate)
@@ -100,6 +128,9 @@ material choice not already authorized, and prepare the concrete proposal before
 asking. A decision the user delegated (for example "pick the architecture") does not
 need another approval when you exercise it, but a newly discovered consequential
 choice is surfaced before implementation. Record the authorization basis and the
-scope it covers in the PRD or the handover. An agent-written record or a status
+scope it covers in the PRD or the handover, and on a project with change records as
+a `change authorize` record (the user's words as the excerpt, or a `--delegated`
+disposition with its basis). An agent-written record or a status
 field is not authenticated human approval. When resuming without the context that
-granted authorization, do not invent it — ask.
+granted authorization, do not invent it — read the `resume` report; an authorization
+it reports as `current` needs no repeat approval, and any other verdict is asked.

@@ -1,0 +1,80 @@
+{
+  "schema": 2,
+  "prd": ".prd/prd-v1.md",
+  "base": "f90442ae2436132c2582441b42056ab6b4266312",
+  "candidate": "73aebd8090ef6dcb52bcd8b6269e61cc192f9a2c",
+  "created": "2026-09-12T08:26:48Z",
+  "environment": {
+    "os": "darwin 25.6.0",
+    "node": "v22.23.1",
+    "tools": [
+      "bash"
+    ],
+    "limitations": []
+  },
+  "coverage_review": "R-01 is covered by C-01.",
+  "requirements": [
+    {
+      "id": "R-01",
+      "disposition": "delivered",
+      "tickets": [
+        "T-01"
+      ],
+      "checks": [
+        "C-01"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "id": "C-01",
+      "kind": "command",
+      "required": true,
+      "result": "passed",
+      "command": "test \"$(cat value.txt)\" = good",
+      "timestamp": "2026-09-12T08:26:47Z",
+      "artifacts": [
+        ".prd/evidence/prd-v1/73aebd8090ef6dcb52bcd8b6269e61cc192f9a2c/checks/C-01.log"
+      ],
+      "provenance": "runtime",
+      "attempt": {
+        "id": "000002-20260912T082647Z-2f6492",
+        "sequence": 2,
+        "outcome": "passed",
+        "exit_code": 0,
+        "started": "2026-09-12T08:26:47Z",
+        "finished": "2026-09-12T08:26:47Z",
+        "source_before": "938efc4fb40dc666254fffc008f0133327842c770bd5a059bcf30a62a59dfa85",
+        "source_after": "938efc4fb40dc666254fffc008f0133327842c770bd5a059bcf30a62a59dfa85",
+        "check_digest": "0e0b9ee1e5cc884e75390a811c8d855994a6ae90174f38ea47f5a3470fa8392f",
+        "runner": {
+          "shell": "/bin/bash",
+          "args": [
+            "-eo",
+            "pipefail",
+            "-c"
+          ],
+          "version": "GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)"
+        },
+        "cwd": ".",
+        "log_sha256": "e4698189d9b45e68d214e3e9c8268cebb741f8df672e6bd8d24d34f86fdf9f4a",
+        "truncated": false
+      }
+    }
+  ],
+  "visual_review": {
+    "applicable": false,
+    "reason": "no UI"
+  },
+  "artifacts": [
+    {
+      "path": ".prd/evidence/prd-v1/73aebd8090ef6dcb52bcd8b6269e61cc192f9a2c/checks/C-01.log",
+      "sha256": "e4698189d9b45e68d214e3e9c8268cebb741f8df672e6bd8d24d34f86fdf9f4a"
+    }
+  ],
+  "change": {
+    "id": "prd-v1",
+    "prd_revision": "166c3b155df52597b80705efd38fffbce73dcfdf6df27d7e070fc50a94994416",
+    "base": "f90442ae2436132c2582441b42056ab6b4266312"
+  }
+}

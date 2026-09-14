@@ -1,0 +1,127 @@
+{
+  "schema": 1,
+  "run": "ui-states/pair-2/pincer",
+  "brief": "ui-states",
+  "arm": "pincer",
+  "pair": 2,
+  "order": 24,
+  "created": "2026-09-12T20:25:28.260Z",
+  "status": "valid",
+  "reason": null,
+  "environment": {
+    "model": "sonnet",
+    "tool": "claude-code",
+    "tool_version": "2.1.267",
+    "node": "v22.23.1",
+    "os": "darwin 25.6.0",
+    "kit": {
+      "source": "tarball pincer-workflow-0.5.0.tgz",
+      "digest": "b7d6e7894ae4093e69d24b74ab80b693aa6c2e587218388ec8b6b93e35bc0cee"
+    },
+    "caps": {
+      "turns_per_session": 150,
+      "wall_clock_minutes": 30
+    }
+  },
+  "workspace": {
+    "base": "450b02bf61ddc74ae8deb1fd62da60ceb1a332af",
+    "project_base": "2a98c4888f133e6db51dfcfa9602a5e069b7beee",
+    "candidate": "f32350e3f01bea15858eec6b03545faf70b6e0a4",
+    "unrelated_edits": {}
+  },
+  "sessions": [
+    {
+      "name": "S1",
+      "prompt": "Read BRIEF.md in this repository and implement what it asks for, committing your work as you go. Work autonomously; when you are done, stop and summarize what you built and how you verified it.",
+      "started": "2026-09-12T20:25:28.376Z",
+      "ended": "2026-09-12T20:34:23.480Z",
+      "exit": 0,
+      "transcript": "logs/S1.json"
+    }
+  ],
+  "interventions": [],
+  "effort": {
+    "setup_minutes": 0,
+    "review_minutes": null,
+    "active_minutes": 8.92,
+    "elapsed_minutes": 8.92,
+    "tokens": {
+      "input": 9151230,
+      "output": 40867
+    },
+    "cost_usd": 2.8767,
+    "unavailable": {
+      "tokens": null,
+      "cost_usd": null
+    }
+  },
+  "evaluation": {
+    "evaluator": {
+      "brief": "ui-states",
+      "digest": "c8778373954188f27dbed487ac80ae9a2d89d426f1e322d6b8cdd79ece6a306e"
+    },
+    "at": "2026-09-12T20:34:24.538Z",
+    "candidate": "f32350e3f01bea15858eec6b03545faf70b6e0a4",
+    "outcome": "accepted",
+    "checks": [
+      {
+        "id": "validator",
+        "title": "validate returns the specified messages",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: valid input returns {}\nok 1 - valid input returns {}\n  ---\n  duration_ms: 0.3985\n  type: 'test'\n  ...\n# Subtest: missing email\nok 2 - missing email\n  ---\n  duration_ms: 0.080625\n  type: 'test'\n  ...\n# Subtest: blank email\nok 3 - blank email\n  ---\n  duration_ms: 0.030833\n  type: 'test'\n  ...\n# Subtest: email without @\nok 4 - email without @\n  ---\n  duration_ms: 0.029625\n  type: 'test'\n  ...\n# Subtest: missing password\nok 5 - missing password\n  ---\n  duration_ms: 0.029542\n  type: 'test'\n  ...\n# Subtest: short password\nok 6 - short password\n  ---\n  duration_ms: 0.038125\n  type: 'test'\n  ...\n# Subtest: both invalid\nok 7 - both invalid\n  ---\n  duration_ms: 0.057542\n  type: 'test'\n  ...\n1..7\n# tests 7\n# suites 0\n# pass 7\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 39.4755"
+      },
+      {
+        "id": "empty-state",
+        "title": "labels, ids, names, no summary, Sign up button",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: empty state\nok 1 - empty state\n  ---\n  duration_ms: 0.74125\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 41.032667"
+      },
+      {
+        "id": "error-state",
+        "title": "aria-invalid, aria-describedby, error elements and the alert summary",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: error state\nok 1 - error state\n  ---\n  duration_ms: 0.674125\n  type: 'test'\n  ...\n# Subtest: one error leaves the other field clean\nok 2 - one error leaves the other field clean\n  ---\n  duration_ms: 0.102833\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 44.9145"
+      },
+      {
+        "id": "submitting-state",
+        "title": "aria-busy, disabled button, Signing up…",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: submitting state\nok 1 - submitting state\n  ---\n  duration_ms: 0.613875\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 44.184834"
+      },
+      {
+        "id": "escaping",
+        "title": "values are HTML-escaped",
+        "kind": "acceptance",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: values are escaped\nok 1 - values are escaped\n  ---\n  duration_ms: 0.567042\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 44.31525"
+      },
+      {
+        "id": "own-tests",
+        "title": "the candidate's own npm test passes",
+        "kind": "regression",
+        "result": "passed",
+        "exit": 0,
+        "detail": "TAP version 13\n# Subtest: renders a form\nok 1 - renders a form\n  ---\n  duration_ms: 0.479084\n  type: 'test'\n  ...\n# Subtest: empty state has labels, no error markup, and default button\nok 2 - empty state has labels, no error markup, and default button\n  ---\n  duration_ms: 0.102917\n  type: 'test'\n  ...\n# Subtest: values are HTML-escaped in the value attribute\nok 3 - values are HTML-escaped in the value attribute\n  ---\n  duration_ms: 0.045959\n  type: 'test'\n  ...\n# Subtest: a single field error adds aria attributes and an error paragraph, leaves the other field alone\nok 4 - a single field error adds aria attributes and an error paragraph, leaves the other field alone\n  ---\n  duration_ms: 0.061084\n  type: 'test'\n  ...\n# Subtest: multiple errors produce an error summary linking to each field\nok 5 - multiple errors produce an error summary linking to each field\n  ---\n  duration_ms: 0.091333\n  type: 'test'\n  ...\n# Subtest: no errors means no error summary\nok 6 - no errors means no error summary\n  ---\n  duration_ms: 0.318667\n  type: 'test'\n  ...\n# Subtest: submitting true disables the button and marks the form busy\nok 7 - submitting true disables the button and marks the form busy\n  ---\n  duration_ms: 0.082125\n  type: 'test'\n  ...\n# Subtest: submitting false (and default) leaves the form and button in their normal state\nok 8 - submitting false (and default) leaves the form and button in their normal state\n  ---\n  duration_ms: 0.031041\n  type: 'test'\n  ...\n# Subtest: missing email and password both report errors\nok 9 - missing email and password both report errors\n  ---\n  duration_ms: 0.533541\n  type: 'test'\n  ...\n# Subtest: blank email reports missing-email message\nok 10 - blank email reports missing-email message\n  ---\n  duration_ms: 0.073584\n  type: 'test'\n  ...\n# Subtest: email without @ reports invalid-email message\nok 11 - email without @ reports invalid-email message\n  ---\n  duration_ms: 0.04275\n  type: 'test'\n  ...\n# Subtest: missing password reports missing-password message\nok 12 - missing password reports missing-password message\n  ---\n  duration_ms: 0.033625\n  type: 'test'\n  ...\n# Subtest: short password reports length message\nok 13 - short password reports length message\n  ---\n  duration_ms: 0.034584\n  type: 'test'\n  ...\n# Subtest: valid input returns no errors\nok 14 - valid input returns no errors\n  ---\n  duration_ms: 0.030917\n  type: 'test'\n  ...\n1..14\n# tests 14\n# suites 0\n# pass 14\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 41.612959"
+      },
+      {
+        "id": "evidence-binding",
+        "title": "evidence in the candidate names this candidate (or the candidate its evaluation commit sits on)",
+        "kind": "evidence",
+        "result": "passed",
+        "exit": 0,
+        "detail": "NOTES.md: f32350e is the evaluation commit of 7bf2cbc (5 evaluation file(s))\n.prd/evidence/prd-v1/7bf2cbcdc2b980353b78c52db43730c2118d0346/manifest.json: f32350e is the evaluation commit of 7bf2cbc (5 evaluation file(s))\n.prd/evidence/changes/prd-v1.json (latest evaluation): f32350e is the evaluation commit of 7bf2cbc (5 evaluation file(s))"
+      }
+    ],
+    "regressions": 0,
+    "log": "evaluation.log"
+  }
+}

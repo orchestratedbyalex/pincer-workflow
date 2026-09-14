@@ -196,9 +196,23 @@ for (const command of [
   'node scripts/pincer-runtime.cjs evidence export --candidate aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --base bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb --prd .prd/prd-v1.md --draft draft.json',
   'scripts/pincer-runtime.cjs status --json', 'node scripts/pincer-runtime.cjs status', 'cat .pincer/runtime/index.json', 'ls .pincer/runtime/attempts',
   'git diff -- .prd/changes/prd-v1.json', 'cat .prd/changes/prd-v1.json', 'grep outcome .pincer/runtime/attempts/000001.json',
+  'node scripts/pincer-runtime.cjs change select prd-v1', 'node scripts/pincer-runtime.cjs change activate prd-v1', 'node scripts/pincer-runtime.cjs change pause prd-v1 --reason "end of session" --note "T-02 next"',
+  'node scripts/pincer-runtime.cjs change authorize prd-v1 --agreement 0000000000000000000000000000000000000000000000000000000000000000 --reference "session" --excerpt "go ahead"', 'node scripts/pincer-runtime.cjs resume --json', 'node scripts/pincer-runtime.cjs change list', 'cat .prd/evidence/changes/prd-v1.json',
 ]) check('ticket', `allow runtime ${command}`, bash(command), 0);
 for (const command of [
+  // T-81: an allowlisted runtime verb is not a licence to redirect its output onto
+  // runtime-owned state. Every one of these ran as an "exact pincer call" and was
+  // allowed through, whatever the redirect target was.
+  'node scripts/pincer-runtime.cjs change list > .prd/changes/prd-v1.json',
+  'node scripts/pincer-runtime.cjs resume --json > tickets/T-01-example.md',
+  'node scripts/pincer-runtime.cjs resume --json >> .prd/evidence/changes/prd-v1.json',
+  'node scripts/pincer-runtime.cjs change show prd-v1 --json > .pincer/runtime/index.json',
+  'node scripts/pincer-runtime.cjs register --prd .prd/prd-v1.md > .prd/changes/prd-v1.json',
+  'node scripts/pincer-runtime.cjs recover > .pincer/runtime/selection.json',
+  'node scripts/pincer-runtime.cjs change list > .prd/evidence/prd-v1/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/coverage/map.json',
+  'bash scripts/pincer-ticket.sh verify T-01 > tickets/T-01-example.md',
   'rm -rf .pincer/runtime', 'rm -rf .pincer', 'rm .pincer/runtime/index.json', 'echo "{}" > .prd/changes/prd-v1.json', 'echo x >> .pincer/runtime/index.json',
+  'echo "{}" > .prd/evidence/changes/prd-v1.json', 'rm .prd/evidence/changes/prd-v1.json', 'rm -rf .prd/changes/prd-v1/agreements', 'echo x > .pincer/runtime/selection.json',
   "sed -i '' 's/failed/passed/' .pincer/runtime/attempts/000001.json", 'mv .pincer/runtime .pincer/old', 'cp fake.json .pincer/runtime/index.json',
   'git checkout -- .prd/changes/', 'git restore .prd/changes/prd-v1.json', 'node -e "require(\'fs\').writeFileSync(\'.pincer/runtime/index.json\', \'{}\')"',
   'bash -c "rm -rf .pincer/runtime"', 'node scripts/pincer-runtime.cjs verify T-01; rm -rf .pincer/runtime',

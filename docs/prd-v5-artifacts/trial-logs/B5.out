@@ -1,0 +1,5 @@
+This raises `D-01` and blocks execution until you answer it directly, which corrects the gap left by my earlier authorization.
+
+**Where things stand:** `prd-v1` was paused mid-build (T-01 done but its receipt is missing — needs `verify`; T-02 and T-04 open, both blocked by T-01). Since it was last paused, the PRD was revised outside this session to add **R-03 (`list --json`) and ticket T-04**. That's a scope change I can't wave through on a general "don't re-ask" instruction — the workflow requires it named explicitly.
+
+**What I need from you:** please confirm, by name, whether T-04 (`list --json`) is in scope to build now. For example: *"yes, build T-04 / list --json as written."* Once you do, I'll record it and continue straight through T-02 and T-04 — no further approval prompts for anything already covered.

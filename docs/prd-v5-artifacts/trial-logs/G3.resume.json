@@ -1,0 +1,187 @@
+{
+  "schema": 1,
+  "runtime": 2,
+  "generated": "2026-09-12T00:26:04Z",
+  "root": "<scratchpad>/trial/greenfield",
+  "mode": "changes",
+  "selection": {
+    "change": "prd-v1",
+    "problem": null
+  },
+  "change": {
+    "id": "prd-v1",
+    "prd": ".prd/prd-v1.md",
+    "prd_revision": "13439981d194d529fac904c86bd7adc69037fbbed9d33cb9d59693e1ec5b941b",
+    "base": "b2d6e35c34f334167471f57db0e195a791f09ea1",
+    "registered": "2026-09-12T00:15:25Z",
+    "sequence": 7,
+    "lifecycle": {
+      "state": "completed",
+      "since": "2026-09-12T00:25:38Z",
+      "reason": null,
+      "note": null,
+      "superseded_by": null
+    },
+    "view": {
+      "head": "8b587edd8b9ad004d8e0b491bc1ec691e709cd23",
+      "branch": "main",
+      "base_is_ancestor": true,
+      "dirty": []
+    }
+  },
+  "agreement": {
+    "current": "a55572c160a96177e40198bc735643edc77c2d536729c9defbd7d121c0361909",
+    "authorized": {
+      "id": "A-02",
+      "agreement": "G-02",
+      "digest": "a55572c160a96177e40198bc735643edc77c2d536729c9defbd7d121c0361909",
+      "disposition": "delegated",
+      "recorded": "2026-09-12T00:19:16Z",
+      "reference": null,
+      "excerpt": null,
+      "constraints": null
+    },
+    "verdict": "current",
+    "difference": null,
+    "decisions": {
+      "open": [],
+      "resolved": []
+    }
+  },
+  "references": {
+    "prd": {
+      "path": ".prd/prd-v1.md",
+      "title": "Notes CLI: add and list"
+    },
+    "snapshot": ".prd/changes/prd-v1/agreements/G-02.json",
+    "tickets": [
+      {
+        "id": "T-01",
+        "file": "tickets/T-01-add-and-list.md",
+        "objective": "Implement `add <text>` and `list` in `src/notes.js` so `test/notes.test.js` passes."
+      },
+      {
+        "id": "T-02",
+        "file": "tickets/T-02-document-usage.md",
+        "objective": "Document `add` and `list` in README.md."
+      }
+    ]
+  },
+  "tickets": [
+    {
+      "id": "T-01",
+      "file": "tickets/T-01-add-and-list.md",
+      "status": "done",
+      "size": "S",
+      "depends_on": [],
+      "started": "2026-09-12T00:16:33Z",
+      "finished": "2026-09-12T00:19:33Z",
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "next": null
+      },
+      "latest_attempt": {
+        "id": "000006-20260912T002535Z-31c407",
+        "sequence": 6,
+        "outcome": "passed",
+        "started": "2026-09-12T00:25:35Z",
+        "finished": "2026-09-12T00:25:35Z"
+      },
+      "legacy_receipt": null
+    },
+    {
+      "id": "T-02",
+      "file": "tickets/T-02-document-usage.md",
+      "status": "done",
+      "size": "S",
+      "depends_on": [
+        "T-01"
+      ],
+      "started": "2026-09-12T00:24:54Z",
+      "finished": "2026-09-12T00:25:19Z",
+      "readiness": {
+        "ready": true,
+        "reasons": [],
+        "next": null
+      },
+      "latest_attempt": {
+        "id": "000005-20260912T002507Z-106ff6",
+        "sequence": 5,
+        "outcome": "passed",
+        "started": "2026-09-12T00:25:07Z",
+        "finished": "2026-09-12T00:25:07Z"
+      },
+      "legacy_receipt": null
+    }
+  ],
+  "attempts": [
+    {
+      "ticket": "T-01",
+      "check": null,
+      "id": "000001-20260912T001919Z-89cd3e",
+      "outcome": "passed",
+      "started": "2026-09-12T00:19:19Z",
+      "finished": "2026-09-12T00:19:19Z",
+      "current": false
+    },
+    {
+      "ticket": "T-01",
+      "check": null,
+      "id": "000004-20260912T002449Z-8e6d28",
+      "outcome": "passed",
+      "started": "2026-09-12T00:24:49Z",
+      "finished": "2026-09-12T00:24:49Z",
+      "current": false
+    },
+    {
+      "ticket": "T-01",
+      "check": null,
+      "id": "000006-20260912T002535Z-31c407",
+      "outcome": "passed",
+      "started": "2026-09-12T00:25:35Z",
+      "finished": "2026-09-12T00:25:35Z",
+      "current": true
+    },
+    {
+      "ticket": "T-02",
+      "check": null,
+      "id": "000005-20260912T002507Z-106ff6",
+      "outcome": "passed",
+      "started": "2026-09-12T00:25:07Z",
+      "finished": "2026-09-12T00:25:07Z",
+      "current": true
+    }
+  ],
+  "candidate": {
+    "notes": "missing",
+    "reason": "missing (no evaluation recorded in .prd/evidence/changes/prd-v1.json)",
+    "candidate": null,
+    "base": null,
+    "evidence": null,
+    "local_attempts": "available",
+    "newer_attempts": [],
+    "reasons": [
+      {
+        "code": "EVIDENCE_MISSING",
+        "detail": "missing (no evaluation recorded in .prd/evidence/changes/prd-v1.json)"
+      }
+    ],
+    "locator": ".prd/evidence/changes/prd-v1.json",
+    "evaluation": null
+  },
+  "handoff": null,
+  "blockers": [
+    {
+      "code": "EVIDENCE_MISSING",
+      "detail": "missing (no evaluation recorded in .prd/evidence/changes/prd-v1.json)"
+    }
+  ],
+  "next": {
+    "action": "evaluate the candidate",
+    "command": "/pincer-evaluate (missing (no evaluation recorded in .prd/evidence/changes/prd-v1.json))",
+    "ticket": null,
+    "check": null,
+    "rule": 7
+  }
+}

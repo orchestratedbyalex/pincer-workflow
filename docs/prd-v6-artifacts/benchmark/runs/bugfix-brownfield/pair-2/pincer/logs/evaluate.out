@@ -1,0 +1,8 @@
+bugfix-brownfield/pair-2/pincer: rejected (candidate 41b20b2, evaluator 733613ae2e3e frozen)
+  failed     slugify exit 1 — not ok 4 - slugify("Version 2.0 (beta)")
+  passed     truncate exit 0 — TAP version 13
+  failed     changelog exit 1 — not ok 1 - CHANGELOG Unreleased mentions slugify
+  passed     unrelated-edits exit 0 — 2 unrelated edit(s) intact
+  passed     own-tests exit 0 — TAP version 13
+  passed     evidence-binding exit 0 — no evidence names another candidate
+  log <runs>/bugfix-brownfield/pair-2/pincer/evaluation.log · status valid

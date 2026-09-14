@@ -47,6 +47,24 @@ durable runtime-owned release record is later work.
      exits 1 and names the check). A fresh clone reports `local verification history
      unavailable; saved candidate evidence validated only`: state that limit in the
      verdict rather than claiming local verification.
+   - Change records (the `Runtime` line reads `changes`): the selected change is
+     `completed`, its authorization is `current` for the current agreement, and its
+     evaluation locator `.prd/evidence/changes/<id>.json` names the evaluated
+     candidate; `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs ready` reports `SELECTION_REQUIRED`,
+     `LIFECYCLE_BLOCKED`, `DECISION_REQUIRED`, `AUTHORIZATION_REQUIRED` or
+     `AGREEMENT_CHANGED` as failures. Release selects, activates and completes nothing;
+     historical evidence of a cancelled or superseded change is inspectable but never
+     release-ready.
+   - Strict coverage (the status line reads `Coverage strict …`): read
+     `node ${CLAUDE_PLUGIN_ROOT}/scripts/pincer-runtime.cjs coverage` — structure complete, every in-scope
+     scenario `delivered` on the evaluated candidate, deferrals and removals backed by
+     their decision and user authorization, `delivery` reported as original versus
+     agreed scope (never conflate them), adequacy `adequate`; the manifest is schema 3
+     and the `Provenance` line reads `runtime (schema 3)`. `ready` names
+     `COVERAGE_INCOMPLETE`, `SCOPE_UNAUTHORIZED`, `OBLIGATION_MISSING`,
+     `REVIEW_MISSING` and `ADEQUACY_REQUIRED` as failures. A change labeled
+     `Coverage unverified` did not adopt strict coverage: audit it under the rules
+     above and say so; never imply strict coverage was established.
    - Every file the manifest lists is tracked, and `git status --short` is empty before
      and after the audit.
    - Run the repository's candidate-wide release gate directly (`npm test`, or the

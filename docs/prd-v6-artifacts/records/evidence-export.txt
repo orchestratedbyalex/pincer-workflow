@@ -1,0 +1,2 @@
+exported .prd/evidence/prd-v1/f90eba40482a02a946550ac5a4246302ff72763d/manifest.json (schema 3) — delivery: original true, agreed true — validate: node scripts/pincer-evidence.cjs validate .prd/evidence/prd-v1/f90eba40482a02a946550ac5a4246302ff72763d/manifest.json --candidate f90eba40482a02a946550ac5a4246302ff72763d --prd .prd/prd-v1.md
+recorded evaluation of change prd-v1 in .prd/evidence/changes/prd-v1.json (candidate f90eba4); commit it with the evidence

@@ -21,8 +21,10 @@ run the pipeline, then present results.
    that uncertainty before claiming a complete review. Record full commit IDs for
    `base` and `candidate` (`git rev-parse HEAD`), then review `git diff <base>..<candidate>`.
    The candidate is the clean, committed tree that already includes the implementation,
-   the ticket closures and the PRD `status: built` commit: `git status --short` must be
-   empty before review. If anything is uncommitted or the PRD is not yet built, return
+   the ticket closures, on a project with change records the `change complete` commit
+   (the `Runtime` line reads `… · completed ·`; `check` and `evidence export` refuse an
+   active, paused or unauthorized change), and the PRD `status: built` commit:
+   `git status --short` must be empty before review. If anything is uncommitted or the PRD is not yet built, return
    to `/pincer-code`; do not review a dirty tree.
 2. Dispatch a `code-quality-reviewer` agent with: the diff, the PRD's Success Criteria and
    Scope sections, and the list of tickets. If the diff is large, split by area and
@@ -30,7 +32,13 @@ run the pipeline, then present results.
    in a separate pass, applying `.claude/agents/code-quality-reviewer.md` as the rubric.)
    Keep the reviewer's report — or its explicit no-findings statement — for step 9,
    where it is saved as an artifact; a review that left no record cannot be audited.
-3. Yourself, in parallel, check spec compliance. For every requirement `R-NN` in the
+3. Yourself, in parallel, check spec compliance. On a change with strict coverage
+   (`Coverage strict …` in status) start from `node scripts/pincer-runtime.cjs coverage`:
+   its structure must be complete, and its scenario rows are the obligations — the
+   export derives every disposition from the map and the outcomes, so you do not
+   author `requirements`; your judgment is recorded as `adequacy` (whether the
+   declared checks and reviews really establish their scenarios) and in
+   `coverage_review`. Otherwise, for every requirement `R-NN` in the
    PRD record one disposition: `delivered` (evidence on this candidate), `blocked`
    (required behavior failed or was left unverified — this blocks PASS; do not relabel
    it a known limitation to pass), or `deferred` (only with explicit user authorization;
@@ -65,8 +73,20 @@ run the pipeline, then present results.
    produces a new candidate: re-record `candidate`, re-run the checks against it, and
    write fresh evidence in step 9 — never reuse a manifest from a previous candidate.
 9. Persist evidence for the candidate under `.prd/evidence/prd-vN/<candidate>/`.
-   Migrated project (the `Runtime` status line names a change): run each executable
-   check through the runtime on the clean candidate view —
+   Strict coverage: run every declared command check as
+   `node scripts/pincer-runtime.cjs check C-NN --candidate <sha>` (no command, no
+   timeout: the map's declaration is the only source, and a supplied command is
+   `CHECK_UNDECLARED`); record each declared review or visual obligation in the
+   draft with its `result` and an artifact saved under the candidate's evidence
+   directory (a required one that is not passed with an artifact is
+   `REVIEW_MISSING`); write `adequacy: { verdict: "adequate" | "inadequate", note }`;
+   list every declared check once and no `requirements` (they are derived). The
+   export writes the inventory and map snapshots under `coverage/`, derives the
+   scenario and requirement rows and `delivery` (original versus agreed scope) and
+   validates them against the committed candidate; an `inadequate` judgment or a
+   failed required check is recorded honestly and blocks readiness. Migrated
+   project without strict coverage (the `Runtime` status line names a change): run
+   each executable check through the runtime on the clean candidate view —
    `node scripts/pincer-runtime.cjs check C-NN --candidate <sha> -- <command>` (one
    command per check, the command line as run; `npm test` stays one aggregate check) —
    then write the authored fields to a draft outside the evidence directory, for
@@ -79,8 +99,12 @@ run the pipeline, then present results.
    `result`, `provenance: runtime` and `attempt` from the attempts, labels review and
    visual checks `provenance: authored`, computes the digests and writes an evidence
    schema 2 manifest; it refuses a dirty tree, a HEAD that is not the candidate, a stub
-   without an attempt, and a `passed` or `failed` command result written by hand. A
-   tool that cannot run is recorded as an authored command check with
+   without an attempt, and a `passed` or `failed` command result written by hand. On a
+   project with change records the export also appends the evaluation to the change's
+   locator `.prd/evidence/changes/<id>.json` (the identity of this change's
+   evaluation; root `NOTES.md` stays the human summary and may be overwritten by a
+   later change's evaluation without losing this one) — commit the locator with the
+   evidence. A tool that cannot run is recorded as an authored command check with
    `result: unverified` and a note, as before. Legacy project (no change binding):
    author the schema 1 manifest as follows.
    - `checks/C-NN.log` — the command and a redacted summary or safe log of each
@@ -122,11 +146,13 @@ run the pipeline, then present results.
    evidence: .prd/evidence/prd-vN/<candidate>/manifest.json
    ---
    ```
-   Then commit NOTES.md, the manifest and its listed artifacts — and nothing else —
+   Then commit NOTES.md, the manifest, its listed artifacts and (change records) the
+   evaluation locator — and nothing else —
    as `evaluate: PRD vN candidate <short sha>`. Status accepts this later commit only
-   when its diff from the candidate is limited to `NOTES.md` and the evidence files
-   the manifest lists; changes to source, tests, configuration, tickets, the PRD or
-   other evaluations require reevaluation. Legacy notes without these references
+   when its diff from the candidate is limited to `NOTES.md`, the candidate's evidence
+   directories and evaluation locators; changes to source, tests, configuration,
+   tickets, the PRD or the change record (a lifecycle transition after the
+   candidate) require reevaluation. Legacy notes without these references
    do not establish readiness. Then describe what was built, what was cut
    and why, known issues, and what you'd do next with more time. Then a **Handover**
    section, written for the stranger who inherits this repo in six months: how to get
@@ -144,6 +170,9 @@ material choice not already authorized, and prepare the concrete proposal before
 asking. A decision the user delegated (for example "pick the architecture") does not
 need another approval when you exercise it, but a newly discovered consequential
 choice is surfaced before implementation. Record the authorization basis and the
-scope it covers in the PRD or the handover. An agent-written record or a status
+scope it covers in the PRD or the handover, and on a project with change records as
+a `change authorize` record (the user's words as the excerpt, or a `--delegated`
+disposition with its basis). An agent-written record or a status
 field is not authenticated human approval. When resuming without the context that
-granted authorization, do not invent it — ask.
+granted authorization, do not invent it — read the `resume` report; an authorization
+it reports as `current` needs no repeat approval, and any other verdict is asked.

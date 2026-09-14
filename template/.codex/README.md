@@ -38,7 +38,7 @@ sandbox_mode   = "workspace-write" # writes confined to the repo; no network by 
 
 The ticket scripts work here unchanged (`scripts/pincer-ticket.sh
 start|verify|done T-NN` and `scripts/pincer-status.sh`); they are thin wrappers
-around `scripts/pincer-runtime.cjs`, so Node.js 18+ is required.
+around `scripts/pincer-runtime.cjs`, so Node.js 22+ is required.
 Without a Pincer Codex hook adapter, the rule in `AGENTS.md` carries the weight
 of stopping hand-edited ticket state; `$pincer-status` warns about any ticket
 marked done without a receipt.

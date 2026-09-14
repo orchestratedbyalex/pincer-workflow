@@ -1,0 +1,43 @@
+{
+  "session_id": "3d30b8b3-f0b1-4fe2-9a71-2e9fdfff5934",
+  "num_turns": 103,
+  "duration_ms": 533022,
+  "duration_api_ms": 510033,
+  "total_cost_usd": 2.8767175000000003,
+  "usage": {
+    "input_tokens": 190,
+    "cache_creation_input_tokens": 139254,
+    "cache_read_input_tokens": 9011786,
+    "output_tokens": 40867,
+    "output_tokens_details": {
+      "thinking_tokens": 10033
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 139254,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 2190,
+        "cache_read_input_tokens": 157514,
+        "cache_creation_input_tokens": 271,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 271
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "is_error": false,
+  "subtype": "success",
+  "result": "**PINCER Release Audit — candidate `7bf2cbc`**\n\n| Item | Verdict | Evidence |\n|---|---|---|\n| PRD selected, `status: built`, no blocking warnings | pass | `.prd/prd-v1.md` frontmatter `status: built`; status shows `Runtime changes · selected prd-v1 · completed` |\n| Every ticket done and ready | pass | `node scripts/pincer-runtime.cjs ready` → `ready candidate 7bf2cbc...` (exit 0); T-01/T-02 both `done` with current passing attempts |\n| `NOTES.md` names PRD/base/candidate/evidence; notes current, evidence `ok` | pass* | Evidence line: `ok`; Evaluation locator: `current (7bf2cbc...)`. *The plain \"Notes\" line itself prints `stale: candidate changed after evaluation: .prd/evidence/changes/prd-v1.json` — this is the documented compatibility-summary limitation (status.sh's `notesCurrent` legacy check doesn't treat the evaluation locator file as an allowed follower, unlike the change-mode candidate/resume logic, which correctly reports `current`). Per the status line's own parenthetical (\"the evaluation locator decides\") and `docs/runtime-contracts.md`'s Evaluation Locator section, the locator is authoritative here, not the legacy Notes heuristic. |\n| Provenance line names schema, no newer nonpassing attempt | pass | `Provenance runtime (schema 2) · local attempts consistent with the exported checks` |\n| Change completed, authorization current, locator names evaluated candidate | pass | `resume --json`: lifecycle `completed`, agreement verdict `current` (A-01), locator evaluation candidate matches `7bf2cbc` |\n| Every evidence-manifest file tracked; tree clean before/after | pass | `git ls-files .prd/evidence/` lists all 4 files; `git status --short` empty before and after this audit |\n| Strict coverage | skipped (not adopted) | Status labels `Coverage unverified · strict coverage not adopted` — audited under non-strict rules only, no strict-coverage claim made |\n| Every requirement dispositioned, none blocked | pass | Manifest: R-01..R-04 all `delivered`, tickets/checks named, no `blocked` rows |\n| Ticket deps/acceptance/verification match implementation | pass | Both tickets' acceptance boxes ticked match implemented behavior; verification commands (`node --test test/validate.test.js`, `test/form.test.js`) match what was built |\n| Candidate-wide release gate passes directly | pass | `npm test` run directly (not via `pincer-ticket.sh`): 14/14 pass, exit 0, tree stayed clean |\n| Scope cuts / limitations explicit | pass | PRD §7 Out of Scope; NOTES.md \"Known issues\" (non-string `validate()` input, unwired `index.html`) |\n| Review findings have file:line + disposition | pass | `.prd/evidence/prd-v1/7bf2cbc.../review/code-quality.md` — explicit no-findings, with the one noted (non-blocking) edge case cited by file:line |\n| Fixes after evaluation via new ticket | skipped (N/A) | No post-evaluation fixes were needed |\n| UI checks or `visual_review.applicable: false` + reason | pass | Manifest `visual_review: { applicable: false, reason: \"...\" }` — pure functions, no dynamic UI in scope |\n| Security review: locations/remediation, no secret values printed | pass | No secrets found; `.gitignore` covers `.env*`; no candidate values were printed anywhere |\n| No secret env file tracked; dependency/invalid-input checks run when applicable | pass* | `git ls-files \\| grep -i env` → none tracked. `npm audit` genuinely inapplicable (zero dependencies, no lockfile) — recorded as a limitation, not silently skipped. No HTTP endpoint exists, so no invalid-input check applies |\n| Commit history tells the story | pass | `git log --oneline`: PRD → narrow/tickets → register/authorize/activate → T-01 → T-02 → complete → built → evaluate, in order |\n| NOTES.md covers shipped/cuts/limitations/next steps/deps/riskiest assumption | pass | All present in `NOTES.md` |\n| Platform/environment limits stated, not overclaimed | pass | NOTES + draft `environment.limitations` state the audit tool gaps plainly |\n| Audit repaired nothing, changed no state, published nothing | pass | Only `status`, `ready`, `npm test` (direct) and reads were run this pass; `git status --short` empty throughout |\n| Every failed/skipped item named before verdict | pass | See table — 2 skipped (strict coverage not adopted; no post-eval fixes needed), 0 failed |\n\n**PASS — candidate 7bf2cbc: workflow artifacts complete** (strict coverage not adopted, which is optional for this profile; no other gaps)\n\n---\n\n## Summary\n\nImplemented `BRIEF.md` end-to-end through the full PINCER pipeline (plan → narrow → code → evaluate → release):\n\n- `src/validate.js`: `validate({ email, password })` — all four required rules, `{}` on valid input.\n- `src/form.js`: `render({ values, errors, submitting })` — accessible labels/ids, HTML-escaped values, per-field `aria-invalid`/`aria-describedby`/error `<p>`, an error summary (`role=\"alert\"`, present only when errors exist), and a submitting state (`aria-busy`, disabled button, changed label).\n- 14 unit tests (`test/validate.test.js`, `test/form.test.js`) covering every rule and rendered state, including an HTML-escaping/attribute-breakout case.\n\n**Verified:** `npm test` (14/14 passing, run both through the ticket lifecycle and directly for the release gate); an independent `code-quality-reviewer` pass over the full diff found no defects. Full evidence trail lives in `.prd/evidence/prd-v1/7bf2cbc.../manifest.json`; `NOTES.md` (repo root) has the human-readable handover, known issues, and what's next. Everything is committed — `7bf2cbc` is the implementation candidate, `f32350e` (HEAD) adds only the evaluation artifacts on top of it."
+}

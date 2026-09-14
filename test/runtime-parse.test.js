@@ -176,3 +176,18 @@ for (const marker of ['-', '  -', '\t*', ' +', ' 1.', ' 2)']) {
   assert.equal(run(dir, process.execPath, [runtime, 'frobnicate']).status, 2);
 }
 console.log('runtime parser tests passed');
+
+// PRD v6 T-67: the strict inventory reader (requirements.cjs) sits beside the old
+// parser without changing it — an old-format PRD validates exactly as before, and
+// the strict reading of it names why no verdict exists instead of throwing.
+{
+  const requirements = createRequire(import.meta.url)(path.join(repo, 'template/scripts/pincer-runtime/requirements.cjs'));
+  const dir = tempDir(); createPrd(dir);
+  assert.equal(validate(dir, '.prd/prd-v1.md').status, 0, 'old-format PRD validates');
+  const strict = requirements.readInventory(dir, '.prd/prd-v1.md');
+  assert.equal(strict.code, 'INVENTORY_INVALID'); assert.deepEqual(strict.problems, ['.prd/prd-v1.md: no requirement definitions']);
+  write(dir, '.prd/prd-v1.md', read(dir, '.prd/prd-v1.md') + '\n### R-01 — One\n\n- **S-01:** one\n');
+  assert.equal(validate(dir, '.prd/prd-v1.md').status, 0, 'a strict PRD validates under the old parser too');
+  assert.ok(requirements.readInventory(dir, '.prd/prd-v1.md').ok);
+}
+console.log('runtime parser tests passed (strict inventory beside the old parser)');

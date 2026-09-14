@@ -1,0 +1,75 @@
+cd "<scratchpad>/trial/brownfield" && git status && echo "---" && ls scripts/ 2>/dev/null
+cd "<scratchpad>/trial/brownfield" && bash scripts/pincer-status.sh 2>&1 | head -200
+cd "<scratchpad>/trial/brownfield" && node scripts/pincer-runtime.cjs status --json 2>&1 | head -300
+cd "<scratchpad>/trial/brownfield" && cat .prd/changes/prd-v1.json 2>&1
+cd "<scratchpad>/trial/brownfield" && ls tickets/ && echo "---git log for prd-v1---" && git log --oneline -- .prd/prd-v1.md
+cd "<scratchpad>/trial/brownfield" && cat .claude/commands/pincer-code.md
+cd "<scratchpad>/trial/brownfield" && node scripts/pincer-runtime.cjs resume 2>&1
+cd "<scratchpad>/trial/brownfield" && node scripts/pincer-runtime.cjs change select prd-v1 2>&1
+cd "<scratchpad>/trial/brownfield" && node scripts/pincer-runtime.cjs change resume prd-v1 2>&1 && echo "---RESUME---" && node scripts/pincer-runtime.cjs resume 2>&1
+cd "<scratchpad>/trial/brownfield" && node scripts/pincer-runtime.cjs change authorize --help 2>&1
+cd "<scratchpad>/trial/brownfield" && node scripts/pincer-runtime.cjs change authorize prd-v1 --agreement e22544d31a7a1ef38358b2ef6bea391fa94cef7daee9658041ea1ceb1bba9488 --reference "user message in this conversation" --excerpt "Continue the work on change prd-v1 where it was left off ... and continue with its remaining tickets. Do not ask me to re-approve scope I already approved." 2>&1
+cd "<scratchpad>/trial/brownfield" && node scripts/pincer-runtime.cjs change resume prd-v1 2>&1 && echo "---RESUME REPORT---" && node scripts/pincer-runtime.cjs resume 2>&1
+cd "<scratchpad>/trial/brownfield" && bash scripts/pincer-ticket.sh verify T-01 2>&1
+cd "<scratchpad>/trial/brownfield" && cat src/notes.js && echo "---json test---" && cat test/json.test.js
+cd "<scratchpad>/trial/brownfield" && bash scripts/pincer-ticket.sh start T-04 2>&1
+[Edit] <scratchpad>/trial/brownfield/src/notes.js
+[Edit] <scratchpad>/trial/brownfield/src/notes.js
+cd "<scratchpad>/trial/brownfield" && bash scripts/pincer-ticket.sh verify T-01 2>&1
+cd "<scratchpad>/trial/brownfield" && bash scripts/pincer-ticket.sh start T-04 2>&1
+cd "<scratchpad>/trial/brownfield" && bash scripts/pincer-ticket.sh verify T-04 2>&1
+cd "<scratchpad>/trial/brownfield" && git diff -- src/notes.js
+[Edit] <scratchpad>/trial/brownfield/tickets/T-04-json-output.md
+cd "<scratchpad>/trial/brownfield" && bash scripts/pincer-ticket.sh done T-04 2>&1
+cd "<scratchpad>/trial/brownfield" && git status --short
+cd "<scratchpad>/trial/brownfield" && git add .prd/changes/prd-v1.json .prd/changes/prd-v1/agreements/G-02.json && git diff --cached --stat
+cd "<scratchpad>/trial/brownfield" && git commit -m "$(cat <<'EOF'
+Authorize and resume change prd-v1 (G-02/A-02)
+
+PRD v1 gained R-03 (list --json) and ticket T-04 after the original
+authorization; record the user's instruction to continue against the
+new agreement and resume the paused change.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/brownfield" && git add src/notes.js tickets/T-04-json-output.md && git diff --cached
+cd "<scratchpad>/trial/brownfield" && git commit -m "$(cat <<'EOF'
+T-04: json output
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/brownfield" && bash scripts/pincer-ticket.sh start T-02 2>&1 && echo "---README---" && cat README.md 2>&1
+[Edit] <scratchpad>/trial/brownfield/README.md
+cd "<scratchpad>/trial/brownfield" && bash scripts/pincer-ticket.sh verify T-02 2>&1
+[Edit] <scratchpad>/trial/brownfield/tickets/T-02-document-usage.md
+cd "<scratchpad>/trial/brownfield" && bash scripts/pincer-ticket.sh done T-02 2>&1
+cd "<scratchpad>/trial/brownfield" && git status --short && echo "---diff---" && git diff -- README.md tickets/T-02-document-usage.md
+cd "<scratchpad>/trial/brownfield" && git add README.md tickets/T-02-document-usage.md && git commit -m "$(cat <<'EOF'
+T-02: document usage
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/brownfield" && bash scripts/pincer-status.sh 2>&1
+cd "<scratchpad>/trial/brownfield" && bash scripts/pincer-ticket.sh verify T-01 2>&1 | tail -20
+cd "<scratchpad>/trial/brownfield" && bash scripts/pincer-ticket.sh verify T-04 2>&1 | tail -20
+cd "<scratchpad>/trial/brownfield" && bash scripts/pincer-status.sh 2>&1
+cd "<scratchpad>/trial/brownfield" && node scripts/pincer-runtime.cjs change complete prd-v1 2>&1
+cd "<scratchpad>/trial/brownfield" && git status --short && git add .prd/changes/prd-v1.json && git commit -m "$(cat <<'EOF'
+Complete PRD v1
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+[Edit] <scratchpad>/trial/brownfield/.prd/prd-v1.md
+cd "<scratchpad>/trial/brownfield" && bash scripts/pincer-status.sh 2>&1
+cd "<scratchpad>/trial/brownfield" && git add .prd/prd-v1.md && git commit -m "$(cat <<'EOF'
+PRD v1: built
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+cd "<scratchpad>/trial/brownfield" && git status --short && echo "---" && git diff --stat CHANGELOG.md
+cd "<scratchpad>/trial/brownfield" && bash scripts/pincer-status.sh 2>&1

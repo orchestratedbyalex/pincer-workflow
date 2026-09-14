@@ -1,0 +1,13 @@
+PINCER coverage · 2026-09-12T21:59:18Z · <project>
+Change     prd-v1 · coverage strict
+Agreement  current bbe3a5fbb3f9 · reviewed G-01 (A-01, bbe3a5fbb3f9) · verdict current
+Inventory  2 requirement(s), 3 scenario(s) · 001a4782d33d
+Map        .prd/coverage/prd-v1.json · e388ad9495a2 · checks C-01 (command, required), C-02 (review, required)
+Structure  complete
+Implementation complete · 3/3 in-scope scenario(s) complete
+  S-01   complete       tickets T-01 done · checks C-01 · candidate delivered
+  S-02   complete       tickets T-01 done · checks C-01 · candidate delivered
+  S-03   complete       tickets T-02 done · checks C-02 · candidate delivered
+Candidate  f90eba4 · delivery original true, agreed true · adequacy adequate ("the command check reads the real file and the review names the S-03 wording it checked")
+Blockers   none
+Next       read-only release audit: /pincer-release

@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { repo, tempDir, createTicket, createPrd, write, read, run, ticketScript, statusScript, writeEvidence, writeNotes } from './helpers.js';
+import { repo, tempDir, createTicket, createPrd, write, read, run, ticketScript, statusScript, writeEvidence, writeNotes, bindV050 } from './helpers.js';
 
 const runtime = path.join(repo, 'template/scripts/pincer-runtime.cjs');
 const validator = path.join(repo, 'template/scripts/pincer-evidence.cjs');
@@ -34,7 +34,7 @@ function candidateFixture() {
   const file = createTicket(dir, { command: 'test "$(cat value.txt)" = good', criteria: '- [x] expected behavior' });
   write(dir, 'value.txt', 'good');
   commit(dir, 'prd and ticket');
-  passes(rt(dir, 'register', '--prd', '.prd/prd-v1.md'), 'register'); commit(dir, 'register');
+  bindV050(dir); commit(dir, 'register');
   passes(sh(dir, 'start', 'T-01')); passes(sh(dir, 'verify', 'T-01')); passes(sh(dir, 'done', 'T-01'));
   assert.equal(git(dir, 'status', '--porcelain').trim(), 'M tickets/T-01-example.md', 'S-22: verify created no product diff; done wrote lifecycle fields only');
   commit(dir, 'T-01 done');
@@ -181,9 +181,9 @@ function draftFor(dir, candidate, { required = true, extra = [] } = {}) {
   assert.match(j.next, /pincer-release/, 'schema 1 remains release-ready under the legacy contract');
   const legacyLabelled = passes(run(dir, 'bash', [statusScript]));
   assert.match(line(legacyLabelled, 'Evidence'), / · ok$/);
-  // Migrate, then ask for runtime evidence without having run the checks.
+  // A v0.5.0 binding (migrated mode), then ask for runtime evidence without having run the checks.
   write(dir, '.gitignore', '.pincer/\n');
-  passes(rt(dir, 'migrate', '--apply', '--prd', '.prd/prd-v1.md'));
+  bindV050(dir);
   const migrated = commit(dir, 'migrated');
   draftFor(dir, migrated, { required: true });
   const none = rt(dir, 'evidence', 'export', '--candidate', migrated, '--base', JSON.parse(read(dir, '.prd/changes/prd-v1.json')).base, '--prd', '.prd/prd-v1.md', '--draft', '.pincer/drafts/candidate.json');
@@ -259,3 +259,16 @@ function draftFor(dir, candidate, { required = true, extra = [] } = {}) {
   assert.match(read(dir, `${evidenceDir(candidate)}/checks/C-01.log`), /--- stdout ---\nsecond-run\n/);
 }
 console.log('runtime evidence tests passed');
+
+// PRD v6 T-73: the validator names schema 3 as such and refuses it outside strict
+// coverage semantics only through the reconciliation rules (test/coverage-evidence.test.js);
+// a schema 1 or 2 manifest keeps validating exactly as before, and an unknown schema is refused.
+{
+  const dir = tempDir();
+  const candidate = 'a'.repeat(40);
+  write(dir, '.prd/prd-v1.md', '---\nversion: 1\nstatus: built\n---\n# p\n');
+  write(dir, `.prd/evidence/prd-v1/${candidate}/manifest.json`, JSON.stringify({ schema: 4 }));
+  const r = run(dir, process.execPath, [validator, 'validate', `.prd/evidence/prd-v1/${candidate}/manifest.json`]);
+  assert.equal(r.status, 1); assert.match(r.stderr, /unknown evidence schema 4 — this runtime validates schemas 1, 2 and 3/);
+}
+console.log('runtime evidence tests passed (schema 4 refused)');

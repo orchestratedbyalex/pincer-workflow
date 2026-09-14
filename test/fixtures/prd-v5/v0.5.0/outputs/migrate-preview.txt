@@ -1,0 +1,7 @@
+migration plan for .prd/prd-v1.md (change prd-v1)
+  binding   .prd/changes/prd-v1.json (new; base = HEAD)
+  ticket    tickets/T-01-example.md: remove verified, last_check → legacy_receipts[T-01] (history, not runtime evidence)
+  gitignore already ignores .pincer/
+  backups   .pincer/backups/<timestamp>/ for every changed authored file
+  note      no --authorization given; registration does not prove human approval
+apply with: node scripts/pincer-runtime.cjs migrate --apply --prd .prd/prd-v1.md

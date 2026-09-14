@@ -11,7 +11,7 @@
 # readiness warnings, and the next command. Exit codes follow
 # docs/runtime-contracts.md (0 inspected, 4 invalid input).
 command -v node >/dev/null 2>&1 || {
-  echo 'pincer-status: Node.js 18+ is required — the runtime is scripts/pincer-runtime.cjs' >&2
+  echo 'pincer-status: Node.js 22+ is required — the runtime is scripts/pincer-runtime.cjs' >&2
   exit 4
 }
 exec node "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/pincer-runtime.cjs" status "$@"
