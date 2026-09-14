@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "kind": "platform",
+  "id": "platform-01-claude-code",
+  "recorded": "2026-09-14T00:00:00Z",
+  "status": "outstanding",
+  "observed": false,
+  "fixture": false,
+  "outstanding_reason": "T-93 has not run: no spending or wall-clock cap has been supplied, and the exact tool versions are not pinned (docs/prd-v7-protocol.md, section 9)",
+  "surface": "claude-code",
+  "intent": "A full strict journey on Claude Code using the shipped instructions, plus the outbound half of the cross-agent handoff.",
+  "provenance": {
+    "kit": null,
+    "kit_source": "pincer-workflow 0.6.0 plus the v7 improvements, to be packed and installed",
+    "base": null,
+    "tool_version": null,
+    "model": null
+  },
+  "stages": {
+    "install": {
+      "state": "outstanding",
+      "reason": "not yet run: T-93 has not run: no spending or wall-clock cap has been supplied, and the exact tool versions are not pinned (docs/prd-v7-protocol.md, section 9)"
+    },
+    "adopt": {
+      "state": "outstanding",
+      "reason": "not yet run: T-93 has not run: no spending or wall-clock cap has been supplied, and the exact tool versions are not pinned (docs/prd-v7-protocol.md, section 9)"
+    },
+    "authorize": {
+      "state": "outstanding",
+      "reason": "not yet run: T-93 has not run: no spending or wall-clock cap has been supplied, and the exact tool versions are not pinned (docs/prd-v7-protocol.md, section 9)"
+    },
+    "implement": {
+      "state": "outstanding",
+      "reason": "not yet run: T-93 has not run: no spending or wall-clock cap has been supplied, and the exact tool versions are not pinned (docs/prd-v7-protocol.md, section 9)"
+    },
+    "revise": {
+      "state": "outstanding",
+      "reason": "not yet run: T-93 has not run: no spending or wall-clock cap has been supplied, and the exact tool versions are not pinned (docs/prd-v7-protocol.md, section 9)"
+    },
+    "pause": {
+      "state": "outstanding",
+      "reason": "not yet run: T-93 has not run: no spending or wall-clock cap has been supplied, and the exact tool versions are not pinned (docs/prd-v7-protocol.md, section 9)"
+    },
+    "recover": {
+      "state": "outstanding",
+      "reason": "not yet run: T-93 has not run: no spending or wall-clock cap has been supplied, and the exact tool versions are not pinned (docs/prd-v7-protocol.md, section 9)"
+    },
+    "evaluate": {
+      "state": "outstanding",
+      "reason": "not yet run: T-93 has not run: no spending or wall-clock cap has been supplied, and the exact tool versions are not pinned (docs/prd-v7-protocol.md, section 9)"
+    }
+  },
+  "handoff": {
+    "from": "claude-code",
+    "to": "codex",
+    "observed": false,
+    "conversational_recap": false,
+    "reason": "the second half of the handoff needs the Codex CLI pinned and available; T-93 has not run: no spending or wall-clock cap has been supplied, and the exact tool versions are not pinned (docs/prd-v7-protocol.md, section 9)"
+  },
+  "support": [
+    {
+      "surface": "claude-code",
+      "capability": "full strict journey with revision, pause, fresh-session recovery and schema 3 evaluation",
+      "support": "unobserved",
+      "reason": "T-93 has not run"
+    },
+    {
+      "surface": "codex",
+      "capability": "full strict journey with revision, pause, fresh-session recovery and schema 3 evaluation",
+      "support": "unobserved",
+      "reason": "T-93 has not run; the Codex CLI version is not pinned and its availability is unverified"
+    },
+    {
+      "surface": "copilot",
+      "capability": "full strict journey",
+      "support": "unobserved",
+      "reason": "no Copilot account is available for this study"
+    },
+    {
+      "surface": "plugin-only",
+      "capability": "bootstrap of project artifacts from the plugin alone",
+      "support": "installed",
+      "basis": "the plugin is generated from the template and test/distribution.test.js checks their parity; no journey was run"
+    }
+  ]
+}
