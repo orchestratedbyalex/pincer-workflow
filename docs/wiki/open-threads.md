@@ -2,17 +2,11 @@
 
 ## Release state of 0.6.0 (2026-09-14)
 
-- [2026-09-14] **The evaluation is not on main.** PR #1 merged `feat/prd-v6` at the
-  candidate `ce98abd` — main's tree is byte-identical to it — but the evaluate commit
-  `350823e` had not been pushed, so `main` carries the v5+v6 code under **PRD v4's**
-  NOTES.md and evidence. `NOTES.md` and `.prd/evidence/prd-v6/ce98abd…/` exist only in
-  the local branch ([[candidate-evidence]])
-- [2026-09-14] **npm has 0.6.0; no public ref does.** The bump commit `566b553` and the
-  tag `v0.6.0` are local-only, and `main`'s `package.json` still says 0.5.0. The
-  published tarball is reproducible from main — unpacking `pincer-workflow@0.6.0` and
-  diffing against `git archive origin/main` shows `bin/`, `template/`, README and LICENSE
-  byte-identical, `version` the only difference — but nobody can find the commit it was
-  cut from ([[distribution-channels]])
+**Resolved 2026-09-14:** the evaluation, the bump and the tag are all on `origin/main`
+(`350823e`, `566b553`, `694241c` are ancestors; the remote tag `v0.6.0` resolves to
+`694241c`). The two threads claiming they were local-only were wrong for this checkout
+and are deleted rather than carried.
+
 - [2026-09-14] `npm version minor` was run without `--no-git-tag-version` and without
   rebuilding, leaving `plugin/.claude-plugin/plugin.json` at 0.5.0 and
   `test/distribution.test.js` red. Fixed by re-running `scripts/build-plugin.sh`.
@@ -110,3 +104,17 @@
 - [2026-09-14] No v7 candidate is selected and no v7 evidence exists; NOTES.md still names the v6 evaluation. Authored docs and metadata are finished, so the candidate can be chosen cleanly. ([[candidate-evidence]])
 - [2026-09-14] Three v7 benchmark faults are not separable from adjacent checks; the suite asserts the intended evaluator is among the failures, not alone. The UI browser adapter is a deterministic fake proving the seam, not a browser. ([[v7-measured-friction]])
 - [2026-09-14] Remote publication state of 0.6.0 is unverified: the reconciliation speaks only about this checkout, never the server.
+
+## PRD v7 live execution (2026-09-14)
+
+- [2026-09-14] **Nothing live has run, and four prerequisites are outstanding**: a costed
+  spending cap, a wall-clock cap, three pilot projects with an access decision, and two
+  non-implementing human reviewers. The reviewers are not a budget item — the implementing
+  agent is `REVIEW_NOT_INDEPENDENT` by construction ([[v7-measured-friction]])
+- [2026-09-14] **Browser tooling is unreachable from a driven session.** Chrome is
+  installed but no binary is on PATH inside a `claude -p` run, so the `ui-states` brief's
+  held-out check is `unverified`, which makes those runs `unavailable` — never accepted.
+  Decide whether to configure an adapter or to record the gap ([[fix-the-driver-before-run-one]])
+- [2026-09-14] **The GitHub MCP server is failing to connect** (400, badly formatted
+  Authorization header). `gh` works, so nothing is blocked, but remote-state checks go
+  through the CLI until it is fixed

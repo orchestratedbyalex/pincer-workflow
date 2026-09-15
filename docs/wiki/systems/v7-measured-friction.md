@@ -14,6 +14,8 @@ v6 harness, not a child — see the landmine below).
 | `effort.cjs` | the v7 run record (schema 7) as an **event log**, with every total recomputed from it offline |
 | `freeze.cjs` | the cohort identity: a digest over everything that determines what a session sees or how its result is judged |
 | `observations.cjs` | the pilot / platform / comparison record schemas and their validator |
+| `live-driver.sh` | the one file that spends money; refuses without an explicit spending-cap assertion, enters the workspace, enforces the wall clock |
+| `orchestrator.cjs` | the run loop: stop-on-limit, per-cell checkpoint and resume, reruns above the schedule, per-arm kit install ([[fix-the-driver-before-run-one]]) |
 
 ## What the baseline measured
 
@@ -88,6 +90,17 @@ lives at `scripts/delivery-benchmark-v7/`. The alternative was editing a frozen 
 
 Also: regenerate `test/fixtures/delivery-benchmark-v7/frozen.json` after any edit to the
 named execution path; the command is in a comment at the top of `freeze-spec.cjs`, and
-the suite fails when tree and manifest disagree.
+the suite fails when tree and manifest disagree. The cohort is **`6de061ec…`** since
+T-98; `eef74402…` was the pre-T-98 identity and no run was ever executed under it.
+
+## What the study would cost
+
+Re-derived from v6's 42 run records and 60 session JSONs, not its summary prose: plain
+$0.51/run and 2.4 active minutes, kit $2.41/run and 9.3 minutes — 4.7x the money and
+3.85x the time, on 36 runs for $52.54. v7 is **72 runs and 126 live sessions** across
+three arms, so roughly **$181 central, $215-220 with reruns**, x1.28 if billed metered.
+It does not fit one sitting: v6 hit an account limit after $15.77 of continuous spend
+65 minutes in, which puts v7 at five or six reset windows — days, not hours. The strict
+arm has no measured precedent and is the widest term in the estimate.
 
 Related: [[delivery-benchmark]], [[read-only-projections]], [[strict-coverage]].

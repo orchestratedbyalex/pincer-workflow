@@ -22,6 +22,7 @@
 - [[runtime]] — template/scripts/pincer-runtime.cjs + pincer-runtime/: modules, commands, exit codes, gotchas
 
 - [[cli-installer]] — bin/pincer.js: init/update/doctor, the .pincer.json manifest, copy logic
+- [[fix-the-driver-before-run-one]] — the v7 driver placed and capped nothing and the edition had no run loop; fixed and the cohort re-minted while zero runs existed (T-98)
 - [[template-kit]] — template/: the PINCER kit itself, its invariants, provenance
 - [[distribution-channels]] — npm/npx, Claude plugin marketplace, raw files; release flow and enforcement parity
 - [[ticket-state-machine]] — pincer-ticket.sh (start/verify/done + receipts), pincer-status.sh, ticket-guard.sh hook, the /pincer-status command
