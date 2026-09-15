@@ -28,9 +28,13 @@ const COHORT = 'a'.repeat(64);
 function fakeCli() {
   const dir = tempDir();
   const sentinel = path.join(dir, 'invocations.log');
+  const prompts = path.join(dir, 'prompts.log');
   fs.writeFileSync(path.join(dir, 'claude'), `#!/usr/bin/env bash
 set -u
 echo "$PWD" >> ${JSON.stringify(sentinel)}
+# The prompt is the last positional argument. Recorded verbatim so a case can prove what
+# the agent was actually told, rather than inspecting the script that composes it.
+{ printf '%s' "\${@: -1}"; printf '\\n<<<END-OF-PROMPT>>>\\n'; } >> ${JSON.stringify(prompts)}
 if [ -n "\${CLAUDECODE:-}" ] || [ -n "\${CLAUDE_CODE_ENTRYPOINT:-}" ]; then
   echo "stand-in: the session is not fresh; CLAUDECODE/CLAUDE_CODE_ENTRYPOINT survived" >&2
   exit 90
@@ -39,7 +43,24 @@ case "\${FAKE_MODE:-ok}" in
   ok)
     git add -A >/dev/null 2>&1 || true
     git -c user.name=stand-in -c user.email=s@example.invalid commit -q --allow-empty -m "stand-in session" >/dev/null 2>&1 || true
-    echo '{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":0}'
+    echo '{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":1.25,"duration_ms":120000,"usage":{"input_tokens":1000,"output_tokens":500,"cache_read_input_tokens":250}}'
+    ;;
+  bare)
+    git -c user.name=stand-in -c user.email=s@example.invalid commit -q --allow-empty -m "stand-in session" >/dev/null 2>&1 || true
+    echo '{"type":"result","subtype":"success","is_error":false,"result":"done"}'
+    ;;
+  tidy)
+    git -c user.name=stand-in -c user.email=s@example.invalid commit -q --allow-empty -m "stand-in session" >/dev/null 2>&1 || true
+    echo '{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":1.25,"duration_ms":120000,"usage":{"input_tokens":1000,"output_tokens":500,"cache_read_input_tokens":250}}'
+    ;;
+  adopt)
+    mkdir -p .prd/evidence/changes
+    cat > .prd/evidence/changes/C-01.json <<'JSON'
+{"schema":3,"coverage":{"map":".prd/coverage/C-01.json","adopted":"2026-09-15T00:00:00Z","agreement":"G-01"},"events":[{"sequence":1,"kind":"adopt"}]}
+JSON
+    git add .prd >/dev/null 2>&1 || true
+    git -c user.name=stand-in -c user.email=s@example.invalid commit -q --allow-empty -m "stand-in session" >/dev/null 2>&1 || true
+    echo '{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":1.25,"duration_ms":120000,"usage":{"input_tokens":1000,"output_tokens":500}}'
     ;;
   limit)
     echo '{"type":"result","subtype":"error","is_error":true,"result":"You'"'"'ve hit your session limit · resets 3pm","total_cost_usd":0}'
@@ -51,8 +72,39 @@ case "\${FAKE_MODE:-ok}" in
 esac
 `);
   fs.chmodSync(path.join(dir, 'claude'), 0o755);
-  return { dir, sentinel, invocations: () => (fs.existsSync(sentinel) ? fs.readFileSync(sentinel, 'utf8').trim().split('\n').filter(Boolean) : []) };
+  return {
+    dir, sentinel,
+    invocations: () => (fs.existsSync(sentinel) ? fs.readFileSync(sentinel, 'utf8').trim().split('\n').filter(Boolean) : []),
+    prompts: () => (fs.existsSync(prompts) ? fs.readFileSync(prompts, 'utf8').split('\n<<<END-OF-PROMPT>>>\n').filter(Boolean) : []),
+  };
 }
+
+// The seven digests a `valid` record's provenance must carry. The orchestrator fills
+// `base` and `kit` itself; the rest come from the freeze, and a test that omitted them
+// would be asserting against a record no study could ever produce.
+const PROVENANCE = {
+  prompts: 'b'.repeat(64), driver: 'c'.repeat(64), collector: 'd'.repeat(64),
+  evaluator: 'e'.repeat(64), protocol: 'f'.repeat(64), caps: '1'.repeat(64), configuration: '2'.repeat(64),
+};
+
+// Drive real cells through the real loop with the stand-in on PATH. PATH is replaced, not
+// prepended, for the same reason as everywhere else in this file.
+async function withStandIn(fake, mode, run) {
+  const savedPath = process.env.PATH;
+  const savedMode = process.env.FAKE_MODE;
+  process.env.PATH = `${fake.dir}:/usr/bin:/bin`;
+  process.env.FAKE_MODE = mode;
+  try { return await run(); } finally {
+    process.env.PATH = savedPath;
+    if (savedMode === undefined) delete process.env.FAKE_MODE; else process.env.FAKE_MODE = savedMode;
+  }
+}
+
+const briefs = require(path.join(V7, 'briefs.cjs'));
+const TASK = briefs.loadBrief('cli-greenfield').prompts[0].prompt;
+
+const cellFor = (ids, brief, arm, repetition = 1) =>
+  schedule.schedule(ids).find(c => c.brief === brief && c.arm === arm && c.repetition === repetition);
 
 // PATH is REPLACED, never prepended: prepending leaves the real binary reachable if the
 // stand-in's directory is ever misspelled, and a test that silently falls through to the
@@ -219,8 +271,13 @@ function workspace() {
 
   const rerun = orchestrator.claimRerun(runs, cell, { cohort: COHORT });
   assert.equal(rerun.cell.repetition, schedule.REPETITIONS + 1, 'the rerun takes the first number above the schedule');
-  assert.match(rerun.record.reason, new RegExp(`replacing the invalid run ${spoiled.run.replace(/\//g, '\\/')}`));
-  assert.ok(rerun.record.events.some(e => e.kind === 'intervention' && e.intervention === 'operator'));
+  // The replaced run is named in the operator event and NOT on `record.reason`: a fresh
+  // rerun is `pending`, and the validator allows a reason only on a run that admits
+  // something went wrong. Setting it there made every rerun invalid the moment it existed.
+  assert.equal(rerun.record.reason, null, 'a pending rerun carries no reason');
+  const claim = rerun.record.events.find(e => e.kind === 'intervention' && e.intervention === 'operator');
+  assert.ok(claim, 'the rerun is claimed by an operator event');
+  assert.match(claim.detail, new RegExp(`replacing the invalid run ${spoiled.run.replace(/\//g, '\\/')}`));
   assert.equal(orchestrator.readRecord(runs, cell).status, 'invalid', 'the original stays on disk');
   assert.equal(orchestrator.readRecord(runs, cell).reason, 'account limit during S1', 'with its reason');
 
@@ -306,6 +363,262 @@ function workspace() {
   assert.match(spawnSync('git', ['log', '-1', '--format=%s'], { cwd: ws, encoding: 'utf8' }).stdout, /Install PINCER kit/);
 }
 
+// --- the three arms are three arms ----------------------------------------------------------
+// The edition shipped with `loadBrief` taking no arm, so every arm received a byte-identical
+// prompt in a byte-identical tree: `strict` was not an arm, and a third of the schedule
+// bought a duplicate of another one. Proven from the prompt the stand-in was HANDED, not
+// from the code that composes it.
+{
+  const ids = ['cli-greenfield'];
+  const runs = tempDir();
+  const kit = fakeKit();
+  const fake = fakeCli();
+  orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
+  const opts = { cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit };
+  await withStandIn(fake, 'tidy', async () => {
+    for (const arm of ['plain', 'pincer', 'strict']) {
+      await orchestrator.driveRun(runs, cellFor(ids, 'cli-greenfield', arm), opts);
+    }
+  });
+
+  const given = fake.prompts();
+  assert.equal(given.length, 3, 'one session per arm');
+  assert.equal(new Set(given).size, 3, 'the three arms are told three different things');
+  for (const prompt of given) assert.ok(prompt.includes(TASK), 'and every arm receives the identical task');
+  assert.ok(!given[0].includes('PINCER'), 'the plain arm is told nothing about a kit it does not have');
+  assert.ok(given[1].includes('PINCER') && !given[1].includes('coverage adopt'), 'the default arm is told to use the kit and not to adopt');
+  assert.ok(given[2].includes('coverage adopt'), 'the strict arm is told to adopt strict coverage');
+}
+
+// --- a completed run produces a record its own validator accepts -----------------------------
+// This is the assertion whose absence let the edition ship: the suite proved orchestration
+// behaviour and the validator proved its opinions on hand-built records, and the two never
+// met. Every record the orchestrator produced failed `effort.problems()`.
+{
+  const ids = ['cli-greenfield'];
+  const kit = fakeKit();
+
+  for (const [arm, mode] of [['plain', 'tidy'], ['strict', 'adopt']]) {
+    const runs = tempDir();
+    const fake = fakeCli();
+    orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
+    const cell = cellFor(ids, 'cli-greenfield', arm);
+    const out = await withStandIn(fake, mode, () => orchestrator.driveRun(runs, cell, {
+      cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+    }));
+    const record = orchestrator.readRecord(runs, cell);
+    assert.deepEqual(effort.problems(record), [], `the ${arm} arm's record validates`);
+    assert.deepEqual(out.problems, [], 'and driveRun says so');
+    assert.equal(record.status, 'valid', 'a rejected candidate is still a valid measurement');
+    assert.ok(record.evaluation && record.evaluation.checks.length, 'and the evaluation is on the record either way');
+
+    // The provider's own figures, from the payload the driver saved.
+    assert.equal(record.reported.cost_usd, 1.25, 'the cost is the one the session reported');
+    assert.equal(record.reported.tokens, mode === 'adopt' ? 1500 : 1750, 'tokens are summed across the payload');
+    assert.equal(record.reported.provider_minutes, 2, '120000ms is two minutes, not 120000');
+    assert.deepEqual(record.unavailable, {}, 'nothing is unavailable when everything was reported');
+
+    if (arm === 'strict') {
+      assert.equal(record.adoption.observed, true, 'adoption is observed from the workspace');
+      assert.match(record.adoption.evidence, /schema 3.*adopt event/, 'and names the record it read');
+    } else {
+      assert.equal(record.adoption.observed, false, 'a default arm is looked at and found not to have adopted');
+    }
+  }
+
+  // A strict run that did not adopt is a protocol failure, not a strict result.
+  {
+    const runs = tempDir();
+    const fake = fakeCli();
+    orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
+    const cell = cellFor(ids, 'cli-greenfield', 'strict');
+    await withStandIn(fake, 'tidy', () => orchestrator.driveRun(runs, cell, {
+      cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+    }));
+    const record = orchestrator.readRecord(runs, cell);
+    assert.equal(record.status, 'invalid');
+    assert.match(record.reason, /did not adopt strict coverage/);
+    assert.deepEqual(effort.problems(record), [], 'and the protocol failure is itself a valid record');
+  }
+
+  // A metric no payload carried is null WITH its reason, never a fabricated zero.
+  {
+    const runs = tempDir();
+    const fake = fakeCli();
+    orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
+    const cell = cellFor(ids, 'cli-greenfield', 'plain');
+    await withStandIn(fake, 'bare', () => orchestrator.driveRun(runs, cell, {
+      cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+    }));
+    const record = orchestrator.readRecord(runs, cell);
+    for (const key of ['tokens', 'cost_usd', 'provider_minutes']) {
+      assert.equal(record.reported[key], null, `${key} is null, not zero`);
+      assert.ok(record.unavailable[key], `and ${key} says why`);
+    }
+    assert.deepEqual(effort.problems(record), [], 'a record that measured nothing is still reportable, with its reasons');
+  }
+}
+
+// --- a rerun record is valid the moment it exists --------------------------------------------
+{
+  const runs = tempDir();
+  const ids = ['cli-greenfield'];
+  orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
+  const cell = cellFor(ids, 'cli-greenfield', 'plain');
+  const original = orchestrator.readRecord(runs, cell);
+  original.status = 'invalid';
+  original.reason = 'account limit during S1';
+  orchestrator.writeRecord(runs, cell, original);
+
+  const claimed = orchestrator.claimRerun(runs, cell, { cohort: COHORT, provenance: PROVENANCE });
+  assert.equal(claimed.record.repetition, orchestrator.RERUN_FIRST, 'a rerun is numbered above the schedule');
+  assert.equal(claimed.record.reason, null, 'a pending rerun carries no reason: the validator refuses one');
+  assert.deepEqual(effort.problems(claimed.record), [], 'so the replacement is valid the moment it is created');
+  const event = claimed.record.events.find(e => e.kind === 'intervention');
+  assert.match(event.detail, new RegExp(`replacing the invalid run ${original.run}`), 'and the replaced run is still named');
+  assert.equal(orchestrator.readRecord(runs, cell).reason, 'account limit during S1', 'the original keeps its own reason');
+}
+
+// --- the harness preserves what it asks the agent to preserve ---------------------------------
+// `harness.prepare` used to inject the unrelated edits BEFORE the kit install, whose final
+// act is `git add -A`. The harness therefore committed the very work the brief tells the
+// agent to leave alone, on kit arms only — and nothing noticed, because the check read its
+// edits from a record key that did not exist.
+{
+  const ids = ['brownfield-maintenance'];
+  const kit = fakeKit();
+  for (const arm of ['plain', 'pincer', 'strict']) {
+    const runs = tempDir();
+    const fake = fakeCli();
+    orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
+    const cell = cellFor(ids, 'brownfield-maintenance', arm);
+    await withStandIn(fake, arm === 'strict' ? 'adopt' : 'tidy', () => orchestrator.driveRun(runs, cell, {
+      cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+    }));
+    const record = orchestrator.readRecord(runs, cell);
+    const ws = path.join(orchestrator.runDir(runs, cell), 'workspace');
+
+    assert.deepEqual(
+      Object.keys(record.workspace.unrelated_edits).sort(), ['README.md', 'operator-notes.md'],
+      `the ${arm} arm records what was injected, so the check has something to compare`,
+    );
+    const tracked = spawnSync('git', ['ls-files', '--error-unmatch', 'operator-notes.md'], { cwd: ws, encoding: 'utf8' });
+    assert.notEqual(tracked.status, 0, `the ${arm} arm leaves the untracked file untracked`);
+    const head = spawnSync('git', ['show', 'HEAD:README.md'], { cwd: ws, encoding: 'utf8' });
+    assert.ok(!head.stdout.includes('do not commit'), `the ${arm} arm does not commit the unrelated edit`);
+
+    const check = record.evaluation.checks.find(c => c.id === 'unrelated-edits');
+    assert.ok(check, 'the preservation check ran');
+    assert.equal(check.result, 'passed', `and passes on ${arm} because the edits really are intact`);
+    assert.match(check.detail, /2 unrelated edit\(s\) intact/, 'over two real edits, not a vacuous zero');
+  }
+
+  // And the check is alive: an agent that sweeps the tree with `git add -A` fails it. A
+  // passing preservation column over zero edits, which is what the edition would have
+  // reported for all 72 runs, proves nothing at all.
+  {
+    const runs = tempDir();
+    const fake = fakeCli();
+    orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
+    const cell = cellFor(ids, 'brownfield-maintenance', 'pincer');
+    await withStandIn(fake, 'ok', () => orchestrator.driveRun(runs, cell, {
+      cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+    }));
+    const record = orchestrator.readRecord(runs, cell);
+    const check = record.evaluation.checks.find(c => c.id === 'unrelated-edits');
+    assert.equal(check.result, 'failed', 'a sweeping agent fails preservation');
+    assert.match(check.detail, /operator-notes\.md: the untracked file was committed/);
+    assert.match(check.detail, /README\.md: the unrelated edit was committed/);
+    assert.equal(record.status, 'valid', 'and that is a rejected candidate, not an invalid experiment');
+  }
+}
+
+// --- an interrupted cell is re-driven clean, not resumed into --------------------------------
+// A killed cell used to leave `pending` with no events, and the restart did not wipe: the
+// dead attempt's commits were swept into the restarted run's recorded base by `git add -A`,
+// producing a record that looks clean and that nothing can detect.
+{
+  const ids = ['cli-greenfield'];
+  const runs = tempDir();
+  const kit = fakeKit();
+  const fake = fakeCli();
+  orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
+  const cell = cellFor(ids, 'cli-greenfield', 'plain');
+  const home = orchestrator.runDir(runs, cell);
+  const ws = path.join(home, 'workspace');
+
+  // Stage an interrupted attempt by hand: a workspace with a commit in it and a log, and a
+  // record still reading pending — exactly the state a kill leaves behind.
+  fs.mkdirSync(ws, { recursive: true });
+  spawnSync('git', ['init', '-q', '-b', 'main'], { cwd: ws });
+  spawnSync('git', ['config', 'user.email', 's@example.invalid'], { cwd: ws });
+  spawnSync('git', ['config', 'user.name', 'stand-in'], { cwd: ws });
+  fs.writeFileSync(path.join(ws, 'DEAD-ATTEMPT'), 'work from the killed run\n');
+  spawnSync('git', ['add', '-A'], { cwd: ws });
+  spawnSync('git', ['commit', '-q', '-m', 'dead attempt'], { cwd: ws });
+  const dead = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: ws, encoding: 'utf8' }).stdout.trim();
+  fs.mkdirSync(path.join(home, 'logs'), { recursive: true });
+  fs.writeFileSync(path.join(home, 'logs', 'S1.json'), '{"result":"the killed session"}');
+
+  await withStandIn(fake, 'tidy', () => orchestrator.driveRun(runs, cell, {
+    cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+  }));
+  const record = orchestrator.readRecord(runs, cell);
+
+  assert.ok(!fs.existsSync(path.join(ws, 'DEAD-ATTEMPT')), 'the dead attempt is gone from the workspace');
+  const ancestor = spawnSync('git', ['merge-base', '--is-ancestor', dead, 'HEAD'], { cwd: ws });
+  assert.notEqual(ancestor.status, 0, 'and its commit is not in the restarted run at all');
+  assert.equal(
+    fs.readFileSync(path.join(home, 'logs-attempt-1', 'S1.json'), 'utf8'), '{"result":"the killed session"}',
+    'the killed session\'s log is retained rather than overwritten',
+  );
+  const event = record.events.find(e => e.kind === 'intervention' && /interrupted attempt/.test(e.detail));
+  assert.ok(event, 'and the discarded attempt is named on the record, so the repetition is visible');
+  assert.deepEqual(effort.problems(record), [], 'the re-driven record is reportable');
+}
+
+// --- nothing is prepared and nothing is spent until the inputs agree --------------------------
+// Each of these used to be discovered after the workspace was built, or not at all: the
+// driver validated a cohort's SHAPE and never its correspondence to what it was executing.
+{
+  const ids = ['cli-greenfield'];
+  const kit = fakeKit();
+  const base = { ids, spendingCap: true, model: 'stand-in', maxTurns: 5, wallClockMinutes: 30, kit };
+
+  const cases = [
+    ['a different cohort', { cohort: 'b'.repeat(64) }, /not the cohort this cell was planned under/],
+    ['a moved execution path', { cohort: COHORT, frozen: { cohort: 'c'.repeat(64) } }, /the execution path has changed/],
+    ['a different model', { cohort: COHORT, model: 'other' }, /planned for model stand-in/],
+    ['a different turn cap', { cohort: COHORT, maxTurns: 400 }, /planned for 5 turns per session/],
+    ['a different wall clock', { cohort: COHORT, wallClockMinutes: 5 }, /planned for a 30-minute wall clock/],
+    ['no spending cap', { cohort: COHORT, spendingCap: false }, /no spending cap has been asserted/],
+  ];
+  for (const [what, override, expected] of cases) {
+    const runs = tempDir();
+    const fake = fakeCli();
+    orchestrator.plan(runs, {
+      cohort: COHORT, ids, provenance: PROVENANCE,
+      environment: { model: 'stand-in', caps: { turns_per_session: 5, wall_clock_minutes: 30 } },
+    });
+    const cell = cellFor(ids, 'cli-greenfield', 'plain');
+    const out = await withStandIn(fake, 'tidy', () => orchestrator.driveRun(runs, cell, { ...base, ...override }));
+
+    assert.equal(out.refused, true, `${what} is refused`);
+    assert.match(out.detail, expected, `${what} says which input disagreed`);
+    assert.equal(fake.invocations().length, 0, `${what} never reaches a session`);
+    assert.ok(!fs.existsSync(path.join(orchestrator.runDir(runs, cell), 'workspace')), `${what} never touches the workspace`);
+
+    // And the cell is still drivable. A refusal that marked it terminal would strand it:
+    // `driveRun` skips any non-pending cell forever and `claimRerun` replaces only invalid
+    // runs, so one dry run would cost a cell of the study permanently.
+    const record = orchestrator.readRecord(runs, cell);
+    assert.equal(record.status, 'pending', `${what} leaves the cell as it found it`);
+    assert.equal(record.reason, null);
+    const after = await withStandIn(fake, 'tidy', () => orchestrator.driveRun(runs, cell, { ...base, cohort: COHORT }));
+    assert.equal(after.record.status, 'valid', `and the cell still runs afterwards (${what})`);
+  }
+}
+
 // --- the loop is offline by construction ----------------------------------------------------
 {
   const source = fs.readFileSync(path.join(V7, 'orchestrator.cjs'), 'utf8');
@@ -321,6 +634,17 @@ function workspace() {
   const { REPO, SPEC } = require(path.join(V7, 'freeze-spec.cjs'));
   assert.ok(SPEC.harness.includes('scripts/delivery-benchmark-v7/orchestrator.cjs'), 'the orchestrator is named in the freeze');
   assert.equal(REPO, repo);
+
+  // It has an operator entry point. Without one the schedule is only reachable by writing
+  // the unfrozen caller this file exists to make unnecessary, and the cohort would then
+  // describe a configuration that some other script decided.
+  assert.ok(source.includes('require.main === module'), 'the orchestrator is runnable');
+  const help = spawnSync(process.execPath, [path.join(V7, 'orchestrator.cjs'), '--help'], { encoding: 'utf8' });
+  assert.match(help.stdout, /--runs <dir>/, 'and documents how to run it');
+  assert.match(help.stdout, /--browser <module>/, 'including how to supply a browser adapter');
+  assert.match(help.stdout, /unavailable/, 'and what happens to UI checks without one');
+  assert.match(help.stdout, /--i-have-a-spending-cap/, 'and that spending is an assertion a human makes');
+  assert.equal(spawnSync(process.execPath, [path.join(V7, 'orchestrator.cjs')], { encoding: 'utf8' }).status, 2, 'and refuses with no --runs');
 }
 
 console.log('benchmark orchestrator tests passed');

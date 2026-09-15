@@ -31,6 +31,7 @@ unfinished. Nothing in this packet should be read as evidence that they happened
 | T-96 | This packet, the replay cases and the integration gates | `docs/prd-v7-review-packet.md`, `docs/prd-v7-artifacts/replay.sh`, `test/improvement-review-packet.test.js` |
 | T-97 | Fix found while measuring: `REVISION_CHANGED` advised a command changes mode refuses | `template/scripts/pincer-runtime/readiness.cjs`, regression in `test/change-lifecycle.test.js` |
 | T-98 | Fix found before the first live run: the frozen driver placed and capped nothing, and the edition had no run loop | `scripts/delivery-benchmark-v7/live-driver.sh`, `scripts/delivery-benchmark-v7/orchestrator.cjs`, `test/benchmark-orchestrator.test.js` |
+| T-99 | Five more found before the first live run: the strict arm was not an arm, no record passed its own validator, the preservation check was dead, a crash repeated a cell's paid sessions, and execution inputs were never reconciled with the freeze | `scripts/delivery-benchmark-v7/orchestrator.cjs`, `scripts/delivery-benchmark-v7/harness.cjs`, `scripts/delivery-benchmark-v7/effort.cjs`, `test/benchmark-orchestrator.test.js`, `docs/pincer-assessment-2026-09-15.md` |
 
 ## 2. The two shipped product changes
 
