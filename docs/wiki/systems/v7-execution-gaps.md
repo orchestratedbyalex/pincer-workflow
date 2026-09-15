@@ -1,15 +1,19 @@
 # The v7 execution path, and the five gaps between it and a reportable study
 
-The 2026-09-15 assessment (`docs/pincer-assessment-2026-09-15.md`) raised five P1 findings
-against the v7 benchmark orchestrator. All five were re-verified independently on
-2026-09-15 with stand-in CLIs and zero paid sessions. **Four confirmed as written; one
-(F-04) is real but its stated consequence does not occur, because a larger defect masks
-it.** None touches shipped code: `package.json` ships `bin` and `template` only, and
-nothing under `scripts/delivery-benchmark-v7/` reaches a user. See [[v7-measured-friction]]
-and [[fix-the-driver-before-run-one]] for what the edition is and why T-98 fixed the
-driver first.
+**Closed by T-99 on 2026-09-15, before run #1.** Cohort re-minted `6de061ec…` →
+`47dedc0a…`, with exactly `harness`, `collector` and `briefs` moving.
 
-## Why they block the first paid run
+The 2026-09-15 assessment (`docs/pincer-assessment-2026-09-15.md`) raised five P1 findings
+against the v7 benchmark orchestrator. All five were re-verified independently with
+stand-in CLIs and zero paid sessions. **Four confirmed as written; one (F-04) was real but
+its stated consequence did not occur, because a larger defect masked it.** None touched
+shipped code: `package.json` ships `bin` and `template` only, and nothing under
+`scripts/delivery-benchmark-v7/` reaches a user. See [[v7-measured-friction]] and
+[[fix-the-driver-before-run-one]] for what the edition is and why T-98 fixed the driver
+first. This page keeps the diagnosis, because the shape of these defects is the reason the
+suite now asserts what it does.
+
+## Why they had to close before the first paid run
 
 Not because the records are unrecoverable — four of the five backfill from retained logs.
 They block because **the fix is unapplicable later**. `freeze-spec.cjs` lists
@@ -24,7 +28,7 @@ One escape hatch worth knowing: `SPEC.harness` is a **file list**, not a directo
 surfaces mid-study, put the correction in an unfrozen sibling rather than patching
 `orchestrator.cjs`.
 
-## The five, in the order they matter
+## The five as found, in the order they mattered
 
 **The strict arm is not an arm.** `loadBrief(id, dir)` takes no arm, so `brief.prompts` is
 arm-independent; `installKit` branches on arm exactly once (`plain` gets nothing); the
@@ -73,7 +77,7 @@ the record keeps A while the driver gets B. Smallest of the five, and the cheap 
 inherited environment — is a separate project and unnecessary here, since the environment
 is constant across arms and so cannot confound the comparison.
 
-## Three gaps the assessment did not raise
+## Three gaps the assessment did not raise, also closed
 
 - **No operator entry point.** No `require.main`, no shebang, no npm script, no mention in
   `docs/` or `README.md`; the only callers are the test suite. An operator must hand-write
@@ -86,14 +90,50 @@ is constant across arms and so cannot confound the comparison.
   `invalid` runs. `effort.cjs:298` counts `complete` over `valid|invalid|unavailable`, so
   the study can never read complete. Recovery is deleting `record.json` by hand.
 
+## What T-99 changed
+
+- `ARM_PREAMBLE` in `orchestrator.cjs`, prepended at the prompt write. It varies the
+  workflow clause and never the task, so the arms differ by what the protocol already said
+  distinguished them. Adoption is then read back from `.prd/evidence/changes/*.json`:
+  a strict run that did not adopt, and a default run that did, are both protocol failures.
+- `complete()` fills `reported` from the payload the driver already saved, records what is
+  genuinely unavailable *with its reason*, and runs `effort.problems()` before the record
+  is written. A record that cannot validate becomes `invalid` with the problems as its
+  reason rather than a `valid` record nothing would accept.
+- `claimRerun` no longer sets `record.reason`; the replaced run is named in the operator
+  event, which survives to whatever terminal status the rerun reaches.
+- `harness.applyUnrelated` is separate from `prepare`, and the orchestrator installs the
+  kit **first**, then injects, then records the map in `record.workspace.unrelated_edits`.
+  The two brownfield briefs gained an `unrelated` hook, so the check has a subject.
+- An interrupted cell is re-driven from a wiped workspace, its logs kept at
+  `logs-attempt-N/` and the discarded attempt named in an intervention. The record is
+  checkpointed after every session, not once per cell.
+- A preflight refuses a cohort, model or cap that disagrees with the planned record, and
+  refuses a missing spending cap — all before the workspace is touched. **No refusal writes
+  a terminal status**, so a dry run no longer strands a cell.
+- An operator entry point (`node orchestrator.cjs --runs <dir> …`) computes the freeze
+  itself, supplies the provenance mapping, and takes `--browser <module>`. Without one it
+  says on stderr that UI checks will be `unverified` and those runs `unavailable`.
+
+One thing the verification got wrong and this page corrects: `driveSchedule` **does**
+forward a browser adapter — it passes its whole `opts` to `driveRun`, which destructures
+`browser`. The real gap was that nothing supplied one and nothing said so.
+
 ## The suite gap underneath all of it
 
-`test/benchmark-orchestrator.test.js` asserts orchestration behaviour — stop, resume,
-rerun, cap — and `test/delivery-benchmark-v7.test.js` asserts the validator's opinions on
-hand-built records. **No test anywhere feeds an orchestrator-produced record to
-`effort.problems()`**, and the preservation test hand-wires `record.workspace` and never
-calls `installKit`. That is why `npm test` is green over a dead check and an unreportable
-record. One assertion — `problems(record).length === 0` on a stand-in-driven cell — catches
-the whole of the first finding.
+`test/benchmark-orchestrator.test.js` asserted orchestration behaviour — stop, resume,
+rerun, cap — and `test/delivery-benchmark-v7.test.js` asserted the validator's opinions on
+hand-built records. **No test anywhere fed an orchestrator-produced record to
+`effort.problems()`**, and the preservation test hand-wired `record.workspace` and never
+called `installKit`. That is why `npm test` was green over a dead check and an unreportable
+record.
+
+T-99's suite closes it from the other side: every new case drives the real loop with a
+stand-in CLI and then asserts on what landed on disk. `problems(record).length === 0` on a
+driven cell is the single assertion that catches the whole of the first finding, and the
+preservation case asserts **both** directions — a tidy agent passes over two real edits, a
+sweeping one fails — because a check that only ever passes proves nothing. The stand-in now
+records the prompt it was handed, so the arms are compared by what the agent was actually
+told rather than by reading the code that composes it.
 
 Related: [[v7-measured-friction]], [[fix-the-driver-before-run-one]], [[delivery-benchmark]].

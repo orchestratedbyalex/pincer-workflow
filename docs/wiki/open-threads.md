@@ -118,34 +118,14 @@ and are deleted rather than carried.
   Authorization header). `gh` works, so nothing is blocked, but remote-state checks go
   through the CLI until it is fixed
 
-## The 2026-09-15 assessment, verified 2026-09-15
+## The 2026-09-15 assessment — closed by T-99 (2026-09-15)
 
-Five findings against the v7 benchmark orchestrator, each reproduced offline with
-stand-in CLIs and zero paid sessions. None touches shipped code ([[v7-execution-gaps]]).
+All five verified findings and the three gaps verification added were closed before run #1,
+while re-minting was still free ([[v7-execution-gaps]]). Cohort `6de061ec…` → `47dedc0a…`.
 
-- [2026-09-15] **Every record the orchestrator writes fails its own validator.**
-  `driveRun` never fills `reported`, never observes adoption and never calls
-  `effort.problems()`; `claimRerun` sets a `reason` on a `pending` record, which
-  `effort.cjs:124` rejects outright.
-- [2026-09-15] **The strict arm is not an arm.** `pincer` and `strict` get byte-identical
-  workspaces and byte-identical argv, so a third of the schedule buys a duplicate of
-  another arm, and no strict run can ever be reported.
-- [2026-09-15] **The preservation check is dead in the orchestrator path.** No brief
-  supplies unrelated edits, `prepare`’s return value is discarded and `effort.empty()`
-  has no `workspace` key, so all 72 runs would print `0 unrelated edit(s) intact` — a
-  fabricated pass. Wiring it on without reordering the kit install would instead fail 12
-  of 72 cells against the kit arms.
-- [2026-09-15] **A crash inside a cell repeats its paid sessions and contaminates the
-  base.** Verified by kill test: six stand-in sessions billed for a three-session cell,
-  and the dead attempt’s commits swept into the restarted run’s `provenance.base`.
-- [2026-09-15] Execution inputs are never reconciled with the freeze: `driveRun` takes
-  cohort, model and caps from its caller and compares them with nothing.
-- [2026-09-15] The orchestrator has **no operator entry point** — no `require.main`, no
-  npm script, no documented invocation — so an operator must hand-write exactly the
-  unfrozen caller the freeze exists to eliminate.
-- [2026-09-15] A cap-less dry run writes `outstanding`, which `driveRun` then skips
-  forever and `claimRerun` refuses to replace. The cell is stranded and the study can
-  never read `complete`.
-- [2026-09-15] `ui-states` is structurally `unavailable`: `browser` defaults to `null`
-  through `driveSchedule`, which has no parameter to supply an adapter, so 9 of 72 runs
-  can never be accepted whatever the agent writes.
+- [2026-09-15] Still open, and unchanged by T-99: **no browser adapter is configured**. The
+  orchestrator can now be given one (`--browser <module>`) and says so when it is not, but
+  choosing or writing the adapter is a decision, and without it the `ui-states` brief's nine
+  runs are `unavailable` — never accepted ([[v7-execution-gaps]])
+- [2026-09-15] The two non-implementing reviewers, the spending cap, the wall-clock cap and
+  the three pilot projects remain the user's call. Nothing in T-99 moves them.

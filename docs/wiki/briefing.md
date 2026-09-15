@@ -27,10 +27,12 @@ T-87..T-97, PR #4 (`0534ea2`) carried T-98. The CI matrix ran green on the merge
 - **T-98** fixed the benchmark edition before its first run: the frozen driver placed and
   capped nothing and there was no run loop at all ([[fix-the-driver-before-run-one]]).
   Cohort re-minted openly, `eef74402…` → `6de061ec…`, at zero cost because no run existed.
-- **The 2026-09-15 assessment found five more, all verified** ([[v7-execution-gaps]]): the
-  strict arm is byte-identical to the default arm, every record fails `effort.problems()`,
-  the preservation check is dead, a crash repeats a cell’s paid sessions and poisons its
-  base, and execution inputs are never reconciled with the freeze. None ships to users.
+- **T-99 closed five more, found by the 2026-09-15 assessment and verified independently**
+  ([[v7-execution-gaps]]): the strict arm was byte-identical to the default arm, no record
+  passed `effort.problems()`, the preservation check was dead, a crash repeated a cell’s
+  paid sessions and poisoned its base, and execution inputs were never reconciled with the
+  freeze. Cohort `6de061ec…` → `47dedc0a…`, still free because no run exists. The
+  orchestrator now has an operator entry point. None of it ships to users.
 - **Outstanding, and the user's call:** every live observation. Three baseline pilots
   (T-89), two platform journeys and the handoff (T-93), 72 benchmark runs and timed
   reviews (T-95). 7 of 30 scenarios are `outstanding`, three more partly so;
@@ -38,22 +40,19 @@ T-87..T-97, PR #4 (`0534ea2`) carried T-98. The CI matrix ran green on the merge
 
 ## Active / next task
 
-1. **Close the five execution gaps before spending anything** ([[v7-execution-gaps]]).
-   About a day of offline work; the same fix after run 30 strands those runs under
-   `COHORT_CHANGED` and costs ~$80. Ship the arm preamble, record completion, preservation
-   reorder+wiring, crash handling and the cohort preflight together, re-mint once, and add
-   the one assertion that would have caught most of it: `effort.problems(record).length === 0`
-   on a stand-in-driven cell.
-2. **The decisions nothing can proceed without.** A costed spending cap (~$181 central,
+1. **The decisions nothing can proceed without.** A costed spending cap (~$181 central,
    $215-220 realistic, over five or six account reset windows — see
    [[v7-measured-friction]]), a wall-clock cap, three pilot projects and their access,
    and **two non-implementing human reviewers**. The last one is not a budget problem: an
    agent that implemented the candidate is `REVIEW_NOT_INDEPENDENT` by construction.
-3. **Codex is now pinned** (`codex-cli 0.153.4`, authenticated) — one prerequisite off
+2. **Codex is now pinned** (`codex-cli 0.153.4`, authenticated) — one prerequisite off
    section 9 without spending anything. Both CLIs work headless on this host.
-4. **Evaluate.** No v7 candidate is selected and no v7 evidence exists; `NOTES.md` still
+3. **Evaluate.** No v7 candidate is selected and no v7 evidence exists; `NOTES.md` still
    names the v6 evaluation. Authored docs and metadata are finished, so the candidate can
    be chosen cleanly.
+4. **A browser adapter.** The orchestrator takes `--browser <module>` and warns without
+   one, but nobody has written or chosen an adapter, so nine of the 72 runs would be
+   `unavailable` ([[v7-execution-gaps]]).
 5. Other parked items are in [[open-threads]].
 
 ## Recent decisions
@@ -77,10 +76,11 @@ T-87..T-97, PR #4 (`0534ea2`) carried T-98. The CI matrix ran green on the merge
 - **A backgrounded watchdog inherits the caller's stdout**, so its `sleep` holds a
   synchronous caller's pipe open long after the child exits. Redirect it to `/dev/null`.
   This was invisible in review and only a real end-to-end test caught it.
-- **No test feeds an orchestrator-produced record to `effort.problems()`**, and the
-  preservation test hand-wires `record.workspace` and never calls `installKit`. That is
-  why `npm test` is green over a dead check and an unreportable record
-  ([[v7-execution-gaps]]).
+- **A benchmark case that only asserts orchestration proves nothing about the record.**
+  T-99's cases drive the real loop with a stand-in and then assert on what landed on disk;
+  keep it that way, and keep asserting BOTH directions of a check ([[v7-execution-gaps]]).
+- Check objects use `id`, not `name` (`evaluator-kit.cjs:26`) — a `find` on `c.name`
+  silently matches nothing and the assertion passes on `undefined`.
 - `SPEC.harness` in `freeze-spec.cjs` is a **file list**, not a directory digest — so a new
   sibling module under `scripts/delivery-benchmark-v7/` does not change the cohort. That is
   the only way to correct anything mid-study without stranding the runs already paid for.

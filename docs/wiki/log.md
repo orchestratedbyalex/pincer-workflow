@@ -320,3 +320,20 @@ the user's.
 - New page [[v7-execution-gaps]]; briefing and index updated.
 - Outcome: nothing live has run and nothing was spent. The five gaps are a day of offline
   work and must close before run #1 — the same fix after run 30 strands those runs.
+
+## [2026-09-15] end | T-99 closes the five execution gaps before run #1
+
+- Fixed all five verified findings plus the three gaps verification added: arm preamble
+  and adoption observation, record completion through `effort.problems()`, preservation
+  reorder + record wiring + brief hooks, clean re-drive after a crash with per-session
+  checkpoints, and a cohort/model/caps preflight that refuses before touching anything.
+- Shipped the operator entry point the edition never had (`--runs`, `--kit`, `--browser`,
+  `--i-have-a-spending-cap`), and made every refusal non-terminal so a dry run can no
+  longer strand a cell.
+- Suite: the new cases drive the real loop with a stand-in CLI and assert on what landed
+  on disk, including both directions of the preservation check. 63 suites green.
+- Cohort re-minted `6de061ec…` → `47dedc0a…`; exactly `harness`, `collector` and `briefs`
+  moved. Free because no run exists — the last moment it would have been.
+- Outcome: T-99 done, receipt `a05a552f47b9`. No session ran and nothing was spent. What
+  remains before run #1 is decisions, not code: cap, projects, reviewers, and a browser
+  adapter ([[v7-execution-gaps]]).
