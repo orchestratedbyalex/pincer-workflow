@@ -280,3 +280,60 @@ docs/prd-v7-protocol.md, tickets/T-98, wiki.
 Outcome: 63 suites green, T-98 done with a real receipt, Codex pinned at 0.153.4. No live
 session has run and none was paid for; the spending, project and reviewer decisions remain
 the user's.
+
+## [2026-09-15] assessment | next work after T-98
+
+- Reviewed HEAD `0534ea2` and saved `docs/pincer-assessment-2026-09-15.md`.
+- Offline stand-ins reproduced incomplete completed effort records, an accepted
+  execution/record cohort mismatch and kit installation committing unrelated edits.
+  Inspected identical default/strict instructions and the missing running-session
+  checkpoint. No paid model or live trial was launched.
+- Next recommendation: close those five benchmark orchestration gaps before paid
+  runs, complete the planned strict pilots, then test guided coverage authoring as
+  the next product improvement. Keep release metadata changes before evaluation.
+- Local regression chain still running at handoff, with no failures through coverage
+  evidence checks. Exact-HEAD CI has green Ubuntu Node 22/24 jobs and macOS jobs still
+  in progress. No full-matrix pass claimed. Product source and tickets unchanged.
+
+## [2026-09-15] documentation | junior-friendly Pincer flowcharts
+
+- Added `docs/pincer-workflow-guide.md` with the full journey, ticket loop, recovery,
+  and security/cost decisions. Raw Mermaid sources are in `docs/diagrams/`.
+- Distinguished user/agent judgment from runtime checks, strict from default coverage,
+  elapsed time from billing, and release auditing from publication.
+- Checked the charts against canonical playbooks; all diagram connections resolve.
+  No runtime, generated adapter, ticket state or frozen benchmark input changed.
+
+## [2026-09-15] end | PR #4 merged, and the 2026-09-15 assessment verified
+
+- Merged PR #4 (`0534ea2`), fast-forwarded local `main`, CI green 4/4 on the merge commit,
+  deleted five merged local branches (kept the unmerged `backup/pre-rewrite-2026-09-13`).
+- Independently re-verified all five findings of `docs/pincer-assessment-2026-09-15.md`
+  with offline stand-in CLIs and zero paid sessions: four confirmed as written, F-04 real
+  but masked by a larger defect the assessment missed (the preservation check is dead, not
+  merely contaminated). Added three gaps it did not raise: no operator entry point,
+  `ui-states` structurally unavailable, a cap-less dry run strands a cell.
+- Corrected stale claims the assessment flagged: `docs/prd-v7-review-packet.md` (S-29 now
+  delivered, scenario count 10 → 7, Codex and CI moved out of the outstanding table),
+  `docs/prd-v7-platforms.md`, `docs/prd-v7-comparison.md`, `docs/wiki/open-threads.md`.
+  Four doc-binding suites re-run green.
+- New page [[v7-execution-gaps]]; briefing and index updated.
+- Outcome: nothing live has run and nothing was spent. The five gaps are a day of offline
+  work and must close before run #1 — the same fix after run 30 strands those runs.
+
+## [2026-09-15] end | T-99 closes the five execution gaps before run #1
+
+- Fixed all five verified findings plus the three gaps verification added: arm preamble
+  and adoption observation, record completion through `effort.problems()`, preservation
+  reorder + record wiring + brief hooks, clean re-drive after a crash with per-session
+  checkpoints, and a cohort/model/caps preflight that refuses before touching anything.
+- Shipped the operator entry point the edition never had (`--runs`, `--kit`, `--browser`,
+  `--i-have-a-spending-cap`), and made every refusal non-terminal so a dry run can no
+  longer strand a cell.
+- Suite: the new cases drive the real loop with a stand-in CLI and assert on what landed
+  on disk, including both directions of the preservation check. 63 suites green.
+- Cohort re-minted `6de061ec…` → `47dedc0a…`; exactly `harness`, `collector` and `briefs`
+  moved. Free because no run exists — the last moment it would have been.
+- Outcome: T-99 done, receipt `a05a552f47b9`. No session ran and nothing was spent. What
+  remains before run #1 is decisions, not code: cap, projects, reviewers, and a browser
+  adapter ([[v7-execution-gaps]]).

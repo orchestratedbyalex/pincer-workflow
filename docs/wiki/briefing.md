@@ -14,8 +14,9 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 remote to `694241c`. The older handover claim that these were local-only is wrong and
 those threads are closed.
 
-**PRD v7 is merged** (PR #3, `ae796d6`, full CI matrix green) and implemented as far as
-money-free work goes.
+**PRD v7 is merged and on `main` at `0534ea2`** — PR #3 (`ae796d6`) carried the PRD and
+T-87..T-97, PR #4 (`0534ea2`) carried T-98. The CI matrix ran green on the merge commit
+(run 34930700263, 4/4). Implemented as far as money-free work goes.
 
 - **Shipped:** `coverage scaffold --change <id> [--json]` and
   `resume --brief [--change <id>] [--json]` — both read-only projections
@@ -26,9 +27,15 @@ money-free work goes.
 - **T-98** fixed the benchmark edition before its first run: the frozen driver placed and
   capped nothing and there was no run loop at all ([[fix-the-driver-before-run-one]]).
   Cohort re-minted openly, `eef74402…` → `6de061ec…`, at zero cost because no run existed.
+- **T-99 closed five more, found by the 2026-09-15 assessment and verified independently**
+  ([[v7-execution-gaps]]): the strict arm was byte-identical to the default arm, no record
+  passed `effort.problems()`, the preservation check was dead, a crash repeated a cell’s
+  paid sessions and poisoned its base, and execution inputs were never reconciled with the
+  freeze. Cohort `6de061ec…` → `47dedc0a…`, still free because no run exists. The
+  orchestrator now has an operator entry point. None of it ships to users.
 - **Outstanding, and the user's call:** every live observation. Three baseline pilots
   (T-89), two platform journeys and the handoff (T-93), 72 benchmark runs and timed
-  reviews (T-95). 10 of 30 scenarios are `outstanding`, three more partly so;
+  reviews (T-95). 7 of 30 scenarios are `outstanding`, three more partly so;
   `docs/prd-v7-review-packet.md` §6 lists what each needs.
 
 ## Active / next task
@@ -43,7 +50,10 @@ money-free work goes.
 3. **Evaluate.** No v7 candidate is selected and no v7 evidence exists; `NOTES.md` still
    names the v6 evaluation. Authored docs and metadata are finished, so the candidate can
    be chosen cleanly.
-4. Other parked items are in [[open-threads]].
+4. **A browser adapter.** The orchestrator takes `--browser <module>` and warns without
+   one, but nobody has written or chosen an adapter, so nine of the 72 runs would be
+   `unavailable` ([[v7-execution-gaps]]).
+5. Other parked items are in [[open-threads]].
 
 ## Recent decisions
 
@@ -66,6 +76,14 @@ money-free work goes.
 - **A backgrounded watchdog inherits the caller's stdout**, so its `sleep` holds a
   synchronous caller's pipe open long after the child exits. Redirect it to `/dev/null`.
   This was invisible in review and only a real end-to-end test caught it.
+- **A benchmark case that only asserts orchestration proves nothing about the record.**
+  T-99's cases drive the real loop with a stand-in and then assert on what landed on disk;
+  keep it that way, and keep asserting BOTH directions of a check ([[v7-execution-gaps]]).
+- Check objects use `id`, not `name` (`evaluator-kit.cjs:26`) — a `find` on `c.name`
+  silently matches nothing and the assertion passes on `undefined`.
+- `SPEC.harness` in `freeze-spec.cjs` is a **file list**, not a directory digest — so a new
+  sibling module under `scripts/delivery-benchmark-v7/` does not change the cohort. That is
+  the only way to correct anything mid-study without stranding the runs already paid for.
 - `docs/prd-v7-artifacts/v6-preservation.json` digests 674 v6 files individually;
   `test/improvement-contracts.test.js` fails naming the file that moved. `docs/prd-v6-review-packet.md`'s
   stale "(51 suites)" must **stay** stale — correcting it fails that suite.

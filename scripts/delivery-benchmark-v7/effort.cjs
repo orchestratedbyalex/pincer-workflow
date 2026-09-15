@@ -84,6 +84,10 @@ function empty({ run, cohort, brief, arm, repetition, order = null, environment 
     // Did this run actually do what its arm claims? For `strict` this is read from the
     // workspace's own change record, not from the agent's narration.
     adoption: { required: arm === 'strict', observed: null, evidence: null },
+    // What the workspace was prepared with. The preservation check reads its unrelated
+    // edits from here: an empty map means nothing was injected, which is why it must be
+    // written by whoever prepared the run rather than defaulted at read time.
+    workspace: { unrelated_edits: {} },
     events: [],
     // Metrics that cannot be derived from events: provider-reported figures.
     reported: { tokens: null, cost_usd: null, provider_minutes: null },
@@ -111,7 +115,7 @@ function problems(r, { frozen = null } = {}) {
   const bad = (code, detail) => out.push({ code, detail });
   if (!r || typeof r !== 'object' || Array.isArray(r)) return [{ code: 'RECORD_INVALID', detail: 'record must be an object' }];
   if (r.schema !== SCHEMA) bad('SCHEMA_UNKNOWN', `schema must be ${SCHEMA}`);
-  const known = ['schema', 'run', 'cohort', 'brief', 'arm', 'repetition', 'order', 'status', 'reason', 'provenance', 'environment', 'adoption', 'events', 'reported', 'unavailable', 'evaluation'];
+  const known = ['schema', 'run', 'cohort', 'brief', 'arm', 'repetition', 'order', 'status', 'reason', 'provenance', 'environment', 'adoption', 'workspace', 'events', 'reported', 'unavailable', 'evaluation'];
   for (const k of Object.keys(r)) if (!known.includes(k)) bad('RECORD_INVALID', `unknown key "${k}"`);
   if (!ARMS.includes(r.arm)) bad('RECORD_INVALID', `arm must be one of ${ARMS.join(', ')}`);
   if (!STATUSES.includes(r.status)) bad('RECORD_INVALID', `status must be one of ${STATUSES.join(', ')}`);
@@ -155,6 +159,15 @@ function problems(r, { frozen = null } = {}) {
     if (a.required && r.status === 'valid' && a.observed !== true) bad('ADOPTION_UNVERIFIED', 'a strict run must record observed adoption; a run that did not adopt is a protocol failure, not a strict result');
     if (a.observed === true && !isStr(a.evidence, LIMITS.detail)) bad('ADOPTION_UNVERIFIED', 'observed adoption needs its evidence reference');
     if (!a.required && a.observed === true) bad('RECORD_INVALID', `the ${r.arm} arm must not adopt strict coverage`);
+  }
+
+  // The workspace the run was prepared with. `unrelated_edits` is what the preservation
+  // check compares against, so an absent block is not an empty one: it means nobody
+  // recorded what was injected, and a preservation pass over it would prove nothing.
+  const w = r.workspace;
+  if (!w || typeof w !== 'object' || Array.isArray(w)) bad('RECORD_INVALID', 'workspace must be an object');
+  else if (!w.unrelated_edits || typeof w.unrelated_edits !== 'object' || Array.isArray(w.unrelated_edits)) {
+    bad('RECORD_INVALID', 'workspace.unrelated_edits must be an object, empty when nothing was injected');
   }
 
   // Events.

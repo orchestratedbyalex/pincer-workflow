@@ -101,8 +101,9 @@ From the [protocol](prd-v7-protocol.md), section 9, all still outstanding:
 - a concrete spending cap and wall-clock cap — **the 72-run schedule is substantive
   spending and must be costed before it runs**;
 - at least two non-implementing reviewers identified and available;
-- the Codex CLI version pinned and available, and browser tooling for the UI brief
-  (absent tooling makes a run `unavailable`, never an acceptance);
+- browser tooling for the UI brief (absent tooling makes a run `unavailable`, never an
+  acceptance); the Codex CLI is no longer among these — T-98 pinned it at
+  `codex-cli 0.153.4` on the supported host;
 - the v7 candidate identified, so both kits in each pair are pinned by digest.
 
 Until then every criterion of R-09 is unchecked and T-95 stays open. A valid negative

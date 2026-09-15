@@ -99,8 +99,7 @@ and are deleted rather than carried.
   ([[cli-installer]])
 - [2026-09-04] Copilot: `/pincer-*` prompt-file chain in VS Code untested end to end
   ([[distribution-channels]])
-- [2026-09-14] PRD v7's live work is unstarted: three baseline pilots, two platform journeys plus a handoff, 72 benchmark runs and timed reviews by two non-implementing people. Needs project selection and access, a costed spending cap and wall-clock cap, reviewers, and the Codex CLI pinned. ([[v7-measured-friction]])
-- [2026-09-14] The Ubuntu/macOS x Node 22/24 CI matrix has not run on the v7 work; nothing is pushed. ([[distribution-channels]])
+- [2026-09-14] PRD v7's live work is unstarted: three baseline pilots, two platform journeys plus a handoff, 72 benchmark runs and timed reviews by two non-implementing people. Needs project selection and access, a costed spending cap and wall-clock cap, reviewers, and reviewers. The Codex CLI is no longer among them — T-98 pinned it at 0.153.4. ([[v7-measured-friction]])
 - [2026-09-14] No v7 candidate is selected and no v7 evidence exists; NOTES.md still names the v6 evaluation. Authored docs and metadata are finished, so the candidate can be chosen cleanly. ([[candidate-evidence]])
 - [2026-09-14] Three v7 benchmark faults are not separable from adjacent checks; the suite asserts the intended evaluator is among the failures, not alone. The UI browser adapter is a deterministic fake proving the seam, not a browser. ([[v7-measured-friction]])
 - [2026-09-14] Remote publication state of 0.6.0 is unverified: the reconciliation speaks only about this checkout, never the server.
@@ -118,3 +117,15 @@ and are deleted rather than carried.
 - [2026-09-14] **The GitHub MCP server is failing to connect** (400, badly formatted
   Authorization header). `gh` works, so nothing is blocked, but remote-state checks go
   through the CLI until it is fixed
+
+## The 2026-09-15 assessment — closed by T-99 (2026-09-15)
+
+All five verified findings and the three gaps verification added were closed before run #1,
+while re-minting was still free ([[v7-execution-gaps]]). Cohort `6de061ec…` → `47dedc0a…`.
+
+- [2026-09-15] Still open, and unchanged by T-99: **no browser adapter is configured**. The
+  orchestrator can now be given one (`--browser <module>`) and says so when it is not, but
+  choosing or writing the adapter is a decision, and without it the `ui-states` brief's nine
+  runs are `unavailable` — never accepted ([[v7-execution-gaps]])
+- [2026-09-15] The two non-implementing reviewers, the spending cap, the wall-clock cap and
+  the three pilot projects remain the user's call. Nothing in T-99 moves them.

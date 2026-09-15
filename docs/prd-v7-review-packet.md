@@ -31,6 +31,7 @@ unfinished. Nothing in this packet should be read as evidence that they happened
 | T-96 | This packet, the replay cases and the integration gates | `docs/prd-v7-review-packet.md`, `docs/prd-v7-artifacts/replay.sh`, `test/improvement-review-packet.test.js` |
 | T-97 | Fix found while measuring: `REVISION_CHANGED` advised a command changes mode refuses | `template/scripts/pincer-runtime/readiness.cjs`, regression in `test/change-lifecycle.test.js` |
 | T-98 | Fix found before the first live run: the frozen driver placed and capped nothing, and the edition had no run loop | `scripts/delivery-benchmark-v7/live-driver.sh`, `scripts/delivery-benchmark-v7/orchestrator.cjs`, `test/benchmark-orchestrator.test.js` |
+| T-99 | Five more found before the first live run: the strict arm was not an arm, no record passed its own validator, the preservation check was dead, a crash repeated a cell's paid sessions, and execution inputs were never reconciled with the freeze | `scripts/delivery-benchmark-v7/orchestrator.cjs`, `scripts/delivery-benchmark-v7/harness.cjs`, `scripts/delivery-benchmark-v7/effort.cjs`, `test/benchmark-orchestrator.test.js`, `docs/pincer-assessment-2026-09-15.md` |
 
 ## 2. The two shipped product changes
 
@@ -98,10 +99,10 @@ says who and on what. `outstanding` means it has not been established.
 | R-09 | S-26 | **outstanding** | no reviewers identified; no review has been timed |
 | R-09 | S-27 | **outstanding** | both predeclared targets are `outstanding`; the report shape is frozen and publishes unfavourable results, but there are no results |
 | R-10 | S-28 | delivered (mechanical) | `test/improvement-review-packet.test.js` binds every citation in this table to the repository; missing artifacts, forged references and vacuous citations fail |
-| R-10 | S-29 | delivered (mechanical) / **outstanding** (CI) | `package.json` test chain, `test/distribution.test.js`, `test/installer.test.js` — the full offline suite, both generators and packed installs pass locally. **The Ubuntu/macOS × Node 22/24 CI matrix has not run on this work** |
+| R-10 | S-29 | delivered (mechanical) | `package.json` test chain, `test/distribution.test.js`, `test/installer.test.js` — the full offline suite, both generators and packed installs pass locally, and the Ubuntu/macOS × Node 22/24 matrix ran green on `0534ea2` (run 34930700263) |
 | R-10 | S-30 | delivered (judgment) | authored documentation and metadata precede candidate selection; no candidate has been selected, so no evaluation exists to be stale. **Judgment:** mine as implementer |
 
-Ten of thirty scenarios are outstanding, and three more are partly outstanding. That is
+Seven of thirty scenarios are outstanding, and three more are partly outstanding. That is
 the honest shape of this increment: the engineering is done, the experiment is not.
 
 ## 4. Replay cases
@@ -163,9 +164,16 @@ spending decisions it said to obtain afterwards.
 | Three pilot projects (1 greenfield, 2 brownfield, one with pre-existing user edits) | R-03 (S-07, S-08) | project selection and access decisions |
 | A concrete spending cap and wall-clock cap | R-03, R-07, R-09 | **the 72-run schedule is substantive spending and must be costed before it runs** |
 | Two non-implementing reviewers | R-09 (S-26) | people who did not implement this candidate, available for timed reviews |
-| Codex CLI availability and pinned version | R-07 (S-19, S-20) | the tool installed and its version recorded |
 | Browser tooling for UI evaluation | R-08, R-09 | absent tooling makes a run `unavailable`, never an acceptance |
-| The CI matrix on this work | R-10 (S-29) | a push; the matrix is Ubuntu/macOS × Node 22/24 |
+
+Two entries of this table have been settled since the packet was first assembled, and
+are recorded here rather than deleted:
+
+- **Codex CLI** availability and version — pinned at `codex-cli 0.153.4`, authenticated
+  and verified on the supported host (T-98). Section 9 of the
+  [protocol](prd-v7-protocol.md) carries the version.
+- **The CI matrix on this work** — Ubuntu/macOS × Node 22/24 ran green on `0534ea2`
+  (run 34930700263), so S-29 is delivered rather than partly outstanding.
 
 A smaller study is not something the implementing agent may decide by running fewer
 cells: it requires an explicit recorded scope revision.

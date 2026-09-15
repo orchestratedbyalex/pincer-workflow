@@ -1,12 +1,12 @@
 {
   "schema": 1,
-  "cohort": "6de061ec069bf01979482672967263f0b338a5bee01e2e18dac7a1554ac0842d",
+  "cohort": "47dedc0a6102fc66e7c69348d3d4487dc4a68258f7bc72428314696addd8e1ce",
   "inputs": {
     "protocol": "4ed601c56d1366576984c901267741dfa887ab8038da58c61b32059b93d3d0a2",
-    "harness": "4da572d2aaf45bea6ca07d9334bb0261303dc30661520986f842604d526978c4",
-    "collector": "a392063c49841c806dfd1ce07336156ce3c9abda2dfcd0d57ce53eaac1f79403",
+    "harness": "1203a54c91218ae85ac3bb6eb67d1fce109e31f445a57f906b96b268c985d288",
+    "collector": "d10227985450823b3472acf57422115402b2d1818c59a52452cb5d4675b86d94",
     "driver": "402ce548c298b26cd99f620c281ec0548fb58a0c1d802402b8cc508e7d82ea8a",
-    "briefs": "67d22b6b06205ed854a1df6bffaaf90d5fea510b5574cd4d30389e3bc33d4f65",
+    "briefs": "c0d05e241ce39597762f23d658573ecec4c42cb8403f23c050eaf21360e950ec",
     "evaluators": "b12c4a0c2a3434d1d5803349de17d5b1b49140de7a43183f1ce3b59c991f58cb",
     "caps": "7c48ae64c96d13f6037a810cf3346db1f5f58a5b084573a090d5a541fcbe6294",
     "configuration": "15b7af6291b230dcc4d1ca75995e7381d543e7947930e22d43a871dca7663480"
@@ -23,10 +23,10 @@
   ],
   "briefs": {
     "brownfield-maintenance": {
-      "digest": "4eb73a848a1e722d6d95b7c04a32150efb12ba169dd0d3fbb6b5db3a717741a4",
+      "digest": "169fb8d63bf2a40a511e59fd0b03ef1cdfac3771ac6aa798cab370869d2ca80c",
       "evaluator": "f0020254fb20c5f64a718292e1321774a570bcb7f7d54d288e1acbf868fcbe70",
       "files": {
-        "test/fixtures/delivery-benchmark-v7/briefs/brownfield-maintenance/base.cjs": "5591e413211fe16c5f4c6c815b224b3fe6107a0c1c9f918252dfadd8a2fd3939",
+        "test/fixtures/delivery-benchmark-v7/briefs/brownfield-maintenance/base.cjs": "be3a338db7716a6acc3cde6d9fe348d37db5dfe5e57b476c9a659be6032aeb0b",
         "test/fixtures/delivery-benchmark-v7/briefs/brownfield-maintenance/brief.md": "6580d5857fa8134e478c5c187806370af9b5c9f8eff9a09a9c211cee935c59d4",
         "test/fixtures/delivery-benchmark-v7/briefs/brownfield-maintenance/controls.cjs": "b9e95a0eb0fafbebbdf42effb582c5efff4b62a2761aec6678ef69128a6b477e",
         "test/fixtures/delivery-benchmark-v7/briefs/brownfield-maintenance/evaluator/describe.test.cjs": "400bf81ee4020524854f3c48496e3c316ea00938e7d2b847449c983d4ac1559f",
@@ -36,10 +36,10 @@
       }
     },
     "bugfix-brownfield": {
-      "digest": "862b6c16f90737cbee2851eee01cc9dcf604459c320b7ea3145d8e663317cb89",
+      "digest": "7e467a0c4ddbd36193852c02e77766400468981c61621524b858962a6c821680",
       "evaluator": "37e19ebdc0b3952186b418f33c450f9f130a815870b07f0ac4f04f684a7e5ab4",
       "files": {
-        "test/fixtures/delivery-benchmark-v7/briefs/bugfix-brownfield/base.cjs": "ac9fea74af9bbc0767f71592286b12b6b8cb434dfd1ab64e2b6e414d2ccf9291",
+        "test/fixtures/delivery-benchmark-v7/briefs/bugfix-brownfield/base.cjs": "3e0b16bc5e215ec0e6d685d6ab8ead4899313cea14faabbdf8bb5f45bb25ad87",
         "test/fixtures/delivery-benchmark-v7/briefs/bugfix-brownfield/brief.md": "11aebbe8d13dc90577db17855851dac88bd457b8670ca5f4fa3ed42d0bc9bdce",
         "test/fixtures/delivery-benchmark-v7/briefs/bugfix-brownfield/controls.cjs": "ac99d3c01510c39015c81b6134a7ddf2aba7a27b4a6c448a87df6f03652036f2",
         "test/fixtures/delivery-benchmark-v7/briefs/bugfix-brownfield/evaluator/boundary.test.cjs": "428e9805612aca5386ab8d10192477588943119929f4e29e736a39da00a3095b",

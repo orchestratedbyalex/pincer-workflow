@@ -78,6 +78,15 @@ function prepare(ws, id, { arm = 'plain', dir = briefs.BRIEFS_DIR, unrelatedEdit
   // BRIEF.md is the task the agent reads. Everything held out stays out of the tree.
   write(ws, 'BRIEF.md', `# ${id}\n\n${brief.task}\n`);
   commitAll(ws, `Add BRIEF.md for ${id}`);
+  return { brief, workspace: ws, arm, unrelated_edits: applyUnrelated(ws, unrelatedEdits) };
+}
+
+// Inject the controlled uncommitted work a preservation brief is about, and return the
+// map the evaluator compares against. Separate from `prepare` because ORDER MATTERS: the
+// orchestrator installs the kit first and injects afterwards, since the install ends in
+// `git add -A` and would otherwise commit the very edits the run is asked to leave alone.
+// A caller that injects before its own commits is staging the check's answer.
+function applyUnrelated(ws, unrelatedEdits = null) {
   const edits = {};
   if (unrelatedEdits) {
     for (const [rel, e] of Object.entries(unrelatedEdits)) {
@@ -90,7 +99,7 @@ function prepare(ws, id, { arm = 'plain', dir = briefs.BRIEFS_DIR, unrelatedEdit
       }
     }
   }
-  return { brief, workspace: ws, arm, unrelated_edits: edits };
+  return edits;
 }
 
 // Export a commit into a directory: the candidate is the commit, never the dirty tree.
@@ -124,4 +133,4 @@ function statusFor(outcome) {
   return 'invalid';
 }
 
-module.exports = { GIT_ID, DEFAULT_TOOLS, LIB, sh, git, write, gitInit, commitAll, commitPaths, prepare, exportCandidate, evaluateCandidate, statusFor };
+module.exports = { GIT_ID, DEFAULT_TOOLS, LIB, sh, git, write, gitInit, commitAll, commitPaths, prepare, applyUnrelated, exportCandidate, evaluateCandidate, statusFor };

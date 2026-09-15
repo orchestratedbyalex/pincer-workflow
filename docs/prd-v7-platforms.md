@@ -33,7 +33,7 @@ refuses it as `observed` (`SUPPORT_SUBSTITUTED`), and
 | --- | --- | --- | --- |
 | Claude Code | Full strict journey: install, adopt, authorize, implement, revise under authorization, pause, fresh-session recovery, schema 3 evaluation | `unobserved` | T-93 has not run: no spending or wall-clock cap has been supplied |
 | Claude Code | Package installs and its documented commands run | `installed` | `test/installer.test.js`, `test/strict-onboarding.test.js` — a scripted packed-install walkthrough, not an agent session |
-| Codex | Full strict journey | `unobserved` | T-93 has not run; the Codex CLI version to be used is not pinned and its availability is unverified |
+| Codex | Full strict journey | `unobserved` | T-93 has not run; the CLI itself is pinned at `codex-cli 0.153.4`, authenticated and verified on the supported host (T-98), which is installation and not a journey |
 | Codex | Adapters generated from the template without drift | `installed` | `test/distribution.test.js`, `test/change-distribution.test.js`, `test/coverage-distribution.test.js` |
 | Claude Code → Codex | Cross-agent handoff: work started on one surface resumed on the other from files, with no conversational recap | `unobserved` | T-93 has not run |
 | Copilot | Full strict journey | `unobserved` | no Copilot account is available for this study; prompts are generated and parity-checked, nothing more |
