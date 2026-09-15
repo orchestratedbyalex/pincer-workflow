@@ -18,6 +18,7 @@
 ## Systems
 - [[strict-coverage]] — PRD v6: the PRD as inventory, the authored map, agreement binding, declared checks, evidence schema 3, the coverage and impact reports
 - [[v7-measured-friction]] — the v7 measurement tooling, what the baseline measured, and what an operator-driven measurement cannot show
+- [[v7-execution-gaps]] — the five verified gaps between the v7 execution path and a reportable study, and why they must close before run #1
 - [[delivery-benchmark]] — six frozen briefs, held-out evaluators, the run harness and what the 36 paired runs showed
 - [[runtime]] — template/scripts/pincer-runtime.cjs + pincer-runtime/: modules, commands, exit codes, gotchas
 

@@ -99,8 +99,7 @@ and are deleted rather than carried.
   ([[cli-installer]])
 - [2026-09-04] Copilot: `/pincer-*` prompt-file chain in VS Code untested end to end
   ([[distribution-channels]])
-- [2026-09-14] PRD v7's live work is unstarted: three baseline pilots, two platform journeys plus a handoff, 72 benchmark runs and timed reviews by two non-implementing people. Needs project selection and access, a costed spending cap and wall-clock cap, reviewers, and the Codex CLI pinned. ([[v7-measured-friction]])
-- [2026-09-14] The Ubuntu/macOS x Node 22/24 CI matrix has not run on the v7 work; nothing is pushed. ([[distribution-channels]])
+- [2026-09-14] PRD v7's live work is unstarted: three baseline pilots, two platform journeys plus a handoff, 72 benchmark runs and timed reviews by two non-implementing people. Needs project selection and access, a costed spending cap and wall-clock cap, reviewers, and reviewers. The Codex CLI is no longer among them — T-98 pinned it at 0.153.4. ([[v7-measured-friction]])
 - [2026-09-14] No v7 candidate is selected and no v7 evidence exists; NOTES.md still names the v6 evaluation. Authored docs and metadata are finished, so the candidate can be chosen cleanly. ([[candidate-evidence]])
 - [2026-09-14] Three v7 benchmark faults are not separable from adjacent checks; the suite asserts the intended evaluator is among the failures, not alone. The UI browser adapter is a deterministic fake proving the seam, not a browser. ([[v7-measured-friction]])
 - [2026-09-14] Remote publication state of 0.6.0 is unverified: the reconciliation speaks only about this checkout, never the server.
@@ -118,3 +117,35 @@ and are deleted rather than carried.
 - [2026-09-14] **The GitHub MCP server is failing to connect** (400, badly formatted
   Authorization header). `gh` works, so nothing is blocked, but remote-state checks go
   through the CLI until it is fixed
+
+## The 2026-09-15 assessment, verified 2026-09-15
+
+Five findings against the v7 benchmark orchestrator, each reproduced offline with
+stand-in CLIs and zero paid sessions. None touches shipped code ([[v7-execution-gaps]]).
+
+- [2026-09-15] **Every record the orchestrator writes fails its own validator.**
+  `driveRun` never fills `reported`, never observes adoption and never calls
+  `effort.problems()`; `claimRerun` sets a `reason` on a `pending` record, which
+  `effort.cjs:124` rejects outright.
+- [2026-09-15] **The strict arm is not an arm.** `pincer` and `strict` get byte-identical
+  workspaces and byte-identical argv, so a third of the schedule buys a duplicate of
+  another arm, and no strict run can ever be reported.
+- [2026-09-15] **The preservation check is dead in the orchestrator path.** No brief
+  supplies unrelated edits, `prepare`’s return value is discarded and `effort.empty()`
+  has no `workspace` key, so all 72 runs would print `0 unrelated edit(s) intact` — a
+  fabricated pass. Wiring it on without reordering the kit install would instead fail 12
+  of 72 cells against the kit arms.
+- [2026-09-15] **A crash inside a cell repeats its paid sessions and contaminates the
+  base.** Verified by kill test: six stand-in sessions billed for a three-session cell,
+  and the dead attempt’s commits swept into the restarted run’s `provenance.base`.
+- [2026-09-15] Execution inputs are never reconciled with the freeze: `driveRun` takes
+  cohort, model and caps from its caller and compares them with nothing.
+- [2026-09-15] The orchestrator has **no operator entry point** — no `require.main`, no
+  npm script, no documented invocation — so an operator must hand-write exactly the
+  unfrozen caller the freeze exists to eliminate.
+- [2026-09-15] A cap-less dry run writes `outstanding`, which `driveRun` then skips
+  forever and `claimRerun` refuses to replace. The cell is stranded and the study can
+  never read `complete`.
+- [2026-09-15] `ui-states` is structurally `unavailable`: `browser` defaults to `null`
+  through `driveSchedule`, which has no parameter to supply an adapter, so 9 of 72 runs
+  can never be accepted whatever the agent writes.
