@@ -49,6 +49,48 @@ function tree(root, rel) {
   visit(rel);
   return { digest: hash(canonical(files)), files };
 }
+// Browser distributions use internal framework/version links. Bind link text as well
+// as every ordinary target file, without traversing links or weakening generic tree().
+function browserRuntimeTree(root, rel) {
+  const runtimeRoot = contained(root, rel);
+  const files = {}, links = {}, directories = new Map();
+  const edge = (from, to) => { if (!directories.has(from)) directories.set(from, []); directories.get(from).push(to); };
+  const inside = target => {
+    const relative = path.relative(runtimeRoot, target);
+    return !path.isAbsolute(relative) && relative !== '..' && !relative.startsWith(`..${path.sep}`);
+  };
+  function visit(full, name) {
+    if (/(?:^|\/)(?:\.env(?:\.[^/]*)?|\.credentials\.json|auth\.json|credentials(?:\.json)?|\.npmrc|\.netrc|id_rsa|id_ed25519|\.ssh|\.aws)(?:\/|$)/i.test(name)) throw new Error('browser runtime contains a protected configuration path');
+    const stat = fs.lstatSync(full);
+    if (stat.isSymbolicLink()) {
+      const target = fs.readlinkSync(full);
+      if (path.isAbsolute(target) || !inside(path.resolve(path.dirname(full), target))) throw new Error('browser runtime link escapes its bundle');
+      let resolved;
+      try { resolved = fs.realpathSync(full); }
+      catch { throw new Error('browser runtime link is broken or cyclic'); }
+      if (!inside(resolved)) throw new Error('browser runtime link resolves outside its bundle');
+      const targetStat = fs.statSync(resolved);
+      if (!targetStat.isFile() && !targetStat.isDirectory()) throw new Error('browser runtime link target is not a regular file or directory');
+      if (targetStat.isDirectory()) edge(path.dirname(full), resolved);
+      links[name] = { target, resolved: path.relative(runtimeRoot, resolved).split(path.sep).join('/') };
+    } else if (stat.isDirectory()) {
+      if (full !== runtimeRoot) edge(path.dirname(full), full);
+      for (const child of fs.readdirSync(full).sort()) visit(path.join(full, child), `${name}/${child}`);
+    } else if (stat.isFile()) files[name] = hash(fs.readFileSync(full));
+    else throw new Error('browser runtime supports only ordinary files, directories and internal links');
+  }
+  visit(runtimeRoot, rel);
+  const active = new Set(), complete = new Set();
+  function acyclic(directory) {
+    if (active.has(directory)) throw new Error('browser runtime link creates a directory cycle');
+    if (complete.has(directory)) return;
+    active.add(directory);
+    for (const next of directories.get(directory) || []) acyclic(next);
+    active.delete(directory); complete.add(directory);
+  }
+  acyclic(runtimeRoot);
+  return { digest: hash(canonical({ files, links })), files, links };
+}
 function browserIdentity(root, browser) {
   if (browser === null || browser === undefined) return null;
   object(browser, ['entry', 'roots', 'runtime'], 'browser');
@@ -73,8 +115,14 @@ function browserIdentity(root, browser) {
       if (!candidates.some(p => Object.hasOwn(files, p))) throw new Error('browser: dependency is outside the declared closure');
     }
   }
-  object(browser.runtime, ['name', 'version', 'path'], 'browser runtime');
-  const runtime = { name: text(browser.runtime.name, 'browser runtime name'), version: text(browser.runtime.version, 'browser runtime version'), ...tree(root, browser.runtime.path) };
+  object(browser.runtime, ['name', 'version', 'path', 'executable'], 'browser runtime');
+  const runtime = { name: text(browser.runtime.name, 'browser runtime name'), version: text(browser.runtime.version, 'browser runtime version'), ...browserRuntimeTree(root, browser.runtime.path) };
+  if (browser.runtime.executable !== undefined) {
+    const executable = contained(root, browser.runtime.executable);
+    const relative = path.relative(contained(root, browser.runtime.path), executable);
+    if (path.isAbsolute(relative) || relative === '..' || relative.startsWith(`..${path.sep}`) || !fs.statSync(executable).isFile()) throw new Error('browser executable must belong to the runtime artifact');
+    runtime.executable = browser.runtime.executable;
+  }
   return { entry: browser.entry, files, digest: hash(canonical(files)), runtime };
 }
 function versionProbeFixture(version) {
@@ -168,4 +216,4 @@ function parseArgs(argv) {
   }
   return out;
 }
-module.exports = { versionProbeFixture, canonical, contained, tree, browserIdentity, resolve, assertCurrent, recordInputs, parseArgs };
+module.exports = { versionProbeFixture, canonical, contained, tree, browserRuntimeTree, browserIdentity, resolve, assertCurrent, recordInputs, parseArgs };

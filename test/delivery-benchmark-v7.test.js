@@ -33,12 +33,15 @@ const IDS = ['brownfield-maintenance', 'bugfix-brownfield', 'cli-greenfield', 'h
 const fakeBrowser = {
   name: 'fake-headless', version: '1.0.0',
   observe({ page, expectations }) {
-    if (!expectations.clickMustNotFire) return { ok: false, detail: 'unknown expectation' };
+    const observations = { fixture: true, note: 'markup simulation; not browser evidence' };
+    if (page.includes('<style>')) return { ok: false, detail: 'fixture simulates hidden state', observations };
+    if (expectations.state !== 'submitting') return { ok: true, detail: 'fixture simulates visible state', observations };
     const m = /<button[^>]*>/.exec(page);
-    if (!m) return { ok: false, detail: 'no button in the rendered page' };
+    if (!m) return { ok: false, detail: 'no button in the rendered page', observations };
     return /\sdisabled(\s|>|=)/.test(m[0])
-      ? { ok: true, detail: 'the browser refused to activate the button' }
-      : { ok: false, detail: `the browser activated the button: ${m[0]} carries no disabled attribute` };
+      ? { ok: true, detail: 'the browser refused to activate the button', observations }
+      : { ok: false, detail: `the browser activated the button: ${m[0]} carries no disabled attribute`, observations };
+
   },
 };
 

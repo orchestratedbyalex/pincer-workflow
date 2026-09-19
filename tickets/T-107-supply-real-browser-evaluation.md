@@ -1,10 +1,14 @@
 ---
 ticket: T-107
-status: open
+status: done
 size: M
 prd: .prd/prd-v8.md
 depends_on: [T-101]
 timeout: 900
+started: 2026-09-19T06:49:06Z
+last_check: 2026-09-19T07:18:30Z passed d8228b8033f8
+verified: 2026-09-19T07:18:30Z d8228b8033f8
+finished: 2026-09-19T07:18:30Z
 ---
 
 ## Objective
@@ -26,9 +30,9 @@ Make UI acceptance depend on actual browser behavior through the existing evalua
 Choose, verify and pin an existing supported browser automation tool during this ticket; keep it in maintainer-only tooling and out of the dependency-free distributed runtime. Prepare any new dependency decision concretely before installation. The real-browser suite is offline with respect to models, uses local fixtures and fails explicitly when its required browser is missing. Keep seam-unit checks in normal tests and document/provision the real-browser integration gate separately.
 
 ## Acceptance Criteria
-- [ ] S-22: A pinned real browser/adapter observes the working UI control and rejects deliberately broken loading, empty, error or interaction behavior that markup-only checks miss; screenshots and observation artifacts identify the tested candidate.
-- [ ] S-23: Missing browser tooling, launch failure, timeout or absent observations yields unavailable/error with reasons and never acceptance; the preflight refuses a full UI study schedule when required browser capability is absent.
-- [ ] S-24: Browser/adapter version and implementation digests participate in execution provenance; candidate servers use disposable local workspaces and are stopped after success, failure and interruption without accessing production data.
+- [x] S-22: A pinned real browser/adapter observes the working UI control and rejects deliberately broken loading, empty, error or interaction behavior that markup-only checks miss; screenshots and observation artifacts identify the tested candidate.
+- [x] S-23: Missing browser tooling, launch failure, timeout or absent observations yields unavailable/error with reasons and never acceptance; the preflight refuses a full UI study schedule when required browser capability is absent.
+- [x] S-24: Browser/adapter version and implementation digests participate in execution provenance; candidate servers use disposable local workspaces and are stopped after success, failure and interruption without accessing production data.
 
 ## Verification
 Proves: The focused checks exercise the stated controls and failure paths. Static assertions are sufficient only for authored contracts/generated artifacts; behavioral claims require observed outputs, side effects or refusal behavior.

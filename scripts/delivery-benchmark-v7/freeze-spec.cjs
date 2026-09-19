@@ -39,7 +39,7 @@ const SPEC = {
   protocol: 'docs/prd-v7-protocol.md',
   // The execution path, in load order. Adding a module that drives or judges a run
   // means adding it here, or the cohort stops describing what actually ran.
-  harness: ['scripts/delivery-benchmark-v7/briefs.cjs', 'scripts/delivery-benchmark-v7/schedule.cjs', 'scripts/delivery-benchmark-v7/harness.cjs', 'scripts/delivery-benchmark-v7/evaluator-kit.cjs', 'scripts/delivery-benchmark-v7/orchestrator.cjs', 'scripts/delivery-benchmark-v7/effective.cjs', 'scripts/delivery-benchmark-v7/freeze.cjs', 'scripts/delivery-benchmark-v7/freeze-spec.cjs', 'scripts/delivery-benchmark-v7/run-claims.cjs', 'scripts/delivery-benchmark-v7/isolated-launch.cjs'],
+  harness: ['scripts/delivery-benchmark-v7/briefs.cjs', 'scripts/delivery-benchmark-v7/schedule.cjs', 'scripts/delivery-benchmark-v7/harness.cjs', 'scripts/delivery-benchmark-v7/evaluator-kit.cjs', 'scripts/delivery-benchmark-v7/orchestrator.cjs', 'scripts/delivery-benchmark-v7/effective.cjs', 'scripts/delivery-benchmark-v7/freeze.cjs', 'scripts/delivery-benchmark-v7/freeze-spec.cjs', 'scripts/delivery-benchmark-v7/run-claims.cjs', 'scripts/delivery-benchmark-v7/isolated-launch.cjs', 'scripts/delivery-benchmark-v7/browser-preflight.cjs', 'scripts/delivery-benchmark-v7/browser.cjs'],
   briefs: 'test/fixtures/delivery-benchmark-v7/briefs',
   collector: 'scripts/delivery-benchmark-v7/effort.cjs',
   driver: 'scripts/delivery-benchmark-v7/live-driver.sh',

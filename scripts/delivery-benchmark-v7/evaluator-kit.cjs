@@ -51,22 +51,30 @@ function ownTests(ctx, { timeout = 60000 } = {}) {
 }
 
 // --- The browser seam -------------------------------------------------------------------
-// `adapter` is { name, version, observe(page) -> { ok, detail } }. A real one drives a
-// browser; the suite injects a deterministic one so the seam itself is testable offline.
+// `adapter.observe({candidate,page,expectations,...})` may be async and must return
+// boolean ok plus nonempty observations. Real adapters also retain candidate-bound
+// artifacts. Injected doubles exercise this seam without claiming browser evidence.
 // No adapter means `unverified`, and the caller turns that into `unavailable`.
-function observed(ctx, id, title, page, expectations) {
+async function observed(ctx, id, title, page, expectations) {
   const adapter = ctx.browser;
   if (!adapter || typeof adapter.observe !== 'function') {
     return check(id, 'acceptance', title, { result: 'unverified', exit: null, detail: 'no browser adapter configured: this UI requirement was not observed, which is not the same as satisfied' }, { observed: false });
   }
   let outcome;
   try {
-    outcome = adapter.observe({ candidateDir: ctx.candidateDir, page, expectations });
+    outcome = await adapter.observe({ candidate: ctx.candidate, candidateDir: ctx.candidateDir, page, expectations, id,
+      artifactDir: path.join(path.dirname(ctx.candidateDir), 'browser-artifacts'), signal: ctx.signal });
+    if (!outcome || typeof outcome.ok !== 'boolean' || !outcome.observations || typeof outcome.observations !== 'object' || !Object.keys(outcome.observations).length) {
+      throw new Error('browser adapter returned no valid observations');
+    }
+    if (adapter.real && (outcome.candidate !== ctx.candidate || !Array.isArray(outcome.artifacts) || outcome.artifacts.length < 2 || outcome.artifacts.some(a => !a.path || !/^[0-9a-f]{64}$/.test(a.sha256) || !fs.existsSync(a.path) || sha256(fs.readFileSync(a.path)) !== a.sha256))) {
+      throw new Error('browser artifacts missing or not bound to the tested candidate');
+    }
   } catch (e) {
     return check(id, 'acceptance', title, { result: 'error', exit: null, detail: `browser adapter failed: ${e && e.message ? e.message : e}` }, { observed: false });
   }
   const result = outcome && outcome.ok ? 'passed' : 'failed';
-  return check(id, 'acceptance', title, { result, exit: outcome && outcome.ok ? 0 : 1, detail: `${adapter.name}@${adapter.version}: ${outcome && outcome.detail ? outcome.detail : '(no detail)'}` }, { observed: true, adapter: `${adapter.name}@${adapter.version}` });
+  return check(id, 'acceptance', title, { result, exit: outcome && outcome.ok ? 0 : 1, detail: `${adapter.name}@${adapter.version}: ${outcome && outcome.detail ? outcome.detail : '(no detail)'}` }, { observed: true, adapter: `${adapter.name}@${adapter.version}`, observations: outcome.observations, ...(outcome.artifacts ? { artifacts: outcome.artifacts } : {}) });
 }
 
 // --- Structural checks, run through this file so each has a real exit status ------------

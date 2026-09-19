@@ -75,3 +75,14 @@ and capture-I/O failure termination. The legacy bypass launch is disabled. Offli
 verification passes; no native session occurred. Acceptance remains open for real CLI
 authentication, kit discovery and managed policy. No API key is available in this session;
 the user was asked whether to provide one through the environment.
+
+### T-107
+
+Real Chrome 153.0.8010.48 accepted the working UI and rejected five broken controls,
+including transparent ancestors that pass markup checks. Observed timeouts with an active
+server and SIGTERM clean up browser, profile and server; forbidden resource requests
+remain blocked. Parent reviewed a retained screenshot and artifact bindings. Final runtime
+provenance includes the full app bundle (674 files, seven confined internal links);
+external/broken/cyclic links are refused. Preflight probes version, native input and
+screenshot capability before measured UI preparation. No model session was used.
+Latest runtime verification artifacts: `/var/folders/yc/tz09y39n7t7_h5wm36tdcgbh0000gn/T/pincer-browser-gate-zNm3ni`.

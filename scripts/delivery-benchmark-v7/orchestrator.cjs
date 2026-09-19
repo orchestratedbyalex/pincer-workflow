@@ -40,6 +40,7 @@ const freeze = require('./freeze.cjs');
 const effectiveInputs = require('./effective.cjs');
 const claims = require('./run-claims.cjs');
 const isolation = require('./isolated-launch.cjs');
+const { prepareBrowser } = require('./browser-preflight.cjs');
 
 const DRIVER = path.join(__dirname, 'live-driver.sh');
 
@@ -424,6 +425,7 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
   // `claimRerun` replaces only invalid runs, so one dry run would cost a cell of the
   // study permanently. A refusal that launched nothing leaves the cell as it found it.
   const refuse = detail => ({ record, stop: true, refused: true, detail });
+  let effectiveBrowser = browser;
   if (spendingCap !== true) return refuse(`${record.run}: no spending cap has been asserted; nothing was prepared and no session was launched`);
   if (cohort !== record.cohort) {
     return refuse(`${record.run}: the cohort given to the driver (${String(cohort).slice(0, 12)}) is not the cohort this cell was planned under (${String(record.cohort).slice(0, 12)})`);
@@ -445,6 +447,7 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
       const gate = isolation.preflightExecution({ effective: opts.effective, apiKey: opts.apiKey,
         readiness: opts.readiness, observationFile: opts.observationFile, onGroup: group => claims.registerGroup(claim, group) });
       if (!gate.ok) throw new Error(gate.detail);
+      if (cell.brief === 'ui-states') effectiveBrowser = await prepareBrowser(opts.effective, { signal: opts.signal });
     } catch (error) { return refuse(error.message); }
   }
   const plannedModel = record.environment.model;
@@ -574,7 +577,7 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
   const evalStart = iso();
   let evaluation;
   try {
-    evaluation = await harness.evaluateCandidate({ id: cell.brief, workspace: ws, candidate, dir, tools, browser, record, scratch });
+    evaluation = await harness.evaluateCandidate({ id: cell.brief, workspace: ws, candidate, dir, tools, browser: effectiveBrowser, record, scratch });
   } catch (e) {
     record.status = 'invalid';
     record.reason = `evaluation failed: ${String(e.message).slice(0, effort.LIMITS.reason)}`;
@@ -598,6 +601,11 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
 async function driveSchedule(runsRoot, opts) {
   const { ids = briefs.briefIds(), kit = null } = opts;
   const cells = schedule.schedule(ids);
+  // Check UI capability for the whole schedule before the first paid cell, even
+  // when the first brief itself does not need a browser.
+  if (typeof opts.fixtureSession !== 'function' && ids.includes('ui-states')) {
+    await prepareBrowser(opts.effective, { signal: opts.signal });
+  }
   // Checked before the first session rather than at the cell that needs it: discovering a
   // missing kit halfway through is discovering it after the paid runs behind it.
   if (!kit && cells.some(c => c.arm !== 'plain')) {
