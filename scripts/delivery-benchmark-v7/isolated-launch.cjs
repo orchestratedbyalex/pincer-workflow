@@ -151,7 +151,8 @@ function argumentsFor(options, settingsPath) {
     '--setting-sources', 'project', '--settings', settingsPath,
     '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}', '--no-chrome', '--no-session-persistence',
     '--max-turns', String(options.caps.turns_per_session), '--max-budget-usd', String(options.caps.spend_usd),
-    '--output-format', 'json', options.prompt];
+    // Task text is data on stdin, never an option-shaped positional argument.
+    '--input-format', 'text', '--output-format', 'json'];
 }
 function redactor(secret) {
   return text => String(text || '').split(secret).join('[REDACTED]').replace(/\b(?:sk-ant-|sk-|ghp_)[A-Za-z0-9_-]{16,}/g, '[REDACTED]');
@@ -265,9 +266,9 @@ async function runSession(options, nativePreflight = null) {
       fs.mkdirSync(options.logDir, { recursive: true, mode: 0o700 });
       if (fs.existsSync(logFiles.stdout) || fs.existsSync(logFiles.stderr)) fail('LOG_EXISTS', 'session captures are append-preserved; allocate a new session identity');
     }
-    const payload = native ? { kind: 'native', args, bundle: options.effective, arm: options.arm, readiness: options.readiness,
+    const payload = native ? { kind: 'native', args, prompt: options.prompt, bundle: options.effective, arm: options.arm, readiness: options.readiness,
       expectedAssets: options.expectedAssets, observationFile: options.observationFile || null } :
-      { kind: 'fixture', args, mode: options.mode || 'ok', model: options.model, heartbeat: options.heartbeat || null };
+      { kind: 'fixture', args, prompt: options.prompt, mode: options.mode || 'ok', model: options.model, heartbeat: options.heartbeat || null };
     const result = await supervise({ cwd: fs.realpathSync(options.workspace), env, payload,
       timeoutMs: native ? options.caps.wall_clock_minutes * 60000 : options.timeoutMs || options.caps.wall_clock_minutes * 60000,
       onGroup: options.onGroup, signal: options.signal, logFiles, captureIO: native ? fs : options.fixtureCaptureIO || fs });
@@ -307,6 +308,7 @@ if (require.main === module && process.argv[2] === '--session-supervisor') {
   process.stdin.on('end', () => {
     try {
       const payload = JSON.parse(input);
+      if (typeof payload.prompt !== 'string' || !payload.prompt.length) fail('PROMPT_INVALID', 'a nonempty task prompt is required on stdin');
       let executable, args;
       if (payload.kind === 'native') {
         const gate = preflightNative({ effective: payload.bundle, apiKey: process.env.ANTHROPIC_API_KEY, arm: payload.arm, workspace: process.cwd(),
@@ -317,18 +319,29 @@ if (require.main === module && process.argv[2] === '--session-supervisor') {
         if (effective.canonical(process.env) !== effective.canonical(expectedEnv)) fail('ENVIRONMENT_CHANGED', 'supervisor environment differs from the isolated profile');
         const settingsPath = path.join(sessionRoot, 'settings.json');
         if (effective.canonical(JSON.parse(fs.readFileSync(settingsPath, 'utf8'))) !== effective.canonical({ permissions: { defaultMode: 'manual' } })) fail('SETTINGS_CHANGED', 'isolated permission override changed');
-        const expectedArgs = argumentsFor({ model: gate.manifest.effective.model, caps: gate.manifest.caps, prompt: payload.args.at(-1) }, settingsPath);
+        const expectedArgs = argumentsFor({ model: gate.manifest.effective.model, caps: gate.manifest.caps }, settingsPath);
         if (effective.canonical(payload.args) !== effective.canonical(expectedArgs)) fail('ARGUMENTS_CHANGED', 'native arguments differ from the frozen profile');
         executable = fs.realpathSync(payload.bundle.input.tool.executable); args = expectedArgs;
-      } else if (payload.kind === 'fixture') { executable = process.execPath; args = [__filename, '--fixture-tool', input]; }
+      } else if (payload.kind === 'fixture') {
+        const { prompt, ...metadata } = payload;
+        executable = process.execPath; args = [__filename, '--fixture-tool', JSON.stringify(metadata)];
+      }
       else fail('LAUNCH_INVALID', 'unknown launch mode');
-      const child = spawn(executable, args, { cwd: process.cwd(), env: process.env, stdio: 'inherit' });
+      const child = spawn(executable, args, { cwd: process.cwd(), env: process.env, stdio: ['pipe', 'inherit', 'inherit'] });
+      let inputFailed = false;
+      child.stdin.on('error', () => {
+        inputFailed = true;
+        process.stderr.write('PROMPT_DELIVERY_FAILED: task input could not be delivered\n');
+        child.kill('SIGTERM');
+      });
+      child.stdin.end(payload.prompt, 'utf8');
       child.on('error', () => { process.exitCode = 127; });
-      child.on('exit', (code, signal) => { process.exitCode = code ?? (signal === 'SIGTERM' ? 143 : signal === 'SIGINT' ? 130 : 1); });
+      child.on('exit', (code, signal) => { process.exitCode = inputFailed ? 74 : code ?? (signal === 'SIGTERM' ? 143 : signal === 'SIGINT' ? 130 : 1); });
     } catch (error) { process.stderr.write(`${error.code || 'LAUNCH_REFUSED'}: ${error.message}\n`); process.exitCode = 3; }
   });
 } else if (require.main === module && process.argv[2] === '--fixture-tool') {
   const input = JSON.parse(process.argv[3]);
+  const prompt = fs.readFileSync(0, 'utf8');
   if (input.mode === 'echo-secret') process.stdout.write(process.env.ANTHROPIC_API_KEY);
   else if (input.mode === 'exit7') process.exitCode = 7;
   else if (['hang', 'descendant', 'stream-descendant'].includes(input.mode)) {
@@ -349,7 +362,7 @@ if (require.main === module && process.argv[2] === '--session-supervisor') {
       env_names: Object.keys(process.env).sort(), settings,
       project_instructions: has('CLAUDE.md') && has('AGENTS.md'),
       commands: has('.claude/commands'), agents: has('.claude/agents'), skills: has('.claude/skills'), hook_exits: hookExits,
-      plugins_in_home: fs.existsSync(path.join(process.env.HOME, '.claude/plugins')), args: input.args }));
+      plugins_in_home: fs.existsSync(path.join(process.env.HOME, '.claude/plugins')), args: input.args, prompt }));
   }
 } else if (require.main === module) { process.stderr.write('isolated-launch: direct native launch is unavailable until the T-109 isolation observation gate\n'); process.exitCode = 3; }
 module.exports = { PROFILE, assetsFor, settingsFor, observationTarget, checkNativeReadiness, preflightExecution, preflightNative, buildEnvironment, argumentsFor, observeFixture, launchNative };
