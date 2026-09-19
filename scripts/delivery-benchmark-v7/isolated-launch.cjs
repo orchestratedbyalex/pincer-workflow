@@ -219,7 +219,8 @@ function argumentsFor(options, settingsPath) {
 // Synthetic isolation canary. User-level settings with a SessionStart hook and a user
 // CLAUDE.md are planted in the per-session HOME and config dir, where a CLI that ignored
 // `--setting-sources project` would read them. Nothing personal is involved: the phrase is
-// random per session and is never retained, only whether it or the hook marker appeared.
+// random per session. The launcher writes only the verdict into the record; captures keep
+// whatever the tool emitted, so a leak leaves the phrase in them.
 function plantCanary(sessionRoot) {
   const phrase = `PINCER-CANARY-${crypto.randomBytes(8).toString('hex')}`;
   const marker = path.join(sessionRoot, 'canary-user-hook-ran');
@@ -231,22 +232,60 @@ function plantCanary(sessionRoot) {
   }
   return { phrase, marker };
 }
+// "Canary not triggered" is not "isolation demonstrated". A hook that ran or a phrase that
+// was echoed is positive evidence the user-level file was loaded. The converse is not
+// evidence: settings may load without their SessionStart hook running, and instructions
+// may load without being echoed. Those questions stay `unknown` here; a reviewer answers
+// them from the hook log and other retained evidence, or leaves them open.
 function checkCanary(canary, texts) {
   const user_hook_ran = fs.existsSync(canary.marker);
-  const phrase_in_captures = texts.some(text => typeof text === 'string' && text.includes(canary.phrase));
-  return { ok: !user_hook_ran && !phrase_in_captures, user_hook_ran, phrase_in_captures };
+  const echoed = texts.some(text => typeof text === 'string' && text.includes(canary.phrase));
+  return { leak_detected: user_hook_ran || echoed, user_hook_ran,
+    user_settings_loaded: user_hook_ran ? true : 'unknown', user_instructions_loaded: echoed ? true : 'unknown' };
 }
 // Retain the CLI's hook debug log as a redacted copy beside the captures. The raw file is
 // removed with the session root. Absence is recorded, never assumed to mean "no hooks".
-function retainHookDebug(debugFile, target, clean) {
-  let text;
-  try { if (!fs.existsSync(debugFile)) return { capture: { present: false }, text: '' }; text = fs.readFileSync(debugFile, 'utf8'); }
-  catch (error) { return { capture: { present: true, retained: false, error: error.code || 'UNKNOWN' }, text: '' }; }
-  const safe = clean(text);
-  if (!target) return { capture: { present: true, file: null, bytes: Buffer.byteLength(safe) }, text: safe };
-  try { fs.writeFileSync(target, safe, { flag: 'wx', mode: 0o600 }); }
-  catch (error) { return { capture: { present: true, retained: false, error: error.code || 'UNKNOWN' }, text: safe }; }
-  return { capture: { present: true, file: path.basename(target), bytes: Buffer.byteLength(safe) }, text: safe };
+// When the redacted copy cannot be written, the evidence is preserved where it can be:
+// a redacted copy in the retained scratch if that works, otherwise the raw file moved
+// there (a metadata-only rename survives a full disk) and flagged as unredacted.
+function retainHookDebug(debugFile, target, clean, recovery, io = fs) {
+  if (!fs.existsSync(debugFile)) return { capture: { present: false }, text: '' };
+  let raw;
+  try { raw = fs.readFileSync(debugFile, 'utf8'); }
+  catch (error) { return { capture: { present: true, readable: false, retained: false, error: error.code || 'UNKNOWN' }, text: '' }; }
+  const safe = clean(raw), bytes = Buffer.byteLength(safe);
+  if (!target) return { capture: { present: true, retained: false, file: null, bytes }, text: safe };
+  let error;
+  try { io.writeFileSync(target, safe, { flag: 'wx', mode: 0o600 }); return { capture: { present: true, retained: true, file: path.basename(target), bytes }, text: safe }; }
+  catch (e) { error = e.code || 'UNKNOWN'; }
+  const recovered = path.join(recovery.dir, `${recovery.name}.debug.log`);
+  try { io.writeFileSync(`${recovered}.redacted`, safe, { flag: 'wx', mode: 0o600 }); return { capture: { present: true, retained: false, recovered: `${recovery.name}.debug.log.redacted`, redacted: true, error }, text: safe }; } catch {}
+  try { fs.renameSync(debugFile, `${recovered}.unredacted`); fs.chmodSync(`${recovered}.unredacted`, 0o600); return { capture: { present: true, retained: false, recovered: `${recovery.name}.debug.log.unredacted`, redacted: false, error }, text: safe }; }
+  catch { return { capture: { present: true, retained: false, recovered: null, error }, text: safe }; }
+}
+// Required hook evidence per arm: the plain arm has no kit hooks, so a retained log is
+// enough; a kit arm's log must show both installed hook scripts. A log that exists but
+// does not is insufficient, and insufficient is not "present".
+const KIT_HOOK_SCRIPTS = ['.claude/hooks/block-dangerous.sh', '.claude/hooks/ticket-guard.sh'];
+function hookEvidence(arm, capture, text) {
+  const required = arm === 'plain' ? [] : KIT_HOOK_SCRIPTS;
+  const missing = required.filter(script => !text.includes(script));
+  let status;
+  if (!capture.present) status = 'missing';
+  else if (capture.readable === false) status = 'unreadable';
+  else if (!capture.retained) status = 'unretained';
+  else status = !text.trim() || missing.length ? 'insufficient' : 'sufficient';
+  return { status, required, missing };
+}
+// Every deficiency is a named reason; a measured session is reportable only with none.
+function reportability({ nativePreflight, attestedModel, model, result, canary, hookEvidence: evidence }) {
+  const unreportable = [];
+  if (attestedModel !== model) unreportable.push('model attestation missing or different from the requested model');
+  if (result.cleanup_complete !== true) unreportable.push('process cleanup unresolved');
+  if (result.capture_failure) unreportable.push('capture failure');
+  if (canary.leak_detected) unreportable.push('isolation canary tripped');
+  if (evidence.status !== 'sufficient') unreportable.push(`hook evidence ${evidence.status}${evidence.missing?.length ? ` (${evidence.missing.join(', ')})` : ''}`);
+  return { reportable: Boolean(nativePreflight?.reportable) && unreportable.length === 0, unreportable };
 }
 function redactor(secret) {
   return text => String(text || '').split(secret).join('[REDACTED]').replace(/\b(?:sk-ant-|sk-|ghp_)[A-Za-z0-9_-]{16,}/g, '[REDACTED]');
@@ -342,7 +381,7 @@ async function supervise({ cwd, env, payload, timeoutMs, onGroup = async () => {
 }
 async function runSession(options, nativePreflight = null) {
   const native = Boolean(nativePreflight), assets = nativePreflight?.assets || validateParameters(options);
-  if (!native && !['ok', 'exit7', 'echo-secret', 'hang', 'descendant', 'stream-descendant', 'leak-canary'].includes(options.mode || 'ok')) fail('FIXTURE_MODE_INVALID', 'unknown fixture behavior');
+  if (!native && !['ok', 'exit7', 'echo-secret', 'hang', 'descendant', 'stream-descendant', 'leak-canary', 'partial-hook-log'].includes(options.mode || 'ok')) fail('FIXTURE_MODE_INVALID', 'unknown fixture behavior');
   const root = fs.realpathSync(options.stateRoot);
   const sessionRoot = fs.mkdtempSync(path.join(root, 'isolated-session-'));
   for (const name of ['home', 'config', 'tmp']) fs.mkdirSync(path.join(sessionRoot, name), { mode: 0o700 });
@@ -368,8 +407,12 @@ async function runSession(options, nativePreflight = null) {
     const result = await supervise({ cwd: fs.realpathSync(options.workspace), env, payload,
       timeoutMs: native ? options.caps.wall_clock_minutes * 60000 : options.timeoutMs || options.caps.wall_clock_minutes * 60000,
       onGroup: options.onGroup, signal: options.signal, logFiles, captureIO: native ? fs : options.fixtureCaptureIO || fs });
-    const hookDebug = retainHookDebug(debugFileFor(settingsPath), logFiles?.debug || null, clean);
+    const hookDebug = retainHookDebug(debugFileFor(settingsPath), logFiles?.debug || null, clean, { dir: root, name: options.name || 'session' }, options.fixtureRetainIO || fs);
     const isolationCanary = checkCanary(canary, [result.stdout, result.stderr, hookDebug.text]);
+    const evidence = hookEvidence(options.arm, hookDebug.capture, hookDebug.text);
+    // A log that existed but could not be retained where the record expects it is a
+    // retention failure: the allocator stops on it, and review precedes any further launch.
+    const evidenceRetentionFailed = Boolean(logFiles) && hookDebug.capture.present === true && hookDebug.capture.retained !== true;
     let attestedModel = null;
     if (native) {
       try { const response = JSON.parse(result.stdout); if (typeof response.model === 'string') attestedModel = response.model; else if (response.modelUsage && Object.keys(response.modelUsage).length === 1) attestedModel = Object.keys(response.modelUsage)[0]; } catch {}
@@ -385,13 +428,13 @@ async function runSession(options, nativePreflight = null) {
       // carries it so report regeneration from retained files can see it too.
       cleanup_complete: result.cleanup_complete,
       // Observed, not configured: whether the planted user-level configuration was read,
-      // and whether the CLI's hook debug log was written and retained.
-      isolation_canary: isolationCanary, hook_capture: hookDebug.capture,
+      // whether the CLI's hook debug log was written and retained, and what it showed.
+      isolation_canary: isolationCanary, hook_capture: hookDebug.capture, hook_evidence: evidence,
       configuration: PROFILE, env_names: Object.keys(env).filter(k => k !== 'ANTHROPIC_API_KEY').sort(),
     };
-    const reportable = Boolean(nativePreflight?.reportable && attestedModel === options.model && result.cleanup_complete && !result.capture_failure && isolationCanary.ok);
+    const { reportable, unreportable } = reportability({ nativePreflight, attestedModel: native ? attestedModel : options.model, model: options.model, result, canary: isolationCanary, hookEvidence: evidence });
     return { ...result, started, ended: new Date().toISOString(), environment, assets: assets.files, logFiles,
-      reportable, observation: !native ? 'controlled fixture plumbing; not native CLI isolation evidence' : !attestedModel ? 'provider model attestation missing; operational only' : options.readiness.purpose,
+      reportable, unreportable, evidence_retention_failed: evidenceRetentionFailed, review_required: evidenceRetentionFailed, observation: !native ? 'controlled fixture plumbing; not native CLI isolation evidence' : !attestedModel ? 'provider model attestation missing; operational only' : options.readiness.purpose,
       end: result.timedOut ? 'capped' : result.status === 124 ? 'ambiguous' : 'completed',
       limit: /usage limit|session limit|rate limit|quota/i.test(`${result.stdout}\n${result.stderr}`), refused: false };
   } finally { fs.rmSync(sessionRoot, { recursive: true, force: true }); }
@@ -463,17 +506,24 @@ if (require.main === module && process.argv[2] === '--session-supervisor') {
     setInterval(() => {}, 1000);
   } else {
     const flag = name => input.args[input.args.indexOf(name) + 1];
-    // The synthetic tool writes the hook debug log the way the CLI would, with a
-    // credential in it, so the retained copy proves redaction.
-    fs.writeFileSync(flag('--debug-file'), `[DEBUG] fixture hook debug: executing hook command; key ${process.env.ANTHROPIC_API_KEY}\n`);
+    // The synthetic tool writes the hook debug log the way the CLI would: one line per
+    // executed hook command with its status, plus a credential so the retained copy proves
+    // redaction. `partial-hook-log` runs and logs only the first hook.
+    const debugLines = [`[DEBUG] fixture hook debug: executing hook commands; key ${process.env.ANTHROPIC_API_KEY}`];
     const override = JSON.parse(fs.readFileSync(flag('--settings'), 'utf8'));
     const projectFile = path.join(process.cwd(), '.claude/settings.json');
     const project = fs.existsSync(projectFile) ? JSON.parse(fs.readFileSync(projectFile, 'utf8')) : {};
     const settings = { ...project, permissions: { ...project.permissions, ...override.permissions } };
     const has = rel => fs.existsSync(path.join(process.cwd(), rel));
-    const hookExits = (settings.hooks?.PreToolUse || []).flatMap(group => group.hooks.map(hook => spawnSync('/bin/bash', ['--noprofile', '--norc', '-c', hook.command], {
-      cwd: process.cwd(), env: process.env, encoding: 'utf8', input: JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'rm -rf /' } }), timeout: 5000,
-    }).status));
+    const groups = (settings.hooks?.PreToolUse || []).slice(0, input.mode === 'partial-hook-log' ? 1 : undefined);
+    const hookExits = groups.flatMap(group => group.hooks.map(hook => {
+      const status = spawnSync('/bin/bash', ['--noprofile', '--norc', '-c', hook.command], {
+        cwd: process.cwd(), env: process.env, encoding: 'utf8', input: JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'rm -rf /' } }), timeout: 5000,
+      }).status;
+      debugLines.push(`[DEBUG] Hook command completed with status ${status}: ${hook.command}`);
+      return status;
+    }));
+    fs.writeFileSync(flag('--debug-file'), `${debugLines.join('\n')}\n`);
     process.stdout.write(JSON.stringify({ model: input.model, cwd: process.cwd(), auth_present: Boolean(process.env.ANTHROPIC_API_KEY),
       env_names: Object.keys(process.env).sort(), settings,
       project_instructions: has('CLAUDE.md') && has('AGENTS.md'),
@@ -483,4 +533,4 @@ if (require.main === module && process.argv[2] === '--session-supervisor') {
       session_root: path.dirname(flag('--settings')), args: input.args, prompt }));
   }
 } else if (require.main === module) { process.stderr.write('isolated-launch: direct native launch is unavailable until the T-109 isolation observation gate\n'); process.exitCode = 3; }
-module.exports = { PROFILE, assetsFor, settingsFor, observationTarget, checkNativeReadiness, preflightExecution, preflightNative, buildEnvironment, argumentsFor, observeFixture, launchNative };
+module.exports = { PROFILE, KIT_HOOK_SCRIPTS, assetsFor, settingsFor, observationTarget, checkNativeReadiness, preflightExecution, preflightNative, buildEnvironment, argumentsFor, reportability, observeFixture, launchNative };

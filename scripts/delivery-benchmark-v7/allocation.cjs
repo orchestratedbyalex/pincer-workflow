@@ -371,6 +371,9 @@ function reconcile(options) {
       return { settled: false, stopped: true, code, reason };
     };
     if (!groupGone(item.pgid) || options.result?.cleanup_complete === false) return stop('ALLOCATION_CLEANUP_UNKNOWN', 'Session process cleanup is unresolved; explicit review required.');
+    // Evidence the record expects could not be retained where it belongs. Whatever was
+    // recovered needs a reviewer before another paid session builds on this allocation.
+    if (options.result?.evidence_retention_failed === true) return stop('ALLOCATION_EVIDENCE_UNRETAINED', 'Session evidence could not be retained; explicit review required before further execution.');
     const settled = () => {
       if (expired && !state.stopped) state.stopped = { code: 'ALLOCATION_EXPIRED', reason: 'Allocation expired; accounting is retained but further launch remains prohibited.', at: new Date().toISOString() };
       save(grant, state);

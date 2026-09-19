@@ -252,12 +252,13 @@ try {
       assert.equal(f.api.reconcile(options(f, { handle, cellClaim: claim })).code, 'ALLOCATION_COST_UNKNOWN');
     } finally { Date.now = originalNow; f.claims.release(claim); }
   }
-  for (const scenario of ['quota', 'overcap', 'cleanup']) {
+  for (const scenario of ['quota', 'overcap', 'cleanup', 'evidence']) {
     const f = fixture(), claim = f.claims.acquire(f.runs, 'cell.fixture.1.plain'), current = session();
     const handle = f.api.reserve(options(f, { session: current, cellClaim: claim })); intent(f, current);
     await consume(f, claim, handle); payload(f, current, scenario === 'overcap' ? 1.1 : 0.4);
-    const outcome = f.api.reconcile(options(f, { handle, cellClaim: claim, result: { limit: scenario === 'quota', cleanup_complete: scenario !== 'cleanup' } }));
+    const outcome = f.api.reconcile(options(f, { handle, cellClaim: claim, result: { limit: scenario === 'quota', cleanup_complete: scenario !== 'cleanup', evidence_retention_failed: scenario === 'evidence' } }));
     assert.equal(outcome.stopped, true);
+    if (scenario === 'evidence') assert.equal(outcome.code, 'ALLOCATION_EVIDENCE_UNRETAINED', 'unretained session evidence stops the allocation until reviewed');
     assert.equal(f.api.inspect({ grant: f.grant }).status, 'stopped');
     f.claims.release(claim);
   }

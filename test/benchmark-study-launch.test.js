@@ -64,7 +64,7 @@ try {
     preflight: isolation.preflightExecution, launch: isolation.launchNative,
     reserve: allocator.reserve, reconcile: allocator.reconcile, evaluate: harness.evaluateCandidate };
   try {
-    for (const scenario of ['wall-cap', 'provider-cap', 'noncap', 'cleanup-unknown', 'changed-project', 'operational', 'operational-failed']) {
+    for (const scenario of ['wall-cap', 'provider-cap', 'noncap', 'cleanup-unknown', 'changed-project', 'operational', 'operational-failed', 'hook-evidence-missing', 'retention-failed']) {
       // An operational smoke is unreportable by purpose: it must still run the whole
       // path and evaluate, launch no second prompt, and stop for operator inspection.
       const operational = scenario.startsWith('operational');
@@ -92,9 +92,9 @@ try {
       const manifest = { cohort, effective: { model: 'synthetic' }, caps: { turns_per_session: 5, wall_clock_minutes: 1 } };
       effective.assertCurrent = () => manifest;
       isolation.preflightExecution = () => ({ ok: true });
-      let launches = 0, reservations = 0, evaluations = 0, launched = null;
+      let launches = 0, reservations = 0, evaluations = 0, launched = null, reconciledWith = null;
       allocator.reserve = () => { reservations++; return { fixture: true }; };
-      allocator.reconcile = () => ({ stopped: !operational && scenario !== 'changed-project' });
+      allocator.reconcile = options => { reconciledWith = options.result; return { stopped: !operational && !['changed-project', 'hook-evidence-missing'].includes(scenario) }; };
       isolation.launchNative = async options => {
         launches++;
         launched = { readiness: options.readiness, observationFile: options.observationFile };
@@ -105,8 +105,12 @@ try {
           is_error: scenario === 'provider-cap', total_cost_usd: 0.1, duration_api_ms: 1,
           modelUsage: { fixture: { inputTokens: 1, outputTokens: 1, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 } } };
         fs.writeFileSync(path.join(options.logDir, `${options.name}.json`), capped || failed ? '{partial' : JSON.stringify(result));
+        // The launcher's verdict arrives as `reportable` plus its named reasons; the
+        // orchestrator must act on them, not on a fixture's say-so alone.
+        const unreportable = scenario === 'hook-evidence-missing' ? ['hook evidence missing'] : scenario === 'retention-failed' ? ['hook evidence unretained'] : [];
         return { status: capped ? 124 : failed ? 7 : 0, end: capped ? 'capped' : failed ? 'failed' : 'completed',
-          cleanup_complete: scenario !== 'cleanup-unknown', reportable: scenario === 'changed-project',
+          cleanup_complete: scenario !== 'cleanup-unknown', reportable: scenario === 'changed-project', unreportable,
+          evidence_retention_failed: scenario === 'retention-failed', review_required: scenario === 'retention-failed',
           observation: operational ? 'operational-smoke' : 'measured',
           ended: new Date().toISOString(), environment: { fixture: true, tool: 'synthetic-native-boundary' } };
       };
@@ -140,6 +144,20 @@ try {
         assert.equal(launched.readiness.observationReviewed, true);
         assert.equal(launched.observationFile, 'observation.json');
         assert.doesNotMatch(out.record.reason, /Operational smoke/);
+      }
+      if (scenario === 'hook-evidence-missing') {
+        // Missing required hook evidence makes the measured session unreportable through
+        // the orchestration path: the record says why, the cell is invalid, the schedule stops.
+        assert.match(out.record.reason, /not reportable \(hook evidence missing\)/, out.record.reason);
+        assert.equal(out.stop, true);
+        assert.equal(evaluations, 0);
+      }
+      if (scenario === 'retention-failed') {
+        // The retention failure reaches the allocator, which stops the allocation so no
+        // later paid session can start before an explicit review decision.
+        assert.equal(reconciledWith.evidence_retention_failed, true, 'the allocator sees the retention failure');
+        assert.match(out.record.reason, /allocation stopped/);
+        assert.equal(out.stop, true);
       }
     }
   } finally {

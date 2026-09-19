@@ -66,13 +66,15 @@ try {
     // Synthetic isolation canary: user-level settings, a SessionStart hook and a user
     // CLAUDE.md are planted in the per-session HOME and config dir. A CLI that honors
     // --setting-sources project never runs the hook or sees the phrase.
+    // "Canary not triggered" is not "isolation demonstrated": a hook that did not run and
+    // a phrase that was not echoed leave the loading question unknown, never answered.
     const canary = result.environment.isolation_canary;
-    assert.equal(canary.ok, true, JSON.stringify(canary));
-    assert.equal(canary.user_hook_ran, false);
-    assert.equal(canary.phrase_in_captures, false);
-    assert.ok(!JSON.stringify(result).includes('PINCER-CANARY-'), 'the phrase itself is never retained');
-    assert.equal(result.environment.hook_capture.present, true, 'the fixture wrote a hook debug log and it was retained');
+    assert.deepEqual(canary, { leak_detected: false, user_hook_ran: false, user_settings_loaded: 'unknown', user_instructions_loaded: 'unknown' }, JSON.stringify(canary));
+    assert.ok(!JSON.stringify(result).includes('PINCER-CANARY-'), 'a clean session leaves no phrase anywhere');
+    assert.equal(result.environment.hook_capture.present, true, 'the fixture wrote a hook debug log');
+    assert.equal(result.environment.hook_evidence.status, 'unretained', 'without a log directory nothing durable holds it');
     assert.equal(result.reportable, false);
+    assert.ok(result.unreportable.includes('hook evidence unretained'), JSON.stringify(result.unreportable));
     assert.equal(result.environment.fixture, true);
     assert.equal(result.environment.tool, 'synthetic-session');
     assert.equal(result.environment.isolation_profile, isolation.PROFILE.name);
@@ -129,11 +131,66 @@ try {
     assert.ok(!debug.includes(SECRET), 'the retained debug copy is redacted');
     assert.ok(debug.includes('[REDACTED]'));
     assert.equal(fs.statSync(result.logFiles.debug).mode & 0o777, 0o600);
-    assert.deepEqual(result.environment.hook_capture, { present: true, file: 'S1.debug.log', bytes: Buffer.byteLength(debug) });
+    assert.deepEqual(result.environment.hook_capture, { present: true, retained: true, file: 'S1.debug.log', bytes: Buffer.byteLength(debug) });
+    const KIT_HOOKS = ['.claude/hooks/block-dangerous.sh', '.claude/hooks/ticket-guard.sh'];
+    assert.deepEqual(result.environment.hook_evidence, { status: 'sufficient', required: KIT_HOOKS, missing: [] });
+    for (const hook of KIT_HOOKS) assert.ok(debug.includes(hook), `the retained log names ${hook}`);
+    assert.equal(result.evidence_retention_failed, false);
     assert.deepEqual(fs.readdirSync(options.stateRoot), [], 'the raw debug log leaves with the session root');
+    const plain = await isolation.observeFixture({ ...fixture(), logDir: path.join(tempDir(), 'captures'), name: 'S1' });
+    assert.deepEqual(plain.environment.hook_evidence, { status: 'sufficient', required: [], missing: [] }, 'the plain arm requires a retained log and no kit hooks');
     const silent = await isolation.observeFixture({ ...fixture(), logDir: path.join(tempDir(), 'captures'), name: 'S1', mode: 'exit7' });
     assert.equal(silent.environment.hook_capture.present, false, 'a tool that wrote no debug log is recorded as such');
+    assert.equal(silent.environment.hook_evidence.status, 'missing');
     assert.equal(fs.existsSync(silent.logFiles.debug), false);
+    assert.equal(silent.evidence_retention_failed, false, 'nothing existed to retain');
+    // A log that exists but does not show every kit hook is insufficient, not "present".
+    const partial = await isolation.observeFixture({ ...fixture('pincer'), logDir: path.join(tempDir(), 'captures'), name: 'S1', mode: 'partial-hook-log' });
+    assert.equal(partial.environment.hook_capture.retained, true);
+    assert.deepEqual(partial.environment.hook_evidence, { status: 'insufficient', required: KIT_HOOKS, missing: ['.claude/hooks/ticket-guard.sh'] });
+    assert.ok(partial.unreportable.some(reason => /hook evidence insufficient .*ticket-guard/.test(reason)), JSON.stringify(partial.unreportable));
+  }
+  {
+    // Retention failure: the redacted copy cannot be written. The raw log is preserved in
+    // the retained scratch (unredacted, flagged), the result demands review, and nothing
+    // pretends the evidence was retained.
+    const options = fixture('pincer');
+    options.logDir = path.join(options.root, 'captures'); options.name = 'S1';
+    const fault = () => { const error = new Error(SECRET); error.code = 'ENOSPC'; throw error; };
+    const result = await isolation.observeFixture({ ...options, fixtureRetainIO: { writeFileSync: fault } });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(result.environment.hook_capture, { present: true, retained: false, recovered: 'S1.debug.log.unredacted', redacted: false, error: 'ENOSPC' });
+    assert.equal(result.environment.hook_evidence.status, 'unretained');
+    assert.equal(result.evidence_retention_failed, true);
+    assert.equal(result.review_required, true);
+    assert.equal(fs.existsSync(result.logFiles.debug), false);
+    const recovered = path.join(options.stateRoot, 'S1.debug.log.unredacted');
+    assert.ok(fs.existsSync(recovered), 'the raw log survives for review');
+    assert.equal(fs.statSync(recovered).mode & 0o777, 0o600);
+    assert.match(fs.readFileSync(recovered, 'utf8'), /block-dangerous/);
+    assert.ok(!JSON.stringify(result).includes(SECRET), 'the fault message never reaches the result');
+  }
+  {
+    // The reportability gate itself, with a measured preflight: every deficiency is a
+    // named reason, and only a session with none of them is reportable.
+    const clean = { nativePreflight: { reportable: true }, attestedModel: 'claude-m-1', model: 'claude-m-1',
+      result: { cleanup_complete: true, capture_failure: null }, canary: { leak_detected: false }, hookEvidence: { status: 'sufficient', missing: [] } };
+    assert.deepEqual(isolation.reportability(clean), { reportable: true, unreportable: [] });
+    for (const [patch, reason] of [
+      [{ attestedModel: null }, /model attestation/], [{ result: { cleanup_complete: false, capture_failure: null } }, /cleanup/],
+      [{ result: { cleanup_complete: true, capture_failure: { code: 'CAPTURE_IO_FAILED' } } }, /capture failure/],
+      [{ canary: { leak_detected: true } }, /canary tripped/],
+      [{ hookEvidence: { status: 'missing', missing: [] } }, /hook evidence missing/],
+      [{ hookEvidence: { status: 'unreadable', missing: [] } }, /hook evidence unreadable/],
+      [{ hookEvidence: { status: 'unretained', missing: [] } }, /hook evidence unretained/],
+      [{ hookEvidence: { status: 'insufficient', missing: ['.claude/hooks/ticket-guard.sh'] } }, /hook evidence insufficient \(.claude\/hooks\/ticket-guard.sh\)/],
+    ]) {
+      const verdict = isolation.reportability({ ...clean, ...patch });
+      assert.equal(verdict.reportable, false, JSON.stringify(patch));
+      assert.equal(verdict.unreportable.length, 1);
+      assert.match(verdict.unreportable[0], reason);
+    }
+    assert.equal(isolation.reportability({ ...clean, nativePreflight: { reportable: false } }).reportable, false, 'an operational or fixture session is never reportable');
   }
   {
     // A tool that reads user-level configuration despite the profile trips the canary:
@@ -142,12 +199,11 @@ try {
     const leaked = await isolation.observeFixture({ ...fixture(), mode: 'leak-canary' });
     assert.equal(leaked.status, 0, leaked.stderr);
     const canary = leaked.environment.isolation_canary;
-    assert.equal(canary.ok, false);
-    assert.equal(canary.user_hook_ran, true);
-    assert.equal(canary.phrase_in_captures, true);
+    assert.deepEqual(canary, { leak_detected: true, user_hook_ran: true, user_settings_loaded: true, user_instructions_loaded: true });
     assert.equal(leaked.reportable, false);
-    assert.match(leaked.stdout, /PINCER-CANARY-[a-f0-9]{16}/, 'captures keep what the tool printed');
-    assert.ok(!JSON.stringify(leaked.environment).includes('PINCER-CANARY-'));
+    assert.ok(leaked.unreportable.includes('isolation canary tripped'));
+    assert.match(leaked.stdout, /PINCER-CANARY-[a-f0-9]{16}/, 'captures keep what the tool printed, phrase included');
+    assert.ok(!JSON.stringify(leaked.environment).includes('PINCER-CANARY-'), 'the launcher itself writes no phrase into the record');
   }
 } finally {
   for (const [key, value] of Object.entries(restore)) if (value === undefined) delete process.env[key]; else process.env[key] = value;

@@ -37,21 +37,45 @@ the launcher plants user-level configuration where a CLI that ignored
 `--setting-sources project` would read it: `settings.json` with a `SessionStart` hook that
 touches a marker inside the session root, and a `CLAUDE.md` holding a random per-session
 phrase, in both the per-session `HOME/.claude` and `CLAUDE_CONFIG_DIR`. After the session
-the launcher records `environment.isolation_canary = { ok, user_hook_ran,
-phrase_in_captures }`: the marker's existence and whether the phrase reached stdout, stderr
-or the hook debug log. The phrase itself is never retained. A tripped canary makes the
-session unreportable. The operator's real home directory, configuration and instruction
-text are never read, hashed or compared.
+the launcher records `environment.isolation_canary = { leak_detected, user_hook_ran,
+user_settings_loaded, user_instructions_loaded }`. The two `loaded` fields are `true` on
+positive evidence (the hook ran; the phrase reached stdout, stderr or the hook debug log)
+and otherwise `unknown`: settings can load without their `SessionStart` hook running, and
+instructions can load without being echoed. **A canary that was not triggered does not
+demonstrate isolation**; it only failed to refute it. The launcher writes no phrase into
+the record, but captures keep whatever the tool emitted, so a leak leaves the phrase in
+them. A tripped canary makes the session unreportable. The operator's real home
+directory, configuration and instruction text are never read, hashed or compared.
 
 **Hook capture** (`hook_capture: debug-hooks-file`). The argument vector adds
 `--debug hooks --debug-file <session>/debug.log`, so the CLI writes its own hook matching
 and execution log inside the session root. The launcher retains only a redacted copy,
 `logs/<session>.debug.log` (mode 0600, append-preserved), and records
-`environment.hook_capture = { present, file, bytes }`; an absent log is recorded, never
-read as "no hooks ran". The final result object on stdout is unchanged, so result parsing,
-usage accounting, redaction and interruption handling are the same as before. Whether the
-pinned CLI's hook debug lines name each executed hook command and its exit status is a
-smoke finding: it is documented behavior, not yet observed here.
+`environment.hook_capture = { present, retained, file, bytes }`; an absent log is
+recorded, never read as "no hooks ran". The final result object on stdout is unchanged, so
+result parsing, usage accounting, redaction and interruption handling are the same as
+before. Whether the pinned CLI's hook debug lines name each executed hook command and its
+exit status is a smoke finding: it is documented behavior, not yet observed here.
+
+**Required hook evidence** (`environment.hook_evidence = { status, required, missing }`).
+The plain arm requires a retained log; a kit arm's retained log must name both installed
+hook scripts (`.claude/hooks/block-dangerous.sh`, `.claude/hooks/ticket-guard.sh`).
+`status` is `missing` (no log), `unreadable`, `unretained` (no durable copy), `insufficient`
+(retained but not showing the required hooks) or `sufficient`. Anything but `sufficient`
+makes a measured session unreportable, with the reason named in `unreportable`.
+
+**Retention failure.** If the redacted copy cannot be written, the launcher preserves what
+it can in the retained scratch: a redacted copy if that succeeds, otherwise the raw file
+renamed there and flagged `redacted: false`. The result carries
+`evidence_retention_failed: true` and `review_required: true`; the allocator stops the
+allocation (`ALLOCATION_EVIDENCE_UNRETAINED`), so no further paid session starts before an
+explicit recovery decision.
+
+**Reportability** is one gate, `reportability()`, with every deficiency a named reason:
+model attestation, process cleanup, capture failure, a tripped canary, or hook evidence
+that is not sufficient. The orchestrator records those reasons in the run's `reason` and
+stops the schedule. The fixture path never reaches `reportable: true`; the gate is tested
+directly and through the orchestration path with the launcher's verdict as input.
 
 ## Why this profile retains project discovery
 

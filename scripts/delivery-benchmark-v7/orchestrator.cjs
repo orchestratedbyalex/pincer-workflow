@@ -664,7 +664,9 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
       const reason = allocationStopped
         ? 'Study allocation stopped after this session; retained accounting or custody requires review.'
         : operational ? 'Operational smoke session: retained as operational evidence, never a study result.'
-          : 'Native session did not attest the required model, isolation or process cleanup; artifacts retained.';
+          : Array.isArray(s.unreportable) && s.unreportable.length
+            ? `Native session is not reportable (${s.unreportable.join('; ')}); artifacts retained.`.slice(0, 500)
+            : 'Native session did not attest the required model, isolation or process cleanup; artifacts retained.';
       // Once custody is gone, an independent evaluator may inspect a capped
       // candidate even though accounting/model attestation is incomplete. No
       // subsequent paid prompt is permitted, and experiment validity stays invalid.
