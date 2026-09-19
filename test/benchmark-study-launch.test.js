@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { tempDir } from './helpers.js';
+import { spawnSync } from 'node:child_process';
+import { repo, tempDir, write } from './helpers.js';
 
 const require = createRequire(import.meta.url);
 const runner = require('../scripts/delivery-benchmark-v7/orchestrator.cjs');
@@ -178,10 +179,61 @@ try {
   assert.equal(sessions, 9);
 }
 {
-  assert.deepEqual(effective.parseArgs(['--study-manifest', 'study.json', '--study-purpose', 'operational-smoke', '--repetitions', '1']),
-    { 'study-manifest': 'study.json', 'study-purpose': 'operational-smoke', repetitions: 1 });
+  assert.deepEqual(effective.parseArgs(['--study-manifest', 'study.json', '--study-purpose', 'operational-smoke', '--repetitions', '1', '--briefs', 'ui-states']),
+    { 'study-manifest': 'study.json', 'study-purpose': 'operational-smoke', repetitions: 1, briefs: ['ui-states'] });
+  assert.deepEqual(effective.parseArgs(['--briefs', 'ui-states,cli-greenfield']).briefs, ['ui-states', 'cli-greenfield']);
   for (const args of [['--study-purpose', 'operational-smoke'], ['--study-manifest', 'study.json', '--study-purpose', 'smoke'],
-    ['--repetitions', '0'], ['--repetitions', '10'], ['--repetitions', '1', '--repetitions', '1']]) assert.throws(() => effective.parseArgs(args), args.join(' '));
+    ['--repetitions', '0'], ['--repetitions', '10'], ['--repetitions', '1', '--repetitions', '1'],
+    // An operational smoke names the briefs it may plan; the whole schedule is never implied.
+    ['--study-manifest', 'study.json', '--study-purpose', 'operational-smoke', '--repetitions', '1'],
+    ['--briefs', ''], ['--briefs', 'ui-states,'], ['--briefs', 'ui-states,ui-states'], ['--briefs', '../x']]) assert.throws(() => effective.parseArgs(args), args.join(' '));
 }
 
-console.log('benchmark study launch tests passed (pending decisions, exact session bases, capped native-boundary evaluation, operational smoke, repetition prefix)');
+// The documented smoke command, through the actual operator entry point. The internal API
+// receives its brief list from the caller; the CLI has to derive the same list from its
+// arguments, or the packaged command plans every brief and the allocation refuses them all.
+{
+  const inputRoot = tempDir(), runs = path.join(tempDir(), 'smoke');
+  write(inputRoot, 'inputs/kits/kit.tgz', 'fixture archive identity');
+  write(inputRoot, 'browser/index.cjs', 'module.exports = {};\n');
+  write(inputRoot, 'runtime/browser', 'browser binary');
+  const executable = path.join(inputRoot, 'inputs/tool/version-probe');
+  fs.mkdirSync(path.dirname(executable), { recursive: true });
+  fs.writeFileSync(executable, effective.versionProbeFixture('2.1.273'), { mode: 0o755 });
+  write(inputRoot, 'inputs.json', JSON.stringify({
+    model: 'claude-example-1', tool: { executable, version: '2.1.273', kind: 'version-probe-fixture' },
+    caps: { turns_per_session: 3, wall_clock_minutes: 2, spend_usd: 1 },
+    kit: { path: 'inputs/kits/kit.tgz', commit: 'a'.repeat(40) },
+    browser: { entry: 'browser/index.cjs', roots: ['browser'], runtime: { name: 'chromium', version: '1.2.3', path: 'runtime' } },
+    configuration: { permission_mode: 'manual', cwd_kind: 'scratch', isolation_profile: 'claude-project-isolated-v1' },
+  }));
+  write(inputRoot, 'study.json', JSON.stringify({ schema: 1, kind: 'pincer-study-readiness',
+    execution: null, projects: null, kits: null, schedule: null, reviewers: null,
+    authorization: null, allocation: null, stop_resume: null, evidence: {} }));
+  const documented = ['--runs', runs, '--execution-inputs', path.join(inputRoot, 'inputs.json'), '--input-root', inputRoot,
+    '--study-manifest', path.join(inputRoot, 'study.json'), '--study-input-root', inputRoot,
+    '--study-purpose', 'operational-smoke', '--repetitions', '1', '--briefs', 'ui-states', '--plan-only'];
+  const cli = args => spawnSync(process.execPath, [path.join(repo, 'scripts/delivery-benchmark-v7/orchestrator.cjs'), ...args], { encoding: 'utf8' });
+  const records = () => fs.existsSync(runs) ? fs.readdirSync(runs, { recursive: true }).filter(name => name.endsWith('record.json')).sort() : [];
+  const planned = cli(documented);
+  assert.equal(planned.status, 0, planned.stderr);
+  assert.match(planned.stdout, /^cohort [a-f0-9]{64}\n3 cells, 3 newly planned\n$/, planned.stdout);
+  assert.deepEqual(records(), ['ui-states/rep-1/pincer/record.json', 'ui-states/rep-1/plain/record.json', 'ui-states/rep-1/strict/record.json']);
+  const order = records().map(file => JSON.parse(fs.readFileSync(path.join(runs, file), 'utf8'))).sort((a, b) => a.order - b.order);
+  assert.deepEqual(order.map(record => [record.order, record.run, record.status]),
+    [[1, 'ui-states/rep-1/pincer', 'pending'], [2, 'ui-states/rep-1/strict', 'pending'], [3, 'ui-states/rep-1/plain', 'pending']],
+    'the three authorized smoke cells, in the documented order, and nothing else');
+  const again = cli(documented);
+  assert.equal(again.status, 0, again.stderr);
+  assert.match(again.stdout, /3 cells, 0 newly planned/, 'replanning is idempotent');
+  const before = records();
+  const unnamed = cli(documented.filter((arg, i) => arg !== '--briefs' && documented[i - 1] !== '--briefs'));
+  assert.equal(unnamed.status, 2, 'an operational smoke without a brief list is refused before planning');
+  assert.match(unnamed.stderr, /--briefs/);
+  const unknown = cli(documented.map(arg => arg === 'ui-states' ? 'ui-states,no-such-brief' : arg));
+  assert.equal(unknown.status, 2, unknown.stderr);
+  assert.match(unknown.stderr, /no-such-brief/);
+  assert.deepEqual(records(), before, 'a refused invocation plans nothing');
+}
+
+console.log('benchmark study launch tests passed (pending decisions, exact session bases, capped native-boundary evaluation, operational smoke, repetition prefix, documented CLI command)');

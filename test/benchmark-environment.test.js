@@ -57,6 +57,7 @@ try {
     const result = await isolation.observeFixture(options);
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.cleanup_complete, true, 'registered session group is observed gone before returning');
+    assert.equal(result.environment.cleanup_complete, true, 'and the fact is retained in the record environment');
     assert.equal(result.reportable, false);
     assert.equal(result.environment.fixture, true);
     assert.equal(result.environment.tool, 'synthetic-session');

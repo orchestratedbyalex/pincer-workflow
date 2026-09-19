@@ -805,6 +805,7 @@ async function main(argv) {
       '--study-manifest <json> --study-input-root <dir>  actual decisions and retained readiness evidence',
       '--study-purpose measured|operational-smoke  the approved manifest purpose (default measured)',
       '--repetitions <n>  plan and drive only the first n scheduled repetitions (an operational smoke uses 1)',
+      '--briefs <id,...>  plan and drive only these briefs, in schedule order (required for an operational smoke)',
       '--model <provider-id> --max-turns <n> --wall-clock-minutes <n> --max-budget-usd <n>',
       '--kit <relative-tarball> --browser <module>  override entries from execution inputs',
       'Missing browser leaves UI checks unavailable; browser dependency roots must be declared.',
@@ -815,6 +816,8 @@ async function main(argv) {
     return args.help ? 0 : 2;
   }
   if (!args['execution-inputs']) throw new Error('--execution-inputs is required; historical plans are read-only');
+  const unknownBriefs = (args.briefs || []).filter(id => !briefs.briefIds().includes(id));
+  if (unknownBriefs.length) { process.stderr.write(`orchestrator: --briefs: unknown brief ${unknownBriefs.join(', ')}\n`); return 2; }
   const { REPO, SPEC } = require('./freeze-spec.cjs');
   const input = JSON.parse(fs.readFileSync(args['execution-inputs'], 'utf8'));
   if (args.model) input.model = args.model;
@@ -835,6 +838,7 @@ async function main(argv) {
       inputRoot: args['study-input-root'] ? path.resolve(args['study-input-root']) : inputRoot,
       purpose: args['study-purpose'] || 'measured' } : null,
     repetitions: args.repetitions,
+    ...(args.briefs ? { ids: args.briefs } : {}),
     apiKey: process.env.ANTHROPIC_API_KEY,
     provenance: {
       protocol: manifest.inputs.protocol, prompts: manifest.inputs.briefs, driver: manifest.inputs.driver,

@@ -198,7 +198,7 @@ function recordInputs(manifest) {
   };
 }
 function parseArgs(argv) {
-  const valued = new Set(['runs', 'execution-inputs', 'input-root', 'study-manifest', 'study-input-root', 'study-purpose', 'repetitions', 'model', 'max-turns', 'wall-clock-minutes', 'max-budget-usd', 'kit', 'browser']);
+  const valued = new Set(['runs', 'execution-inputs', 'input-root', 'study-manifest', 'study-input-root', 'study-purpose', 'repetitions', 'briefs', 'model', 'max-turns', 'wall-clock-minutes', 'max-budget-usd', 'kit', 'browser']);
   const boolean = new Set(['help', 'plan-only', 'i-have-a-spending-cap']);
   const out = {};
   for (let i = 0; i < argv.length; i++) {
@@ -222,6 +222,16 @@ function parseArgs(argv) {
     if (!/^[1-9]$/.test(out.repetitions)) throw new Error('--repetitions: expected a single positive digit');
     out.repetitions = Number(out.repetitions);
   }
+  // The briefs to plan and drive, in schedule order. The internal API takes this list from
+  // its caller; the operator entry point has to take it from here, or the documented smoke
+  // command plans every brief and the allocation refuses the cells it never approved.
+  if (Object.hasOwn(out, 'briefs')) {
+    if (!/^[a-z0-9-]+(?:,[a-z0-9-]+)*$/.test(out.briefs)) throw new Error('--briefs: expected a comma-separated list of brief ids');
+    out.briefs = out.briefs.split(',');
+    if (new Set(out.briefs).size !== out.briefs.length) throw new Error('--briefs: duplicate brief id');
+  }
+  // An operational smoke names the briefs it may plan; the whole schedule is never implied.
+  if (out['study-purpose'] === 'operational-smoke' && !Object.hasOwn(out, 'briefs')) throw new Error('--study-purpose operational-smoke: requires --briefs');
   return out;
 }
 module.exports = { versionProbeFixture, canonical, contained, tree, browserRuntimeTree, browserIdentity, resolve, assertCurrent, recordInputs, parseArgs };

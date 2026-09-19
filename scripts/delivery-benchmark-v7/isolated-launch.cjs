@@ -335,6 +335,10 @@ async function runSession(options, nativePreflight = null) {
       node: process.version, os: os.platform(), platform_release: os.release(), arch: os.arch(),
       permission_mode: 'manual', permission_prompts: 'none', isolation_profile: PROFILE.name,
       host_policy_observed: nativePreflight?.reportable || false, authentication: PROFILE.authentication, caps: options.caps,
+      // Retained in the record: whether the supervisor observed the session's process group
+      // gone before returning. The allocation ledger stops on the same fact; the record
+      // carries it so report regeneration from retained files can see it too.
+      cleanup_complete: result.cleanup_complete,
       configuration: PROFILE, env_names: Object.keys(env).filter(k => k !== 'ANTHROPIC_API_KEY').sort(),
     };
     const reportable = Boolean(nativePreflight?.reportable && attestedModel === options.model && result.cleanup_complete && !result.capture_failure);
