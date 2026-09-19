@@ -20,9 +20,12 @@ An independent review found the documented launch command planned 24 cells (the 
 brief selection); `bffcfc8` adds the required `--briefs` and retains `cleanup_complete`.
 `f504c80` finishes the native-observation preparation: a synthetic isolation canary in the
 per-session HOME/config and a redacted copy of the CLI's hook debug log
-(`--debug hooks --debug-file`); nothing personal is read. `07af4be` points T-109's
-verification at the study checkout's manifest and keeps the measured gate. The study root is
-`/Users/Shared/pincer-v8-study` (detached worktree at `f504c80` + copied CLI, K0 and Chrome
+(`--debug hooks --debug-file`); nothing personal is read. `499fb6b` grades hook evidence
+into one reportability gate with named reasons, separates "canary not triggered" from
+"isolation demonstrated" (`unknown` where evidence is insufficient) and stops the
+allocation on a retention failure. `07af4be` points T-109's verification at the study
+checkout's manifest and keeps the measured gate. The study root is
+`/Users/Shared/pincer-v8-study` (detached worktree at `499fb6b` + copied CLI, K0 and Chrome
 for Testing). The proposed inputs resolve there; only decisions and reviewed evidence
 summaries remain pending.
 

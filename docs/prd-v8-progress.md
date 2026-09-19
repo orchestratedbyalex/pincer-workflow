@@ -302,3 +302,37 @@ T-109 was re-verified through the pinned kit at 20:17Z with the corrected block:
 suites pass and the measured readiness gate exits 2 by design with 14 pending reasons
 (`last_check … failed c936a9b60fc5`; the block hash changed with the edit). No CI run
 exists for these commits; the branch is not pushed. T-109 and T-102 remain in progress.
+
+### T-109 — observation issues fixed (19 September 2026)
+
+Two remaining observation defects, fixed in `499fb6b` without widening scope. No paid
+session, launch, push, merge or publication; no decision inferred.
+
+- **Canary versus demonstration.** `isolation_canary` no longer says `ok`. It records
+  `leak_detected`, `user_hook_ran`, and `user_settings_loaded` / `user_instructions_loaded`,
+  which are `true` only on positive evidence and otherwise `unknown`: settings can load
+  without their `SessionStart` hook running and instructions can load without being echoed.
+  An untriggered canary refutes nothing and demonstrates nothing by itself. The package's
+  "the phrase is never retained" was wrong and is corrected: the launcher writes no phrase
+  into the record, but captures keep what the tool emitted, so a leak leaves it there.
+- **Hook evidence gates measured reportability.** `hook_evidence.status` is `missing`,
+  `unreadable`, `unretained`, `insufficient` (a kit arm's retained log must name both hook
+  scripts) or `sufficient`. One `reportability()` gate turns every deficiency, plus model
+  attestation, cleanup, capture failure and a tripped canary, into a named reason; the
+  orchestrator writes the reasons into `record.reason` and stops the schedule.
+- **Retention failure.** The launcher preserves a redacted copy in the attempt's scratch
+  or, failing that, the raw file renamed there and flagged unredacted; the result carries
+  `evidence_retention_failed` and `review_required`, and the allocator stops the
+  allocation (`ALLOCATION_EVIDENCE_UNRETAINED`) so no paid session follows before an
+  explicit recovery decision.
+- **Tests through the orchestration path.** The study-launch native-boundary block drives
+  `hook-evidence-missing` (record reason names it, cell invalid, schedule stops, no
+  evaluation) and `retention-failed` (the allocator receives the flag and stops). The
+  environment suite tests the gate directly with a measured preflight and the fixture tool
+  in compliant, leaking, partial-log and retention-fault runs; the allocation suite tests
+  the new stop code. Sixteen focused suites passed. Cohort `b0299e7e…` → `fef7ffdc…`
+  (harness only); dry-run effective cohort `141a70da…` → `12535053…`; worktree moved to
+  `499fb6b`, drafts regenerated, `runs/smoke` untouched.
+
+The full `npm test` result and the pinned-kit re-verification are recorded below this
+entry once complete.

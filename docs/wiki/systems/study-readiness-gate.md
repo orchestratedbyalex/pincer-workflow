@@ -22,10 +22,16 @@ is `study.json` beside it.
 - `isolated-launch.cjs` — profile `claude-project-isolated-v1`, pinned to CLI **2.1.273**,
   explicit ten-variable environment, per-session HOME/config holding only a **synthetic
   canary** (user-level `settings.json` with a `SessionStart` hook touching a marker, and a
-  `CLAUDE.md` with a random phrase; `environment.isolation_canary {ok, user_hook_ran,
-  phrase_in_captures}` after the run), `--permission-prompts none`, empty MCP, and
-  `--debug hooks --debug-file <session>/debug.log` whose redacted copy is retained as
-  `logs/<S>.debug.log` (`environment.hook_capture {present, file, bytes}`).
+  `CLAUDE.md` with a random phrase; `environment.isolation_canary {leak_detected,
+  user_hook_ran, user_settings_loaded, user_instructions_loaded}` after the run, the
+  `loaded` fields `true` only on positive evidence and otherwise `unknown`),
+  `--permission-prompts none`, empty MCP, and `--debug hooks --debug-file
+  <session>/debug.log` whose redacted copy is retained as `logs/<S>.debug.log`
+  (`hook_capture {present, retained, file, bytes}`, graded by `hook_evidence {status,
+  required, missing}`; a kit arm needs both hook scripts named). `reportability()` is the
+  one gate: attestation, cleanup, capture, canary and hook evidence each a named reason the
+  orchestrator writes into `record.reason`. A retention failure preserves the log in the
+  attempt's scratch and stops the allocation (`ALLOCATION_EVIDENCE_UNRETAINED`).
   `observationTarget` = profile + tool bytes/version + model + kit + platform, so a PROFILE
   field change moves it (`8af4d99d…` → `d53ff6f0…` on 2026-09-19). A session is
   `reportable` only for the measured purpose with an attested model, complete cleanup and
@@ -69,9 +75,10 @@ is `study.json` beside it.
 - `orchestrator.cjs` and `effective.cjs` are in `SPEC.harness`: after editing either,
   regenerate `test/fixtures/delivery-benchmark-v7/frozen.json` (command at the top of
   `freeze-spec.cjs`). Cohort moved `4113e10b…` → `f09e4312…` → `d1e57a17…` → `b0299e7e…`
-  on 2026-09-19 for the smoke launch path, `--briefs`, then the canary and hook capture;
+  → `fef7ffdc…` on 2026-09-19 for the smoke launch path, `--briefs`, the canary and hook
+  capture, then the graded hook evidence;
   zero paid runs existed. The dry-run effective cohort in the study root's `drafts/` moves
-  with it (`976db3ee…` → `64325207…` → `141a70da…`)
+  with it (`976db3ee…` → `64325207…` → `141a70da…` → `12535053…`)
   and the honest draft must be regenerated (script pattern: recompute `effective.resolve`
   from the study checkout, refresh `execution.{candidate,effective.digest,
   observation_target,evidence_target,inputs[].digest}` and `schedule[].effective_digest`).
@@ -86,6 +93,13 @@ is `study.json` beside it.
   proposal to digest `~/.claude` and grep captures for private text is replaced by the
   synthetic canary; the environment suite's hostile-home fixtures already prove the
   launcher inherits nothing from the operator's process.
+- **An untriggered canary is not a demonstration.** Only a hook that ran or a phrase that
+  was echoed is evidence (of a leak); "not loaded" needs positive evidence a reviewer finds
+  elsewhere, else it stays `unknown`. Captures keep whatever the tool emitted, phrase
+  included, so never claim "the phrase is never retained".
+- **A fixture's `reportable: false` proves nothing about the gate.** Test `reportability()`
+  directly and drive the orchestrator with the launcher's verdict (`unreportable`,
+  `evidence_retention_failed`) as input.
 - The real-browser gate defaults to `/Applications/Google Chrome` at 153.0.8010.48; point
   it at the pinned runtime with `PINCER_BROWSER_EXECUTABLE` and `PINCER_BROWSER_VERSION`.
   Google Chrome auto-updates, so T-107's pass on it is not evidence for a pinned copy.
