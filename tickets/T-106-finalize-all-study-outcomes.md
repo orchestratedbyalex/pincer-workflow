@@ -1,10 +1,14 @@
 ---
 ticket: T-106
-status: open
+status: done
 size: M
 prd: .prd/prd-v8.md
 depends_on: [T-105]
 timeout: 900
+started: 2026-09-19T07:41:26Z
+last_check: 2026-09-19T07:50:47Z passed ce88400fe405
+verified: 2026-09-19T07:50:47Z ce88400fe405
+finished: 2026-09-19T07:50:47Z
 ---
 
 ## Objective
@@ -31,9 +35,9 @@ T-110 now depends on both T-102 and T-109. No observation acceptance is waived.
 Feed real output records into the real validator on every branch. Validation failure needs a valid diagnostic envelope with retained raw record, not an invalid record labelled valid. Do not suppress rejected candidates or unavailable runs to improve rates.
 
 ## Acceptance Criteria
-- [ ] S-19: Actual orchestrator output validates for accepted and rejected candidates, account limits, capped sessions, ambiguous exits, evaluator exceptions, missing browser capability and unavailable results; every terminal record includes reasons for missing metrics.
-- [ ] S-20: A usable capped candidate receives the predeclared independent evaluation, account limits stop the schedule, refusal before launch leaves a cell runnable, and session/provider error payloads cannot masquerade as normal completion.
-- [ ] S-21: Injected finalization/write failures retain recoverable raw artifacts and report failure; reruns preserve original terminal outcomes, and missing evidence never yields acceptance or a fabricated zero.
+- [x] S-19: Actual orchestrator output validates for accepted and rejected candidates, account limits, capped sessions, ambiguous exits, evaluator exceptions, missing browser capability and unavailable results; every terminal record includes reasons for missing metrics.
+- [x] S-20: A usable capped candidate receives the predeclared independent evaluation, account limits stop the schedule, refusal before launch leaves a cell runnable, and session/provider error payloads cannot masquerade as normal completion.
+- [x] S-21: Injected finalization/write failures retain recoverable raw artifacts and report failure; reruns preserve original terminal outcomes, and missing evidence never yields acceptance or a fabricated zero.
 
 ## Verification
 Proves: The focused checks exercise the stated controls and failure paths. Static assertions are sufficient only for authored contracts/generated artifacts; behavioral claims require observed outputs, side effects or refusal behavior.

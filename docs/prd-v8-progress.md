@@ -119,3 +119,14 @@ unknown coverage for imported legacy attempts. Missing legacy attempts cannot be
 complete total. Invalid-run spend remains in accounting while acceptance denominators
 remain separate. Provider semantics are in `docs/prd-v8-usage-semantics.md`; native payload
 validation remains part of the operational smoke, not an offline claim.
+
+### T-106
+
+All launched terminal paths use the same accounting, protocol observation, validation
+and atomic publication path. Actual persisted outputs validate for success, rejection,
+unavailable evaluation, caps, account/provider errors and evaluator exceptions. Clean
+prelaunch refusals remain pending and resumable. A capped candidate is independently
+evaluated; a coincident execution error remains an invalid experiment and stops further
+prompts. Accounting, validation and write faults retain private raw evidence with a
+separately validated diagnostic and block retries until explicit operator disposition.
+Diagnostic-storage failure retains ownership. No automatic diagnostic repair is provided.

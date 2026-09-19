@@ -30,6 +30,7 @@
 // orchestrator refuses the same way, one level up, so that a caller cannot slip past the
 // decision by driving the loop instead of the session.
 const fs = require('node:fs');
+const finalization = require('./finalization.cjs');
 const os = require('node:os');
 const path = require('node:path');
 const briefs = require('./briefs.cjs');
@@ -120,7 +121,9 @@ function writeRecord(runsRoot, cell, record, claim = null) {
   const owned = claim || claims.acquire(runsRoot, key, 'record publication');
   try {
     claims.assertOwner(owned, runsRoot, key);
-    const dir = runDir(runsRoot, cell); fs.mkdirSync(dir, { recursive: true });
+    const dir = runDir(runsRoot, cell);
+    if (finalization.blocked(dir)) throw new Error('FINALIZATION_FAILED: record mutation requires explicit operator disposition');
+    fs.mkdirSync(dir, { recursive: true });
     const file = claims.contained(runsRoot, `${cell.brief}/rep-${cell.repetition}/${cell.arm}/record.json`);
     claims.atomicWrite(file, `${JSON.stringify(record, null, 2)}\n`);
     return file;
@@ -221,6 +224,7 @@ function claimRerun(runsRoot, cell, options) {
   } finally { if (original) claims.release(original); claims.release(allocation); }
 }
 function claimRerunOwned(runsRoot, cell, { cohort, provenance = {}, environment = {} }) {
+  if (finalization.blocked(runDir(runsRoot, cell))) throw new Error('FINALIZATION_FAILED: original requires explicit operator disposition');
   const original = readRecord(runsRoot, cell);
   if (!original) throw new Error(`no record to rerun at ${idOf(cell)}`);
   if (original.status !== 'invalid') throw new Error(`${original.run} is ${original.status}, not invalid; only an invalid run is rerun`);
@@ -287,10 +291,9 @@ function readUsage(logDir, names) {
 // evaluator and wrote it, so every record the orchestrator produced failed
 // `effort.problems()` — the two halves of the edition never met.
 //
-// A record that cannot pass its own validator is `invalid` with the problems as its
-// reason. That keeps candidate acceptance and experiment validity separate: the
-// evaluation stays on the record either way, and a rejected candidate remains a perfectly
-// valid measurement.
+// Compute complete accounting and protocol observations without repairing invalid
+// data into a plausible result. The caller validates before publishing, or retains a
+// separate diagnostic envelope and the exact attempted record on failure.
 function complete(record, { home, logDir, workspace, sessions }) {
   const usage = usageAccounting.collect(record.schema === 8 ? home : logDir, record, sessions);
   usageAccounting.apply(record, usage);
@@ -314,12 +317,7 @@ function complete(record, { home, logDir, workspace, sessions }) {
     }
   }
 
-  const problems = effort.problems(record);
-  if (problems.length && record.status === 'valid') {
-    record.status = 'invalid';
-    record.reason = `the record does not validate: ${problems.map(x => `${x.code} ${x.detail}`).join('; ')}`.slice(0, 500);
-  }
-  return problems;
+  return effort.problems(record);
 }
 
 // Install a released kit into the workspace, as its own commit, so the candidate's base
@@ -379,8 +377,13 @@ async function driveRun(runsRoot, cell, opts) {
     if (!['RUN_BUSY', 'RUN_RECOVERY_REQUIRED'].includes(error.code)) throw error;
     return { record: readRecord(runsRoot, cell), stop: true, refused: true, code: error.code, detail: error.message };
   }
-  try { return await driveRunOwned(runsRoot, cell, opts, claim); }
-  finally { claims.release(claim); }
+  let result;
+  try { result = await driveRunOwned(runsRoot, cell, opts, claim); return result; }
+  finally {
+    // If even diagnostic storage failed, retain ownership: automatic retry cannot
+    // safely distinguish the last checkpoint from an unrecorded terminal decision.
+    if (!result?.diagnosticFailure) claims.release(claim);
+  }
 }
 async function driveRunOwned(runsRoot, cell, opts, claim) {
   const {
@@ -390,6 +393,7 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
   } = opts;
   const record = readRecord(runsRoot, cell);
   if (!record) throw new Error(`no planned record at ${idOf(cell)}`);
+  if (finalization.blocked(runDir(runsRoot, cell))) return { record, stop: true, refused: true, code: 'FINALIZATION_FAILED', detail: 'Retained finalization failure requires explicit operator disposition' };
   // Resume: a cell that already reached a terminal status is never redriven. This is the
   // whole reason the study can span reset windows without repeating paid work.
   if (record.status !== 'pending') return { record, stop: false, skipped: true };
@@ -458,6 +462,22 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
     usageAccounting.apply(record, usageAccounting.collect(home, record));
     writeRecord(runsRoot, cell, record, claim);
   };
+  const finalize = (status, reason = null, stop = false) => {
+    record.status = status;
+    record.reason = reason;
+    for (const session of attempt.sessions) if (session.status === 'intent') {
+      session.status = 'unavailable';
+      session.unavailable = 'Session completion was not observed; retained output may be partial.';
+    }
+    attempts.finish(attempt);
+    try {
+      const problems = complete(record, { home, logDir: logs, workspace: ws, sessions: sessionNames });
+      if (problems.length) return finalization.failed(home, record);
+      writeRecord(runsRoot, cell, record, claim);
+      return { record, stop, problems };
+    } catch { return finalization.failed(home, record); }
+  };
+  try {
   const boundary = async name => {
     if (typeof opts.fixtureSession === 'function' && typeof opts.fixtureCheckpoint === 'function') await opts.fixtureCheckpoint(name, { record, attempt, workspace: ws, scratch, logs });
   };
@@ -500,6 +520,7 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
   // recoverable from the workspace; from here on a crash costs money.
   checkpoint();
   await boundary('setup');
+  let executionFailure = null;
   for (const p of brief.prompts) {
     const promptFile = path.join(scratch, `${p.name}.prompt`);
     fs.mkdirSync(scratch, { recursive: true });
@@ -509,13 +530,14 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
     const intent = attempts.intent(record, attempt, p.name, prompt.slice(0, effort.LIMITS.prompt));
     checkpoint();
     await boundary('session-start');
-    const s = await session({
+    let s;
+    try { s = await session({
       run: record.run, workspace: ws, promptFile, model, maxTurns,
       wallClockMinutes, cohort, logDir: logs, name: p.name, spendingCap, effective: opts.effective,
       onGroup: group => claims.registerGroup(claim, group),
       arm: cell.arm, stateRoot: scratch, apiKey: opts.apiKey, expectedAssets,
       readiness: opts.readiness, observationFile: opts.observationFile, signal: opts.signal,
-    });
+    }); } catch { return finalize('invalid', 'Session execution threw before completion; retained output may be partial.'); }
     attempts.sessionEnd(record, attempt, intent, s);
     if (s.environment) record.environment = { ...record.environment, ...s.environment };
     // Checkpointed per SESSION, not per cell. A cell is up to three paid sessions; a
@@ -523,13 +545,12 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
     // so nothing on disk said those sessions had been bought.
     checkpoint();
     await boundary('session-end');
-    if (s.refused) return refuse(`${record.run}: ${s.stderr || s.code || 'the driver refused the session'}`);
+    if (s.refused) return refuse('The driver refused before invocation; retained pending attempt requires explicit resume.');
 
     if (typeof opts.fixtureSession !== 'function' && s.reportable !== true) {
       record.status = 'invalid';
       record.reason = 'native session did not attest the required model, isolation or process cleanup; artifacts retained';
-      checkpoint();
-      return { record, stop: true };
+      return finalize(record.status, record.reason, true);
     }
 
     // An account limit ends the study, not the cell. Marking it invalid keeps the
@@ -542,25 +563,37 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
         kind: 'intervention', id: attempts.eventId(record, attempt, `${p.name}:limit`), started: s.ended, ended: s.ended,
         intervention: 'operator', detail: record.reason,
       });
-      checkpoint();
-      return { record, stop: true };
+      return finalize(record.status, record.reason, true);
     }
 
-    if (s.end === 'capped') {
+    let result;
+    try { result = JSON.parse(fs.readFileSync(path.join(logs, `${p.name}.json`), 'utf8')); } catch {}
+    const providerCap = s.status === 0 && result?.type === 'result' && result.is_error === true &&
+      ['error_max_turns', 'error_max_budget_usd'].includes(result.subtype);
+    if (s.end === 'capped' || providerCap) {
+      if (result && (result.is_error === true || String(result.subtype).startsWith('error_')) &&
+          !['error_max_turns', 'error_max_budget_usd'].includes(result.subtype)) {
+        executionFailure = 'A capped session also reported a provider execution error; independent candidate evaluation is retained but the experiment is invalid.';
+      }
       // The cap is a fact about the run, recorded as an operator intervention — and the
       // run still goes to the evaluator. v6 marked one capped session as having produced
       // no usable work when it had committed code and been rejected on the merits; a cap
       // decides when a session stopped, never whether what it wrote was any good.
       record.events.push({
         kind: 'intervention', id: attempts.eventId(record, attempt, `${p.name}:cap`), started: s.ended, ended: s.ended,
-        intervention: 'operator', detail: `session ${p.name} ended by the ${wallClockMinutes}-minute wall-clock cap (exit ${CAP_EXIT})`,
+        intervention: 'operator', detail: providerCap ? `session ${p.name} reached its predeclared provider cap (${result.subtype})` : `session ${p.name} ended by the ${wallClockMinutes}-minute wall-clock cap (exit ${CAP_EXIT})`,
       });
     } else if (s.end === 'ambiguous') {
       record.status = 'invalid';
       record.reason = `session ${p.name} exited ${s.status} without a matching cap marker; the cap and the exit status disagree`;
-      checkpoint();
-      return { record, stop: false };
+      return finalize(record.status, record.reason);
     }
+    if (s.end !== 'capped' && !providerCap) {
+      if (s.status !== 0 || s.end === 'failed' || !result || result.type !== 'result' || result.subtype !== 'success' || result.is_error === true) {
+        return finalize('invalid', `Session ${p.name} has no successful provider completion; retained payload determines accounting.`);
+      }
+    }
+    if (executionFailure) break;
   }
 
   const candidate = harness.git(ws, 'rev-parse', 'HEAD');
@@ -571,11 +604,8 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
   let evaluation;
   try {
     evaluation = await harness.evaluateCandidate({ id: cell.brief, workspace: ws, candidate, dir, tools, browser: effectiveBrowser, record, scratch });
-  } catch (e) {
-    record.status = 'invalid';
-    record.reason = `evaluation failed: ${String(e.message).slice(0, effort.LIMITS.reason)}`;
-    checkpoint();
-    return { record, stop: false };
+  } catch {
+    return finalize('invalid', 'Independent evaluation failed; retained candidate and artifacts require review.');
   }
   record.evaluation = {
     candidate, evaluator: effort.sha256(fs.readFileSync(path.join(dir, cell.brief, 'evaluator', 'evaluate.cjs'))),
@@ -583,11 +613,14 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
   };
   record.events.push({ kind: 'evaluation', id: attempts.eventId(record, attempt, 'evaluation'), started: evalStart, ended: iso() });
   attempt.evaluation = 'completed';
-  attempts.finish(attempt);
-  record.status = harness.statusFor(evaluation.outcome);
-  const problems = complete(record, { home, logDir: logs, workspace: ws, sessions: sessionNames });
-  checkpoint();
-  return { record, stop: false, problems };
+  const status = executionFailure ? 'invalid' : harness.statusFor(evaluation.outcome);
+  return finalize(status, executionFailure || (status === 'valid' ? null : 'Independent evaluation is unavailable or inconclusive; no acceptance is established.'));
+  } catch {
+    // A thrown setup, collector or checkpoint operation retains the actual
+    // in-memory record and last atomic checkpoint. Never infer a successful run.
+    return finalization.failed(home, record);
+  }
+
 }
 
 // Walk the schedule in execution order, stopping at the first account limit. Everything
