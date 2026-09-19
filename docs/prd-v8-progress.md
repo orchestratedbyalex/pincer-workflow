@@ -252,5 +252,9 @@ inferred. Commit `bffcfc8` (harness) plus this documentation commit.
 Frozen cohort `f09e4312…` → `d1e57a17…` (harness digest only). The study worktree was moved
 to `bffcfc8`; the dry-run effective manifest and honest draft were regenerated there
 (effective cohort `976db3ee…` → `64325207…`, observation target unchanged `8af4d99d…`).
-Focused suites passed after the change; the full `npm test` result and the pinned-kit
-re-verification are recorded below this entry once complete.
+Focused suites passed after the change. The full `npm test` chain (76 suites) passed
+locally on 19 September 2026 (started 17:38Z, finished 17:53Z, exit 0) on the tree at
+`bffcfc8` plus the documentation edits. T-109 was re-verified through the pinned kit at
+17:53Z: its four suites pass and the readiness command still exits 2 by design
+(`last_check … failed 9f673d51f3aa`). No CI run exists for these commits; the branch is
+not pushed. T-109 and T-102 remain in progress.
