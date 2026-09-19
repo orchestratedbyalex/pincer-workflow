@@ -112,8 +112,10 @@ function resolve(root, spec, input, { inputRoot = root } = {}) {
   const kitPath = contained(inputRoot, input.kit.path);
   if (!fs.statSync(kitPath).isFile()) throw new Error('kit: expected an archive file');
   const kit = { commit: text(input.kit.commit, 'kit commit', /^[a-f0-9]{40}$/), digest: hash(fs.readFileSync(kitPath)) };
-  object(input.configuration, ['permission_mode', 'cwd_kind'], 'configuration');
+  object(input.configuration, ['permission_mode', 'cwd_kind', 'isolation_profile', 'isolation_observation_digest'], 'configuration');
   if (!['manual', 'acceptEdits', 'auto', 'dontAsk', 'plan'].includes(input.configuration.permission_mode) || input.configuration.cwd_kind !== 'scratch') throw new Error('configuration: explicit supported permission posture and scratch cwd required');
+  if (Object.hasOwn(input.configuration, 'isolation_profile')) text(input.configuration.isolation_profile, 'isolation profile', /^[a-z][a-z0-9-]+$/);
+  if (Object.hasOwn(input.configuration, 'isolation_observation_digest')) text(input.configuration.isolation_observation_digest, 'isolation observation digest', /^[a-f0-9]{64}$/);
   const configuration = { ...input.configuration };
   const staticManifest = freeze.compute(root, spec);
   const effective = {
@@ -142,6 +144,8 @@ function recordInputs(manifest) {
     environment: { model: e.model, tool: e.tool.name, tool_version: e.tool.version,
       os: e.platform.os, node: e.platform.node, platform_release: e.platform.release,
       permission_mode: e.configuration.permission_mode, caps,
+      ...(e.configuration.isolation_profile ? { isolation_profile: e.configuration.isolation_profile } : {}),
+      ...(e.configuration.isolation_observation_digest ? { isolation_observation_digest: e.configuration.isolation_observation_digest } : {}),
       fixture: e.tool.kind === 'version-probe-fixture' },
   };
 }

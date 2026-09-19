@@ -164,78 +164,17 @@ function workspace() {
   return dir;
 }
 
-// --- the driver refuses before it spends ------------------------------------------------
+// --- the historical direct shell route is closed ----------------------------------------
+// T-102's new isolation suite observes subprocess cwd, environment and watchdog
+// behavior. Legacy argv must not remain a second route to an inherited-config CLI.
 {
-  const fake = fakeCli();
-  const ws = workspace();
-  const prompt = path.join(ws, 'PROMPT.txt');
-
-  const noOptIn = drive(fake, flags(ws, prompt));
-  assert.equal(noOptIn.status, 3, 'without the spending-cap assertion it refuses');
-  assert.match(noOptIn.stderr, /no spending cap has been asserted/);
-  assert.equal(fake.invocations().length, 0, 'and it refuses before launching anything');
-
-  for (const [bad, what] of [['0', 'zero'], ['abc', 'non-numeric'], ['', 'empty']]) {
-    const r = drive(fake, [...flags(ws, prompt, { wall: bad }), '--i-have-a-spending-cap']);
-    assert.ok(r.status === 4 || r.status === 2, `a ${what} wall-clock cap is refused, not treated as no cap`);
+  const fake = fakeCli(), ws = workspace(), prompt = path.join(ws, 'PROMPT.txt');
+  for (const args of [flags(ws, prompt), [...flags(ws, prompt), '--i-have-a-spending-cap']]) {
+    const result = drive(fake, args);
+    assert.equal(result.status, 3);
+    assert.match(result.stderr, /historical direct launch route is disabled/);
   }
-  assert.equal(fake.invocations().length, 0, 'a bad cap never reaches a session');
-
-  const badCohort = drive(fake, [...flags(ws, prompt).slice(0, -1), 'not-a-cohort', '--i-have-a-spending-cap']);
-  assert.equal(badCohort.status, 4, 'a run must carry the cohort it belongs to');
-}
-
-// --- the session runs IN the workspace it was given --------------------------------------
-{
-  const fake = fakeCli();
-  const ws = workspace();
-  const elsewhere = tempDir();
-  const prompt = path.join(ws, 'PROMPT.txt');
-
-  // Driven from a DIFFERENT directory: before T-98 the session inherited this one while
-  // the frozen configuration recorded `cwd_kind: scratch`.
-  const r = drive(fake, [...flags(ws, prompt), '--i-have-a-spending-cap'], { cwd: elsewhere });
-  assert.equal(r.status, 0, `the stand-in session completed: ${r.stderr}`);
-  const seen = fake.invocations();
-  assert.equal(seen.length, 1, 'the stand-in ran, so the real CLI was never reached');
-  assert.equal(fs.realpathSync(seen[0]), fs.realpathSync(ws), 'the session ran in the workspace, not the caller directory');
-  assert.notEqual(fs.realpathSync(seen[0]), fs.realpathSync(elsewhere));
-}
-
-// --- a session's own exit status survives, and is never confused with the cap -------------
-{
-  const fake = fakeCli();
-  const ws = workspace();
-  const prompt = path.join(ws, 'PROMPT.txt');
-
-  const failed = drive(fake, [...flags(ws, prompt), '--i-have-a-spending-cap'], { mode: 'exit7' });
-  assert.equal(failed.status, 7, 'a failing session reports its own status');
-  assert.doesNotMatch(failed.stderr, orchestrator.CAP_MARKER, 'and is not labelled a cap');
-
-  // A session that exits 124 on its own carries no marker, so the orchestrator refuses to
-  // call it capped rather than guessing.
-  const own124 = drive(fake, [...flags(ws, prompt), '--i-have-a-spending-cap'], { mode: 'exit124' });
-  assert.equal(own124.status, 124);
-  assert.equal(orchestrator.endOf(own124), 'ambiguous', 'exit 124 without the marker is ambiguous, not a cap');
-}
-
-// --- the wall clock actually ends a session ----------------------------------------------
-// The cap is whole minutes, so this case takes about a minute. That is the price of
-// proving the watchdog rather than asserting it: the defect T-98 fixes was a cap that was
-// validated and never enforced, which reads identically in source to one that works.
-{
-  const fake = fakeCli();
-  const ws = workspace();
-  const prompt = path.join(ws, 'PROMPT.txt');
-  const started = Date.now();
-  const r = drive(fake, [...flags(ws, prompt, { wall: '1' }), '--i-have-a-spending-cap'], { mode: 'hang' });
-  const elapsed = (Date.now() - started) / 1000;
-
-  assert.equal(r.status, orchestrator.CAP_EXIT, 'a session that outruns the clock exits 124');
-  assert.match(r.stderr, orchestrator.CAP_MARKER, 'and says so, so 124 is never ambiguous');
-  assert.equal(orchestrator.endOf(r), 'capped');
-  assert.ok(elapsed < 120, `the cap ended it near its deadline, not late (${elapsed.toFixed(1)}s)`);
-  assert.ok(elapsed >= 55, `and not early (${elapsed.toFixed(1)}s)`);
+  assert.equal(fake.invocations().length, 0);
 }
 
 // --- the orchestrator refuses the same decision, one level up -----------------------------

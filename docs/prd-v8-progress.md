@@ -65,3 +65,13 @@ Surviving inherited or registered detached children prevent reclaim. Parent revi
 complete recovery-receipt publication and retry validation. The sandbox denies the process
 group inspection needed by these tests; verification passed outside it. Ambiguous hosts
 remain blocked rather than assumed dead. T-104 still owns checkpoint replay and attempts.
+
+### T-102 — implementation verified, observation pending
+
+Native and fixture sessions share explicit environment construction, a custody-registered
+supervisor, incremental protected captures and bounded teardown. Parent review added
+pre-workspace gating, preservation of kit discovery without duplicate hook registration,
+and capture-I/O failure termination. The legacy bypass launch is disabled. Offline
+verification passes; no native session occurred. Acceptance remains open for real CLI
+authentication, kit discovery and managed policy. No API key is available in this session;
+the user was asked whether to provide one through the environment.

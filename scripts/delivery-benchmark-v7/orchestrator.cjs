@@ -39,6 +39,7 @@ const effort = require('./effort.cjs');
 const freeze = require('./freeze.cjs');
 const effectiveInputs = require('./effective.cjs');
 const claims = require('./run-claims.cjs');
+const isolation = require('./isolated-launch.cjs');
 
 const DRIVER = path.join(__dirname, 'live-driver.sh');
 
@@ -375,7 +376,8 @@ function installKit(ws, arm, kit) {
 // One session, through the frozen driver. Nothing else in this file may reach a model,
 // and this function adds nothing to the prompt: a driver — or an orchestrator — that
 // coaches is measuring itself rather than the workflow.
-function driveSession({ run, workspace, promptFile, model, maxTurns, wallClockMinutes, cohort, logDir, name, spendingCap, effective = null }) {
+function driveSession({ run, workspace, promptFile, model, maxTurns, wallClockMinutes, cohort, logDir, name, spendingCap, effective = null,
+  arm, stateRoot, apiKey, expectedAssets, onGroup, readiness, observationFile, signal }) {
   if (spendingCap !== true) {
     return { refused: true, status: 3, stdout: '', stderr: 'orchestrator: refused: no spending cap has been asserted' };
   }
@@ -383,10 +385,8 @@ function driveSession({ run, workspace, promptFile, model, maxTurns, wallClockMi
     const current = effectiveInputs.assertCurrent(effective);
     if (current.cohort !== cohort || current.effective.model !== model || current.caps.turns_per_session !== maxTurns || current.caps.wall_clock_minutes !== wallClockMinutes) throw new Error('session inputs differ from effective manifest');
   } catch (error) { return { refused: true, status: 3, stdout: '', stderr: error.message }; }
-  // T-102 supplies the isolated launch implementation. Until it is verified, the
-  // historical shell driver is not a reportable launch route for new manifests.
-  return { refused: true, status: 3, stdout: '', stderr: 'isolated launch prerequisite is not configured' };
-
+  return isolation.launchNative({ effective, arm, workspace, stateRoot, logDir, name,
+    prompt: fs.readFileSync(promptFile, 'utf8'), apiKey, expectedAssets, onGroup, readiness, observationFile, signal });
 }
 
 // One run, end to end. Returns { record, stop } — `stop` is true only for an account
@@ -441,9 +441,10 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
       const inputRoot = opts.effective.inputRoot || opts.effective.root;
       if (kit !== effectiveInputs.contained(inputRoot, opts.effective.input.kit.path)) throw new Error('runtime kit differs from effective manifest');
       if (dir !== briefs.BRIEFS_DIR || opts.tools || browser) throw new Error('unbound brief, tool or browser override');
-      // Loading an adapter belongs after all provenance preflight, never in main().
-      // T-102 must first supply a verified isolation boundary before any preparation.
-      throw new Error('isolated launch prerequisite is not configured');
+      if (opts.readiness?.purpose !== 'measured') throw new Error('measured cells require reviewed native isolation; operational smoke uses a separate allocation');
+      const gate = isolation.preflightExecution({ effective: opts.effective, apiKey: opts.apiKey,
+        readiness: opts.readiness, observationFile: opts.observationFile, onGroup: group => claims.registerGroup(claim, group) });
+      if (!gate.ok) throw new Error(gate.detail);
     } catch (error) { return refuse(error.message); }
   }
   const plannedModel = record.environment.model;
@@ -490,6 +491,7 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
   // the harness had already contaminated.
   harness.prepare(ws, cell.brief, { arm: cell.arm, dir });
   const installed = installKit(ws, cell.arm, kit);
+  const expectedAssets = typeof opts.fixtureSession === 'function' ? null : isolation.assetsFor(cell.arm, ws).files;
   record.provenance.kit = installed ? installed.digest : null;
   record.provenance.kit_source = installed ? installed.source : null;
   record.provenance.base = harness.git(ws, 'rev-parse', 'HEAD');
@@ -516,8 +518,11 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
       run: record.run, workspace: ws, promptFile, model, maxTurns,
       wallClockMinutes, cohort, logDir: logs, name: p.name, spendingCap, effective: opts.effective,
       onGroup: group => claims.registerGroup(claim, group),
+      arm: cell.arm, stateRoot: scratch, apiKey: opts.apiKey, expectedAssets,
+      readiness: opts.readiness, observationFile: opts.observationFile, signal: opts.signal,
     });
-    if (s.refused) return refuse(`${record.run}: the driver refused the session; no spending cap has been asserted`);
+    if (s.refused) return refuse(`${record.run}: ${s.stderr || s.code || 'the driver refused the session'}`);
+    if (s.environment) record.environment = { ...record.environment, ...s.environment };
     record.events.push({
       kind: 'session', id: `${record.run}:${p.name}`, started: s.started, ended: s.ended,
       prompt: prompt.slice(0, effort.LIMITS.prompt),
@@ -526,6 +531,13 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
     // crash after the second used to leave a record reading `pending` with no events,
     // so nothing on disk said those sessions had been bought.
     writeRecord(runsRoot, cell, record, claim);
+
+    if (typeof opts.fixtureSession !== 'function' && s.reportable !== true) {
+      record.status = 'invalid';
+      record.reason = 'native session did not attest the required model, isolation or process cleanup; artifacts retained';
+      writeRecord(runsRoot, cell, record, claim);
+      return { record, stop: true };
+    }
 
     // An account limit ends the study, not the cell. Marking it invalid keeps the
     // partial work and its reason; walking on would convert every later cell into a

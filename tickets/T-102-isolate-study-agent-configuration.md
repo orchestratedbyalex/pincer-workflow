@@ -1,10 +1,13 @@
 ---
 ticket: T-102
-status: open
+status: in_progress
 size: M
 prd: .prd/prd-v8.md
 depends_on: [T-101]
 timeout: 900
+started: 2026-09-19T06:49:06Z
+last_check: 2026-09-19T07:13:23Z passed 42cb37f26796
+verified: 2026-09-19T07:13:23Z 42cb37f26796
 ---
 
 ## Objective
@@ -51,3 +54,13 @@ keep any observation criterion unchecked until its linked artifacts have been re
   by this ticket. Reuse actual session decisions; obtain only missing execution inputs.
 - Preserve historical frozen records and report changed execution/scoring under explicit
   cohort identity. New scenario scope or an unsupported design needs a recorded revision.
+
+## Implementation evidence — 19 September 2026
+
+The isolated native launcher and offline environment/custody/capture controls are
+implemented and the focused verification passes. No actual CLI session was launched.
+Acceptance remains unchecked pending observed native authentication, kit discovery and
+managed-policy isolation. The current session has no API key; an environment-based
+credential decision and separately capped operational launch remain pending. Synthetic
+process records are explicitly fixture/unreportable and do not close this observation.
+See `docs/prd-v8-agent-isolation.md` for the reviewed profile and retained evidence format.
