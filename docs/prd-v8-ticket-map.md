@@ -1,7 +1,7 @@
 # PRD v8 ticket map — reliable delivery with less effort
 
 [PRD v8](../.prd/prd-v8.md) follows the [readiness assessment](pincer-readiness-2026-09-15.md).
-All 20 tickets are new and open. These are planning artifacts, not execution receipts,
+The 20-ticket plan is tracked through ticket runtime receipts. This map is not execution evidence,
 measured observations or runtime authorization. Scenario coverage and verification
 adequacy are the author's planning judgment; structural checks do not establish adequacy.
 
@@ -11,15 +11,15 @@ adequacy are the author's planning judgment; structural checks do not establish 
 | --- | --- | --- | --- | --- |
 | [T-100](../tickets/T-100-reconcile-v8-scope-and-contracts.md) | Reconcile delivery obligations and freeze the v8 contracts | M | — | Offline implementation/review |
 | [T-101](../tickets/T-101-bind-effective-study-inputs.md) | Bind effective execution inputs to the cohort | M | T-100 | Offline implementation/review |
-| [T-102](../tickets/T-102-isolate-study-agent-configuration.md) | Isolate and record agent execution configuration | M | T-101 | Offline implementation/review |
+| [T-102](../tickets/T-102-isolate-study-agent-configuration.md) | Isolate and record agent execution configuration | M | T-101 | Offline implementation plus native observation |
 | [T-103](../tickets/T-103-claim-study-runs-exclusively.md) | Claim study runs exclusively | M | T-101 | Offline implementation/review |
 | [T-104](../tickets/T-104-preserve-study-attempts-on-restart.md) | Preserve checkpointed attempts through interruption | M | T-103 | Offline implementation/review |
 | [T-105](../tickets/T-105-account-for-partial-study-usage.md) | Account for incomplete and repeated usage honestly | M | T-104 | Offline implementation/review |
-| [T-106](../tickets/T-106-finalize-all-study-outcomes.md) | Finalize every terminal outcome into a valid record | M | T-102, T-105 | Offline implementation/review |
+| [T-106](../tickets/T-106-finalize-all-study-outcomes.md) | Finalize every terminal outcome into a valid record | M | T-105 | Offline implementation/review |
 | [T-107](../tickets/T-107-supply-real-browser-evaluation.md) | Supply and prove the real browser evaluator | M | T-101 | Offline implementation/review |
 | [T-108](../tickets/T-108-prepare-release-before-candidate-selection.md) | Make release preparation reproducible | M | T-100 | Offline implementation/review |
 | [T-109](../tickets/T-109-gate-study-execution-readiness.md) | Gate live work on offline integrity and concrete prerequisites | M | T-106, T-107, T-108 | Live evidence required |
-| [T-110](../tickets/T-110-observe-baseline-strict-journeys.md) | Observe the baseline strict journeys and rank friction | L | T-109 | Live evidence required |
+| [T-110](../tickets/T-110-observe-baseline-strict-journeys.md) | Observe the baseline strict journeys and rank friction | L | T-102, T-109 | Live evidence required |
 | [T-111](../tickets/T-111-observe-file-only-agent-handoff.md) | Observe platform journeys and a file-only handoff | L | T-110 | Live evidence required |
 | [T-112](../tickets/T-112-guide-coverage-authoring.md) | Guide coverage authoring with reviewable proposals | L | T-110 | Offline implementation/review |
 | [T-113](../tickets/T-113-simplify-proportionate-workflow.md) | Simplify small-change onboarding and recovery | M | T-110, T-112 | Offline implementation/review |
@@ -120,9 +120,14 @@ No dependencies on unfinished old tickets are inserted that would form a circula
 ## Gates and execution limits
 
 - **First ready ticket:** T-100. Authoring the plan does not start it.
-- **Before paid sessions:** T-101–T-108 complete, T-109 offline integrity passes and the
+- **Before operational smoke:** T-101, T-103–T-108 complete, T-102 implementation verified,
+  T-109 offline integrity passes and the
   actual numeric budgets, wall-clock caps, projects/access, reviewers and version pins
   are recorded. T-109 itself stays open until its capped operational smoke is observed.
+- **Before measured sessions:** T-102 and T-109 both complete with reviewed native
+  observations. The 19 September scheduling correction moves the T-102 completion
+  dependency from T-106 to T-110; it removes the smoke/observation cycle without
+  closing T-102 on fixtures or relaxing any acceptance scenario.
 - **Before usability implementation:** T-110's evidence supports the hypothesis. A
   contrary result requires a concrete revision before replacing the feature.
 - **Before the main comparison:** K2 and all effective inputs are pinned; T-114 results

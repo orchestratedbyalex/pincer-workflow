@@ -3,7 +3,7 @@ ticket: T-106
 status: open
 size: M
 prd: .prd/prd-v8.md
-depends_on: [T-102, T-105]
+depends_on: [T-105]
 timeout: 900
 ---
 
@@ -19,6 +19,11 @@ Give success, rejection, limits and errors one complete recording path without c
 - Order, predecessor obligations and verification limits: [v8 ticket map](../docs/prd-v8-ticket-map.md).
 
 ## Requirements
+
+Scheduling correction, 19 September 2026: T-102's isolated launcher implementation is
+verified, but its native observation remains open. This offline ticket may proceed;
+T-110 now depends on both T-102 and T-109. No observation acceptance is waived.
+
 - Actual orchestrator output validates for accepted and rejected candidates, account limits, capped sessions, ambiguous exits, evaluator exceptions, missing browser capability and unavailable results; every terminal record includes reasons for missing metrics.
 - A usable capped candidate receives the predeclared independent evaluation, account limits stop the schedule, refusal before launch leaves a cell runnable, and session/provider error payloads cannot masquerade as normal completion.
 - Injected finalization/write failures retain recoverable raw artifacts and report failure; reruns preserve original terminal outcomes, and missing evidence never yields acceptance or a fabricated zero.

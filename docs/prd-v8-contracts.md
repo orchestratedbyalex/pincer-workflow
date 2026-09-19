@@ -38,6 +38,13 @@ original inputs and are never silently re-evaluated or pooled with changed execu
 
 ## Effective execution identity — T-101/T-102/T-107
 
+Scheduling correction, 19 September 2026: verified T-102 implementation is sufficient
+for offline T-106 work after T-105. T-109's separately authorized operational smoke
+supplies native observations; it is not a measured run. Both T-102 and T-109 must be
+complete before T-110 or any measured session. Missing, synthetic or incompatible
+native evidence prevents measured readiness. Every original acceptance scenario remains
+required. This corrects current v8 dependencies only; historical v7 receipts are unchanged.
+
 Resolve one canonical effective manifest before planning, workspace preparation or
 launch. Include resolved model, actual tool/version, numeric turn/spend/wall-clock
 caps, kit commit and artifact digest, protocol/briefs, evaluator/browser implementation

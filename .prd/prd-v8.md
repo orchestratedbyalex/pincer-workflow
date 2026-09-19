@@ -309,6 +309,14 @@ A disproved usability hypothesis yields an explicit proposed PRD revision before
 not a checkbox tick. Missing access/reviewers/budgets leave dependent live work unfinished;
 independent authorized offline work can proceed. No default spending allocation is inferred.
 
+Scheduling correction — 19 September 2026: T-102 combines offline implementation
+with native observations supplied by T-109's operational smoke. Requiring its closure
+before T-106 created a cycle. T-106 therefore depends on T-105, using the verified
+T-102 implementation; T-110 depends on both T-102 and T-109. A separately authorized,
+capped operational smoke may collect the outstanding T-102 observations after all
+offline infrastructure checks pass. Measured work requires both tickets complete.
+All original scenarios remain required; synthetic checks cannot close native observations.
+
 | Success criterion | Evidence / interpretation |
 | --- | --- |
 | All three reproduced defects prevented | Real orchestrator failure/control cases and actual output-validator assertions |

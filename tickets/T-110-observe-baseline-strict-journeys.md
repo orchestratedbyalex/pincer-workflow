@@ -3,7 +3,7 @@ ticket: T-110
 status: open
 size: L
 prd: .prd/prd-v8.md
-depends_on: [T-109]
+depends_on: [T-102, T-109]
 timeout: 900
 ---
 

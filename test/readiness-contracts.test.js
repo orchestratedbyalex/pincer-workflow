@@ -79,6 +79,31 @@ function validateDocuments(contract, overlay) {
 }
 
 validateDocuments(contracts, obligations);
+
+// The operational smoke supplies native observations, so it must be reachable
+// without prematurely closing T-102. Measured work still has both completion gates.
+function validateV8Dependencies(dependencies) {
+  assert.deepEqual(dependencies['T-106'], ['T-105']);
+  assert.deepEqual(dependencies['T-109'], ['T-106', 'T-107', 'T-108']);
+  assert.deepEqual(dependencies['T-110'], ['T-102', 'T-109']);
+  const visit = (id, ancestors = []) => {
+    assert.ok(!ancestors.includes(id), `dependency cycle: ${[...ancestors, id].join(' -> ')}`);
+    assert.ok(Object.hasOwn(dependencies, id), `unknown predecessor ${id}`);
+    for (const predecessor of dependencies[id]) visit(predecessor, [...ancestors, id]);
+  };
+  for (const id of Object.keys(dependencies)) visit(id);
+}
+const v8Dependencies = {};
+for (const file of fs.readdirSync(path.join(root, 'tickets')).filter(name => /^T-1[01]\d-/.test(name))) {
+  const content = read(`tickets/${file}`);
+  const id = content.match(/^ticket: (T-\d+)$/m)[1];
+  const field = content.match(/^depends_on: \[([^\]]*)\]$/m);
+  v8Dependencies[id] = field ? field[1].split(',').map(value => value.trim()).filter(Boolean) : [];
+}
+validateV8Dependencies(v8Dependencies);
+for (const [id, dependencies] of [['T-106', ['T-102', 'T-105']], ['T-110', ['T-109']]]) {
+  assert.throws(() => validateV8Dependencies({ ...v8Dependencies, [id]: dependencies }));
+}
 // Fault the authored controls, not fake runtime outcomes. Each mutation must be rejected.
 const mutations = [
   [contracts, obligations.replace(/^\| S-07 .*\n/m, '')],
