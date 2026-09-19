@@ -37,6 +37,7 @@ const schedule = require('./schedule.cjs');
 const harness = require('./harness.cjs');
 const effort = require('./effort.cjs');
 const freeze = require('./freeze.cjs');
+const effectiveInputs = require('./effective.cjs');
 
 const DRIVER = path.join(__dirname, 'live-driver.sh');
 
@@ -132,8 +133,38 @@ function nextRepetition(runsRoot, brief, arm) {
 // Materialise the schedule as pending records. Idempotent by construction: a cell that
 // already has a record is left exactly as it is, which is what makes `plan` safe to call
 // again after an interrupted study and what makes it the resume checkpoint.
-function plan(runsRoot, { cohort, provenance = {}, environment = {}, ids = briefs.briefIds() }) {
+function plan(runsRoot, { cohort, provenance = {}, environment = {}, ids = briefs.briefIds(), effective = null }) {
   const cells = schedule.schedule(ids);
+  if (effective) {
+    const manifest = effectiveInputs.assertCurrent(effective);
+    ({ provenance, environment } = effectiveInputs.recordInputs(manifest));
+    if (manifest.cohort !== cohort) throw new Error('effective cohort does not match plan');
+    const manifestPath = path.join(runsRoot, 'effective-manifest.json');
+    if (fs.existsSync(manifestPath) && effectiveInputs.canonical(JSON.parse(fs.readFileSync(manifestPath, 'utf8'))) !== effectiveInputs.canonical(manifest)) throw new Error('existing plan has different effective inputs');
+    // Inspect all stored cells, including reruns and briefs outside this invocation.
+    // Never fill a partially populated plan until the entire existing plan agrees.
+    function inspect(dir) {
+      if (!fs.existsSync(dir)) return;
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isSymbolicLink()) throw new Error('plan contains a symbolic link');
+        const file = path.join(dir, entry.name);
+        if (entry.isDirectory() && !['workspace', 'scratch', 'logs'].includes(entry.name) && !entry.name.startsWith('logs-attempt-')) inspect(file);
+        else if (entry.isFile() && entry.name === 'record.json') {
+          const record = JSON.parse(fs.readFileSync(file, 'utf8'));
+          if (record.cohort !== cohort) throw new Error('existing record has different effective inputs');
+          for (const [key, value] of Object.entries(provenance)) {
+            if (record.provenance?.[key] !== value) throw new Error('existing record has unknown effective provenance');
+          }
+          for (const [key, value] of Object.entries(environment)) {
+            if (effectiveInputs.canonical(record.environment?.[key]) !== effectiveInputs.canonical(value)) throw new Error('existing record has different effective environment');
+          }
+        }
+      }
+    }
+    inspect(runsRoot);
+    fs.mkdirSync(runsRoot, { recursive: true });
+    if (!fs.existsSync(manifestPath)) fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, { flag: 'wx' });
+  }
   const created = [];
   for (const cell of cells) {
     if (readRecord(runsRoot, cell)) continue;
@@ -309,30 +340,18 @@ function installKit(ws, arm, kit) {
 // One session, through the frozen driver. Nothing else in this file may reach a model,
 // and this function adds nothing to the prompt: a driver — or an orchestrator — that
 // coaches is measuring itself rather than the workflow.
-function driveSession({ run, workspace, promptFile, model, maxTurns, wallClockMinutes, cohort, logDir, name, spendingCap }) {
+function driveSession({ run, workspace, promptFile, model, maxTurns, wallClockMinutes, cohort, logDir, name, spendingCap, effective = null }) {
   if (spendingCap !== true) {
     return { refused: true, status: 3, stdout: '', stderr: 'orchestrator: refused: no spending cap has been asserted' };
   }
-  fs.mkdirSync(logDir, { recursive: true });
-  const started = iso();
-  const r = harness.sh('bash', [
-    DRIVER,
-    '--run', run,
-    '--workspace', workspace,
-    '--prompt-file', promptFile,
-    '--model', model,
-    '--max-turns', String(maxTurns),
-    '--wall-clock-minutes', String(wallClockMinutes),
-    '--cohort', cohort,
-    '--i-have-a-spending-cap',
-  ]);
-  const ended = iso();
-  fs.writeFileSync(path.join(logDir, `${name}.json`), r.stdout || '');
-  fs.writeFileSync(path.join(logDir, `${name}.err`), r.stderr || '');
-  return {
-    refused: false, status: r.status, stdout: r.stdout, stderr: r.stderr,
-    started, ended, end: endOf(r), limit: limitHit(r.stdout) || limitHit(r.stderr),
-  };
+  try {
+    const current = effectiveInputs.assertCurrent(effective);
+    if (current.cohort !== cohort || current.effective.model !== model || current.caps.turns_per_session !== maxTurns || current.caps.wall_clock_minutes !== wallClockMinutes) throw new Error('session inputs differ from effective manifest');
+  } catch (error) { return { refused: true, status: 3, stdout: '', stderr: error.message }; }
+  // T-102 supplies the isolated launch implementation. Until it is verified, the
+  // historical shell driver is not a reportable launch route for new manifests.
+  return { refused: true, status: 3, stdout: '', stderr: 'isolated launch prerequisite is not configured' };
+
 }
 
 // One run, end to end. Returns { record, stop } — `stop` is true only for an account
@@ -367,6 +386,18 @@ async function driveRun(runsRoot, cell, opts) {
   if (frozen && frozen.cohort && frozen.cohort !== record.cohort) {
     return refuse(`${record.run}: the execution path has changed since this cell was planned (${String(record.cohort).slice(0, 12)} → ${frozen.cohort.slice(0, 12)}); plan a new cohort rather than driving this one`);
   }
+  if (typeof opts.fixtureSession !== 'function') {
+    try {
+      const current = effectiveInputs.assertCurrent(opts.effective);
+      if (current.cohort !== cohort || current.effective.model !== model || current.caps.turns_per_session !== maxTurns || current.caps.wall_clock_minutes !== wallClockMinutes) throw new Error('runtime inputs differ from effective manifest');
+      const inputRoot = opts.effective.inputRoot || opts.effective.root;
+      if (kit !== effectiveInputs.contained(inputRoot, opts.effective.input.kit.path)) throw new Error('runtime kit differs from effective manifest');
+      if (dir !== briefs.BRIEFS_DIR || opts.tools || browser) throw new Error('unbound brief, tool or browser override');
+      // Loading an adapter belongs after all provenance preflight, never in main().
+      // T-102 must first supply a verified isolation boundary before any preparation.
+      throw new Error('isolated launch prerequisite is not configured');
+    } catch (error) { return refuse(error.message); }
+  }
   const plannedModel = record.environment.model;
   if (plannedModel !== null && plannedModel !== model) return refuse(`${record.run}: planned for model ${plannedModel}, driven with ${model}`);
   const plannedCaps = record.environment.caps || {};
@@ -390,6 +421,7 @@ async function driveRun(runsRoot, cell, opts) {
   // with a base nobody can tell is polluted. The discarded logs are kept under their own
   // name and the attempt is named in an event, so the repetition is visible rather than
   // silently paid for twice.
+  if (typeof opts.fixtureSession === 'function') record.environment = { ...record.environment, fixture: true, tool: 'synthetic-session' };
   const setupStart = iso();
   if (fs.existsSync(ws)) {
     const attempt = fs.readdirSync(home).filter(n => n.startsWith('logs-attempt-')).length + 1;
@@ -431,9 +463,10 @@ async function driveRun(runsRoot, cell, opts) {
     fs.mkdirSync(scratch, { recursive: true });
     const prompt = `${ARM_PREAMBLE[cell.arm] || ''}${p.prompt}`;
     fs.writeFileSync(promptFile, prompt);
-    const s = driveSession({
+    const session = typeof opts.fixtureSession === 'function' ? opts.fixtureSession : driveSession;
+    const s = await session({
       run: record.run, workspace: ws, promptFile, model, maxTurns,
-      wallClockMinutes, cohort, logDir: logs, name: p.name, spendingCap,
+      wallClockMinutes, cohort, logDir: logs, name: p.name, spendingCap, effective: opts.effective,
     });
     if (s.refused) return refuse(`${record.run}: the driver refused the session; no spending cap has been asserted`);
     record.events.push({
@@ -531,55 +564,55 @@ async function driveSchedule(runsRoot, opts) {
 // It computes the freeze itself and hands it to `driveRun`, so the cohort a record names
 // is checked against the files on disk rather than against the operator's memory.
 async function main(argv) {
-  const flag = (name, fallback = null) => {
-    const i = argv.indexOf(`--${name}`);
-    return i === -1 ? fallback : argv[i + 1];
-  };
-  const runsRoot = flag('runs');
-  if (!runsRoot || argv.includes('--help')) {
+  let args;
+  try { args = effectiveInputs.parseArgs(argv); }
+  catch (error) { process.stderr.write(`orchestrator: ${error.message}\n`); return 2; }
+  if (args.help || !args.runs) {
     process.stdout.write([
-      'usage: node orchestrator.cjs --runs <dir> [options]',
-      '',
-      '  --runs <dir>              where run directories and records live (required)',
-      '  --kit <tarball>           the released kit installed for the pincer and strict arms',
-      '  --model <name>            default sonnet',
-      '  --max-turns <n>           default 150',
-      '  --wall-clock-minutes <n>  default 30',
-      '  --browser <module>        a CommonJS module exporting the browser adapter. Without',
-      '                            one, every UI check is `unverified`, which makes those runs',
-      '                            `unavailable` — never accepted.',
-      '  --plan-only               write the pending records and stop',
-      '  --i-have-a-spending-cap   assert that a human has agreed a cap. Without it nothing',
-      '                            is prepared and no session is launched.',
+      'usage: node orchestrator.cjs --runs <dir> --execution-inputs <json> [options]',
+      '--input-root <dir>  root containing kit and browser artifacts (default repository)',
+      '--model <provider-id> --max-turns <n> --wall-clock-minutes <n> --max-budget-usd <n>',
+      '--kit <relative-tarball> --browser <module>  override entries from execution inputs',
+      'Missing browser leaves UI checks unavailable; browser dependency roots must be declared.',
+      '--plan-only --i-have-a-spending-cap',
+      'Execution inputs must pin tool executable/version, model, caps, kit commit, and configuration.',
       '',
     ].join('\n'));
-    return runsRoot ? 0 : 2;
+    return args.help ? 0 : 2;
   }
+  if (!args['execution-inputs']) throw new Error('--execution-inputs is required; historical plans are read-only');
   const { REPO, SPEC } = require('./freeze-spec.cjs');
-  const frozen = freeze.compute(REPO, SPEC);
-  const model = flag('model', SPEC.configuration.values.model);
-  const maxTurns = Number(flag('max-turns', SPEC.caps.turns_per_session));
-  const wallClockMinutes = Number(flag('wall-clock-minutes', SPEC.caps.wall_clock_minutes));
-  const browserModule = flag('browser');
-  const browser = browserModule ? require(path.resolve(browserModule)) : null;
-  if (!browser) process.stderr.write('orchestrator: no --browser adapter; any UI check will be unverified and those runs unavailable, never accepted\n');
-
+  const input = JSON.parse(fs.readFileSync(args['execution-inputs'], 'utf8'));
+  if (args.model) input.model = args.model;
+  if (args.kit) input.kit = { ...input.kit, path: args.kit };
+  if (args.browser) input.browser = { ...input.browser, entry: args.browser };
+  for (const [flag, key] of [['max-turns', 'turns_per_session'], ['wall-clock-minutes', 'wall_clock_minutes'], ['max-budget-usd', 'spend_usd']]) {
+    if (Object.hasOwn(args, flag)) input.caps = { ...input.caps, [key]: args[flag] };
+  }
+  const inputRoot = args['input-root'] ? fs.realpathSync(args['input-root']) : REPO;
+  const manifest = effectiveInputs.resolve(REPO, SPEC, input, { inputRoot });
+  const effective = { root: REPO, spec: SPEC, inputRoot, input, manifest };
   const opts = {
-    cohort: frozen.cohort, frozen,
-    kit: flag('kit'), model, maxTurns, wallClockMinutes, browser,
-    spendingCap: argv.includes('--i-have-a-spending-cap'),
+    cohort: manifest.cohort, frozen: manifest, effective,
+    kit: effectiveInputs.contained(inputRoot, input.kit.path), model: input.model,
+    maxTurns: manifest.caps.turns_per_session, wallClockMinutes: manifest.caps.wall_clock_minutes,
+    spendingCap: args['i-have-a-spending-cap'] === true,
     provenance: {
-      protocol: frozen.inputs.protocol, prompts: frozen.inputs.briefs, driver: frozen.inputs.driver,
-      collector: frozen.inputs.collector, evaluator: frozen.inputs.evaluators,
-      caps: frozen.inputs.caps, configuration: frozen.inputs.configuration,
+      protocol: manifest.inputs.protocol, prompts: manifest.inputs.briefs, driver: manifest.inputs.driver,
+      collector: manifest.inputs.collector, evaluator: manifest.inputs.evaluators,
+      caps: manifest.inputs.caps, configuration: manifest.inputs.configuration,
     },
-    environment: { model, caps: { turns_per_session: maxTurns, wall_clock_minutes: wallClockMinutes } },
+    environment: {
+      model: input.model, tool: 'claude-code', tool_version: manifest.effective.tool.version,
+      os: manifest.effective.platform.os, node: manifest.effective.platform.node,
+      platform_release: manifest.effective.platform.release,
+      permission_mode: input.configuration.permission_mode, caps: manifest.caps,
+    },
   };
-  const planned = plan(runsRoot, opts);
-  process.stdout.write(`cohort ${frozen.cohort}\n${planned.cells.length} cells, ${planned.created.length} newly planned\n`);
-  if (argv.includes('--plan-only')) return 0;
-
-  const result = await driveSchedule(runsRoot, opts);
+  const planned = plan(args.runs, opts);
+  process.stdout.write(`cohort ${manifest.cohort}\n${planned.cells.length} cells, ${planned.created.length} newly planned\n`);
+  if (args['plan-only']) return 0;
+  const result = await driveSchedule(args.runs, opts);
   for (const d of result.driven) process.stdout.write(`${d.skipped ? 'skip' : 'run '} ${d.run} ${d.status}\n`);
   if (result.stopped) {
     process.stderr.write(`stopped at ${result.stopped}: ${result.reason}\n`);

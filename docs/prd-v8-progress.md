@@ -39,3 +39,12 @@ Contracts and all 30 v7 scenario obligations reconciled. Static contract verific
 includes 15 negative document mutations and a frozen-content mutation. Parent reviewed
 the historical sequencing disposition, preservation boundaries and deferred findings.
 Runtime readiness remains independent from authored documentation.
+
+### T-101
+
+Effective manifests now bind resolved tool/model/caps, kit bytes, browser closure and
+all execution helpers. Existing-plan validation precedes writes. Parent reviewed the
+secret/path boundaries and fixture-only session seam; focused suites passed. The static
+v7 manifest was explicitly regenerated for the changed execution code. Historical cohorts
+remain readable. Real orchestration refuses until T-102 supplies isolation; the old direct
+shell entry is a known remaining boundary assigned to T-102, not live readiness.

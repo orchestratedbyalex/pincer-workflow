@@ -1,10 +1,14 @@
 ---
 ticket: T-101
-status: open
+status: done
 size: M
 prd: .prd/prd-v8.md
 depends_on: [T-100]
 timeout: 900
+started: 2026-09-19T06:37:58Z
+last_check: 2026-09-19T06:48:33Z passed 70b581c9f100
+verified: 2026-09-19T06:48:33Z 70b581c9f100
+finished: 2026-09-19T06:48:33Z
 ---
 
 ## Objective
@@ -26,9 +30,9 @@ Prevent different executed configurations from masquerading as one frozen experi
 Prefer a resolved execution manifest hashed before plan creation, rather than comparing only caller-supplied labels. Bind the actual kit contents and browser dependency closure, not only module filenames. Exact provider model and CLI versions are resolved and pinned during execution, never guessed in this PRD. Re-freeze amended execution inputs openly at the offline integration gate.
 
 ## Acceptance Criteria
-- [ ] S-04: Planning and execution derive a canonical effective manifest containing resolved model identity, tool version, caps, kit digest, browser/evaluator implementation and all execution helpers; changing any relevant input changes cohort identity or is refused before preparation and launch.
-- [ ] S-05: The model-A/10-turn versus model-B/20-turn reproduction cannot produce the same runnable cohort; resuming an existing plan with changed kit, browser adapter or configuration is refused without workspace, record or session mutation.
-- [ ] S-06: Historical cohorts remain readable with their original inputs; malformed flags, missing values, nonpositive or nonfinite caps, escaping inputs and unknown provenance are rejected explicitly, and secrets are neither recorded nor hashed.
+- [x] S-04: Planning and execution derive a canonical effective manifest containing resolved model identity, tool version, caps, kit digest, browser/evaluator implementation and all execution helpers; changing any relevant input changes cohort identity or is refused before preparation and launch.
+- [x] S-05: The model-A/10-turn versus model-B/20-turn reproduction cannot produce the same runnable cohort; resuming an existing plan with changed kit, browser adapter or configuration is refused without workspace, record or session mutation.
+- [x] S-06: Historical cohorts remain readable with their original inputs; malformed flags, missing values, nonpositive or nonfinite caps, escaping inputs and unknown provenance are rejected explicitly, and secrets are neither recorded nor hashed.
 
 ## Verification
 Proves: The focused checks exercise the stated controls and failure paths. Static assertions are sufficient only for authored contracts/generated artifacts; behavioral claims require observed outputs, side effects or refusal behavior.

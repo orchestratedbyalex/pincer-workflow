@@ -15,7 +15,27 @@ import { repo, tempDir } from './helpers.js';
 
 const require = createRequire(import.meta.url);
 const V7 = path.join(repo, 'scripts/delivery-benchmark-v7');
-const orchestrator = require(path.join(V7, 'orchestrator.cjs'));
+const runtime = require(path.join(V7, 'orchestrator.cjs'));
+// Explicit fixture seam: all programmatic sessions terminate in this callback. It
+// executes only a verified synthetic script and never falls back to the live driver.
+function fixtureSession(options) {
+  const executable = path.join(process.env.PATH.split(path.delimiter)[0], 'claude');
+  assert.match(fs.readFileSync(executable, 'utf8'), /PINCER_SYNTHETIC_CLI/);
+  const started = new Date().toISOString();
+  const r = spawnSync('bash', [executable, fs.readFileSync(options.promptFile, 'utf8')], {
+    cwd: options.workspace, encoding: 'utf8', env: { ...process.env, CLAUDECODE: '', CLAUDE_CODE_ENTRYPOINT: '' },
+  });
+  const ended = new Date().toISOString();
+  fs.mkdirSync(options.logDir, { recursive: true });
+  fs.writeFileSync(path.join(options.logDir, `${options.name}.json`), r.stdout || '');
+  fs.writeFileSync(path.join(options.logDir, `${options.name}.err`), r.stderr || '');
+  return { ...r, started, ended, refused: false, end: runtime.endOf(r), limit: runtime.limitHit(r.stdout) || runtime.limitHit(r.stderr) };
+}
+const orchestrator = {
+  ...runtime,
+  driveRun: (runs, cell, opts) => runtime.driveRun(runs, cell, { ...opts, fixtureSession }),
+  driveSchedule: (runs, opts) => runtime.driveSchedule(runs, { ...opts, fixtureSession }),
+};
 const effort = require(path.join(V7, 'effort.cjs'));
 const schedule = require(path.join(V7, 'schedule.cjs'));
 const DRIVER = path.join(V7, 'live-driver.sh');
@@ -31,6 +51,7 @@ function fakeCli() {
   const prompts = path.join(dir, 'prompts.log');
   fs.writeFileSync(path.join(dir, 'claude'), `#!/usr/bin/env bash
 set -u
+# PINCER_SYNTHETIC_CLI
 echo "$PWD" >> ${JSON.stringify(sentinel)}
 # The prompt is the last positional argument. Recorded verbatim so a case can prove what
 # the agent was actually told, rather than inspecting the script that composes it.
