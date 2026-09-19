@@ -39,7 +39,7 @@ o.driveRun(root,cell,{cohort:'a'.repeat(64),spendingCap:true,model:'fixture',unr
   const watch=setInterval(()=>{const file=path.join(options.logDir,'S1.json');if(fs.existsSync(file)&&fs.readFileSync(file,'utf8').includes('fixture-stream-chunk')){mark('boundary');clearInterval(watch);}},20);
   return isolate.observeFixture({...options,prompt:'controlled fixture',arm:'plain',stateRoot:path.dirname(options.promptFile),toolVersion:isolate.PROFILE.tool_version,permissionMode:'manual',model:'claude-sonnet-4-6',apiKey:'fixture-key',caps:{turns_per_session:5,wall_clock_minutes:1,spend_usd:1},mode:'stream-descendant',heartbeat:path.join(control,'heartbeat'),timeoutMs:60000});
  }
- fs.mkdirSync(options.logDir,{recursive:true});fs.writeFileSync(path.join(options.logDir,options.name+'.json'),JSON.stringify({total_cost_usd:1.25,duration_ms:1000,usage:{input_tokens:120,output_tokens:1}}));fs.writeFileSync(path.join(options.logDir,options.name+'.err'),'');
+ fs.mkdirSync(options.logDir,{recursive:true});fs.writeFileSync(path.join(options.logDir,options.name+'.json'),JSON.stringify({type:'result',subtype:'success',total_cost_usd:1.25,duration_api_ms:1000,modelUsage:{fixture:{inputTokens:120,outputTokens:1,cacheReadInputTokens:0,cacheCreationInputTokens:0}}}));fs.writeFileSync(path.join(options.logDir,options.name+'.err'),'');
  return {status:0,end:'completed',started:new Date().toISOString(),ended:new Date().toISOString()};
 }}).then(result=>mark('result',JSON.stringify(result))).catch(error=>{mark('error',error.stack);process.exitCode=1;});
 `);
@@ -48,7 +48,7 @@ async function killRecover(root,child){const owner=o.inspectClaim(root,cell).own
 const originalEvaluate=harness.evaluateCandidate;
 harness.evaluateCandidate=async()=>({outcome:'rejected',checks:[{id:'controlled',result:'failed',independent:true}]});
 async function resume(root,attempt){return o.driveRun(root,cell,{cohort,spendingCap:true,model:'fixture',resumeInterrupted:{attempt,reason:'Explicit controlled restart from clean base'},fixtureSession:async options=>{
- fs.mkdirSync(options.logDir,{recursive:true});fs.writeFileSync(path.join(options.logDir,options.name+'.json'),JSON.stringify({total_cost_usd:2,duration_ms:1000,usage:{input_tokens:30,output_tokens:1}}));fs.writeFileSync(path.join(options.logDir,options.name+'.err'),'');
+ fs.mkdirSync(options.logDir,{recursive:true});fs.writeFileSync(path.join(options.logDir,options.name+'.json'),JSON.stringify({type:'result',subtype:'success',total_cost_usd:2,duration_api_ms:1000,modelUsage:{fixture:{inputTokens:30,outputTokens:1,cacheReadInputTokens:0,cacheCreationInputTokens:0}}}));fs.writeFileSync(path.join(options.logDir,options.name+'.err'),'');
  return {status:0,end:'completed',started:new Date().toISOString(),ended:new Date().toISOString()};
 }});}
 try {
@@ -69,6 +69,14 @@ for(const boundary of ['setup','session-start','session-end','pre-evaluation','s
  const originalPrepare=harness.prepare;harness.prepare=()=>{throw new Error('Regeneration must not run on resume');};
  let result;try{result=await resume(root,'attempt-000001');}finally{harness.prepare=originalPrepare;}
  assert.equal(result.record.attempts[1].base,result.record.attempts[0].base,'resume retains the exact original base commit');assert.deepEqual(result.problems,[],JSON.stringify(result.record));assert.deepEqual(effort.problems(result.record),[]);
+ const accounting=result.record.measurement;
+ if(['session-start','streaming'].includes(boundary)) {
+  assert.equal(result.record.reported.cost_usd,null,'unknown prior paid usage cannot become a complete total');
+  assert.equal(accounting.metrics.cost_usd.measured_subtotal,2);
+ } else {
+  assert.equal(result.record.reported.cost_usd,boundary==='setup'?2:3.25,'all completed prior and resumed sessions counted once');
+  assert.equal(result.record.reported.tokens,boundary==='setup'?31:152);
+ }
  assert.equal(result.record.attempts.length,2);assert.equal(result.record.attempts[0].status,'interrupted');assert.equal(result.record.attempts[1].status,'completed');
  assert.equal(new Set(result.record.events.map(e=>e.id)).size,result.record.events.length);assert.deepEqual(snap(oldDir),old,'all prior payload/workspace/browser scratch bytes unchanged');
  if(['session-start','streaming'].includes(boundary)){const session=result.record.attempts[0].sessions[0];assert.equal(session.status,'unavailable');assert.match(session.unavailable,/no completion checkpoint/);}

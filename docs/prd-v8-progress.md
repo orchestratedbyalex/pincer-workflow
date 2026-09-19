@@ -100,3 +100,22 @@ malformed-record handling. Measurement completeness remains T-105's next obligat
 
 The T-102 review also moved task text to stdin so flag-shaped prompts cannot change
 launcher options. Its focused verification passed again; native observation remains open.
+
+### Scheduling correction
+
+Commit `c6090aa` repairs the smoke/observation dependency cycle without changing scope.
+T-106 can proceed after T-105 using the verified T-102 implementation. T-110 now requires
+both T-102 and T-109 complete. The separately authorized operational smoke may supply
+T-102's native observations; offline fixtures cannot close them. Static graph checks cover
+both the removed cycle and the retained measured-run gate.
+
+### T-105
+
+Versioned measurement blocks collect all recorded sessions across attempts. Each metric
+has independent completeness and a measured subtotal; whole-tree tokens include cache
+counts once, and provider/API duration remains distinct from wall time. Parent review
+added pending-checkpoint refresh, contradictory provider-envelope refusal and explicit
+unknown coverage for imported legacy attempts. Missing legacy attempts cannot become a
+complete total. Invalid-run spend remains in accounting while acceptance denominators
+remain separate. Provider semantics are in `docs/prd-v8-usage-semantics.md`; native payload
+validation remains part of the operational smoke, not an offline claim.

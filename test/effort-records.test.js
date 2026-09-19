@@ -243,9 +243,25 @@ const ok = (r, label) => assert.deepEqual(effort.problems(r), [], `${label}: ${J
   // An unmeasured cost does not become a zero in the total.
   const withNull = reports.map(r => (r.run === 'cli-greenfield/rep-1/plain' ? { ...r, cost_usd: null, unavailable: { cost_usd: 'no usage block' } } : r));
   const agg2 = effort.aggregate(withNull);
-  assert.equal(agg2.arms.plain.cost_usd.of, 2, 'the denominator drops to the runs that measured it');
+  assert.equal(agg2.arms.plain.cost_usd.of, 3, 'the denominator drops to the runs that measured it');
   assert.equal(agg2.arms.plain.cost_usd.unmeasured, 1, 'and the unmeasured run is counted, not hidden');
-  assert.equal(agg2.arms.plain.cost_usd.total, effort.round(1.87 * 2), 'the total is over the measured runs only');
+  assert.equal(agg2.arms.plain.cost_usd.total, null, 'legacy accounting cannot establish a comparable total');
+  assert.equal(agg2.arms.plain.cost_usd.measured_subtotal, 1.87 * 3, 'legacy subtotal includes invalid or unavailable runs with reported spend');
+}
+
+// Unknown accounting leaves an independently accepted candidate intact.
+{
+  const usage = require('../scripts/delivery-benchmark-v7/usage.cjs');
+  const accepted = valid();
+  const row = { id: 'legacy:S1', payload: 'S1.json', sha256: null, metrics: usage.parse(null) };
+  accepted.measurement = { schema: 1, profile: usage.PROFILE, coverage: 'explicit-legacy-session-list', sessions: [row], metrics: usage.summarize([row], 'explicit-legacy-session-list') };
+  for (const key of usage.KEYS) {
+    accepted.reported[key] = null;
+    accepted.unavailable[key] = accepted.measurement.metrics[key].missing.map(item => `${item.session || 'accounting'}: ${item.reason}`).join('; ').slice(0, 500);
+  }
+  assert.deepEqual(effort.problems(accepted), []);
+  assert.equal(accepted.evaluation.outcome, 'accepted');
+  assert.equal(effort.report(accepted).outcome, 'accepted');
 }
 
 console.log('effort record tests passed');

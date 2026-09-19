@@ -276,33 +276,9 @@ function observeAdoption(ws) {
 // A metric that no payload carried comes back null WITH its reason, never as zero: the
 // study's whole cost column is this function's output, and a fabricated zero there is a
 // claim that a paid session was free.
+const usageAccounting = require('./usage.cjs');
 function readUsage(logDir, names) {
-  const totals = { tokens: 0, cost_usd: 0, provider_minutes: 0 };
-  const seen = { tokens: false, cost_usd: false, provider_minutes: false };
-  const unreadable = [];
-  for (const name of names) {
-    const file = path.join(logDir, `${name}.json`);
-    if (!fs.existsSync(file)) { unreadable.push(`${name}: no payload was saved`); continue; }
-    let payload;
-    try { payload = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { unreadable.push(`${name}: the saved payload is not JSON`); continue; }
-    if (!payload || typeof payload !== 'object') { unreadable.push(`${name}: the saved payload is not an object`); continue; }
-    if (typeof payload.total_cost_usd === 'number') { totals.cost_usd += payload.total_cost_usd; seen.cost_usd = true; }
-    if (typeof payload.duration_ms === 'number') { totals.provider_minutes += payload.duration_ms / 60000; seen.provider_minutes = true; }
-    const u = payload.usage;
-    if (u && typeof u === 'object') {
-      const tokens = ['input_tokens', 'output_tokens', 'cache_creation_input_tokens', 'cache_read_input_tokens']
-        .reduce((sum, k) => sum + (typeof u[k] === 'number' ? u[k] : 0), 0);
-      if (tokens > 0) { totals.tokens += tokens; seen.tokens = true; }
-    }
-  }
-  const why = unreadable.length ? unreadable.join('; ') : 'no session payload reported this metric';
-  const reported = {};
-  const unavailable = {};
-  for (const key of ['tokens', 'cost_usd', 'provider_minutes']) {
-    if (seen[key]) reported[key] = totals[key];
-    else { reported[key] = null; unavailable[key] = why.slice(0, 500); }
-  }
-  return { reported, unavailable };
+  return usageAccounting.collect(logDir, { schema: 7 }, names);
 }
 
 // Everything a record needs before it may be reported, in one place, applied once: the
@@ -315,10 +291,9 @@ function readUsage(logDir, names) {
 // reason. That keeps candidate acceptance and experiment validity separate: the
 // evaluation stays on the record either way, and a rejected candidate remains a perfectly
 // valid measurement.
-function complete(record, { logDir, workspace, sessions }) {
-  const usage = readUsage(logDir, sessions);
-  record.reported = usage.reported;
-  for (const [key, why] of Object.entries(usage.unavailable)) record.unavailable[key] = why;
+function complete(record, { home, logDir, workspace, sessions }) {
+  const usage = usageAccounting.collect(record.schema === 8 ? home : logDir, record, sessions);
+  usageAccounting.apply(record, usage);
 
   const adoption = observeAdoption(workspace);
   if (record.adoption.required) {
@@ -480,6 +455,7 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
   const logs = attempts.location(home, attempt, 'logs');
   const checkpoint = () => {
     if (record.status !== 'pending' && attempt.status === 'running') attempts.finish(attempt);
+    usageAccounting.apply(record, usageAccounting.collect(home, record));
     writeRecord(runsRoot, cell, record, claim);
   };
   const boundary = async name => {
@@ -609,7 +585,7 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
   attempt.evaluation = 'completed';
   attempts.finish(attempt);
   record.status = harness.statusFor(evaluation.outcome);
-  const problems = complete(record, { logDir: logs, workspace: ws, sessions: sessionNames });
+  const problems = complete(record, { home, logDir: logs, workspace: ws, sessions: sessionNames });
   checkpoint();
   return { record, stop: false, problems };
 }

@@ -1,10 +1,14 @@
 ---
 ticket: T-105
-status: open
+status: done
 size: M
 prd: .prd/prd-v8.md
 depends_on: [T-104]
 timeout: 900
+started: 2026-09-19T07:33:55Z
+last_check: 2026-09-19T07:41:25Z passed 42a4188f8216
+verified: 2026-09-19T07:41:25Z 42a4188f8216
+finished: 2026-09-19T07:41:25Z
 ---
 
 ## Objective
@@ -26,9 +30,9 @@ Ensure cost, tokens and provider time include all attempts and never disguise pa
 Freeze provider-field semantics before collection. Incomplete metrics must not block recording that a candidate was independently accepted or rejected. Preserve original payloads securely; reports contain sanitized metadata. Any measurement schema change requires versioned readers and explicit old-record limitations.
 
 ## Acceptance Criteria
-- [ ] S-16: One complete payload plus one missing, malformed or metric-incomplete payload produces a null aggregate with a specific reason, while retaining any clearly labelled measured subtotal; the $1.25/120-token reproduction no longer reports a complete total.
-- [ ] S-17: Usage across all completed, failed and discarded attempts is counted once with provider duration distinct from wall-clock/active intervals; all-null, explicitly reported zero and missing values remain distinguishable.
-- [ ] S-18: Negative, nonfinite, inconsistent or unsupported provider fields are rejected or labelled unavailable; report regeneration from stored payloads needs no model call and never silently omits an attempt or double-counts cache usage.
+- [x] S-16: One complete payload plus one missing, malformed or metric-incomplete payload produces a null aggregate with a specific reason, while retaining any clearly labelled measured subtotal; the $1.25/120-token reproduction no longer reports a complete total.
+- [x] S-17: Usage across all completed, failed and discarded attempts is counted once with provider duration distinct from wall-clock/active intervals; all-null, explicitly reported zero and missing values remain distinguishable.
+- [x] S-18: Negative, nonfinite, inconsistent or unsupported provider fields are rejected or labelled unavailable; report regeneration from stored payloads needs no model call and never silently omits an attempt or double-counts cache usage.
 
 ## Verification
 Proves: The focused checks exercise the stated controls and failure paths. Static assertions are sufficient only for authored contracts/generated artifacts; behavioral claims require observed outputs, side effects or refusal behavior.

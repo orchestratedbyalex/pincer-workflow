@@ -64,7 +64,7 @@ case "\${FAKE_MODE:-ok}" in
   ok)
     git add -A >/dev/null 2>&1 || true
     git -c user.name=stand-in -c user.email=s@example.invalid commit -q --allow-empty -m "stand-in session" >/dev/null 2>&1 || true
-    echo '{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":1.25,"duration_ms":120000,"usage":{"input_tokens":1000,"output_tokens":500,"cache_read_input_tokens":250}}'
+    echo '{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":1.25,"duration_api_ms":120000,"modelUsage":{"test-model":{"inputTokens":1000,"outputTokens":500,"cacheReadInputTokens":250,"cacheCreationInputTokens":0}}}'
     ;;
   bare)
     git -c user.name=stand-in -c user.email=s@example.invalid commit -q --allow-empty -m "stand-in session" >/dev/null 2>&1 || true
@@ -72,7 +72,7 @@ case "\${FAKE_MODE:-ok}" in
     ;;
   tidy)
     git -c user.name=stand-in -c user.email=s@example.invalid commit -q --allow-empty -m "stand-in session" >/dev/null 2>&1 || true
-    echo '{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":1.25,"duration_ms":120000,"usage":{"input_tokens":1000,"output_tokens":500,"cache_read_input_tokens":250}}'
+    echo '{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":1.25,"duration_api_ms":120000,"modelUsage":{"test-model":{"inputTokens":1000,"outputTokens":500,"cacheReadInputTokens":250,"cacheCreationInputTokens":0}}}'
     ;;
   adopt)
     mkdir -p .prd/evidence/changes
@@ -81,7 +81,7 @@ case "\${FAKE_MODE:-ok}" in
 JSON
     git add .prd >/dev/null 2>&1 || true
     git -c user.name=stand-in -c user.email=s@example.invalid commit -q --allow-empty -m "stand-in session" >/dev/null 2>&1 || true
-    echo '{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":1.25,"duration_ms":120000,"usage":{"input_tokens":1000,"output_tokens":500}}'
+    echo '{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":1.25,"duration_api_ms":120000,"modelUsage":{"test-model":{"inputTokens":1000,"outputTokens":500,"cacheReadInputTokens":0,"cacheCreationInputTokens":0}}}'
     ;;
   limit)
     echo '{"type":"result","subtype":"error","is_error":true,"result":"You'"'"'ve hit your session limit · resets 3pm","total_cost_usd":0}'

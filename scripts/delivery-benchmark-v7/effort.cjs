@@ -22,6 +22,7 @@
 // Nothing here runs a model, opens a socket or executes a candidate. Report
 // regeneration is a pure function of the stored events.
 const crypto = require('node:crypto');
+const usage = require('./usage.cjs');
 
 const SCHEMA = 7; // Historical and unlaunched records retain their original reader.
 const ATTEMPT_SCHEMA = 8;
@@ -116,7 +117,7 @@ function problems(r, { frozen = null } = {}) {
   const bad = (code, detail) => out.push({ code, detail });
   if (!r || typeof r !== 'object' || Array.isArray(r)) return [{ code: 'RECORD_INVALID', detail: 'record must be an object' }];
   if (![SCHEMA, ATTEMPT_SCHEMA].includes(r.schema)) bad('SCHEMA_UNKNOWN', `schema must be ${SCHEMA} or ${ATTEMPT_SCHEMA}`);
-  const known = ['schema', 'run', 'cohort', 'brief', 'arm', 'repetition', 'order', 'status', 'reason', 'provenance', 'environment', 'adoption', 'workspace', 'events', 'reported', 'unavailable', 'evaluation'];
+  const known = ['schema', 'run', 'cohort', 'brief', 'arm', 'repetition', 'order', 'status', 'reason', 'provenance', 'environment', 'adoption', 'workspace', 'events', 'reported', 'unavailable', 'evaluation', 'measurement'];
   if (r.schema === ATTEMPT_SCHEMA) known.push('attempts');
   for (const k of Object.keys(r)) if (!known.includes(k)) bad('RECORD_INVALID', `unknown key "${k}"`);
   if (!ARMS.includes(r.arm)) bad('RECORD_INVALID', `arm must be one of ${ARMS.join(', ')}`);
@@ -181,6 +182,8 @@ function problems(r, { frozen = null } = {}) {
     const ids = new Set();
     for (const [i, e] of r.events.entries()) out.push(...eventProblems(e, i, ids));
   }
+
+  out.push(...usage.problems(r));
 
   // Reported metrics: null needs a reason, and a number needs not to be a fake zero.
   // A `pending` run has not run yet, so nothing is expected of it; from the moment a
@@ -333,6 +336,8 @@ function report(r) {
     active_minutes: active,
     session_minutes_summed: sessions.length ? round(intervalsOf(sessions).reduce((t, i) => t + (i.end - i.start), 0) / 60000) : null,
     elapsed_minutes: elapsed,
+    measurement: r.measurement || null,
+    usage_limitation: r.measurement ? (r.measurement.coverage === 'attempt-ledger' ? null : 'Only explicitly listed legacy sessions are covered; historical attempt coverage is unknown.') : 'Legacy usage semantics and attempt coverage are unverified.',
     provider_minutes: r.reported.provider_minutes,
     tokens: r.reported.tokens,
     cost_usd: r.reported.cost_usd,
@@ -349,6 +354,23 @@ const round = n => Math.round(n * 100) / 100;
 
 // Aggregate a set of reports per arm. Denominators are explicit: a rate is always
 // reported with the number of runs it was computed over and the number excluded.
+function aggregateUsage(reports, key) {
+  const supported = reports.length > 0 && reports.every(r => r.measurement?.profile === usage.PROFILE && r.measurement.coverage === 'attempt-ledger');
+  const measured = reports.filter(r => r[key] !== null && typeof r[key] === 'number');
+  const values = reports.map(r => r.measurement ? r.measurement.metrics[key].measured_subtotal : r[key]).filter(v => typeof v === 'number');
+  const subtotal = values.reduce((a, b) => a + b, 0);
+  const safe = Number.isFinite(subtotal) && (key !== 'tokens' || Number.isSafeInteger(subtotal));
+  const complete = supported && measured.length === reports.length && safe;
+  return {
+    total: complete ? subtotal : null,
+    measured_subtotal: values.length && safe ? subtotal : null,
+    of: measured.length,
+    unmeasured: reports.length - measured.length,
+    complete,
+    limitation: !supported ? 'Legacy, unknown or mixed accounting coverage; no comparable total.' : complete ? null : 'One or more sessions have unavailable usage or the sum exceeds the numeric range.',
+  };
+}
+
 function aggregate(reports) {
   const arms = {};
   for (const arm of ARMS) {
@@ -365,7 +387,9 @@ function aggregate(reports) {
       accepted: valid.filter(r => r.outcome === 'accepted').length,
       // Every rate carries the denominator it was computed over.
       acceptance: valid.length ? { accepted: valid.filter(r => r.outcome === 'accepted').length, of: valid.length } : null,
-      cost_usd: { total: sum(measured('cost_usd')), of: measured('cost_usd').length, unmeasured: valid.length - measured('cost_usd').length },
+      cost_usd: aggregateUsage(all, 'cost_usd'),
+      tokens: aggregateUsage(all, 'tokens'),
+      provider_minutes: aggregateUsage(all, 'provider_minutes'),
       active_minutes: { total: sum(measured('active_minutes')), of: measured('active_minutes').length, unmeasured: valid.length - measured('active_minutes').length },
       review_minutes: { total: sum(valid.map(r => r.stages.review).filter(v => v !== null)), of: valid.filter(r => r.stages.review !== null).length, unmeasured: valid.filter(r => r.stages.review === null).length },
       interventions: INTERVENTIONS.reduce((acc, k) => ({ ...acc, [k]: valid.reduce((t, r) => t + r.interventions[k], 0) }), {}),
