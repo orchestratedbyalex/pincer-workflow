@@ -337,3 +337,14 @@ the user's.
 - Outcome: T-99 done, receipt `a05a552f47b9`. No session ran and nothing was spent. What
   remains before run #1 is decisions, not code: cap, projects, reviewers, and a browser
   adapter ([[v7-execution-gaps]]).
+
+## [2026-09-19] end | T-109 smoke execution package prepared; smoke launch path added
+What: packaged the first operational smoke (identities, prompts, schedule, caps, checks,
+auth prerequisites, stop/resume, blockers, protocol corrections) without any paid session;
+fixed the orchestrator so the smoke can run through the frozen loop (`--study-purpose`,
+`--repetitions`), regenerated `frozen.json`, staged a study root at
+`/Users/Shared/pincer-v8-study`, dry-resolved the proposed effective manifest and ran the
+inspector on an honest draft. Files: `scripts/delivery-benchmark-v7/{orchestrator,effective}.cjs`,
+`test/benchmark-study-launch.test.js`, `docs/prd-v8-artifacts/execution/*`,
+`docs/prd-v8-progress.md`, `docs/wiki/systems/study-readiness-gate.md`.
+Outcome: readiness still pending on user decisions and reviewed evidence, by design.

@@ -105,16 +105,38 @@ and are deleted rather than carried.
 - [2026-09-14] Three v7 benchmark faults are not separable from adjacent checks; the suite asserts the intended evaluator is among the failures, not alone. The UI browser adapter is a deterministic fake proving the seam, not a browser. ([[v7-measured-friction]])
 - [2026-09-19] Registry version 0.6.0 was rechecked with `npm view`; see the current overlay. Historical packets retain their original publication-verification limits.
 
+## PRD v8 operational smoke (2026-09-19)
+
+- [2026-09-19] The first smoke is packaged but blocked on user decisions: model, browser
+  runtime, caps/allocation/expiry, a project-access decision for `ui-states`, two
+  independent reviewers, and the `study-authorization` document. Nothing is inferred
+  ([[study-readiness-gate]])
+- [2026-09-19] Smoke evidence is kit-bound: K1 and K2 each need their own capped smoke and
+  native observation before measured use. Proposed protocol wording in the package §8 a;
+  editing the protocol re-freezes the cohort, so do it before minting the effective
+  manifest ([[study-readiness-gate]])
+- [2026-09-19] T-109's Verification block runs the inspector from the repository with the
+  default input root, which cannot validate a launchable manifest; adopt the
+  `--input-root` form (package §8 b) and re-verify through the pinned kit
+  ([[study-readiness-gate]])
+- [2026-09-19] Decide whether `--output-format json` (final result only) is enough
+  native evidence for host policy, personal-configuration absence and kit mechanisms, or
+  whether the profile should capture `stream-json` before the smoke ([[study-readiness-gate]])
+- [2026-09-19] CI has run only on `48df59c`, before the smoke launch path; the branch is
+  not pushed. The candidate needs its own matrix run before its ci summary can exist
+  ([[study-readiness-gate]])
+- [2026-09-19] K0's registry tarball was published from `566b553` while the K0 commit is
+  `694241c` (README differs, executables identical); accept or repack ([[study-readiness-gate]])
+- [2026-09-19] A detached worktree lives at `/Users/Shared/pincer-v8-study/pincer-workflow`
+  with 543 MB of copied inputs beside it; remove with `git worktree remove` when the
+  study is over ([[study-readiness-gate]])
+
 ## PRD v7 live execution (2026-09-14)
 
 - [2026-09-14] **Nothing live has run, and four prerequisites are outstanding**: a costed
   spending cap, a wall-clock cap, three pilot projects with an access decision, and two
   non-implementing human reviewers. The reviewers are not a budget item — the implementing
   agent is `REVIEW_NOT_INDEPENDENT` by construction ([[v7-measured-friction]])
-- [2026-09-14] **Browser tooling is unreachable from a driven session.** Chrome is
-  installed but no binary is on PATH inside a `claude -p` run, so the `ui-states` brief's
-  held-out check is `unverified`, which makes those runs `unavailable` — never accepted.
-  Decide whether to configure an adapter or to record the gap ([[fix-the-driver-before-run-one]])
 - [2026-09-14] **The GitHub MCP server is failing to connect** (400, badly formatted
   Authorization header). `gh` works, so nothing is blocked, but remote-state checks go
   through the CLI until it is fixed
@@ -124,9 +146,5 @@ and are deleted rather than carried.
 All five verified findings and the three gaps verification added were closed before run #1,
 while re-minting was still free ([[v7-execution-gaps]]). Cohort `6de061ec…` → `47dedc0a…`.
 
-- [2026-09-15] Still open, and unchanged by T-99: **no browser adapter is configured**. The
-  orchestrator can now be given one (`--browser <module>`) and says so when it is not, but
-  choosing or writing the adapter is a decision, and without it the `ui-states` brief's nine
-  runs are `unavailable` — never accepted ([[v7-execution-gaps]])
 - [2026-09-15] The two non-implementing reviewers, the spending cap, the wall-clock cap and
   the three pilot projects remain the user's call. Nothing in T-99 moves them.

@@ -169,3 +169,55 @@ T-102 retains its successful implementation receipt and unchecked native criteri
 Draft PR [#6](https://github.com/orchestratedbyalex/pincer-workflow/pull/6) tracks the
 Ubuntu/macOS × Node 22/24 CI results for the final branch commit; do not infer a CI pass
 from this journal entry.
+
+### T-109 — execution package for the first operational smoke (19 September 2026)
+
+Package: `docs/prd-v8-artifacts/execution/T-109-smoke-execution-package.md`, with the
+proposed execution inputs beside it. No paid session, launch, external message, merge,
+publication or new project access occurred; the pinned management kit was used for ticket
+operations; `docs/diagrams/` and `docs/pincer-workflow-guide.md` are untouched.
+
+Verified this session: the pinned kit extraction is byte-identical to `v0.6.0:template/scripts`
+and its recorded digest reproduces; the installed Claude Code is 2.1.273 (sha256
+`953e9880…`) and parses the profile's full argument vector; K0's registry tarball
+(sha256 `cb6c63f9…`, sha1 equal to the registry `dist.shasum`) has `bin/`, `template/`
+and `package.json` identical to commit `694241cc…`; the `ui-states` prepared base
+`e5931061…` and K0 install commit `4cbde166…` reproduce offline; PR #6's eight CI checks
+passed on `48df59c` (runs `35447528639`, `35447527131`); the real-browser gate passed
+against a pinned Chrome for Testing 148.0.7778.97 copy (artifacts in the study root).
+T-107's earlier browser pass used Google Chrome 153.0.8010.48 and does not transfer.
+
+Defects fixed because they prevented an executable package (commit `d43a6ce`, focused
+verification in `test/benchmark-study-launch.test.js`, frozen cohort regenerated
+`4113e10b…` → `f09e4312…` with only `harness` moving): the orchestrator accepted only a
+measured purpose, so no in-tree command could launch the smoke; planning a brief always
+materialised three repetitions, which the allocation's unlisted-run guard would refuse;
+and an operational session was finalized with a false attestation reason and, when
+uncapped, without independent evaluation. `--study-purpose operational-smoke` and
+`--repetitions 1` now drive the smoke through the same loop; an operational record is
+invalid with an explicit operational reason, evaluated, and stops the schedule.
+
+Layout finding: the launcher refuses workspaces under any `CLAUDE.md`/`.claude` ancestor,
+so the study root is `/Users/Shared/pincer-v8-study` (detached worktree at the candidate,
+copied CLI, K0 and browser runtime, 543 MB). Every manifest reference is relative to that
+root; the inspector must run with `--input-root`. The tracked manifest now names K0 and
+records the remaining gaps in `pending_notes`; `execution`, `projects`, `schedule`,
+`reviewers`, `authorization` and `allocation` stay null. The proposed inputs resolve from
+the study root (dry-run cohort `976db3ee…`, not retained as evidence); the inspector on an
+honest draft reports only decision and evidence gaps.
+
+Pending user decisions (bundled in the package §10): model, browser runtime, caps and
+allocation with expiry, project-access decision, two independent reviewers, the
+`study-authorization` document, K0 artifact acceptance, study root, capture format,
+candidate pin with CI, and the T-109 verification command's input root. Reviewer
+attention: smoke evidence is kit-bound, so K1 and K2 need their own smokes (package §8 a);
+the protocol's two time deadlines map to one allocation field (§8 c); `json` output
+captures only the final result (§8 e). The branch is not pushed; CI has not run on the
+new commits. T-109 and T-102 remain in progress; nothing was closed on fixtures.
+
+Integration verification after the harness change: the full `npm test` chain (76 suites)
+passed locally on 19 September 2026 (started 14:58Z, finished 15:14Z, exit 0), including
+the regenerated frozen cohort, the operational-smoke and repetition-prefix cases, and the
+packed-distribution and release-preparation suites. T-109 was re-verified through the
+pinned kit: its four suites pass and the readiness command still exits 2 by design
+(`last_check … failed 9f673d51f3aa`). No CI run exists for these commits.

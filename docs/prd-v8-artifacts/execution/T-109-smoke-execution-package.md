@@ -1,0 +1,314 @@
+# T-109 operational smoke — execution package
+
+Prepared 19 September 2026 on `feat/prd-v8`. No paid session, study launch, external
+message, merge, publication or new project access occurred. This package prepares the
+**first operational smoke** only; it authorizes nothing and forecasts nothing.
+
+Legend. **Verified**: checked in this session against bytes, commands or retained files.
+**Proposed**: a recommendation that becomes binding only through a recorded decision.
+**Decision**: the user (or a named reviewer) must decide; nothing here infers it.
+
+The read-only inspector is the authority on readiness:
+`node scripts/delivery-benchmark-v7/readiness.cjs --manifest … --purpose operational-smoke --require-ready`.
+The checked-in [`study.json`](study.json) stays pending and lists the same gaps.
+
+## 1. Execution identities
+
+| Item | Value | Status |
+| --- | --- | --- |
+| Runner candidate | `feat/prd-v8` HEAD at handoff (SHA in the handoff report and the progress journal). The dry run below used `d43a6ce`, the commit that added the smoke launch path; later commits are documentation only and leave the frozen inputs and helper closure unchanged. The reviewer pins the final SHA after CI runs on it. | Proposed |
+| Study checkout | `/Users/Shared/pincer-v8-study/pincer-workflow`, a detached `git worktree` of the candidate; `execution.source_root` = `pincer-workflow`. | Proposed |
+| CLI | Claude Code **2.1.273**, Mach-O arm64, 212 228 880 bytes, sha256 `953e9880dbcb0b70f31c1f508de6a3fd389753d131688557fd992da9184693fb`. Source: `~/.local/share/claude/versions/2.1.273` (the target of `~/.local/bin/claude`); copied byte-for-byte to `inputs/tool/claude-2.1.273` in the study root. The isolation profile `claude-project-isolated-v1` accepts exactly this version. The profile's full argument vector parses on this binary (`--version` probe; parse-level only, no session). | Verified |
+| Model | `claude-sonnet-5`. Rationale: the v7 cohort pinned the `sonnet` alias, which the v8 contract no longer accepts; this is the current-generation resolution of that pin. Alternative: `claude-opus-5`. Reference prices (claude-api reference cached 2026-06-24, first-party API): Sonnet 5 $2/$10 per MTok in/out; Opus 5 $5/$25. The CLI must attest the same model string in its result payload or the session is unreportable; that attestation is a smoke finding, not a preparation fact. | Proposed / **Decision** |
+| Browser | **Chrome for Testing 148.0.7778.97** (mac_arm), copied with links preserved from `~/.cache/puppeteer/chrome/mac_arm-148.0.7778.97/chrome-mac-arm64` to `inputs/browser/chrome-mac-arm64-148.0.7778.97`; 332 files, 5 internal links, runtime digest `2685936d99483c68ccf5d79373436e2164e8acb03a361ae3fe4763255f86e17d`; adapter `scripts/delivery-benchmark-v7/browser.cjs` (digest `c5687c608428c4883a60213e17787249f8172bb3605dcb00d997b008580baef7`). The real-browser gate (`test/benchmark-browser-live.test.js`) **passed today against this copy**; artifacts: `/Users/Shared/pincer-v8-study/evidence/browser-gate/pincer-browser-gate-T4HLFa`. Alternative: Google Chrome 153.0.8010.48 at `/Applications` (T-107's identity; 1.4 GB, auto-updating, so not pinnable in place). | Proposed / **Decision** |
+| Kit K0 | v0.6.0 at peeled commit `694241cc684f2dd95a0cfe7ffa2827414683e84a`; artifact = npm registry tarball `pincer-workflow-0.6.0.tgz`, 244 142 bytes, sha256 `cb6c63f97b6cd780456807339e8d9d01dbc94ad3370594010dc1e4914c835009`, sha1 `a6bc2b6efa2a27164579b87ca12d3cf88b20e8a5` (equals the registry `dist.shasum`). `bin/`, `template/` and `package.json` are byte-identical to the commit; `README.md` differs (4 diff lines, the tag message explains why) and `LICENSE` exists only in the tarball. Copied to `inputs/kits/pincer-workflow-0.6.0.tgz`. K1 and K2 are not selected. | Verified (artifact acceptance is a **Decision**) |
+| Platform | darwin 25.6.0 (macOS 26.6.2) arm64, Node v22.23.1; recorded by the resolver. | Verified |
+| Management kit | `/tmp/pincer-v8-management-694241c/scripts`, 34 files byte-identical to `v0.6.0:template/scripts`; aggregate digest `c0354c6452d0f5605a7d5a28c385321df4fc7fe7b5fe46fd7d6284cfc1d35cb9` (sorted `scripts/<path>` + NUL + content). | Verified |
+| Isolation configuration | `permission_mode: manual`, `cwd_kind: scratch`, `isolation_profile: claude-project-isolated-v1`; per-session empty `HOME`, `CLAUDE_CONFIG_DIR`, `TMPDIR`; `--setting-sources project`, `--permission-prompts none`, explicit empty MCP, no Chrome integration, no session persistence. | Verified (code) |
+
+### Study root layout (Proposed)
+
+```
+/Users/Shared/pincer-v8-study/           input root (--input-root / --study-input-root)
+  pincer-workflow/                       source_root: detached worktree at the candidate
+  inputs/tool/claude-2.1.273             CLI copy
+  inputs/kits/pincer-workflow-0.6.0.tgz  K0
+  inputs/browser/chrome-mac-arm64-148.0.7778.97/   browser runtime (browser_runtime_root)
+  runs/smoke/                            allocation root (empty until the first reservation)
+  evidence/                              retained gate artifacts and, later, smoke summaries
+  decisions/                             decision documents, once made
+  drafts/                                dry-run files; not evidence
+```
+
+Why not the repository or the home directory: the launcher refuses any workspace with a
+`CLAUDE.md`, `CLAUDE.local.md` or `.claude` ancestor (`rejectAncestorInstructions`), which
+excludes everything under this repository and under `/Users/alex`; the inspector requires
+the allocation root and every referenced artifact inside the input root and refuses
+symbolic links. `/Users/Shared` has no such ancestor and survives reboots (unlike `/tmp`).
+Consequence: every `ref` in `study.json` is relative to the study root, so the inspector
+must be run with `--input-root /Users/Shared/pincer-v8-study` (see §8 b).
+
+## 2. Smoke sessions
+
+Brief `ui-states` (one prompt, needs the browser, so the smoke exercises browser
+preflight, session capture, the stop path and browser-backed independent evaluation).
+Three sessions, one per arm, in the orchestrator's repetition-1 order.
+
+| Order | Session id | Run | Arm | Prompt digest (sha256 of the delivered prompt) |
+| --- | --- | --- | --- | --- |
+| 1 | `smoke-1-pincer` | `ui-states/rep-1/pincer` | pincer | `152143dd60b7a98430464793178c3f349ed55eecfe7510dc9648e2cbd65307d8` |
+| 2 | `smoke-1-strict` | `ui-states/rep-1/strict` | strict | `19ea7fde56f957de358f320fc341803c58dc2bff55b6645b41e504011d52a4d2` |
+| 3 | `smoke-1-plain` | `ui-states/rep-1/plain` | plain | `e96d5cb31e05b762bf0af0d6d27e6cf1760f2d0296142becafcbc1020f553579` |
+
+Project base (Verified, reproducible offline with the fixed preparation date):
+`e5931061a4d3179302f96d4d3f15a09365f97b90`. Kit-install commit over it for both kit arms:
+`4cbde1667dbb2cbb90370570d78ece07e4ca2f1c` (parent = base; 16 intended kit assets).
+
+Exact prompts (delivered on stdin; the task itself is the workspace `BRIEF.md`, i.e.
+`test/fixtures/delivery-benchmark-v7/briefs/ui-states/brief.md`):
+
+- plain, verbatim:
+
+  ```
+  Read BRIEF.md in this repository and implement what it asks for, committing your work as
+  you go. Work autonomously; when you are done, stop and summarize what you built.
+  ```
+
+- pincer: the line `This repository has the PINCER workflow kit installed. Use it for this work.`
+  followed by a blank line, then the plain prompt.
+- strict: the line `This repository has the PINCER workflow kit installed. Use it for this work, and adopt strict coverage for each change you make (`coverage adopt --preview`, then `coverage adopt --apply`) before you implement it.`
+  followed by a blank line, then the plain prompt.
+
+Tool invocation per session (from `isolated-launch.argumentsFor`), with `<model>` and the
+caps taken from the effective manifest:
+
+```
+claude --print --model <model> --permission-mode manual --permission-prompts none
+  --setting-sources project --settings <session>/settings.json --strict-mcp-config
+  --mcp-config {"mcpServers":{}} --no-chrome --no-session-persistence
+  --max-turns 3 --max-budget-usd 1 --input-format text --output-format json
+```
+
+Environment: exactly `PATH`, `HOME`, `CLAUDE_CONFIG_DIR`, `TMPDIR`, `LANG`, `LC_ALL`,
+`CLAUDE_PROJECT_DIR`, `ANTHROPIC_API_KEY`, `GIT_CONFIG_NOSYSTEM`, `GIT_CONFIG_GLOBAL`.
+Nothing is inherited from the operator's shell.
+
+Proposed schedule block (values from the dry run; `effective_digest` changes if any
+decision differs from the proposal):
+
+```json
+[
+  {"id":"smoke-1-pincer","run":"ui-states/rep-1/pincer","name":"S1","arm":"pincer","purpose":"operational-smoke","project":"ui-states","kit":"K0","prompt_digest":"152143dd60b7a98430464793178c3f349ed55eecfe7510dc9648e2cbd65307d8","effective_digest":"976db3ee6a9240b9b24c4d931e877d319334effe9857366144628859a6dfa90f"},
+  {"id":"smoke-1-strict","run":"ui-states/rep-1/strict","name":"S1","arm":"strict","purpose":"operational-smoke","project":"ui-states","kit":"K0","prompt_digest":"19ea7fde56f957de358f320fc341803c58dc2bff55b6645b41e504011d52a4d2","effective_digest":"976db3ee6a9240b9b24c4d931e877d319334effe9857366144628859a6dfa90f"},
+  {"id":"smoke-1-plain","run":"ui-states/rep-1/plain","name":"S1","arm":"plain","purpose":"operational-smoke","project":"ui-states","kit":"K0","prompt_digest":"e96d5cb31e05b762bf0af0d6d27e6cf1760f2d0296142becafcbc1020f553579","effective_digest":"976db3ee6a9240b9b24c4d931e877d319334effe9857366144628859a6dfa90f"}
+]
+```
+
+## 3. Caps, allocation and time limits (Proposed / **Decision**)
+
+| Field | Proposed | Meaning in the implementation |
+| --- | --- | --- |
+| `caps.turns_per_session` | 3 | `--max-turns 3`; the provider ends the session with `error_max_turns` |
+| `caps.wall_clock_minutes` | 2 | supervisor watchdog; exit 124 plus the cap marker |
+| `caps.spend_usd` | 1 | `--max-budget-usd 1`; a client-side limit, not a provider billing cap |
+| `allocation.id` / `root` | `v8-smoke-1` / `runs/smoke` | ledger at `runs/smoke/.allocation/state.json` |
+| `allocation.limit_usd` | 3 | admission stops when known spend + 1 would exceed it |
+| `allocation.session_cap_usd` | 1 | must equal `caps.spend_usd` |
+| `allocation.session_wall_minutes` | 2 | must equal `caps.wall_clock_minutes` |
+| `allocation.max_elapsed_minutes` | 20 | counted from the **first reservation**, covering all three sessions, their setup and evaluation, and operator inspection between invocations; the next session is refused when elapsed + 2 would exceed it |
+| `allocation.expires_at` | decision timestamp + 7 days | after expiry only settlement is possible |
+
+The protocol proposes "six session-minutes" plus "a separate ten-minute operator
+deadline"; the manifest has one elapsed-time field, so 20 minutes is the proposed
+combination (see §8 c). Failed, interrupted and discarded sessions consume the same
+allocation. No cost forecast is made.
+
+## 4. Launch procedure (exact commands; not to be run before every decision exists)
+
+1. Inspect from the study root; it must print `ready: true`, `phase: offline-ready-for-smoke`:
+
+   ```sh
+   cd /Users/Shared/pincer-v8-study
+   node pincer-workflow/scripts/delivery-benchmark-v7/readiness.cjs \
+     --manifest pincer-workflow/docs/prd-v8-artifacts/execution/study.json \
+     --input-root /Users/Shared/pincer-v8-study --purpose operational-smoke --require-ready
+   ```
+
+2. Plan the three cells (no session):
+
+   ```sh
+   cd /Users/Shared/pincer-v8-study/pincer-workflow
+   node scripts/delivery-benchmark-v7/orchestrator.cjs \
+     --runs /Users/Shared/pincer-v8-study/runs/smoke \
+     --execution-inputs docs/prd-v8-artifacts/execution/smoke-execution-inputs.json \
+     --input-root /Users/Shared/pincer-v8-study \
+     --study-manifest docs/prd-v8-artifacts/execution/study.json \
+     --study-input-root /Users/Shared/pincer-v8-study \
+     --study-purpose operational-smoke --repetitions 1 --plan-only
+   ```
+
+   (`smoke-execution-inputs.json` is the decided version of the
+   [proposed inputs](smoke-execution-inputs.proposed.json).)
+
+3. Launch one session per invocation. The operator supplies `ANTHROPIC_API_KEY` in that
+   shell only, then runs the same command without `--plan-only` and with
+   `--i-have-a-spending-cap`. An operational session finalizes its cell as an invalid
+   operational record and **stops the schedule**, so the command exits 1 with
+   `stopped at ui-states/rep-1/<arm>`; inspect the artifacts, then repeat for the next
+   arm. The orchestrator re-runs readiness, accounting and reservation before each launch.
+
+4. After the third session, regenerate the reports offline (§5) and write the smoke and
+   native summaries for review.
+
+## 5. Checks the smoke must show, and where each is observed
+
+Evidence root: `runs/smoke/ui-states/rep-1/<arm>/` (`record.json`, `attempts/attempt-000001/{workspace,scratch,logs}`).
+
+| Check | Observed in | Judged by |
+| --- | --- | --- |
+| `payload_capture` | `logs/S1.json` (final provider result), `logs/S1.err`; `record.measurement` | a parsed `type: result` with `modelUsage`, `total_cost_usd`, `duration_api_ms`; cost/token/provider-minute totals complete; the key never appears in captures |
+| `isolation` | `record.environment` (`env_names`, `isolation_profile`, `permission_mode`, requested vs attested model); session root removed after the run | only the ten profile variables; no personal settings, plugins or MCP; attested model equals the requested one |
+| `browser` | preflight probe before the first paid cell; evaluation artifacts (PNG + JSON) under `scratch/`; `record.evaluation.checks[].observed` | version `148.0.7778.97`, native input and screenshot capability; the ui-states checks were observed in the real browser |
+| `stop` | `record.events` intervention `S1:cap` (provider `error_max_turns`) or exit 124 with the wall-clock marker in `S1.err`; no second prompt; orchestrator exit 1 after each cell | one session per cell, ended by a predeclared cap or by natural completion within it |
+| `cleanup` | session result `cleanup_complete: true` carried into the record; no surviving `claude` process; `.allocation/state.json` reservation `settled` with `actualUSD` | process group gone; ledger settled; no stop code other than expected |
+| `report_regeneration` | offline recomputation from retained files only | the command below reproduces the stored measurement block and validates the record |
+| native: `host_policy` | `record.environment.permission_mode`, the payload's permission denials if present | manual mode with prompts denied, never bypassed |
+| native: `authentication` | session ran with the API key from the launcher environment only | no keychain/subscription credential used; captures contain `[REDACTED]` at most |
+| native: `personal_configuration_absent` | fresh `HOME`/`CLAUDE_CONFIG_DIR`; the operator's `~/.claude` untouched | no personal instruction text, hook or plugin effect in outputs |
+| native: `kit_mechanisms` | kit arms: asset inventory unchanged before and after the session (`ARM_ASSETS_CHANGED` never raised); kit hook activity in `S1.err` or the workspace history | the installed commands, hooks and instructions were available to the session |
+
+Offline regeneration (no model call):
+
+```sh
+node -e "const p=require('node:path'),fs=require('node:fs');const h='scripts/delivery-benchmark-v7';const effort=require('./'+h+'/effort.cjs'),usage=require('./'+h+'/usage.cjs');const home=process.argv[1];const r=JSON.parse(fs.readFileSync(p.join(home,'record.json')));const c=usage.collect(home,r);console.log(JSON.stringify({problems:effort.problems(r),report:effort.report(r),measurement:c.measurement.sessions.map(s=>({id:s.id,cost:s.metrics.cost_usd.value}))},null,2))" /Users/Shared/pincer-v8-study/runs/smoke/ui-states/rep-1/<arm>
+```
+
+Expected terminal state per cell: `status: invalid`, reason
+`Operational smoke session: retained as operational evidence, never a study result.`
+(or, if the attested model is missing, the attestation reason — a real finding), one
+attempt with one session, an evaluation present, and `effort.problems(record)` empty.
+
+## 6. Authentication prerequisites (no secret values here)
+
+- An Anthropic **API key** for a workspace that can spend at least the allocation, exported
+  as `ANTHROPIC_API_KEY` in the launching shell only. The launcher reads it from its own
+  environment, passes it to the child, redacts it from captures, and never writes it.
+  This session had no key (`ANTHROPIC_API_KEY` unset).
+- Subscription/OAuth credentials are not used: each session runs with an empty
+  `CLAUDE_CONFIG_DIR`, so the operator's keychain login is invisible by design.
+- No key, key hash, private instruction text or environment dump may enter any tracked
+  file; the inspector refuses secret-shaped content and protected paths.
+- `gh` is authenticated on this host (used read-only to retrieve CI results).
+
+## 7. Stop and resume rules, and where evidence lives
+
+- Manifest `stop_resume`: unknown cost, account limit, exhausted allocation and changed
+  inputs all **stop**; resume requires an explicit recorded decision. This is already set.
+- Allocation ledger (`runs/smoke/.allocation/state.json`): a stop is recorded for unknown
+  cost, provider account/quota limit, observed cost above the session cap, or unresolved
+  process cleanup. A stopped or unresolved allocation admits nothing.
+- Resume: a recovery decision document (`schema: 1`, `approved: true`, `allocation`,
+  `manifestDigest`, `reservation`, `action: cancel|resume`) applied through
+  `allocation.reconcile`; expired authority permits settlement only.
+- Evidence: run records and captures under `runs/smoke/`; browser gate artifacts under
+  `evidence/browser-gate/`; dry-run files under `drafts/` (never evidence); decision
+  documents and evidence summaries under `decisions/` and `evidence/` once written; CI
+  on GitHub (PR #6).
+
+## 8. Sequencing conflicts and proposed protocol corrections (for review; not applied)
+
+a. **Three-arm smoke before K2.** Executable: all three arms use K0 (the kit is installed
+   in the pincer and strict workspaces; plain receives none). But the native observation
+   target binds the kit identity and the evidence target binds the whole effective block,
+   so this smoke closes T-109 and T-102's native criteria **for the K0 execution identity
+   only**. K1 (T-110) and K2 (T-114/T-115) each need their own capped operational smoke
+   and native observation under their own effective manifest and allocation. Smallest
+   correction to `docs/prd-v8-protocol.md` §"Proposed first allocation": add "The first
+   smoke uses K0 for all three arms. Every later kit cohort (K1, K2) requires its own
+   separately authorized smoke and native observation before measured use; smoke evidence
+   does not transfer across kits." (Editing the protocol re-freezes the cohort; do it
+   before, not after, the effective manifest is minted.)
+b. **Input root versus the ticket's verification command.** T-109's block runs the
+   inspector from the repository with the default input root, which can never validate
+   a launchable manifest (§1). Proposed replacement for that line:
+   `node scripts/delivery-benchmark-v7/readiness.cjs --manifest docs/prd-v8-artifacts/execution/study.json --input-root /Users/Shared/pincer-v8-study --require-ready`
+   (with `--input-root ..` equivalent when run from the study checkout). Re-verify through
+   the pinned kit after the edit.
+c. **Elapsed-time semantics.** The protocol names two deadlines; the manifest has one
+   field measured from the first reservation. Proposed wording: "The allocation's single
+   `max_elapsed_minutes` covers sessions, setup, evaluation and operator inspection."
+d. **Smoke launch path.** Before this preparation the orchestrator accepted only the
+   measured purpose and always planned three repetitions, so no in-tree command could
+   launch the smoke and a three-session allocation would have refused every launch
+   (`ALLOCATION_UNLISTED_RUN`). Commit `d43a6ce` adds `--study-purpose operational-smoke`
+   and `--repetitions 1`, finalizes operational sessions with an explicit operational
+   reason after independent evaluation, and stops after each. The protocol's readiness
+   section could name those two options.
+e. **Capture format.** The profile pins `--output-format json`, which retains only the
+   final result object. Whether that suffices to observe host policy, absence of personal
+   configuration and kit mechanisms is a reviewer judgment; `stream-json` would retain
+   every message but changes the frozen profile (new cohort) and must be decided before
+   the effective manifest is minted.
+f. **K0 artifact provenance.** The registry tarball was published from `566b553`; the
+   K0 commit is `694241c`. Executable content is identical; README differs. Accept the
+   registry tarball as K0's artifact, or repack from the commit (a different digest).
+
+## 9. Readiness blockers (read-only inspector, this preparation)
+
+From the study root with the honest draft (real facts, decisions null), purpose
+`operational-smoke`: the execution block and K0 validate; remaining pending reasons are
+`PROJECT_ACCESS_PENDING`, `INDEPENDENT_REVIEWERS_PENDING`, `SCHEDULE_INPUT_UNBOUND`
+(follows from the missing project), `NUMERIC_ALLOCATION_PENDING`,
+`ACTUAL_AUTHORIZATION_PENDING` and `RETAINED_EVIDENCE_PENDING` for offline, browser,
+packed and ci. Purpose `measured` adds the native observation and the native, smoke and
+report summaries. From the repository with the tracked manifest, `execution`, `schedule`
+and `allocation` are also pending and `kits` reports `REQUIRED_ARTIFACT_UNAVAILABLE`
+because the artifact lives in the study root.
+
+| Blocker | Resolvable by the agent | Needs user or reviewer |
+| --- | --- | --- |
+| execution identity | yes, once model, browser and caps are decided: resolve, retain the effective manifest, fill `execution` | model, browser runtime, caps |
+| projects | base SHA computed | project-access decision document |
+| reviewers | no | two independent reviewer ids and participation decisions |
+| schedule | yes, once projects and execution exist | none beyond the above |
+| allocation | yes, once numbers are decided | numbers and expiry |
+| authorization | no | `study-authorization` decided by `user`, binding purpose, allocation and the canonical schedule digest |
+| evidence.offline/packed | summaries can be drafted from the suite results | reviewer decision |
+| evidence.browser | summary can be drafted from today's gate artifacts (identity-matched) | reviewer decision |
+| evidence.ci | no run exists for the candidate yet | push the branch, wait for the matrix, reviewer decision |
+| native / smoke / report | no | the authorized smoke itself, then review |
+
+## 10. Decisions requested (bundle)
+
+1. Model: `claude-sonnet-5` (proposed) or `claude-opus-5`.
+2. Browser runtime: pinned Chrome for Testing 148.0.7778.97 (proposed) or a copy of Google Chrome 153.0.8010.48.
+3. Caps 3 turns / 2 minutes / $1 per session; allocation $3, 20 elapsed minutes, expiry, ids as in §3.
+4. Project access: a `project-access-decision` for `ui-states` at base `e5931061…`.
+5. Reviewers: two independent reviewer ids and their participation decisions.
+6. Authorization: a `study-authorization` decided by `user` for purpose `operational-smoke`.
+7. K0 artifact: accept the registry tarball (§8 f).
+8. Study root: `/Users/Shared/pincer-v8-study` (proposed).
+9. Capture format: keep `json` or switch the profile to `stream-json` (§8 e).
+10. Candidate pin and CI: push `feat/prd-v8`, then pin the SHA whose matrix passed.
+11. Ticket verification command: adopt the `--input-root` form (§8 b).
+
+Document shapes the inspector accepts (all `schema: 1`, `approved: true`, `decided_by`,
+`decided_at`, nonempty `evidence: [{ref, digest}]`): `project-access-decision` adds
+`project`, `base`; `reviewer-participation-decision` adds `reviewer`, `independent: true`;
+`study-authorization` adds `purpose`, `allocation_id`, `limit_usd`, `session_cap_usd`,
+`session_wall_minutes`, `max_elapsed_minutes`, `expires_at`, `schedule_digest` and must
+be decided by `user`; `evidence-review-decision` adds `reviewer`, `candidate`,
+`kind_reviewed`. Evidence summaries carry `kind`, `candidate`, `execution_target`,
+`result: "passed"`, `fixture` (`false` for browser, native, smoke, report),
+`evidence`, `review: {reviewer, decision}`, plus `matrix` for ci and `arms`/`checks`/
+`purpose` for native and smoke.
+
+## 11. Current evidence and whether it matches the proposed identity
+
+| Kind | Current raw evidence | Matches proposed identity | Missing for a retained summary |
+| --- | --- | --- | --- |
+| offline | Focused suites after the harness change, all passed locally 19 Sep 2026: study-launch, orchestrator, terminal-records, restart, readiness, allocation, effective-inputs, execution-freeze, delivery-benchmark-v7, readiness-contracts, effort-records, run-claims, environment. Full `npm test` result: see the progress journal. | yes (same tree) | summary bound to the candidate and evidence target; reviewer decision |
+| browser | Real-browser gate passed 19 Sep 2026 on CfT 148.0.7778.97 (artifacts in the study root). T-107's earlier pass used Google Chrome 153.0.8010.48 at `/Applications` and does **not** match. | yes, for the proposed runtime | summary; reviewer decision |
+| packed | `test/distribution.test.js` and `test/release-preparation.test.js` are part of the full suite. | yes (same tree) | summary; reviewer decision |
+| ci | PR #6 runs `35447528639` and `35447527131` on `48df59c`: ubuntu/macos × Node 22/24, eight checks `SUCCESS`, completed 14:12–14:19Z. That commit **predates** the harness change. | no (older commit) | a run on the final candidate; summary; reviewer decision |
+| native, smoke, report | none | — | the authorized smoke |
