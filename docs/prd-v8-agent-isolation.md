@@ -27,6 +27,32 @@ not assumed to work. Missing authentication is a prerequisite failure.
 The previous `live-driver.sh` entry point now refuses all calls. There is no legacy
 inherited-configuration launch path.
 
+## Observed, not only configured: the synthetic canary and the hook capture
+
+Two additions make isolation and kit-hook behavior observable from retained files without
+reading anything personal.
+
+**Synthetic isolation canary** (`home: per-session-synthetic-canary`). Before each session
+the launcher plants user-level configuration where a CLI that ignored
+`--setting-sources project` would read it: `settings.json` with a `SessionStart` hook that
+touches a marker inside the session root, and a `CLAUDE.md` holding a random per-session
+phrase, in both the per-session `HOME/.claude` and `CLAUDE_CONFIG_DIR`. After the session
+the launcher records `environment.isolation_canary = { ok, user_hook_ran,
+phrase_in_captures }`: the marker's existence and whether the phrase reached stdout, stderr
+or the hook debug log. The phrase itself is never retained. A tripped canary makes the
+session unreportable. The operator's real home directory, configuration and instruction
+text are never read, hashed or compared.
+
+**Hook capture** (`hook_capture: debug-hooks-file`). The argument vector adds
+`--debug hooks --debug-file <session>/debug.log`, so the CLI writes its own hook matching
+and execution log inside the session root. The launcher retains only a redacted copy,
+`logs/<session>.debug.log` (mode 0600, append-preserved), and records
+`environment.hook_capture = { present, file, bytes }`; an absent log is recorded, never
+read as "no hooks ran". The final result object on stdout is unchanged, so result parsing,
+usage accounting, redaction and interruption handling are the same as before. Whether the
+pinned CLI's hook debug lines name each executed hook command and its exit status is a
+smoke finding: it is documented behavior, not yet observed here.
+
 ## Why this profile retains project discovery
 
 Bare mode skips project CLAUDE.md and legacy commands/agents. The released kit uses those
@@ -38,8 +64,10 @@ The installed help and current official documentation establish the proposed con
 not observed native isolation. `test/benchmark-environment.test.js` runs real child
 processes with a synthetic tool, hostile environment values and personal configuration
 canaries. It observes intended asset availability, runs the actual installed dangerous
-command hook against a synthetic tool input, and verifies process-group teardown. Every
-such record is marked `fixture: true` and `reportable: false`.
+command hook against a synthetic tool input, verifies process-group teardown, checks that
+the planted canary stays untouched for a compliant tool and trips for a leaking one, and
+checks that the hook debug log is retained redacted. Every such record is marked
+`fixture: true` and `reportable: false`.
 
 T-109 must observe the actual CLI with all three arms, working authentication, intended
 kit discovery/hooks and retained managed policy before measured use. An operational
@@ -82,7 +110,8 @@ its asset checks.
 Before tool startup, an inert supervisor registers its process group through `onGroup`.
 A registration failure kills the supervisor before the tool starts. On completion,
 timeout or cancellation the launcher terminates descendants and checks group disappearance.
-`cleanup_complete: false` prevents reportability and keeps custody recovery conservative.
+`cleanup_complete: false` prevents reportability and keeps custody recovery conservative;
+the flag is retained in the record environment.
 The numeric `spend_usd` cap is passed as the CLI per-session `--max-budget-usd`
 limit; it is not an aggregate study billing guarantee. Aggregate allocation remains an
 explicit readiness decision. Captures use unique session filenames, mode 0600, and are flushed incrementally; an

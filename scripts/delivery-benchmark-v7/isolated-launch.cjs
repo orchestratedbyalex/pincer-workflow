@@ -6,12 +6,14 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 const { StringDecoder } = require('node:string_decoder');
+const crypto = require('node:crypto');
 const effective = require('./effective.cjs');
 const PROFILE = Object.freeze({
   name: 'claude-project-isolated-v1', tool_version: '2.1.273',
   authentication: 'anthropic-api-key', setting_sources: 'project',
   permission_mode: 'manual', permission_prompts: 'none',
-  mcp: 'explicit-empty', home: 'per-session-empty',
+  mcp: 'explicit-empty', home: 'per-session-synthetic-canary',
+  hook_capture: 'debug-hooks-file',
   host_policy: 'managed-policy-preserved-observation-required',
 });
 const ARMS = ['plain', 'pincer', 'strict'];
@@ -199,13 +201,52 @@ function buildEnvironment(sessionRoot, workspace, apiKey) {
     GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null',
   };
 }
+// The CLI's hook debug log lives beside the permission override, inside the session root
+// that is removed after the run; only a redacted copy is retained (`retainHookDebug`).
+const debugFileFor = settingsPath => path.join(path.dirname(settingsPath), 'debug.log');
 function argumentsFor(options, settingsPath) {
   return ['--print', '--model', options.model, '--permission-mode', 'manual', '--permission-prompts', 'none',
     '--setting-sources', 'project', '--settings', settingsPath,
     '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}', '--no-chrome', '--no-session-persistence',
     '--max-turns', String(options.caps.turns_per_session), '--max-budget-usd', String(options.caps.spend_usd),
+    // Kit-hook observation: the CLI logs hook matching and execution in its own debug
+    // stream; the `hooks` filter keeps everything else out. The final result object on
+    // stdout is unchanged, so accounting parses exactly what it parsed before.
+    '--debug', 'hooks', '--debug-file', debugFileFor(settingsPath),
     // Task text is data on stdin, never an option-shaped positional argument.
     '--input-format', 'text', '--output-format', 'json'];
+}
+// Synthetic isolation canary. User-level settings with a SessionStart hook and a user
+// CLAUDE.md are planted in the per-session HOME and config dir, where a CLI that ignored
+// `--setting-sources project` would read them. Nothing personal is involved: the phrase is
+// random per session and is never retained, only whether it or the hook marker appeared.
+function plantCanary(sessionRoot) {
+  const phrase = `PINCER-CANARY-${crypto.randomBytes(8).toString('hex')}`;
+  const marker = path.join(sessionRoot, 'canary-user-hook-ran');
+  const settings = JSON.stringify({ hooks: { SessionStart: [{ hooks: [{ type: 'command', command: `touch ${JSON.stringify(marker)}` }] }] } });
+  for (const dir of [path.join(sessionRoot, 'home', '.claude'), path.join(sessionRoot, 'config')]) {
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    fs.writeFileSync(path.join(dir, 'settings.json'), settings, { mode: 0o600 });
+    fs.writeFileSync(path.join(dir, 'CLAUDE.md'), `${phrase}\n`, { mode: 0o600 });
+  }
+  return { phrase, marker };
+}
+function checkCanary(canary, texts) {
+  const user_hook_ran = fs.existsSync(canary.marker);
+  const phrase_in_captures = texts.some(text => typeof text === 'string' && text.includes(canary.phrase));
+  return { ok: !user_hook_ran && !phrase_in_captures, user_hook_ran, phrase_in_captures };
+}
+// Retain the CLI's hook debug log as a redacted copy beside the captures. The raw file is
+// removed with the session root. Absence is recorded, never assumed to mean "no hooks".
+function retainHookDebug(debugFile, target, clean) {
+  let text;
+  try { if (!fs.existsSync(debugFile)) return { capture: { present: false }, text: '' }; text = fs.readFileSync(debugFile, 'utf8'); }
+  catch (error) { return { capture: { present: true, retained: false, error: error.code || 'UNKNOWN' }, text: '' }; }
+  const safe = clean(text);
+  if (!target) return { capture: { present: true, file: null, bytes: Buffer.byteLength(safe) }, text: safe };
+  try { fs.writeFileSync(target, safe, { flag: 'wx', mode: 0o600 }); }
+  catch (error) { return { capture: { present: true, retained: false, error: error.code || 'UNKNOWN' }, text: safe }; }
+  return { capture: { present: true, file: path.basename(target), bytes: Buffer.byteLength(safe) }, text: safe };
 }
 function redactor(secret) {
   return text => String(text || '').split(secret).join('[REDACTED]').replace(/\b(?:sk-ant-|sk-|ghp_)[A-Za-z0-9_-]{16,}/g, '[REDACTED]');
@@ -301,7 +342,7 @@ async function supervise({ cwd, env, payload, timeoutMs, onGroup = async () => {
 }
 async function runSession(options, nativePreflight = null) {
   const native = Boolean(nativePreflight), assets = nativePreflight?.assets || validateParameters(options);
-  if (!native && !['ok', 'exit7', 'echo-secret', 'hang', 'descendant', 'stream-descendant'].includes(options.mode || 'ok')) fail('FIXTURE_MODE_INVALID', 'unknown fixture behavior');
+  if (!native && !['ok', 'exit7', 'echo-secret', 'hang', 'descendant', 'stream-descendant', 'leak-canary'].includes(options.mode || 'ok')) fail('FIXTURE_MODE_INVALID', 'unknown fixture behavior');
   const root = fs.realpathSync(options.stateRoot);
   const sessionRoot = fs.mkdtempSync(path.join(root, 'isolated-session-'));
   for (const name of ['home', 'config', 'tmp']) fs.mkdirSync(path.join(sessionRoot, name), { mode: 0o700 });
@@ -309,15 +350,17 @@ async function runSession(options, nativePreflight = null) {
   // Project settings provide the hooks once. Repeating them in --settings risks
   // merging duplicate hook entries; the override only specifies the approval mode.
   fs.writeFileSync(settingsPath, JSON.stringify({ permissions: { defaultMode: 'manual' } }), { mode: 0o600 });
+  const canary = plantCanary(sessionRoot);
   const env = buildEnvironment(sessionRoot, options.workspace, options.apiKey);
   const args = argumentsFor(options, settingsPath);
+  const clean = redactor(options.apiKey);
   const started = new Date().toISOString();
-  const logFiles = options.logDir ? { stdout: path.join(options.logDir, `${options.name}.json`), stderr: path.join(options.logDir, `${options.name}.err`) } : null;
+  const logFiles = options.logDir ? { stdout: path.join(options.logDir, `${options.name}.json`), stderr: path.join(options.logDir, `${options.name}.err`), debug: path.join(options.logDir, `${options.name}.debug.log`) } : null;
   try {
     if (logFiles) {
       if (!/^[A-Za-z0-9_-]+$/.test(options.name || '')) fail('LOG_NAME_INVALID', 'a safe session identity is required');
       fs.mkdirSync(options.logDir, { recursive: true, mode: 0o700 });
-      if (fs.existsSync(logFiles.stdout) || fs.existsSync(logFiles.stderr)) fail('LOG_EXISTS', 'session captures are append-preserved; allocate a new session identity');
+      if (fs.existsSync(logFiles.stdout) || fs.existsSync(logFiles.stderr) || fs.existsSync(logFiles.debug)) fail('LOG_EXISTS', 'session captures are append-preserved; allocate a new session identity');
     }
     const payload = native ? { kind: 'native', args, prompt: options.prompt, bundle: options.effective, arm: options.arm, readiness: options.readiness,
       expectedAssets: options.expectedAssets, observationFile: options.observationFile || null, allocation: options.allocation } :
@@ -325,6 +368,8 @@ async function runSession(options, nativePreflight = null) {
     const result = await supervise({ cwd: fs.realpathSync(options.workspace), env, payload,
       timeoutMs: native ? options.caps.wall_clock_minutes * 60000 : options.timeoutMs || options.caps.wall_clock_minutes * 60000,
       onGroup: options.onGroup, signal: options.signal, logFiles, captureIO: native ? fs : options.fixtureCaptureIO || fs });
+    const hookDebug = retainHookDebug(debugFileFor(settingsPath), logFiles?.debug || null, clean);
+    const isolationCanary = checkCanary(canary, [result.stdout, result.stderr, hookDebug.text]);
     let attestedModel = null;
     if (native) {
       try { const response = JSON.parse(result.stdout); if (typeof response.model === 'string') attestedModel = response.model; else if (response.modelUsage && Object.keys(response.modelUsage).length === 1) attestedModel = Object.keys(response.modelUsage)[0]; } catch {}
@@ -339,9 +384,12 @@ async function runSession(options, nativePreflight = null) {
       // gone before returning. The allocation ledger stops on the same fact; the record
       // carries it so report regeneration from retained files can see it too.
       cleanup_complete: result.cleanup_complete,
+      // Observed, not configured: whether the planted user-level configuration was read,
+      // and whether the CLI's hook debug log was written and retained.
+      isolation_canary: isolationCanary, hook_capture: hookDebug.capture,
       configuration: PROFILE, env_names: Object.keys(env).filter(k => k !== 'ANTHROPIC_API_KEY').sort(),
     };
-    const reportable = Boolean(nativePreflight?.reportable && attestedModel === options.model && result.cleanup_complete && !result.capture_failure);
+    const reportable = Boolean(nativePreflight?.reportable && attestedModel === options.model && result.cleanup_complete && !result.capture_failure && isolationCanary.ok);
     return { ...result, started, ended: new Date().toISOString(), environment, assets: assets.files, logFiles,
       reportable, observation: !native ? 'controlled fixture plumbing; not native CLI isolation evidence' : !attestedModel ? 'provider model attestation missing; operational only' : options.readiness.purpose,
       end: result.timedOut ? 'capped' : result.status === 124 ? 'ambiguous' : 'completed',
@@ -402,12 +450,22 @@ if (require.main === module && process.argv[2] === '--session-supervisor') {
   const prompt = fs.readFileSync(0, 'utf8');
   if (input.mode === 'echo-secret') process.stdout.write(process.env.ANTHROPIC_API_KEY);
   else if (input.mode === 'exit7') process.exitCode = 7;
+  else if (input.mode === 'leak-canary') {
+    // A tool that ignores the profile: it reads user-level settings from the config dir,
+    // runs their SessionStart hook and echoes the user CLAUDE.md. The canary must catch it.
+    const userSettings = JSON.parse(fs.readFileSync(path.join(process.env.CLAUDE_CONFIG_DIR, 'settings.json'), 'utf8'));
+    for (const group of userSettings.hooks.SessionStart) for (const hook of group.hooks) spawnSync('/bin/bash', ['--noprofile', '--norc', '-c', hook.command], { env: process.env, timeout: 5000 });
+    process.stdout.write(fs.readFileSync(path.join(process.env.CLAUDE_CONFIG_DIR, 'CLAUDE.md'), 'utf8'));
+  }
   else if (['hang', 'descendant', 'stream-descendant'].includes(input.mode)) {
     if (input.mode !== 'hang') spawn(process.execPath, ['-e', `const fs=require('node:fs');setInterval(()=>fs.appendFileSync(process.argv[1],'.'),25)`, input.heartbeat], { stdio: 'ignore' });
     if (input.mode === 'stream-descendant') setInterval(() => process.stdout.write('fixture-stream-chunk\n'), 75);
     setInterval(() => {}, 1000);
   } else {
     const flag = name => input.args[input.args.indexOf(name) + 1];
+    // The synthetic tool writes the hook debug log the way the CLI would, with a
+    // credential in it, so the retained copy proves redaction.
+    fs.writeFileSync(flag('--debug-file'), `[DEBUG] fixture hook debug: executing hook command; key ${process.env.ANTHROPIC_API_KEY}\n`);
     const override = JSON.parse(fs.readFileSync(flag('--settings'), 'utf8'));
     const projectFile = path.join(process.cwd(), '.claude/settings.json');
     const project = fs.existsSync(projectFile) ? JSON.parse(fs.readFileSync(projectFile, 'utf8')) : {};
@@ -420,7 +478,9 @@ if (require.main === module && process.argv[2] === '--session-supervisor') {
       env_names: Object.keys(process.env).sort(), settings,
       project_instructions: has('CLAUDE.md') && has('AGENTS.md'),
       commands: has('.claude/commands'), agents: has('.claude/agents'), skills: has('.claude/skills'), hook_exits: hookExits,
-      plugins_in_home: fs.existsSync(path.join(process.env.HOME, '.claude/plugins')), args: input.args, prompt }));
+      plugins_in_home: fs.existsSync(path.join(process.env.HOME, '.claude/plugins')),
+      canary_planted: fs.existsSync(path.join(process.env.HOME, '.claude/settings.json')) && fs.existsSync(path.join(process.env.CLAUDE_CONFIG_DIR, 'CLAUDE.md')),
+      session_root: path.dirname(flag('--settings')), args: input.args, prompt }));
   }
 } else if (require.main === module) { process.stderr.write('isolated-launch: direct native launch is unavailable until the T-109 isolation observation gate\n'); process.exitCode = 3; }
 module.exports = { PROFILE, assetsFor, settingsFor, observationTarget, checkNativeReadiness, preflightExecution, preflightNative, buildEnvironment, argumentsFor, observeFixture, launchNative };

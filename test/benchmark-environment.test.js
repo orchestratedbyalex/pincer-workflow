@@ -39,6 +39,11 @@ const restore = {};
     assert.equal(observed.args[observed.args.indexOf('--permission-mode') + 1], 'manual');
     assert.equal(observed.args[observed.args.indexOf('--input-format') + 1], 'text');
     assert.ok(!observed.args.includes('--dangerously-skip-permissions'));
+    // Kit-hook observation: the CLI's own hook debug log, written inside the session root
+    // and retained only as a redacted copy. The filter keeps the log to hook execution.
+    assert.equal(observed.args[observed.args.indexOf('--debug') + 1], 'hooks');
+    assert.equal(observed.args[observed.args.indexOf('--debug-file') + 1], path.join(observed.session_root, 'debug.log'));
+    assert.equal(observed.args[observed.args.indexOf('--output-format') + 1], 'json', 'result parsing is unchanged');
   }
 }
 const hostileHome = tempDir(), maliciousHook = path.join(hostileHome, 'PERSONAL_HOOK_RAN');
@@ -58,6 +63,15 @@ try {
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.cleanup_complete, true, 'registered session group is observed gone before returning');
     assert.equal(result.environment.cleanup_complete, true, 'and the fact is retained in the record environment');
+    // Synthetic isolation canary: user-level settings, a SessionStart hook and a user
+    // CLAUDE.md are planted in the per-session HOME and config dir. A CLI that honors
+    // --setting-sources project never runs the hook or sees the phrase.
+    const canary = result.environment.isolation_canary;
+    assert.equal(canary.ok, true, JSON.stringify(canary));
+    assert.equal(canary.user_hook_ran, false);
+    assert.equal(canary.phrase_in_captures, false);
+    assert.ok(!JSON.stringify(result).includes('PINCER-CANARY-'), 'the phrase itself is never retained');
+    assert.equal(result.environment.hook_capture.present, true, 'the fixture wrote a hook debug log and it was retained');
     assert.equal(result.reportable, false);
     assert.equal(result.environment.fixture, true);
     assert.equal(result.environment.tool, 'synthetic-session');
@@ -67,6 +81,7 @@ try {
     assert.equal(observed.cwd, fs.realpathSync(options.workspace));
     assert.equal(observed.auth_present, true);
     assert.equal(observed.plugins_in_home, false);
+    assert.equal(observed.canary_planted, true, 'the synthetic user settings and CLAUDE.md exist while the tool runs');
     assert.equal(calls.length, 1);
     for (const name of ['NODE_OPTIONS', 'BASH_ENV', 'CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT', 'ANTHROPIC_MODEL', 'ANTHROPIC_AUTH_TOKEN', 'HTTPS_PROXY', 'UNRELATED_PRIVATE_VALUE']) assert.ok(!observed.env_names.includes(name), name);
     assert.equal(observed.args[observed.args.indexOf('--permission-mode') + 1], 'manual');
@@ -101,6 +116,39 @@ try {
   assert.equal(fs.readFileSync(captured.logFiles.stdout, 'utf8'), '[REDACTED]');
   assert.equal(fs.statSync(captured.logFiles.stdout).mode & 0o777, 0o600);
   await assert.rejects(isolation.observeFixture(captureOptions), /append-preserved/);
+  {
+    // The hook debug log is retained beside the captures, redacted, 0600, append-preserved,
+    // and its absence is recorded rather than assumed.
+    const options = fixture('pincer');
+    options.logDir = path.join(options.root, 'captures'); options.name = 'S1';
+    const result = await isolation.observeFixture(options);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.logFiles.debug, path.join(options.logDir, 'S1.debug.log'));
+    const debug = fs.readFileSync(result.logFiles.debug, 'utf8');
+    assert.match(debug, /fixture hook debug/);
+    assert.ok(!debug.includes(SECRET), 'the retained debug copy is redacted');
+    assert.ok(debug.includes('[REDACTED]'));
+    assert.equal(fs.statSync(result.logFiles.debug).mode & 0o777, 0o600);
+    assert.deepEqual(result.environment.hook_capture, { present: true, file: 'S1.debug.log', bytes: Buffer.byteLength(debug) });
+    assert.deepEqual(fs.readdirSync(options.stateRoot), [], 'the raw debug log leaves with the session root');
+    const silent = await isolation.observeFixture({ ...fixture(), logDir: path.join(tempDir(), 'captures'), name: 'S1', mode: 'exit7' });
+    assert.equal(silent.environment.hook_capture.present, false, 'a tool that wrote no debug log is recorded as such');
+    assert.equal(fs.existsSync(silent.logFiles.debug), false);
+  }
+  {
+    // A tool that reads user-level configuration despite the profile trips the canary:
+    // the planted hook runs and the planted phrase reaches the captures. The result is
+    // unreportable and the record says why; the phrase itself is never retained.
+    const leaked = await isolation.observeFixture({ ...fixture(), mode: 'leak-canary' });
+    assert.equal(leaked.status, 0, leaked.stderr);
+    const canary = leaked.environment.isolation_canary;
+    assert.equal(canary.ok, false);
+    assert.equal(canary.user_hook_ran, true);
+    assert.equal(canary.phrase_in_captures, true);
+    assert.equal(leaked.reportable, false);
+    assert.match(leaked.stdout, /PINCER-CANARY-[a-f0-9]{16}/, 'captures keep what the tool printed');
+    assert.ok(!JSON.stringify(leaked.environment).includes('PINCER-CANARY-'));
+  }
 } finally {
   for (const [key, value] of Object.entries(restore)) if (value === undefined) delete process.env[key]; else process.env[key] = value;
 }
