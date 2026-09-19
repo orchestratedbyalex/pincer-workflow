@@ -86,3 +86,17 @@ provenance includes the full app bundle (674 files, seven confined internal link
 external/broken/cyclic links are refused. Preflight probes version, native input and
 screenshot capability before measured UI preparation. No model session was used.
 Latest runtime verification artifacts: `/var/folders/yc/tz09y39n7t7_h5wm36tdcgbh0000gn/T/pincer-browser-gate-zNm3ni`.
+
+### T-104
+
+Schema 8 records every attempt and durable session intent while preserving schema 7
+readability. Real process kills exercise setup, session start/end, pre-evaluation and
+streaming capture boundaries. Restart retains prior artifacts and reconstructs the exact
+original base from verified Git objects in a sterile repository; interrupted commits,
+hooks and replacement refs are excluded. Original unrelated file bytes have protected,
+hash-bound recipes. Native legacy history without an original base is refused. Parent
+and independent agent review added reverse session-ledger checks, safe recipe paths and
+malformed-record handling. Measurement completeness remains T-105's next obligation.
+
+The T-102 review also moved task text to stdin so flag-shaped prompts cannot change
+launcher options. Its focused verification passed again; native observation remains open.

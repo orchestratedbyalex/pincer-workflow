@@ -39,6 +39,7 @@ const effort = require('./effort.cjs');
 const freeze = require('./freeze.cjs');
 const effectiveInputs = require('./effective.cjs');
 const claims = require('./run-claims.cjs');
+const attempts = require('./attempts.cjs');
 const isolation = require('./isolated-launch.cjs');
 const { prepareBrowser } = require('./browser-preflight.cjs');
 
@@ -425,6 +426,15 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
   // `claimRerun` replaces only invalid runs, so one dry run would cost a cell of the
   // study permanently. A refusal that launched nothing leaves the cell as it found it.
   const refuse = detail => ({ record, stop: true, refused: true, detail });
+  const home = runDir(runsRoot, cell);
+  try {
+    const invalid = effort.problems(record);
+    if (invalid.length) throw new Error(`planned checkpoint is invalid: ${invalid.map(p => p.code).join(', ')}`);
+    attempts.requireResume(home, record, opts.resumeInterrupted);
+    if (typeof opts.fixtureSession !== 'function' && record.schema === 7 && attempts.resumeTarget(home, record) && !/^[a-f0-9]{40}$/.test(record.provenance.base || '')) {
+      throw Object.assign(new Error('Interrupted historical native execution has no recorded original base; retain it for explicit disposition, not regeneration'), { code: 'ORIGINAL_BASE_UNAVAILABLE' });
+    }
+  } catch (error) { return { ...refuse(error.message), code: error.code || 'RECORD_INVALID' }; }
   let effectiveBrowser = browser;
   if (spendingCap !== true) return refuse(`${record.run}: no spending cap has been asserted; nothing was prepared and no session was launched`);
   if (cohort !== record.cohort) {
@@ -442,7 +452,7 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
       if (current.cohort !== cohort || current.effective.model !== model || current.caps.turns_per_session !== maxTurns || current.caps.wall_clock_minutes !== wallClockMinutes) throw new Error('runtime inputs differ from effective manifest');
       const inputRoot = opts.effective.inputRoot || opts.effective.root;
       if (kit !== effectiveInputs.contained(inputRoot, opts.effective.input.kit.path)) throw new Error('runtime kit differs from effective manifest');
-      if (dir !== briefs.BRIEFS_DIR || opts.tools || browser) throw new Error('unbound brief, tool or browser override');
+      if (dir !== briefs.BRIEFS_DIR || opts.tools || browser || opts.unrelatedEdits) throw new Error('unbound brief, tool or browser override');
       if (opts.readiness?.purpose !== 'measured') throw new Error('measured cells require reviewed native isolation; operational smoke uses a separate allocation');
       const gate = isolation.preflightExecution({ effective: opts.effective, apiKey: opts.apiKey,
         readiness: opts.readiness, observationFile: opts.observationFile, onGroup: group => claims.registerGroup(claim, group) });
@@ -460,63 +470,69 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
     return refuse(`${record.run}: planned for a ${plannedCaps.wall_clock_minutes}-minute wall clock, driven with ${wallClockMinutes}`);
   }
 
-  const home = runDir(runsRoot, cell);
-  const ws = path.join(home, 'workspace');
-  const scratch = path.join(home, 'scratch');
-  const logs = path.join(home, 'logs');
   const brief = briefs.loadBrief(cell.brief, dir);
-
-  // A pending cell with a workspace already on disk is an interrupted attempt: the cell
-  // never reached a terminal status, so something killed it mid-run. Re-drive it from
-  // nothing. `harness.prepare` does not wipe, and its `git add -A` would otherwise commit
-  // the dead attempt's files into this run's recorded base — a record that looks clean,
-  // with a base nobody can tell is polluted. The discarded logs are kept under their own
-  // name and the attempt is named in an event, so the repetition is visible rather than
-  // silently paid for twice.
+  const sessionNames = brief.prompts.map(x => x.name);
+  let attempt;
+  try { attempt = attempts.begin(home, record, { resumeInterrupted: opts.resumeInterrupted, sessionNames }); }
+  catch (error) { return { ...refuse(error.message), code: error.code || 'ATTEMPT_INVALID' }; }
+  const ws = attempts.location(home, attempt, 'workspace');
+  const scratch = attempts.location(home, attempt, 'scratch');
+  const logs = attempts.location(home, attempt, 'logs');
+  const checkpoint = () => {
+    if (record.status !== 'pending' && attempt.status === 'running') attempts.finish(attempt);
+    writeRecord(runsRoot, cell, record, claim);
+  };
+  const boundary = async name => {
+    if (typeof opts.fixtureSession === 'function' && typeof opts.fixtureCheckpoint === 'function') await opts.fixtureCheckpoint(name, { record, attempt, workspace: ws, scratch, logs });
+  };
+  // Persist identity before creating any directory or launching any setup/session work.
+  checkpoint();
+  await boundary('attempt-start');
   if (typeof opts.fixtureSession === 'function') record.environment = { ...record.environment, fixture: true, tool: 'synthetic-session' };
   const setupStart = iso();
-  if (fs.existsSync(ws)) {
-    const attempt = fs.readdirSync(home).filter(n => n.startsWith('logs-attempt-')).length + 1;
-    if (fs.existsSync(logs)) fs.renameSync(logs, path.join(home, `logs-attempt-${attempt}`));
-    fs.rmSync(ws, { recursive: true, force: true });
-    fs.rmSync(scratch, { recursive: true, force: true });
-    record.events.push({
-      kind: 'intervention', id: `${record.run}:attempt-${attempt}`, started: setupStart, ended: setupStart,
-      intervention: 'operator',
-      detail: `an interrupted attempt was discarded and the cell re-driven from a clean workspace; its logs are retained at logs-attempt-${attempt}`,
-    });
-  }
 
   // Order matters, and it is the opposite of what the edition shipped with. The kit is
   // installed and committed FIRST, because the install ends in `git add -A`; injecting
   // the brief's unrelated edits before it committed the very work the run is asked to
   // leave alone, and the preservation check would then have been scored against a tree
   // the harness had already contaminated.
-  harness.prepare(ws, cell.brief, { arm: cell.arm, dir });
-  const installed = installKit(ws, cell.arm, kit);
+  const originalAttempt = record.attempts.slice(0, -1).find(previous => previous.base);
+  let edits;
+  if (originalAttempt) {
+    attempts.restoreBase(home, originalAttempt, ws);
+    edits = originalAttempt.origin === 'legacy' && Object.keys(record.workspace.unrelated_edits || {}).length === 0 ? {} : attempts.loadUnrelated(home, originalAttempt);
+  } else {
+    harness.prepare(ws, cell.brief, { arm: cell.arm, dir });
+    const installed = installKit(ws, cell.arm, kit);
+    record.provenance.kit = installed ? installed.digest : null;
+    record.provenance.kit_source = installed ? installed.source : null;
+    edits = unrelatedEdits || (typeof brief.base.unrelated === 'function' ? brief.base.unrelated(ws, harness.LIB) : null);
+  }
   const expectedAssets = typeof opts.fixtureSession === 'function' ? null : isolation.assetsFor(cell.arm, ws).files;
-  record.provenance.kit = installed ? installed.digest : null;
-  record.provenance.kit_source = installed ? installed.source : null;
+  attempt.configuration_digest = expectedAssets === null ? null : effort.sha256(effectiveInputs.canonical(expectedAssets));
+  if (originalAttempt && originalAttempt.configuration_digest !== attempt.configuration_digest) throw new Error('Original attempt configuration changed; refusing launch');
   record.provenance.base = harness.git(ws, 'rev-parse', 'HEAD');
-  // Injected after the base is taken, and recorded, because an unrecorded injection is
-  // an unmeasurable one: the evaluator reads what to preserve from the record, and an
-  // absent map makes the whole check pass vacuously.
-  const edits = unrelatedEdits || (typeof brief.base.unrelated === 'function' ? brief.base.unrelated(ws, harness.LIB) : null);
+  attempt.base = record.provenance.base;
+  if (originalAttempt && attempt.base !== originalAttempt.base) throw new Error('Original attempt base changed; refusing launch');
+  attempts.validateUnrelated(ws, edits);
+  attempts.saveUnrelated(home, attempt, edits);
   record.workspace = { unrelated_edits: harness.applyUnrelated(ws, edits) };
   record.environment.model = model;
-  record.environment.caps = { turns_per_session: maxTurns, wall_clock_minutes: wallClockMinutes };
-  record.events.push({ kind: 'stage', id: `${record.run}:setup`, stage: 'setup', started: setupStart, ended: iso() });
+  record.environment.caps = { ...record.environment.caps, turns_per_session: maxTurns, wall_clock_minutes: wallClockMinutes };
+  record.events.push({ kind: 'stage', id: attempts.eventId(record, attempt, 'setup'), stage: 'setup', started: setupStart, ended: iso() });
   // The first checkpoint that says this cell was actually started. Everything above is
   // recoverable from the workspace; from here on a crash costs money.
-  writeRecord(runsRoot, cell, record, claim);
-
-  const sessionNames = brief.prompts.map(x => x.name);
+  checkpoint();
+  await boundary('setup');
   for (const p of brief.prompts) {
     const promptFile = path.join(scratch, `${p.name}.prompt`);
     fs.mkdirSync(scratch, { recursive: true });
     const prompt = `${ARM_PREAMBLE[cell.arm] || ''}${p.prompt}`;
     fs.writeFileSync(promptFile, prompt);
     const session = typeof opts.fixtureSession === 'function' ? opts.fixtureSession : driveSession;
+    const intent = attempts.intent(record, attempt, p.name, prompt.slice(0, effort.LIMITS.prompt));
+    checkpoint();
+    await boundary('session-start');
     const s = await session({
       run: record.run, workspace: ws, promptFile, model, maxTurns,
       wallClockMinutes, cohort, logDir: logs, name: p.name, spendingCap, effective: opts.effective,
@@ -524,21 +540,19 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
       arm: cell.arm, stateRoot: scratch, apiKey: opts.apiKey, expectedAssets,
       readiness: opts.readiness, observationFile: opts.observationFile, signal: opts.signal,
     });
-    if (s.refused) return refuse(`${record.run}: ${s.stderr || s.code || 'the driver refused the session'}`);
+    attempts.sessionEnd(record, attempt, intent, s);
     if (s.environment) record.environment = { ...record.environment, ...s.environment };
-    record.events.push({
-      kind: 'session', id: `${record.run}:${p.name}`, started: s.started, ended: s.ended,
-      prompt: prompt.slice(0, effort.LIMITS.prompt),
-    });
     // Checkpointed per SESSION, not per cell. A cell is up to three paid sessions; a
     // crash after the second used to leave a record reading `pending` with no events,
     // so nothing on disk said those sessions had been bought.
-    writeRecord(runsRoot, cell, record, claim);
+    checkpoint();
+    await boundary('session-end');
+    if (s.refused) return refuse(`${record.run}: ${s.stderr || s.code || 'the driver refused the session'}`);
 
     if (typeof opts.fixtureSession !== 'function' && s.reportable !== true) {
       record.status = 'invalid';
       record.reason = 'native session did not attest the required model, isolation or process cleanup; artifacts retained';
-      writeRecord(runsRoot, cell, record, claim);
+      checkpoint();
       return { record, stop: true };
     }
 
@@ -549,10 +563,10 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
       record.status = 'invalid';
       record.reason = `account limit during ${p.name}; the schedule stopped rather than continuing into it`;
       record.events.push({
-        kind: 'intervention', id: `${record.run}:${p.name}:limit`, started: s.ended, ended: s.ended,
+        kind: 'intervention', id: attempts.eventId(record, attempt, `${p.name}:limit`), started: s.ended, ended: s.ended,
         intervention: 'operator', detail: record.reason,
       });
-      writeRecord(runsRoot, cell, record, claim);
+      checkpoint();
       return { record, stop: true };
     }
 
@@ -562,36 +576,41 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
       // no usable work when it had committed code and been rejected on the merits; a cap
       // decides when a session stopped, never whether what it wrote was any good.
       record.events.push({
-        kind: 'intervention', id: `${record.run}:${p.name}:cap`, started: s.ended, ended: s.ended,
+        kind: 'intervention', id: attempts.eventId(record, attempt, `${p.name}:cap`), started: s.ended, ended: s.ended,
         intervention: 'operator', detail: `session ${p.name} ended by the ${wallClockMinutes}-minute wall-clock cap (exit ${CAP_EXIT})`,
       });
     } else if (s.end === 'ambiguous') {
       record.status = 'invalid';
       record.reason = `session ${p.name} exited ${s.status} without a matching cap marker; the cap and the exit status disagree`;
-      writeRecord(runsRoot, cell, record, claim);
+      checkpoint();
       return { record, stop: false };
     }
   }
 
   const candidate = harness.git(ws, 'rev-parse', 'HEAD');
   const evalStart = iso();
+  attempt.evaluation = 'started';
+  checkpoint();
+  await boundary('pre-evaluation');
   let evaluation;
   try {
     evaluation = await harness.evaluateCandidate({ id: cell.brief, workspace: ws, candidate, dir, tools, browser: effectiveBrowser, record, scratch });
   } catch (e) {
     record.status = 'invalid';
     record.reason = `evaluation failed: ${String(e.message).slice(0, effort.LIMITS.reason)}`;
-    writeRecord(runsRoot, cell, record, claim);
+    checkpoint();
     return { record, stop: false };
   }
   record.evaluation = {
     candidate, evaluator: effort.sha256(fs.readFileSync(path.join(dir, cell.brief, 'evaluator', 'evaluate.cjs'))),
     outcome: evaluation.outcome, checks: evaluation.checks,
   };
-  record.events.push({ kind: 'evaluation', id: `${record.run}:evaluation`, started: evalStart, ended: iso() });
+  record.events.push({ kind: 'evaluation', id: attempts.eventId(record, attempt, 'evaluation'), started: evalStart, ended: iso() });
+  attempt.evaluation = 'completed';
+  attempts.finish(attempt);
   record.status = harness.statusFor(evaluation.outcome);
   const problems = complete(record, { logDir: logs, workspace: ws, sessions: sessionNames });
-  writeRecord(runsRoot, cell, record, claim);
+  checkpoint();
   return { record, stop: false, problems };
 }
 
@@ -601,6 +620,14 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
 async function driveSchedule(runsRoot, opts) {
   const { ids = briefs.briefIds(), kit = null } = opts;
   const cells = schedule.schedule(ids);
+  if (typeof opts.fixtureSession !== 'function') {
+    const refuse = reason => ({ driven: [], stopped: cells[0]?.run || null, reason, refused: true });
+    if (opts.spendingCap !== true) return refuse('No spending cap asserted; no browser or session launched');
+    if (opts.readiness?.purpose !== 'measured') return refuse('Measured schedule requires reviewed native execution readiness');
+    const gate = isolation.preflightExecution({ effective: opts.effective, apiKey: opts.apiKey,
+      readiness: opts.readiness, observationFile: opts.observationFile, onGroup: () => {} });
+    if (!gate.ok) return refuse(gate.detail);
+  }
   // Check UI capability for the whole schedule before the first paid cell, even
   // when the first brief itself does not need a browser.
   if (typeof opts.fixtureSession !== 'function' && ids.includes('ui-states')) {

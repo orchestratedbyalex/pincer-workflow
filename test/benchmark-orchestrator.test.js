@@ -456,7 +456,7 @@ function workspace() {
       cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
     }));
     const record = orchestrator.readRecord(runs, cell);
-    const ws = path.join(orchestrator.runDir(runs, cell), 'workspace');
+    const ws = path.join(orchestrator.runDir(runs, cell), record.attempts.at(-1).directory, 'workspace');
 
     assert.deepEqual(
       Object.keys(record.workspace.unrelated_edits).sort(), ['README.md', 'operator-notes.md'],
@@ -522,17 +522,20 @@ function workspace() {
 
   await withStandIn(fake, 'tidy', () => orchestrator.driveRun(runs, cell, {
     cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+    resumeInterrupted: { attempt: 'legacy', reason: 'Explicitly restart the retained historical interrupted fixture' },
   }));
   const record = orchestrator.readRecord(runs, cell);
 
-  assert.ok(!fs.existsSync(path.join(ws, 'DEAD-ATTEMPT')), 'the dead attempt is gone from the workspace');
-  const ancestor = spawnSync('git', ['merge-base', '--is-ancestor', dead, 'HEAD'], { cwd: ws });
+  const fresh = path.join(home, record.attempts.at(-1).directory, 'workspace');
+  assert.ok(fs.existsSync(path.join(ws, 'DEAD-ATTEMPT')), 'the historical workspace is preserved');
+  assert.ok(!fs.existsSync(path.join(fresh, 'DEAD-ATTEMPT')), 'the new workspace excludes dead work');
+  const ancestor = spawnSync('git', ['merge-base', '--is-ancestor', dead, 'HEAD'], { cwd: fresh });
   assert.notEqual(ancestor.status, 0, 'and its commit is not in the restarted run at all');
   assert.equal(
-    fs.readFileSync(path.join(home, 'logs-attempt-1', 'S1.json'), 'utf8'), '{"result":"the killed session"}',
+    fs.readFileSync(path.join(home, 'logs', 'S1.json'), 'utf8'), '{"result":"the killed session"}',
     'the killed session\'s log is retained rather than overwritten',
   );
-  const event = record.events.find(e => e.kind === 'intervention' && /interrupted attempt/.test(e.detail));
+  const event = record.events.find(e => e.kind === 'intervention' && /Explicit resume after legacy-000001/.test(e.detail));
   assert.ok(event, 'and the discarded attempt is named on the record, so the repetition is visible');
   assert.deepEqual(effort.problems(record), [], 'the re-driven record is reportable');
 }

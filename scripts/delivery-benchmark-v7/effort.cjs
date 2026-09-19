@@ -23,7 +23,8 @@
 // regeneration is a pure function of the stored events.
 const crypto = require('node:crypto');
 
-const SCHEMA = 7;
+const SCHEMA = 7; // Historical and unlaunched records retain their original reader.
+const ATTEMPT_SCHEMA = 8;
 const ARMS = ['plain', 'pincer', 'strict'];
 const STATUSES = ['pending', 'valid', 'invalid', 'unavailable', 'outstanding'];
 const OUTCOMES = ['accepted', 'rejected', 'unverified', 'error'];
@@ -114,8 +115,9 @@ function problems(r, { frozen = null } = {}) {
   const out = [];
   const bad = (code, detail) => out.push({ code, detail });
   if (!r || typeof r !== 'object' || Array.isArray(r)) return [{ code: 'RECORD_INVALID', detail: 'record must be an object' }];
-  if (r.schema !== SCHEMA) bad('SCHEMA_UNKNOWN', `schema must be ${SCHEMA}`);
+  if (![SCHEMA, ATTEMPT_SCHEMA].includes(r.schema)) bad('SCHEMA_UNKNOWN', `schema must be ${SCHEMA} or ${ATTEMPT_SCHEMA}`);
   const known = ['schema', 'run', 'cohort', 'brief', 'arm', 'repetition', 'order', 'status', 'reason', 'provenance', 'environment', 'adoption', 'workspace', 'events', 'reported', 'unavailable', 'evaluation'];
+  if (r.schema === ATTEMPT_SCHEMA) known.push('attempts');
   for (const k of Object.keys(r)) if (!known.includes(k)) bad('RECORD_INVALID', `unknown key "${k}"`);
   if (!ARMS.includes(r.arm)) bad('RECORD_INVALID', `arm must be one of ${ARMS.join(', ')}`);
   if (!STATUSES.includes(r.status)) bad('RECORD_INVALID', `status must be one of ${STATUSES.join(', ')}`);
@@ -126,6 +128,8 @@ function problems(r, { frozen = null } = {}) {
   // A status that admits something went wrong must say what.
   if (['invalid', 'unavailable', 'outstanding'].includes(r.status) && !isStr(r.reason, LIMITS.reason)) bad('REASON_REQUIRED', `status ${r.status} needs a reason`);
   if (['pending', 'valid'].includes(r.status) && r.reason !== null) bad('RECORD_INVALID', 'reason is only for invalid, unavailable or outstanding runs');
+
+  if (r.schema === ATTEMPT_SCHEMA) out.push(...attemptProblems(r));
 
   // Provenance: a run that is going to be reported must say what produced it.
   const p = r.provenance;
@@ -216,6 +220,65 @@ function problems(r, { frozen = null } = {}) {
     }
   } else if (r.status === 'valid') {
     bad('EVALUATION_MISSING', 'a valid run has an evaluation; without one it is outstanding, not accepted');
+  }
+  return out;
+}
+
+// Schema 8 extends the measurement envelope only. Schema 7 is read without adding
+// inferred attempts or silently reclassifying historical observations.
+function attemptProblems(record) {
+  const out=[]; const bad=detail=>out.push({code:'ATTEMPT_INVALID',detail});
+  if(!Array.isArray(record.attempts)||!record.attempts.length||record.attempts.length>1000) {bad('schema 8 requires 1..1000 attempt records');return out;}
+  const ids=new Set(), sessions=new Set(); let ordinal=0;
+  for(const attempt of record.attempts) {
+    if(!attempt || typeof attempt!=='object') {bad('attempt must be an object');continue;}
+    const legacy=attempt.origin==='legacy';
+    const allowed=['id','origin','directory','status','started','ended','reason','base','configuration_digest','unrelated_inputs','sessions','evaluation'];
+    if(Object.keys(attempt).some(k=>!allowed.includes(k)))bad('unknown attempt field');
+    if(!['legacy','v8'].includes(attempt.origin))bad('unknown attempt origin');
+    const expected=legacy?'legacy-000001':`attempt-${String(++ordinal).padStart(6,'0')}`;
+    if(attempt.id!==expected||ids.has(attempt.id))bad('attempt identity must be unique and sequential');ids.add(attempt.id);
+    if(legacy&&record.attempts.indexOf(attempt)!==0)bad('legacy attempt must precede new attempts');
+    if(attempt.directory!==(legacy?'.':`attempts/${attempt.id}`))bad('attempt path is not contained in its identity');
+    if(!['running','interrupted','completed'].includes(attempt.status))bad('unknown attempt status');
+    if(!(isIso(attempt.started)||(legacy&&attempt.started===null)))bad('attempt start must be observed or explicitly legacy-unknown');
+    if(attempt.ended!==null&&!isIso(attempt.ended))bad('attempt end must be ISO or null');
+    if(attempt.status==='running'&&(attempt.ended!==null||attempt.reason!==null))bad('running attempt must remain open');
+    if(attempt.status!=='running'&&!isIso(attempt.ended))bad('closed attempt needs an end');
+    if(attempt!==record.attempts.at(-1)&&attempt.status!=='interrupted')bad('only the current attempt may run or complete');
+    if(record.status!=='pending'&&attempt.status==='running')bad('terminal cell cannot contain a running attempt');
+    if(record.status==='pending'&&attempt.status==='completed')bad('pending cell cannot contain a completed attempt');
+    if(attempt.status==='completed'&&attempt.reason!==null)bad('completed attempt cannot claim an interruption reason');
+    if(isIso(attempt.started)&&isIso(attempt.ended)&&ms(attempt.ended)<ms(attempt.started))bad('attempt end precedes start');
+    if(attempt.status==='interrupted'&&!isStr(attempt.reason,500))bad('interrupted attempt needs a reason');
+    if(attempt.unrelated_inputs!==null&&(!attempt.unrelated_inputs||attempt.unrelated_inputs.path!==`${attempt.directory}/unrelated-inputs.json`||!isHex64(attempt.unrelated_inputs.sha256)))bad('unrelated input snapshot must be contained and hashed');
+    if(attempt.configuration_digest!==null&&!isHex64(attempt.configuration_digest))bad('attempt configuration digest must be SHA256 or null');
+    if(attempt.base!==null&&!isSha(attempt.base))bad('attempt base must be a commit or null');
+    if(!['not-started','started','completed'].includes(attempt.evaluation))bad('unknown evaluation checkpoint');
+    if(!Array.isArray(attempt.sessions)) {bad('attempt sessions must be an array');continue;}
+    if(!legacy&&attempt.sessions.length&&!isSha(attempt.base))bad('launched attempt requires its recorded original base');
+    for(const session of attempt.sessions) {
+      if(!session||typeof session!=='object') {bad('session must be an object');continue;}
+      if(Object.keys(session).some(k=>!['id','name','status','intent_at','ended','payload','stderr','unavailable'].includes(k)))bad('unknown session field');
+      if(!/^S[1-9][0-9]*$/.test(session.name)||session.id!==`${attempt.id}:${session.name}`||sessions.has(session.id))bad('session identity must be unique');sessions.add(session.id);
+      const prefix=legacy?'logs':`${attempt.directory}/logs`;
+      if(session.payload!==`${prefix}/${session.name}.json`||session.stderr!==`${prefix}/${session.name}.err`)bad('session payload path escapes its attempt');
+      if(!['intent','completed','unavailable'].includes(session.status))bad('unknown session status');
+      if(!(isIso(session.intent_at)||(legacy&&session.intent_at===null)))bad('session intent timestamp missing');
+      if(session.ended!==null&&!isIso(session.ended))bad('session end must be ISO or null');
+      if(session.status==='completed'&&(!isIso(session.ended)||session.unavailable!==null))bad('completed session needs an end and cannot claim unavailable completion');
+      if(isIso(session.intent_at)&&isIso(session.ended)&&ms(session.ended)<ms(session.intent_at))bad('session end precedes intent');
+      if(session.status==='intent'&&(session.ended!==null||session.unavailable!==null||attempt.status!=='running'))bad('intent must be open under running attempt');
+      if(session.status==='unavailable'&&!isStr(session.unavailable,500))bad('unavailable session needs a reason');
+      if(!legacy) {
+        const event=Array.isArray(record.events)&&record.events.find(e=>e.id===`${record.run}:${session.id}`);
+        if(!event||event.kind!=='session'||event.started!==session.intent_at||event.ended!==session.ended)bad('session must match its unique durable event');
+      }
+    }
+  }
+  if(Array.isArray(record.events)) for(const event of record.events.filter(e=>e.kind==='session')) {
+    const linked=record.attempts.some(attempt=>Array.isArray(attempt?.sessions)&&attempt.sessions.some(session=>session&&typeof session==='object'&&event.id===(attempt.origin==='legacy'?`${record.run}:${session.name}`:`${record.run}:${session.id}`)));
+    if(!linked)bad('every paid session event requires an attempt/session entry');
   }
   return out;
 }
@@ -312,6 +375,6 @@ function aggregate(reports) {
 }
 
 module.exports = {
-  SCHEMA, ARMS, STATUSES, OUTCOMES, RESULTS, STAGES, EVENT_KINDS, INTERVENTIONS, LIMITS,
+  SCHEMA, ATTEMPT_SCHEMA, attemptProblems, ARMS, STATUSES, OUTCOMES, RESULTS, STAGES, EVENT_KINDS, INTERVENTIONS, LIMITS,
   sha256, mergeIntervals, minutesOf, empty, outcomeOf, problems, eventProblems, runId, report, aggregate, round,
 };

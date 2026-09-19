@@ -1,10 +1,14 @@
 ---
 ticket: T-104
-status: open
+status: done
 size: M
 prd: .prd/prd-v8.md
 depends_on: [T-103]
 timeout: 900
+started: 2026-09-19T07:08:41Z
+last_check: 2026-09-19T07:33:45Z passed cbd9411f5d2a
+verified: 2026-09-19T07:33:45Z cbd9411f5d2a
+finished: 2026-09-19T07:33:45Z
 ---
 
 ## Objective
@@ -26,9 +30,9 @@ Recover interrupted study work without duplicate event IDs, overwritten evidence
 Keep the conservative clean-workspace restart policy for indeterminate in-flight state. Use explicit attempt identity, preserving legacy record readability with a versioned measurement migration if needed. Persist a launch intent before invoking the driver and capture output durably as it arrives. Do not convert the previously event-empty interruption fixture into the only regression case.
 
 ## Acceptance Criteria
-- [ ] S-13: Restarting at persisted setup, session-start, session-end and pre-evaluation boundaries yields validator-valid records with unique attempt/session/event identities, including the reproduced duplicate setup/S1 case.
-- [ ] S-14: Real stand-in process kill/restart tests preserve completed session payloads and clearly label missing in-flight data; restart uses a clean disposable workspace and excludes the interrupted attempt commit from the new base.
-- [ ] S-15: Every discarded attempt remains linked with immutable logs and effort; terminal cells are not rerun, concurrent recovery is refused, and a new attempt cannot overwrite or silently drop prior history.
+- [x] S-13: Restarting at persisted setup, session-start, session-end and pre-evaluation boundaries yields validator-valid records with unique attempt/session/event identities, including the reproduced duplicate setup/S1 case.
+- [x] S-14: Real stand-in process kill/restart tests preserve completed session payloads and clearly label missing in-flight data; restart uses a clean disposable workspace and excludes the interrupted attempt commit from the new base.
+- [x] S-15: Every discarded attempt remains linked with immutable logs and effort; terminal cells are not rerun, concurrent recovery is refused, and a new attempt cannot overwrite or silently drop prior history.
 
 ## Verification
 Proves: The focused checks exercise the stated controls and failure paths. Static assertions are sufficient only for authored contracts/generated artifacts; behavioral claims require observed outputs, side effects or refusal behavior.
