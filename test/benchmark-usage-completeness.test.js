@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const usage = require('../scripts/delivery-benchmark-v7/usage.cjs');
 const effort = require('../scripts/delivery-benchmark-v7/effort.cjs');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pincer-usage-'));
@@ -39,6 +40,28 @@ try {
   const complete = collect();
   assert.deepEqual(complete.reported, { tokens: 240, cost_usd: 2.5, provider_minutes: 4 });
   assert.deepEqual(collect(), complete, 'offline regeneration is deterministic');
+  for (const [index, name] of ['one.json', 'two.json'].entries()) {
+    assert.equal(complete.measurement.sessions[index].sha256,
+      crypto.createHash('sha256').update(fs.readFileSync(path.join(root, name))).digest('hex'),
+      'payload provenance hashes the original saved bytes');
+  }
+  // Lossy decoding used to replace 0xff inside a JSON string, accept the result as
+  // complete usage and record a digest that did not match the saved artifact.
+  const malformedUtf8 = Buffer.concat([
+    Buffer.from(JSON.stringify({ ...payload(), result: 'ENCODING_SENTINEL' }).split('ENCODING_SENTINEL')[0]),
+    Buffer.from([0xff]),
+    Buffer.from(JSON.stringify({ ...payload(), result: 'ENCODING_SENTINEL' }).split('ENCODING_SENTINEL')[1]),
+  ]);
+  fs.writeFileSync(path.join(root, 'two.json'), malformedUtf8);
+  const invalidEncoding = collect();
+  assert.equal(invalidEncoding.measurement.sessions[1].sha256, null, 'undecodable content is not fingerprinted');
+  for (const key of usage.KEYS) {
+    assert.equal(invalidEncoding.reported[key], null);
+    assert.match(invalidEncoding.unavailable[key], /invalid UTF-8/);
+    assert.equal(invalidEncoding.measurement.metrics[key].measured_subtotal, complete.reported[key] / 2);
+  }
+  assert.deepEqual(fs.readFileSync(path.join(root, 'two.json')), malformedUtf8, 'the malformed source artifact is preserved');
+  write('two.json', payload());
   const r = record();
   usage.apply(r, complete);
   assert.deepEqual(usage.problems(r), []);

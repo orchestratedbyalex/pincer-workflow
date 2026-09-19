@@ -97,6 +97,7 @@ function collect(root, record, names = []) {
   const inodes = new Set();
   const sessions = references(record, names).map(ref => {
     const file = contained(root, ref.payload);
+    let bytes;
     let text;
     let digest = null;
     let metrics;
@@ -106,15 +107,19 @@ function collect(root, record, names = []) {
       const inode = `${stat.dev}:${stat.ino}`;
       if (inodes.has(inode)) throw new Error('duplicate artifact');
       inodes.add(inode);
-      text = fs.readFileSync(file, 'utf8');
+      bytes = fs.readFileSync(file);
     } catch (error) {
       if (error.message === 'duplicate artifact') throw new Error('Usage sessions alias the same payload artifact.');
       metrics = absent('Saved payload is missing, unreadable or unsupported.');
     }
+    if (bytes !== undefined) {
+      try { text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes); }
+      catch { metrics = absent('Saved payload contains invalid UTF-8.'); }
+    }
     if (text !== undefined) {
       if (secretIn(text)) metrics = absent('Saved payload contains secret material; accounting metadata withheld.');
       else {
-        digest = crypto.createHash('sha256').update(text).digest('hex');
+        digest = crypto.createHash('sha256').update(bytes).digest('hex');
         try { metrics = parse(JSON.parse(text)); }
         catch { metrics = absent('Saved payload is malformed JSON.'); }
       }
