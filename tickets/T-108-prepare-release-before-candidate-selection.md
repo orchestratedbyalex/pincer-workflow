@@ -1,10 +1,14 @@
 ---
 ticket: T-108
-status: open
+status: done
 size: M
 prd: .prd/prd-v8.md
 depends_on: [T-100]
 timeout: 900
+started: 2026-09-19T06:38:17Z
+last_check: 2026-09-19T06:52:08Z passed c995e5c4ea3a
+finished: 2026-09-19T06:50:16Z
+verified: 2026-09-19T06:52:08Z c995e5c4ea3a
 ---
 
 ## Objective
@@ -26,9 +30,9 @@ Prepare consistent versioned distribution artifacts before evaluation without pu
 Define node scripts/prepare-release.cjs --version <semver> --preview|--apply. Preview writes nothing; apply touches only declared version/generated paths and reports partial failure honestly. Run generators/pack checks in a scratch copy before applying. No automatic commit, tag, remote write or npm publish. Version choice is supplied at release time, not inferred from PRD numbering.
 
 ## Acceptance Criteria
-- [ ] S-25: A maintainer preparation command supports preview and explicit apply for a supplied version, regenerates adapters/plugin and verifies package/plugin/version agreement and packed layout before reporting a candidate eligible for selection.
-- [ ] S-26: Repeated preparation is idempotent; invalid versions, unexpected staged work, unrelated modifications or generator failure produce actionable refusal without absorbing user files or creating a tag, commit, publication or false success.
-- [ ] S-27: An integration fixture prepares metadata, commits/selects the candidate and evaluates it without self-invalidating version drift; later source/version changes still stale the evidence under the existing exact artifact allowlist.
+- [x] S-25: A maintainer preparation command supports preview and explicit apply for a supplied version, regenerates adapters/plugin and verifies package/plugin/version agreement and packed layout before reporting a candidate eligible for selection.
+- [x] S-26: Repeated preparation is idempotent; invalid versions, unexpected staged work, unrelated modifications or generator failure produce actionable refusal without absorbing user files or creating a tag, commit, publication or false success.
+- [x] S-27: An integration fixture prepares metadata, commits/selects the candidate and evaluates it without self-invalidating version drift; later source/version changes still stale the evidence under the existing exact artifact allowlist.
 
 ## Verification
 Proves: The focused checks exercise the stated controls and failure paths. Static assertions are sufficient only for authored contracts/generated artifacts; behavioral claims require observed outputs, side effects or refusal behavior.

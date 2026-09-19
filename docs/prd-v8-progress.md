@@ -48,3 +48,11 @@ secret/path boundaries and fixture-only session seam; focused suites passed. The
 v7 manifest was explicitly regenerated for the changed execution code. Historical cohorts
 remain readable. Real orchestration refuses until T-102 supplies isolation; the old direct
 shell entry is a known remaining boundary assigned to T-102, not live readiness.
+
+### T-108
+
+Release preparation is verified in disposable fixtures: preview/apply, packed layout,
+idempotency, unrelated-work refusal, truncated writes and candidate freshness. Parent
+review found and corrected API-only validation and partial-effects/idempotency gaps.
+Distribution and historical-contract suites pass. No repository version was changed;
+no candidate was selected, tagged or published.
