@@ -92,6 +92,30 @@ try {
       assert.throws(() => f.api.reserve(options(f, { session: session(), cellClaim: claim })), /runtime verification/);
     } finally { f.claims.release(claim); }
   }
+  for (const target of ['state', 'record', 'decision']) {
+    const f = fixture(), claim = f.claims.acquire(f.runs, 'cell.fixture.1.plain');
+    const canary = 'private-metadata-canary-do-not-report';
+    try {
+      const handle = f.api.reserve(options(f, { session: session(), cellClaim: claim }));
+      const malformed = `{"private_note": "${canary}", broken}`;
+      let call;
+      if (target === 'decision') {
+        const file = path.join(f.home, 'recovery.json'); fs.writeFileSync(file, malformed);
+        const digest = crypto.createHash('sha256').update(malformed).digest('hex');
+        call = () => f.api.reconcile(options(f, { handle, cellClaim: claim, decision: { ref: 'recovery.json', digest } }));
+      } else {
+        fs.writeFileSync(target === 'state' ? stateFile(f) : path.join(f.runs, session().run, 'record.json'), malformed);
+        call = () => f.api.verifyLaunch(options(f, { handle }));
+      }
+      assert.throws(call, error => {
+        assert.equal(error.code, target === 'decision' ? 'ALLOCATION_DECISION_INVALID' : 'ALLOCATION_METADATA_INVALID');
+        assert.equal(error.message.includes(canary), false);
+        assert.equal(error.message.includes('private_note'), false);
+        assert.equal(error.message.includes(malformed), false);
+        return true;
+      });
+    } finally { f.claims.release(claim); }
+  }
   for (const mutation of [
     r => { r.events.push({ kind: 'session', id: 'orphan', started: new Date().toISOString(), ended: null }); },
     r => { r.attempts[0].sessions[0].payload = '../elsewhere'; },

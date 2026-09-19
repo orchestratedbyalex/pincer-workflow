@@ -154,3 +154,18 @@ independent capped-candidate evaluation when accounting stops the allocation.
 The checked-in study manifest stays pending: no final execution candidate, project
 access/bases, reviewers, user-approved allocation or native smoke evidence is invented.
 T-110 onward remain gated on actual observations and their prescribed order.
+
+## Integration verification
+
+All 76 normal suites passed locally on 19 September 2026, including packed parity,
+controlled process-custody and kill/restart faults, partial accounting, expiry settlement
+and native-boundary cap evaluation. Review also added generic errors for malformed
+private allocation metadata, with canary tests preventing content in error messages.
+The actual Chrome fixture gate passed during T-107 verification. No paid model was used.
+
+The T-109 runtime verification intentionally remains failed at `--require-ready`: its
+offline suites pass, but actual study decisions and native observations are still absent.
+T-102 retains its successful implementation receipt and unchecked native criteria.
+Draft PR [#6](https://github.com/orchestratedbyalex/pincer-workflow/pull/6) tracks the
+Ubuntu/macOS × Node 22/24 CI results for the final branch commit; do not infer a CI pass
+from this journal entry.

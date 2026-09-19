@@ -16,10 +16,14 @@ function safe(root, relative) {
   return claims.contained(root, relative);
 }
 function read(file) {
-  const text = fs.readFileSync(file, 'utf8');
+  let text;
+  try { text = fs.readFileSync(file, 'utf8'); }
+  catch { fail('ALLOCATION_METADATA_INVALID', 'Allocation metadata cannot be read.'); }
   if (freeze.secretIn(text)) fail('ALLOCATION_SECRET', 'Allocation metadata contains secret material.');
-  return JSON.parse(text);
+  try { return JSON.parse(text); }
+  catch { fail('ALLOCATION_METADATA_INVALID', 'Allocation metadata is not valid JSON.'); }
 }
+
 function shape(grant, settlement = false) {
   const a = grant?.allocation;
   if (!grant || grant.schema !== 1 || !/^[a-f0-9]{64}$/.test(grant.manifestDigest || '') || !a || !path.isAbsolute(a.root || '') ||
@@ -337,9 +341,13 @@ function reconcile(options) {
     if (options.decision) {
       const ref = options.decision;
       const file = safe(grant.inputRoot, ref.ref);
-      const bytes = fs.readFileSync(file);
+      let bytes;
+      try { bytes = fs.readFileSync(file); }
+      catch { fail('ALLOCATION_DECISION_INVALID', 'Recovery decision artifact cannot be read.'); }
       if (freeze.secretIn(bytes.toString()) || freeze.sha256(bytes) !== ref.digest) fail('ALLOCATION_DECISION_INVALID', 'Recovery decision artifact is missing, secret-bearing or changed.');
-      const decision = JSON.parse(bytes.toString());
+      let decision;
+      try { decision = JSON.parse(bytes.toString()); }
+      catch { fail('ALLOCATION_DECISION_INVALID', 'Recovery decision artifact is not valid JSON.'); }
       if (decision.schema !== 1 || decision.approved !== true || decision.allocation !== grant.allocation.id || decision.manifestDigest !== grant.manifestDigest || decision.reservation !== item.id || !['cancel', 'resume'].includes(decision.action)) fail('ALLOCATION_DECISION_INVALID', 'Recovery decision does not match this allocation and reservation.');
       const owner = claims.inspect(grant.allocation.root, item.cellKey);
       if (!owner?.owner || owner.owner.groups.some(group => !groupGone(group))) fail('ALLOCATION_CLEANUP_UNKNOWN', 'Recovery requires all registered session groups to be gone.');
