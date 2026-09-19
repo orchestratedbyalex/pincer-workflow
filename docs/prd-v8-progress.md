@@ -221,3 +221,36 @@ the regenerated frozen cohort, the operational-smoke and repetition-prefix cases
 packed-distribution and release-preparation suites. T-109 was re-verified through the
 pinned kit: its four suites pass and the readiness command still exits 2 by design
 (`last_check … failed 9f673d51f3aa`). No CI run exists for these commits.
+
+### T-109 — review corrections to the smoke package (19 September 2026)
+
+An independent review of the execution package found three defects (package §12). No paid
+session, launch, push, merge, publication or new project access occurred; no decision was
+inferred. Commit `bffcfc8` (harness) plus this documentation commit.
+
+1. The documented launch command planned 24 cells: `orchestrator.cjs main()` never passed
+   a brief list, so `--repetitions 1` applied to all eight briefs and the allocation's
+   unlisted-run guard would have refused every launch. The suites missed it because they
+   supplied `ids` to the internal API. `--briefs <id,...>` now selects briefs in schedule
+   order and is required for `--study-purpose operational-smoke`; the launch suite spawns
+   the documented command through the actual CLI and asserts exactly `ui-states/rep-1`
+   pincer, strict, plain in `order` 1–3, idempotent replanning, and refusal without a
+   brief list or with an unknown brief. Reproduced against the real study root into
+   `drafts/plan-dry-run/` (draft, not evidence): three records, `runs/smoke` still empty.
+2. The proposed verification-command correction still failed (`PATH_INVALID`): the manifest
+   must lie inside the declared input root. The package now names the study checkout's
+   manifest; exercised through it, the inspector reports the ten actual gaps and no longer
+   the `REQUIRED_ARTIFACT_UNAVAILABLE` for `kits`. The ticket's block is unchanged pending
+   the reviewer's decision.
+3. `cleanup_complete` was returned by the launcher but never retained. It is now written
+   into `record.environment` beside `host_policy_observed`; the ledger's
+   `ALLOCATION_CLEANUP_UNKNOWN` stop is the second durable source. The evidence table
+   separates configured from observed evidence for each native observation and states what
+   `--output-format json` cannot show: with it, the smoke can establish that kit hooks were
+   installed and registered, not that they fired (capture-format decision, package §8 e).
+
+Frozen cohort `f09e4312…` → `d1e57a17…` (harness digest only). The study worktree was moved
+to `bffcfc8`; the dry-run effective manifest and honest draft were regenerated there
+(effective cohort `976db3ee…` → `64325207…`, observation target unchanged `8af4d99d…`).
+Focused suites passed after the change; the full `npm test` result and the pinned-kit
+re-verification are recorded below this entry once complete.

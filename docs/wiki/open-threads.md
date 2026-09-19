@@ -117,11 +117,17 @@ and are deleted rather than carried.
   manifest ([[study-readiness-gate]])
 - [2026-09-19] T-109's Verification block runs the inspector from the repository with the
   default input root, which cannot validate a launchable manifest; adopt the
-  `--input-root` form (package §8 b) and re-verify through the pinned kit
+  study-checkout-manifest form (package §8 b, exercised; the earlier `--input-root`-only
+  proposal fails `PATH_INVALID`) and re-verify through the pinned kit
   ([[study-readiness-gate]])
 - [2026-09-19] Decide whether `--output-format json` (final result only) is enough
   native evidence for host policy, personal-configuration absence and kit mechanisms, or
-  whether the profile should capture `stream-json` before the smoke ([[study-readiness-gate]])
+  whether the profile should capture `stream-json` before the smoke. Package §5 now lists
+  per observation what `json` cannot show; kit hook execution is unobservable under it
+  ([[study-readiness-gate]])
+- [2026-09-19] Proposed new retained artifact for `personal_configuration_absent`: a digest
+  listing of the operator's `~/.claude` before and after the smoke, kept in the study root
+  and never tracked (package §5); needs the reviewer's acceptance ([[study-readiness-gate]])
 - [2026-09-19] CI has run only on `48df59c`, before the smoke launch path; the branch is
   not pushed. The candidate needs its own matrix run before its ci summary can exist
   ([[study-readiness-gate]])

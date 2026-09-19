@@ -16,9 +16,12 @@ installation, not observed live support; no paid session has run under v8.
 
 The first operational smoke is packaged, not authorized:
 `docs/prd-v8-artifacts/execution/T-109-smoke-execution-package.md` ([[study-readiness-gate]]).
-The study root is `/Users/Shared/pincer-v8-study` (detached worktree + copied CLI, K0 and
-Chrome for Testing). The proposed inputs resolve there; only decisions and reviewed
-evidence summaries remain pending.
+An independent review found the documented launch command planned 24 cells (the CLI had no
+brief selection); `bffcfc8` adds the required `--briefs`, retains `cleanup_complete` in the
+record, and the package's §5/§8 b/§12 were corrected. The study root is
+`/Users/Shared/pincer-v8-study` (detached worktree at `bffcfc8` + copied CLI, K0 and Chrome
+for Testing). The proposed inputs resolve there; only decisions and reviewed evidence
+summaries remain pending.
 
 ## Active / next task
 
@@ -43,7 +46,10 @@ Reviewer attention: the protocol corrections proposed in the package §8.
 
 - **The study root cannot be this repository or anything under `$HOME`** (the launcher
   refuses `CLAUDE.md`/`.claude` ancestors); run the readiness inspector with
-  `--input-root /Users/Shared/pincer-v8-study` ([[study-readiness-gate]]).
+  `--input-root /Users/Shared/pincer-v8-study` **against the study checkout's manifest**,
+  never this repo's copy (`PATH_INVALID`) ([[study-readiness-gate]]).
+- The orchestrator CLI plans every brief unless `--briefs` is given; the smoke purpose
+  requires it. Test the entry point by spawning it, not via `plan()` with `ids`.
 - `orchestrator.cjs`, `effective.cjs`, `readiness.cjs`, `allocation.cjs`,
   `isolated-launch.cjs` and the v8 protocol/isolation/usage docs are in `SPEC.harness`:
   after editing any, regenerate `test/fixtures/delivery-benchmark-v7/frozen.json` (command

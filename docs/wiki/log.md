@@ -348,3 +348,8 @@ inspector on an honest draft. Files: `scripts/delivery-benchmark-v7/{orchestrato
 `test/benchmark-study-launch.test.js`, `docs/prd-v8-artifacts/execution/*`,
 `docs/prd-v8-progress.md`, `docs/wiki/systems/study-readiness-gate.md`.
 Outcome: readiness still pending on user decisions and reviewed evidence, by design.
+
+## [2026-09-19] end | T-109 smoke package corrected after review
+Three review findings fixed: the CLI planned all eight briefs (added `--briefs`, required for the smoke purpose, CLI-level regression that spawns the documented command); the proposed inspector command failed `PATH_INVALID` (manifest must be inside the input root; now the study checkout's copy, exercised); `cleanup_complete` was never retained (now in `record.environment`; evidence table split into configured vs observed, hook firing unobservable under `json`).
+Files: `scripts/delivery-benchmark-v7/{effective,orchestrator,isolated-launch}.cjs`, `test/benchmark-{study-launch,environment}.test.js`, frozen cohort `f09e4312…` → `d1e57a17…`, package §2/§4/§5/§8/§9/§10/§11/§12, progress journal, wiki gate page/threads/briefing.
+Study root: worktree moved to `bffcfc8`; drafts regenerated (effective cohort `64325207…`); `runs/smoke` untouched. No paid launch, push, merge or publication.
