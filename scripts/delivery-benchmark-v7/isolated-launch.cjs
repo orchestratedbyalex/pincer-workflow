@@ -98,25 +98,54 @@ function checkExecutionReadiness(options, manifest) {
       typeof readiness.decisionRef !== 'string' || !/^[A-Za-z0-9._:/-]+$/.test(readiness.decisionRef)) fail('READINESS_REQUIRED', 'explicit recorded spending, project-access and preserved host-policy decisions are required');
     if (typeof options.onGroup !== 'function') fail('CUSTODY_REQUIRED', 'durable process-group registration is required before launch');
     validateExecutionParameters({ model: e.model, toolVersion: e.tool.version, permissionMode: e.configuration.permission_mode, caps: manifest.caps, apiKey });
-    if (readiness.purpose === 'measured') {
-      if (readiness.observationReviewed !== true || !options.observationFile || !/^[a-f0-9]{64}$/.test(e.configuration.isolation_observation_digest || '')) fail('ISOLATION_OBSERVATION_REQUIRED', 'measured launch requires retained reviewed native isolation evidence');
-      const file = effective.contained(bundle.inputRoot || bundle.root, options.observationFile);
-      const raw = fs.readFileSync(file, 'utf8'), observation = JSON.parse(raw);
+    return { ok: true, manifest, reportable: readiness.purpose === 'measured', profile: PROFILE.name };
+  } catch (error) { return { ok: false, code: error.code || 'EFFECTIVE_INPUTS_INVALID', detail: error.message, profile: PROFILE.name }; }
+}
+
+function rejectProtectedObservationPath(relative) {
+  if (typeof relative !== 'string' || /(?:^|[\\/])(?:\.env(?:\.[^/\\]*)?|credentials(?:\.[^/\\]*)?|auth(?:\.[^/\\]*)?|\.credentials(?:\.[^/\\]*)?|\.ssh|\.aws|\.netrc|\.npmrc)(?:[\\/]|$)/i.test(relative)) {
+    fail('ISOLATION_PATH_PROTECTED', 'Protected configuration paths cannot be observation artifacts');
+  }
+}
+function observationPath(root, relative) {
+  rejectProtectedObservationPath(relative);
+  try { return effective.contained(root, relative); }
+  catch { fail('ISOLATION_OBSERVATION_INVALID', 'Observation artifact path is missing or unsafe'); }
+}
+function readObservation(file) {
+  try { return fs.readFileSync(file, 'utf8'); }
+  catch { fail('ISOLATION_OBSERVATION_INVALID', 'Observation artifact cannot be read'); }
+}
+function checkObservation(options, gate) {
+  if (!gate.ok) return gate;
+  try {
+    const bundle = options.effective;
+    const manifest = gate.manifest;
+    const e = manifest.effective;
+    if (options.readiness.purpose === 'measured') {
+      if (options.readiness.observationReviewed !== true || !options.observationFile || !/^[a-f0-9]{64}$/.test(e.configuration.isolation_observation_digest || '')) fail('ISOLATION_OBSERVATION_REQUIRED', 'measured launch requires retained reviewed native isolation evidence');
+      const file = observationPath(bundle.inputRoot || bundle.root, options.observationFile);
+      const raw = readObservation(file);
+      if (require('./freeze.cjs').secretIn(raw)) fail('ISOLATION_OBSERVATION_INVALID', 'observation must not contain credentials');
+      let observation;
+      try { observation = JSON.parse(raw); }
+      catch { fail('ISOLATION_OBSERVATION_INVALID', 'native isolation observation is not valid JSON'); }
+      if (!observation || typeof observation !== 'object' || Array.isArray(observation)) fail('ISOLATION_OBSERVATION_INVALID', 'native isolation observation must be an object');
       if (Object.keys(observation).some(k => !['schema', 'kind', 'fixture', 'target', 'arms', 'host_policy_observed', 'authentication_observed', 'personal_configuration_absent', 'evidence'].includes(k)) ||
         observation.schema !== 1 || observation.kind !== 'native-isolation-observation' || observation.fixture !== false || observation.target !== observationTarget(manifest) ||
         effective.canonical(observation.arms) !== effective.canonical(ARMS) || observation.host_policy_observed !== true || observation.authentication_observed !== true || observation.personal_configuration_absent !== true ||
         !Array.isArray(observation.evidence) || !observation.evidence.length || observation.evidence.some(x => !x || typeof x !== 'object' || Object.keys(x).some(k => !['path', 'digest'].includes(k)) || typeof x.path !== 'string' || !/^[a-f0-9]{64}$/.test(x.digest || ''))) fail('ISOLATION_OBSERVATION_INVALID', 'native isolation observation is incomplete or does not match this execution');
       for (const entry of observation.evidence) {
-        const evidenceFile = effective.contained(bundle.inputRoot || bundle.root, entry.path);
-        const bytes = fs.readFileSync(evidenceFile);
+        const evidenceFile = observationPath(bundle.inputRoot || bundle.root, entry.path);
+        const bytes = readObservation(evidenceFile);
         if (require('./freeze.cjs').secretIn(bytes.toString())) fail('ISOLATION_EVIDENCE_SECRET', 'observation evidence contains credential-shaped text');
         if (require('./freeze.cjs').sha256(bytes) !== entry.digest) fail('ISOLATION_EVIDENCE_CHANGED', 'observation evidence is missing or changed');
       }
       if (require('./freeze.cjs').secretIn(raw)) fail('ISOLATION_OBSERVATION_INVALID', 'observation must not contain credentials');
       if (require('./freeze.cjs').sha256(raw) !== e.configuration.isolation_observation_digest) fail('ISOLATION_OBSERVATION_CHANGED', 'native isolation observation does not match the frozen digest');
     }
-    return { ok: true, manifest, reportable: readiness.purpose === 'measured', profile: PROFILE.name };
-  } catch (error) { return { ok: false, code: error.code || 'EFFECTIVE_INPUTS_INVALID', detail: error.message, profile: PROFILE.name }; }
+    return gate;
+  } catch (error) { return { ok: false, code: error.code || 'ISOLATION_OBSERVATION_INVALID', detail: error.code ? error.message : 'Native isolation observation is invalid', profile: PROFILE.name }; }
 }
 
 function checkArmAssets(options, gate) {
@@ -128,12 +157,36 @@ function checkArmAssets(options, gate) {
     return { ...gate, assets };
   } catch (error) { return { ok: false, code: error.code || 'ARM_ASSETS_INVALID', detail: error.message, profile: PROFILE.name }; }
 }
-function checkNativeReadiness(options, manifest) { return checkArmAssets(options, checkExecutionReadiness(options, manifest)); }
+function checkAllocation(options, gate, requireReservation) {
+  if (!gate.ok) return gate;
+  try {
+    if (!options.allocation) fail('ALLOCATION_REQUIRED', 'A checked study allocation is required for native execution');
+    if (options.readiness.purpose === 'measured' && options.observationFile) rejectProtectedObservationPath(options.observationFile);
+    const grant = require('./allocation.cjs').verifyLaunch(options.allocation, {
+      effectiveDigest: gate.manifest.cohort, arm: options.arm, caps: gate.manifest.caps,
+      ...(requireReservation ? { prompt: options.prompt } : {}), requireReservation,
+    });
+    if (grant.purpose !== options.readiness.purpose) fail('ALLOCATION_PURPOSE_CHANGED', 'Launch purpose differs from the approved study purpose');
+    if (options.readiness.purpose === 'measured') {
+      if (!options.observationFile || !grant.observationFile) fail('ISOLATION_OBSERVATION_REQUIRED', 'Measured launch requires the approved observation artifact');
+      const root = options.effective.inputRoot || options.effective.root;
+      if (fs.realpathSync(root) !== fs.realpathSync(grant.inputRoot)) fail('ISOLATION_OBSERVATION_UNBOUND', 'Observation artifact root differs from the approved study root');
+      if (observationPath(root, options.observationFile) !== observationPath(grant.inputRoot, grant.observationFile)) fail('ISOLATION_OBSERVATION_UNBOUND', 'Observation artifact differs from the approved study artifact');
+    }
+    return gate;
+  } catch (error) { return { ok: false, code: error.code || 'ALLOCATION_INVALID', detail: error.message, profile: PROFILE.name }; }
+}
+function checkNativeReadiness(options, manifest) {
+  return checkArmAssets(options, checkObservation(options, checkAllocation(options, checkExecutionReadiness(options, manifest), true)));
+}
 function preflightExecution(options) {
-  try { return checkExecutionReadiness(options, effective.assertCurrent(options.effective)); }
+  try { return checkObservation(options, checkAllocation(options, checkExecutionReadiness(options, effective.assertCurrent(options.effective)), false)); }
   catch (error) { return { ok: false, code: error.code || 'EFFECTIVE_INPUTS_INVALID', detail: error.message, profile: PROFILE.name }; }
 }
-function preflightNative(options) { return checkArmAssets(options, preflightExecution(options)); }
+function preflightNative(options) {
+  try { return checkNativeReadiness(options, effective.assertCurrent(options.effective)); }
+  catch (error) { return { ok: false, code: error.code || 'EFFECTIVE_INPUTS_INVALID', detail: error.message, profile: PROFILE.name }; }
+}
 
 function buildEnvironment(sessionRoot, workspace, apiKey) {
   // Deliberately never read/spread process.env. Shell, Node, provider, proxy, plugin,
@@ -267,7 +320,7 @@ async function runSession(options, nativePreflight = null) {
       if (fs.existsSync(logFiles.stdout) || fs.existsSync(logFiles.stderr)) fail('LOG_EXISTS', 'session captures are append-preserved; allocate a new session identity');
     }
     const payload = native ? { kind: 'native', args, prompt: options.prompt, bundle: options.effective, arm: options.arm, readiness: options.readiness,
-      expectedAssets: options.expectedAssets, observationFile: options.observationFile || null } :
+      expectedAssets: options.expectedAssets, observationFile: options.observationFile || null, allocation: options.allocation } :
       { kind: 'fixture', args, prompt: options.prompt, mode: options.mode || 'ok', model: options.model, heartbeat: options.heartbeat || null };
     const result = await supervise({ cwd: fs.realpathSync(options.workspace), env, payload,
       timeoutMs: native ? options.caps.wall_clock_minutes * 60000 : options.timeoutMs || options.caps.wall_clock_minutes * 60000,
@@ -312,7 +365,7 @@ if (require.main === module && process.argv[2] === '--session-supervisor') {
       let executable, args;
       if (payload.kind === 'native') {
         const gate = preflightNative({ effective: payload.bundle, apiKey: process.env.ANTHROPIC_API_KEY, arm: payload.arm, workspace: process.cwd(),
-          readiness: payload.readiness, expectedAssets: payload.expectedAssets, observationFile: payload.observationFile, onGroup: () => {} });
+          readiness: payload.readiness, expectedAssets: payload.expectedAssets, observationFile: payload.observationFile, onGroup: () => {}, allocation: payload.allocation, prompt: payload.prompt });
         if (!gate.ok) fail(gate.code, gate.detail);
         const sessionRoot = path.dirname(process.env.HOME);
         const expectedEnv = buildEnvironment(sessionRoot, process.cwd(), process.env.ANTHROPIC_API_KEY);
@@ -322,6 +375,7 @@ if (require.main === module && process.argv[2] === '--session-supervisor') {
         const expectedArgs = argumentsFor({ model: gate.manifest.effective.model, caps: gate.manifest.caps }, settingsPath);
         if (effective.canonical(payload.args) !== effective.canonical(expectedArgs)) fail('ARGUMENTS_CHANGED', 'native arguments differ from the frozen profile');
         executable = fs.realpathSync(payload.bundle.input.tool.executable); args = expectedArgs;
+        require('./allocation.cjs').consume(payload.allocation);
       } else if (payload.kind === 'fixture') {
         const { prompt, ...metadata } = payload;
         executable = process.execPath; args = [__filename, '--fixture-tool', JSON.stringify(metadata)];

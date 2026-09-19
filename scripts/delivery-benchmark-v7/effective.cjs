@@ -198,7 +198,7 @@ function recordInputs(manifest) {
   };
 }
 function parseArgs(argv) {
-  const valued = new Set(['runs', 'execution-inputs', 'input-root', 'model', 'max-turns', 'wall-clock-minutes', 'max-budget-usd', 'kit', 'browser']);
+  const valued = new Set(['runs', 'execution-inputs', 'input-root', 'study-manifest', 'study-input-root', 'model', 'max-turns', 'wall-clock-minutes', 'max-budget-usd', 'kit', 'browser']);
   const boolean = new Set(['help', 'plan-only', 'i-have-a-spending-cap']);
   const out = {};
   for (let i = 0; i < argv.length; i++) {

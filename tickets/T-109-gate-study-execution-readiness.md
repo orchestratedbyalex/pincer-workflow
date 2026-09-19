@@ -1,10 +1,12 @@
 ---
 ticket: T-109
-status: open
+status: in_progress
 size: M
 prd: .prd/prd-v8.md
 depends_on: [T-106, T-107, T-108]
 timeout: 900
+started: 2026-09-19T07:50:54Z
+last_check: 2026-09-19T13:45:02Z failed 9f673d51f3aa
 ---
 
 ## Objective
@@ -35,6 +37,9 @@ Proves: The command validates retained real observation records and required ref
 ```bash
 set -e
 node test/study-readiness.test.js
+node test/benchmark-allocation.test.js
+node test/benchmark-prepared-bases.test.js
+node test/benchmark-study-launch.test.js
 node scripts/delivery-benchmark-v7/readiness.cjs --manifest docs/prd-v8-artifacts/execution/study.json --require-ready
 ```
 

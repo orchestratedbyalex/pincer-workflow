@@ -43,6 +43,8 @@ const claims = require('./run-claims.cjs');
 const attempts = require('./attempts.cjs');
 const isolation = require('./isolated-launch.cjs');
 const { prepareBrowser } = require('./browser-preflight.cjs');
+const studyReadiness = require('./readiness.cjs');
+const allocationBudget = require('./allocation.cjs');
 
 const DRIVER = path.join(__dirname, 'live-driver.sh');
 
@@ -345,14 +347,15 @@ function installKit(ws, arm, kit) {
   fs.rmSync(path.join(ws, 'AGENTS.md.new'), { force: true });
   // Its own commit, so the candidate's base is the post-install tree and the kit is never
   // read as the agent's work.
-  return { digest, source: `tarball ${path.basename(kit)}`, version, base: harness.commitAll(ws, `Install PINCER kit v${version}`) };
+  return { digest, source: `tarball ${path.basename(kit)}`, version,
+    base: harness.commitAll(ws, `Install PINCER kit v${version}`, harness.PREPARATION_DATE) };
 }
 
 // One session, through the frozen driver. Nothing else in this file may reach a model,
 // and this function adds nothing to the prompt: a driver — or an orchestrator — that
 // coaches is measuring itself rather than the workflow.
 function driveSession({ run, workspace, promptFile, model, maxTurns, wallClockMinutes, cohort, logDir, name, spendingCap, effective = null,
-  arm, stateRoot, apiKey, expectedAssets, onGroup, readiness, observationFile, signal }) {
+  arm, stateRoot, apiKey, expectedAssets, onGroup, readiness, observationFile, allocation, signal }) {
   if (spendingCap !== true) {
     return { refused: true, status: 3, stdout: '', stderr: 'orchestrator: refused: no spending cap has been asserted' };
   }
@@ -361,7 +364,55 @@ function driveSession({ run, workspace, promptFile, model, maxTurns, wallClockMi
     if (current.cohort !== cohort || current.effective.model !== model || current.caps.turns_per_session !== maxTurns || current.caps.wall_clock_minutes !== wallClockMinutes) throw new Error('session inputs differ from effective manifest');
   } catch (error) { return { refused: true, status: 3, stdout: '', stderr: error.message }; }
   return isolation.launchNative({ effective, arm, workspace, stateRoot, logDir, name,
-    prompt: fs.readFileSync(promptFile, 'utf8'), apiKey, expectedAssets, onGroup, readiness, observationFile, signal });
+    prompt: fs.readFileSync(promptFile, 'utf8'), apiKey, expectedAssets, onGroup, readiness, observationFile, allocation, signal });
+}
+
+// Resolve actual recorded decisions before any workspace preparation. The old cap
+// flag remains an extra opt-in; it cannot manufacture a study grant or a budget.
+function studyFor(runsRoot, opts, run = null, name = null, prompt = null) {
+  if (!opts.effective?.manifest) throw new Error('An effective manifest is required before study execution');
+  if (!opts.allocation?.manifestPath || opts.allocation.purpose !== 'measured') {
+    throw new Error('A concrete measured-study manifest and allocation are required');
+  }
+  const context = { manifestPath: opts.allocation.manifestPath,
+    inputRoot: opts.allocation.inputRoot, purpose: 'measured' };
+  const inspected = studyReadiness.inspectStudy(context);
+  if (!inspected.ready || !inspected.launchGrant) {
+    const codes = (inspected.pending || []).map(item => item.code).join(', ');
+    throw new Error(`Study readiness is pending: ${codes || 'no validated grant'}`);
+  }
+  const grant = inspected.launchGrant;
+  if (fs.realpathSync(grant.allocation.root) !== fs.realpathSync(runsRoot) ||
+      grant.execution.effective_digest !== opts.effective?.manifest?.cohort) {
+    throw new Error('Study allocation root or effective execution identity differs from this run');
+  }
+  let selected = null;
+  if (run !== null) {
+    const matches = grant.sessions.filter(session => session.run === run && session.name === name);
+    if (matches.length !== 1) throw new Error('The study schedule must name this session exactly once');
+    selected = matches[0];
+    if (selected.effective_digest !== grant.execution.effective_digest ||
+        (prompt !== null && selected.prompt_digest !== effort.sha256(prompt))) {
+      throw new Error('Scheduled prompt or execution identity differs from the delivered session');
+    }
+    context.nextSessionId = selected.id;
+  }
+  const observationPath = effectiveInputs.contained(grant.inputRoot, grant.observationFile);
+  const executionRoot = fs.realpathSync(opts.effective.inputRoot || opts.effective.root);
+  if (fs.realpathSync(grant.inputRoot) !== fs.realpathSync(executionRoot)) {
+    throw new Error('Study and execution artifacts must use the same declared root');
+  }
+  const observationFile = path.relative(executionRoot, observationPath).split(path.sep).join('/');
+  effectiveInputs.contained(executionRoot, observationFile);
+  const project = selected && grant.projects.find(item => item.id === selected.project);
+  if (selected && !project) throw new Error('The selected study project has no approved immutable base');
+  return {
+    projectBase: project?.base || null,
+    allocation: context,
+    readiness: { purpose: 'measured', spendingAuthorized: true, projectAccessAuthorized: true,
+      hostPolicyPreserved: true, decisionRef: grant.decision.ref, observationReviewed: true },
+    observationFile,
+  };
 }
 
 // One run, end to end. Returns { record, stop } — `stop` is true only for an account
@@ -406,6 +457,8 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
   // study permanently. A refusal that launched nothing leaves the cell as it found it.
   const refuse = detail => ({ record, stop: true, refused: true, detail });
   const home = runDir(runsRoot, cell);
+  const brief = briefs.loadBrief(cell.brief, dir);
+  let nativeStudy = null;
   try {
     const invalid = effort.problems(record);
     if (invalid.length) throw new Error(`planned checkpoint is invalid: ${invalid.map(p => p.code).join(', ')}`);
@@ -427,14 +480,16 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
   }
   if (typeof opts.fixtureSession !== 'function') {
     try {
+      const first = brief.prompts[0];
+      nativeStudy = studyFor(runsRoot, opts, record.run, first.name,
+        `${ARM_PREAMBLE[cell.arm] || ''}${first.prompt}`);
       const current = effectiveInputs.assertCurrent(opts.effective);
       if (current.cohort !== cohort || current.effective.model !== model || current.caps.turns_per_session !== maxTurns || current.caps.wall_clock_minutes !== wallClockMinutes) throw new Error('runtime inputs differ from effective manifest');
       const inputRoot = opts.effective.inputRoot || opts.effective.root;
       if (kit !== effectiveInputs.contained(inputRoot, opts.effective.input.kit.path)) throw new Error('runtime kit differs from effective manifest');
       if (dir !== briefs.BRIEFS_DIR || opts.tools || browser || opts.unrelatedEdits) throw new Error('unbound brief, tool or browser override');
-      if (opts.readiness?.purpose !== 'measured') throw new Error('measured cells require reviewed native isolation; operational smoke uses a separate allocation');
       const gate = isolation.preflightExecution({ effective: opts.effective, apiKey: opts.apiKey,
-        readiness: opts.readiness, observationFile: opts.observationFile, onGroup: group => claims.registerGroup(claim, group) });
+        ...nativeStudy, onGroup: group => claims.registerGroup(claim, group) });
       if (!gate.ok) throw new Error(gate.detail);
       if (cell.brief === 'ui-states') effectiveBrowser = await prepareBrowser(opts.effective, { signal: opts.signal });
     } catch (error) { return refuse(error.message); }
@@ -449,7 +504,6 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
     return refuse(`${record.run}: planned for a ${plannedCaps.wall_clock_minutes}-minute wall clock, driven with ${wallClockMinutes}`);
   }
 
-  const brief = briefs.loadBrief(cell.brief, dir);
   const sessionNames = brief.prompts.map(x => x.name);
   let attempt;
   try { attempt = attempts.begin(home, record, { resumeInterrupted: opts.resumeInterrupted, sessionNames }); }
@@ -509,6 +563,17 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
   if (originalAttempt && originalAttempt.configuration_digest !== attempt.configuration_digest) throw new Error('Original attempt configuration changed; refusing launch');
   record.provenance.base = harness.git(ws, 'rev-parse', 'HEAD');
   attempt.base = record.provenance.base;
+  let preparedProjectBase = null;
+  if (nativeStudy) {
+    // Project identity precedes the arm's single kit-install commit. Read the raw
+    // parent ID so an exact-base shallow restart needs no copied ancestor objects.
+    const projectBase = cell.arm === 'plain' ? attempt.base :
+      harness.git(ws, 'cat-file', '-p', attempt.base).match(/^parent ([a-f0-9]{40})$/m)?.[1];
+    preparedProjectBase = projectBase;
+    if (projectBase !== nativeStudy.projectBase) {
+      throw new Error('Prepared workspace differs from the approved immutable study base; no model was launched');
+    }
+  }
   if (originalAttempt && attempt.base !== originalAttempt.base) throw new Error('Original attempt base changed; refusing launch');
   attempts.validateUnrelated(ws, edits);
   attempts.saveUnrelated(home, attempt, edits);
@@ -521,12 +586,26 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
   checkpoint();
   await boundary('setup');
   let executionFailure = null;
+  let stopAfterEvaluation = false;
   for (const p of brief.prompts) {
     const promptFile = path.join(scratch, `${p.name}.prompt`);
     fs.mkdirSync(scratch, { recursive: true });
     const prompt = `${ARM_PREAMBLE[cell.arm] || ''}${p.prompt}`;
     fs.writeFileSync(promptFile, prompt);
     const session = typeof opts.fixtureSession === 'function' ? opts.fixtureSession : driveSession;
+    let reservation = null;
+    if (typeof opts.fixtureSession !== 'function') {
+      try {
+        nativeStudy = studyFor(runsRoot, opts, record.run, p.name, prompt);
+        if (nativeStudy.projectBase !== preparedProjectBase) throw new Error('Scheduled session project base differs from the prepared workspace');
+        reservation = allocationBudget.reserve({ ...nativeStudy.allocation, cellClaim: claim,
+          session: { id: `${attempt.id}:${p.name}`, run: record.run, attempt: attempt.id,
+            name: p.name, payload: `${record.run}/${attempt.directory}/logs/${p.name}.json` } });
+        nativeStudy.allocation = { ...nativeStudy.allocation, handle: reservation };
+      } catch {
+        return refuse('Study allocation no longer permits this session; retained pending work requires explicit resume.');
+      }
+    }
     const intent = attempts.intent(record, attempt, p.name, prompt.slice(0, effort.LIMITS.prompt));
     checkpoint();
     await boundary('session-start');
@@ -536,7 +615,7 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
       wallClockMinutes, cohort, logDir: logs, name: p.name, spendingCap, effective: opts.effective,
       onGroup: group => claims.registerGroup(claim, group),
       arm: cell.arm, stateRoot: scratch, apiKey: opts.apiKey, expectedAssets,
-      readiness: opts.readiness, observationFile: opts.observationFile, signal: opts.signal,
+      ...(nativeStudy || {}), signal: opts.signal,
     }); } catch { return finalize('invalid', 'Session execution threw before completion; retained output may be partial.'); }
     attempts.sessionEnd(record, attempt, intent, s);
     if (s.environment) record.environment = { ...record.environment, ...s.environment };
@@ -545,12 +624,29 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
     // so nothing on disk said those sessions had been bought.
     checkpoint();
     await boundary('session-end');
+    let allocationStopped = false;
+    if (reservation) {
+      const reconciled = allocationBudget.reconcile({ ...nativeStudy.allocation,
+        handle: reservation, result: s, cellClaim: claim });
+      allocationStopped = reconciled.stopped || reconciled.ready === false;
+    }
     if (s.refused) return refuse('The driver refused before invocation; retained pending attempt requires explicit resume.');
-
-    if (typeof opts.fixtureSession !== 'function' && s.reportable !== true) {
-      record.status = 'invalid';
-      record.reason = 'native session did not attest the required model, isolation or process cleanup; artifacts retained';
-      return finalize(record.status, record.reason, true);
+    let result;
+    try { result = JSON.parse(fs.readFileSync(path.join(logs, `${p.name}.json`), 'utf8')); } catch {}
+    const providerCap = s.status === 0 && result?.type === 'result' && result.is_error === true &&
+      ['error_max_turns', 'error_max_budget_usd'].includes(result.subtype);
+    const nativeUnreportable = typeof opts.fixtureSession !== 'function' && s.reportable !== true;
+    if (allocationStopped || nativeUnreportable) {
+      const reason = allocationStopped
+        ? 'Study allocation stopped after this session; retained accounting or custody requires review.'
+        : 'Native session did not attest the required model, isolation or process cleanup; artifacts retained.';
+      // Once custody is gone, an independent evaluator may inspect a capped
+      // candidate even though accounting/model attestation is incomplete. No
+      // subsequent paid prompt is permitted, and experiment validity stays invalid.
+      if ((s.end === 'capped' || providerCap) && s.cleanup_complete === true && !s.limit) {
+        executionFailure = reason;
+        stopAfterEvaluation = true;
+      } else return finalize('invalid', reason, true);
     }
 
     // An account limit ends the study, not the cell. Marking it invalid keeps the
@@ -566,10 +662,6 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
       return finalize(record.status, record.reason, true);
     }
 
-    let result;
-    try { result = JSON.parse(fs.readFileSync(path.join(logs, `${p.name}.json`), 'utf8')); } catch {}
-    const providerCap = s.status === 0 && result?.type === 'result' && result.is_error === true &&
-      ['error_max_turns', 'error_max_budget_usd'].includes(result.subtype);
     if (s.end === 'capped' || providerCap) {
       if (result && (result.is_error === true || String(result.subtype).startsWith('error_')) &&
           !['error_max_turns', 'error_max_budget_usd'].includes(result.subtype)) {
@@ -605,7 +697,7 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
   try {
     evaluation = await harness.evaluateCandidate({ id: cell.brief, workspace: ws, candidate, dir, tools, browser: effectiveBrowser, record, scratch });
   } catch {
-    return finalize('invalid', 'Independent evaluation failed; retained candidate and artifacts require review.');
+    return finalize('invalid', 'Independent evaluation failed; retained candidate and artifacts require review.', stopAfterEvaluation);
   }
   record.evaluation = {
     candidate, evaluator: effort.sha256(fs.readFileSync(path.join(dir, cell.brief, 'evaluator', 'evaluate.cjs'))),
@@ -614,7 +706,7 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
   record.events.push({ kind: 'evaluation', id: attempts.eventId(record, attempt, 'evaluation'), started: evalStart, ended: iso() });
   attempt.evaluation = 'completed';
   const status = executionFailure ? 'invalid' : harness.statusFor(evaluation.outcome);
-  return finalize(status, executionFailure || (status === 'valid' ? null : 'Independent evaluation is unavailable or inconclusive; no acceptance is established.'));
+  return finalize(status, executionFailure || (status === 'valid' ? null : 'Independent evaluation is unavailable or inconclusive; no acceptance is established.'), stopAfterEvaluation);
   } catch {
     // A thrown setup, collector or checkpoint operation retains the actual
     // in-memory record and last atomic checkpoint. Never infer a successful run.
@@ -632,10 +724,19 @@ async function driveSchedule(runsRoot, opts) {
   if (typeof opts.fixtureSession !== 'function') {
     const refuse = reason => ({ driven: [], stopped: cells[0]?.run || null, reason, refused: true });
     if (opts.spendingCap !== true) return refuse('No spending cap asserted; no browser or session launched');
-    if (opts.readiness?.purpose !== 'measured') return refuse('Measured schedule requires reviewed native execution readiness');
-    const gate = isolation.preflightExecution({ effective: opts.effective, apiKey: opts.apiKey,
-      readiness: opts.readiness, observationFile: opts.observationFile, onGroup: () => {} });
-    if (!gate.ok) return refuse(gate.detail);
+    if (cells.some(cell => !readRecord(runsRoot, cell))) return refuse('Every scheduled cell must be planned before execution');
+    const next = cells.find(cell => readRecord(runsRoot, cell)?.status === 'pending');
+    if (!next) return { driven: cells.map(cell => ({ run: idOf(cell),
+      status: readRecord(runsRoot, cell)?.status || 'unplanned', skipped: true })), stopped: null, reason: null, refused: false };
+    try {
+      const first = briefs.loadBrief(next.brief).prompts[0];
+      const nativeStudy = studyFor(runsRoot, opts, idOf(next), first.name,
+        `${ARM_PREAMBLE[next.arm] || ''}${first.prompt}`);
+      const gate = isolation.preflightExecution({ effective: opts.effective, apiKey: opts.apiKey,
+        ...nativeStudy, onGroup: () => {} });
+      if (!gate.ok) return refuse(gate.detail);
+    }
+    catch (error) { return refuse(error.message); }
   }
   // Check UI capability for the whole schedule before the first paid cell, even
   // when the first brief itself does not need a browser.
@@ -676,6 +777,7 @@ async function main(argv) {
     process.stdout.write([
       'usage: node orchestrator.cjs --runs <dir> --execution-inputs <json> [options]',
       '--input-root <dir>  root containing kit and browser artifacts (default repository)',
+      '--study-manifest <json> --study-input-root <dir>  actual decisions and retained readiness evidence',
       '--model <provider-id> --max-turns <n> --wall-clock-minutes <n> --max-budget-usd <n>',
       '--kit <relative-tarball> --browser <module>  override entries from execution inputs',
       'Missing browser leaves UI checks unavailable; browser dependency roots must be declared.',
@@ -702,6 +804,10 @@ async function main(argv) {
     kit: effectiveInputs.contained(inputRoot, input.kit.path), model: input.model,
     maxTurns: manifest.caps.turns_per_session, wallClockMinutes: manifest.caps.wall_clock_minutes,
     spendingCap: args['i-have-a-spending-cap'] === true,
+    allocation: args['study-manifest'] ? { manifestPath: path.resolve(args['study-manifest']),
+      inputRoot: args['study-input-root'] ? path.resolve(args['study-input-root']) : inputRoot,
+      purpose: 'measured' } : null,
+    apiKey: process.env.ANTHROPIC_API_KEY,
     provenance: {
       protocol: manifest.inputs.protocol, prompts: manifest.inputs.briefs, driver: manifest.inputs.driver,
       collector: manifest.inputs.collector, evaluator: manifest.inputs.evaluators,

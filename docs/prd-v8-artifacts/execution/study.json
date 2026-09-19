@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "kind": "pincer-study-readiness",
+  "status": "pending",
+  "execution": null,
+  "projects": null,
+  "kits": null,
+  "schedule": null,
+  "reviewers": null,
+  "authorization": null,
+  "allocation": null,
+  "stop_resume": {
+    "unknown_cost": "stop",
+    "account_limit": "stop",
+    "exhausted_allocation": "stop",
+    "changed_inputs": "stop",
+    "resume": "explicit-recorded-decision"
+  },
+  "evidence": { "offline": null, "browser": null, "packed": null, "ci": null, "native": null, "smoke": null, "report": null },
+  "pending_notes": [
+    "No project/access decisions or immutable project bases supplied.",
+    "No independent reviewer participation decisions supplied.",
+    "K0 is released v0.6.0 at peeled commit 694241cc684f2dd95a0cfe7ffa2827414683e84a; packed artifact digest must still be selected. K1 and K2 are not selected.",
+    "No actual user spending allocation or expiry has been authorized. Proposed protocol limits are not decisions.",
+    "Exact prompts, task schedule, final execution candidate, effective manifest and candidate-wide CI remain pending.",
+    "Native authentication/host-policy/isolation observations and separately authorized operational smoke remain outstanding.",
+    "Passing offline fixture tests are implementation evidence, not native-session observations."
+  ]
+}

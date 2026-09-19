@@ -36,10 +36,10 @@ const CONFIGURATION = {
 };
 
 const SPEC = {
-  protocol: 'docs/prd-v7-protocol.md',
+  protocol: 'docs/prd-v8-protocol.md',
   // The execution path, in load order. Adding a module that drives or judges a run
   // means adding it here, or the cohort stops describing what actually ran.
-  harness: ['scripts/delivery-benchmark-v7/briefs.cjs', 'scripts/delivery-benchmark-v7/schedule.cjs', 'scripts/delivery-benchmark-v7/harness.cjs', 'scripts/delivery-benchmark-v7/evaluator-kit.cjs', 'scripts/delivery-benchmark-v7/orchestrator.cjs', 'scripts/delivery-benchmark-v7/effective.cjs', 'scripts/delivery-benchmark-v7/freeze.cjs', 'scripts/delivery-benchmark-v7/freeze-spec.cjs', 'scripts/delivery-benchmark-v7/run-claims.cjs', 'scripts/delivery-benchmark-v7/isolated-launch.cjs', 'scripts/delivery-benchmark-v7/browser-preflight.cjs', 'scripts/delivery-benchmark-v7/browser.cjs', 'scripts/delivery-benchmark-v7/attempts.cjs', 'scripts/delivery-benchmark-v7/usage.cjs', 'scripts/delivery-benchmark-v7/finalization.cjs'],
+  harness: ['scripts/delivery-benchmark-v7/briefs.cjs', 'scripts/delivery-benchmark-v7/schedule.cjs', 'scripts/delivery-benchmark-v7/harness.cjs', 'scripts/delivery-benchmark-v7/evaluator-kit.cjs', 'scripts/delivery-benchmark-v7/orchestrator.cjs', 'scripts/delivery-benchmark-v7/effective.cjs', 'scripts/delivery-benchmark-v7/freeze.cjs', 'scripts/delivery-benchmark-v7/freeze-spec.cjs', 'scripts/delivery-benchmark-v7/run-claims.cjs', 'scripts/delivery-benchmark-v7/isolated-launch.cjs', 'scripts/delivery-benchmark-v7/browser-preflight.cjs', 'scripts/delivery-benchmark-v7/browser.cjs', 'scripts/delivery-benchmark-v7/attempts.cjs', 'scripts/delivery-benchmark-v7/usage.cjs', 'scripts/delivery-benchmark-v7/finalization.cjs', 'scripts/delivery-benchmark-v7/readiness.cjs', 'scripts/delivery-benchmark-v7/allocation.cjs', 'docs/prd-v7-protocol.md', 'docs/prd-v8-usage-semantics.md', 'docs/prd-v8-agent-isolation.md'],
   briefs: 'test/fixtures/delivery-benchmark-v7/briefs',
   collector: 'scripts/delivery-benchmark-v7/effort.cjs',
   driver: 'scripts/delivery-benchmark-v7/live-driver.sh',

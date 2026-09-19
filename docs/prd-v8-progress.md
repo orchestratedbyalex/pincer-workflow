@@ -130,3 +130,27 @@ evaluated; a coincident execution error remains an invalid experiment and stops 
 prompts. Accounting, validation and write faults retain private raw evidence with a
 separately validated diagnostic and block retries until explicit operator disposition.
 Diagnostic-storage failure retains ownership. No automatic diagnostic repair is provided.
+
+### T-109 — offline implementation, execution decisions pending
+
+The read-only manifest inspector binds actual decisions, project bases, complete
+execution inputs and retained evidence. Missing inputs produce specific pending reasons
+before any execution side effect. Evidence freshness includes the complete execution
+identity, with only the native-observation reference excluded to avoid self-reference.
+Prepared brief and kit-install commits now use a fixed preparation date so the approved
+base is reproducible across machines; candidate commits retain their normal behavior.
+
+The allocation ledger reserves one session at a time, requires cell custody and a
+durable launch intent, consumes once in the registered supervisor, and reconciles
+retained usage before further admission. It rechecks prior accounting before launch;
+unknown spend, orphaned payloads, changed records, unresolved custody, quota limits or
+overspending stop admission. Measured launch requires completed T-102 and T-109 receipts.
+Offline tests cannot supply those observation receipts. Expired authorization permits
+accounting-only settlement with a separate validated grant; all launch paths remain
+blocked. Current empty capture files are allowed only for the exact reserved intent.
+Parent review also bound every later session to the prepared project base and retained
+independent capped-candidate evaluation when accounting stops the allocation.
+
+The checked-in study manifest stays pending: no final execution candidate, project
+access/bases, reviewers, user-approved allocation or native smoke evidence is invented.
+T-110 onward remain gated on actual observations and their prescribed order.

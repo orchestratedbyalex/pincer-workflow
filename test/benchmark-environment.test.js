@@ -195,11 +195,22 @@ try {
     readiness: { purpose: 'operational-smoke', spendingAuthorized: true, projectAccessAuthorized: true,
       hostPolicyPreserved: true, decisionRef: 'synthetic-gate-decision' } };
   const smoke = isolation.checkNativeReadiness(gateOptions, manifest);
-  assert.equal(smoke.ok, true); assert.equal(smoke.reportable, false);
+  assert.equal(smoke.ok, false); assert.equal(smoke.code, 'ALLOCATION_REQUIRED');
+  const allocation = require('../scripts/delivery-benchmark-v7/allocation.cjs');
+  const originalVerify = allocation.verifyLaunch;
+  // Isolate this format/path unit test. The actual allocation module is exercised
+  // by its controlled-worker suite; this stub cannot reach launchNative here.
+  allocation.verifyLaunch = () => ({ purpose: 'operational-smoke', inputRoot: options.root, observationFile: 'observation.json' });
+  gateOptions.allocation = { fixture: true };
+  try {
+
   assert.equal(isolation.checkNativeReadiness({ ...gateOptions, readiness: { ...gateOptions.readiness, spendingAuthorized: false } }, manifest).ok, false);
   assert.equal(isolation.checkNativeReadiness({ ...gateOptions, expectedAssets: { unknown: 'unbound' } }, manifest).code, 'ARM_ASSETS_CHANGED');
   const measured = { ...gateOptions, observationFile: 'observation.json', readiness: { ...gateOptions.readiness, purpose: 'measured', observationReviewed: true } };
-  assert.equal(isolation.checkNativeReadiness(measured, manifest).code, 'ISOLATION_OBSERVATION_REQUIRED');
+  assert.equal(isolation.checkNativeReadiness(measured, manifest).code, 'ALLOCATION_PURPOSE_CHANGED');
+  allocation.verifyLaunch = () => ({ purpose: 'measured', inputRoot: options.root, observationFile: 'observation.json' });
+  assert.equal(isolation.checkNativeReadiness(gateOptions, manifest).code, 'ALLOCATION_PURPOSE_CHANGED');
+  assert.equal(isolation.checkNativeReadiness(measured, manifest).ok, false);
   const evidence = 'synthetic gate evidence only; not a real observed session'; write(options.root, 'evidence.txt', evidence);
   const observation = { schema: 1, kind: 'native-isolation-observation', fixture: false,
     target: isolation.observationTarget(manifest), arms: ['plain', 'pincer', 'strict'],
@@ -207,8 +218,42 @@ try {
     evidence: [{ path: 'evidence.txt', digest: sha(evidence) }] };
   const raw = JSON.stringify(observation); write(options.root, 'observation.json', raw);
   manifest.effective.configuration.isolation_observation_digest = sha(raw);
-  assert.equal(isolation.checkNativeReadiness(measured, manifest).ok, true, 'format validator accepts a complete authored gate record; this is not native evidence');
+  assert.equal(isolation.checkNativeReadiness(measured, manifest).ok, true, 'authored gate format passes with a controlled allocation verifier only');
   write(options.root, 'evidence.txt', 'changed');
   assert.equal(isolation.checkNativeReadiness(measured, manifest).code, 'ISOLATION_EVIDENCE_CHANGED');
+  write(options.root, 'evidence.txt', evidence);
+  write(options.root, 'substitute.json', raw);
+  assert.equal(isolation.checkNativeReadiness({ ...measured, observationFile: 'substitute.json' }, manifest).code, 'ISOLATION_OBSERVATION_UNBOUND');
+  const otherRoot = tempDir();
+  write(otherRoot, 'observation.json', raw);
+  assert.equal(isolation.checkNativeReadiness({ ...measured, effective: { inputRoot: otherRoot } }, manifest).code, 'ISOLATION_OBSERVATION_UNBOUND');
+  const originalRead = fs.readFileSync;
+  for (const protectedPath of ['.env', '.env.local', 'credentials.json', 'auth.json', '.ssh/key', '.aws/config', '.netrc', '.npmrc']) {
+    let reads = 0;
+    fs.readFileSync = () => { reads += 1; throw new Error('private canary must not be read'); };
+    try {
+      const refusal = isolation.checkNativeReadiness({ ...measured, observationFile: protectedPath }, manifest);
+      assert.equal(refusal.code, 'ISOLATION_PATH_PROTECTED');
+      assert.equal(reads, 0, 'protected observation refused before any file read');
+    } finally { fs.readFileSync = originalRead; }
+    const hostile = JSON.stringify({ ...observation, evidence: [{ path: protectedPath, digest: sha('private') }] });
+    write(options.root, 'observation.json', hostile);
+    const allowedObservation = fs.realpathSync(path.join(options.root, 'observation.json'));
+    let protectedReads = 0;
+    fs.readFileSync = (file, ...args) => {
+      if (path.resolve(String(file)) !== allowedObservation) { protectedReads += 1; throw new Error('private canary must not be read'); }
+      return originalRead(file, ...args);
+    };
+    try {
+      assert.equal(isolation.checkNativeReadiness(measured, manifest).code, 'ISOLATION_PATH_PROTECTED');
+      assert.equal(protectedReads, 0, 'protected evidence refused before its read');
+    } finally { fs.readFileSync = originalRead; }
+  }
+  write(options.root, 'observation.json', '{PRIVATE_PARSE_ERROR_CANARY');
+  const malformed = isolation.checkNativeReadiness(measured, manifest);
+  assert.equal(malformed.code, 'ISOLATION_OBSERVATION_INVALID');
+  assert.ok(!malformed.detail.includes('PRIVATE_PARSE_ERROR_CANARY'));
+  } finally { allocation.verifyLaunch = originalVerify; }
 }
+
 console.log('benchmark environment tests passed (native observation remains required)');

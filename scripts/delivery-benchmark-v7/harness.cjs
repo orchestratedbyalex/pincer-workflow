@@ -17,6 +17,9 @@ const briefs = require('./briefs.cjs');
 const effort = require('./effort.cjs');
 const kit = require('./evaluator-kit.cjs');
 
+// v8 preparation provenance: fixed metadata makes an offline-approved base
+// reproducible. Candidate/model commits retain their own observed dates.
+const PREPARATION_DATE = '2026-09-19T00:00:00Z';
 const GIT_ID = {
   GIT_AUTHOR_NAME: 'benchmark', GIT_AUTHOR_EMAIL: 'benchmark@example.invalid',
   GIT_COMMITTER_NAME: 'benchmark', GIT_COMMITTER_EMAIL: 'benchmark@example.invalid',
@@ -74,10 +77,15 @@ const LIB = { write, gitInit, commitAll, commitPaths, git, sh, sha256: kit.sha25
 function prepare(ws, id, { arm = 'plain', dir = briefs.BRIEFS_DIR, unrelatedEdits = null } = {}) {
   const brief = briefs.loadBrief(id, dir);
   fs.mkdirSync(ws, { recursive: true });
-  brief.base.create(ws, LIB);
+  const preparation = {
+    ...LIB,
+    commitAll: (root, message, date = PREPARATION_DATE) => commitAll(root, message, date),
+    commitPaths: (root, message, paths, date = PREPARATION_DATE) => commitPaths(root, message, paths, date),
+  };
+  brief.base.create(ws, preparation);
   // BRIEF.md is the task the agent reads. Everything held out stays out of the tree.
   write(ws, 'BRIEF.md', `# ${id}\n\n${brief.task}\n`);
-  commitAll(ws, `Add BRIEF.md for ${id}`);
+  commitAll(ws, `Add BRIEF.md for ${id}`, PREPARATION_DATE);
   return { brief, workspace: ws, arm, unrelated_edits: applyUnrelated(ws, unrelatedEdits) };
 }
 
@@ -133,4 +141,4 @@ function statusFor(outcome) {
   return 'invalid';
 }
 
-module.exports = { GIT_ID, DEFAULT_TOOLS, LIB, sh, git, write, gitInit, commitAll, commitPaths, prepare, applyUnrelated, exportCandidate, evaluateCandidate, statusFor };
+module.exports = { PREPARATION_DATE, GIT_ID, DEFAULT_TOOLS, LIB, sh, git, write, gitInit, commitAll, commitPaths, prepare, applyUnrelated, exportCandidate, evaluateCandidate, statusFor };
