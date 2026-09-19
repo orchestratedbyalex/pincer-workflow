@@ -296,5 +296,9 @@ verification path) and this documentation commit.
   `--debug-file` keeps stdout clean. Both are documented behavior; a failure would surface
   as `hook_capture.present: false` or an invalid record, never as a silent pass.
 
-The full `npm test` result and the pinned-kit re-verification are recorded below this
-entry once complete.
+The full `npm test` chain (76 suites) passed locally on 19 September 2026 (started 20:02Z,
+finished 20:17Z, exit 0) on the tree at `f504c80`/`07af4be` plus the documentation edits.
+T-109 was re-verified through the pinned kit at 20:17Z with the corrected block: its four
+suites pass and the measured readiness gate exits 2 by design with 14 pending reasons
+(`last_check … failed c936a9b60fc5`; the block hash changed with the edit). No CI run
+exists for these commits; the branch is not pushed. T-109 and T-102 remain in progress.
