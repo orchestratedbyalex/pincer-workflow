@@ -64,7 +64,7 @@ try {
     preflight: isolation.preflightExecution, launch: isolation.launchNative,
     reserve: allocator.reserve, reconcile: allocator.reconcile, evaluate: harness.evaluateCandidate };
   try {
-    for (const scenario of ['wall-cap', 'provider-cap', 'noncap', 'cleanup-unknown', 'changed-project', 'operational', 'operational-failed', 'hook-evidence-missing', 'retention-failed']) {
+    for (const scenario of ['wall-cap', 'provider-cap', 'noncap', 'cleanup-unknown', 'changed-project', 'operational', 'operational-failed', 'hook-evidence-missing', 'hook-registration-only', 'retention-failed']) {
       // An operational smoke is unreportable by purpose: it must still run the whole
       // path and evaluate, launch no second prompt, and stop for operator inspection.
       const operational = scenario.startsWith('operational');
@@ -94,7 +94,7 @@ try {
       isolation.preflightExecution = () => ({ ok: true });
       let launches = 0, reservations = 0, evaluations = 0, launched = null, reconciledWith = null;
       allocator.reserve = () => { reservations++; return { fixture: true }; };
-      allocator.reconcile = options => { reconciledWith = options.result; return { stopped: !operational && !['changed-project', 'hook-evidence-missing'].includes(scenario) }; };
+      allocator.reconcile = options => { reconciledWith = options.result; return { stopped: !operational && !['changed-project', 'hook-evidence-missing', 'hook-registration-only'].includes(scenario) }; };
       isolation.launchNative = async options => {
         launches++;
         launched = { readiness: options.readiness, observationFile: options.observationFile };
@@ -107,7 +107,15 @@ try {
         fs.writeFileSync(path.join(options.logDir, `${options.name}.json`), capped || failed ? '{partial' : JSON.stringify(result));
         // The launcher's verdict arrives as `reportable` plus its named reasons; the
         // orchestrator must act on them, not on a fixture's say-so alone.
-        const unreportable = scenario === 'hook-evidence-missing' ? ['hook evidence missing'] : scenario === 'retention-failed' ? ['hook evidence unretained'] : [];
+        let unreportable = scenario === 'hook-evidence-missing' ? ['hook evidence missing'] : scenario === 'retention-failed' ? ['hook evidence unretained'] : [];
+        if (scenario === 'hook-registration-only') {
+          const hookEvidence = isolation.hookEvidence('strict', { present: true, retained: true },
+            'Registered but NEVER EXECUTED: .claude/hooks/block-dangerous.sh and .claude/hooks/ticket-guard.sh');
+          const verdict = isolation.reportability({ nativePreflight: { reportable: true }, attestedModel: 'synthetic', model: 'synthetic',
+            result: { cleanup_complete: true }, canary: { leak_detected: false }, hookEvidence });
+          assert.equal(verdict.reportable, false);
+          unreportable = verdict.unreportable;
+        }
         return { status: capped ? 124 : failed ? 7 : 0, end: capped ? 'capped' : failed ? 'failed' : 'completed',
           cleanup_complete: scenario !== 'cleanup-unknown', reportable: scenario === 'changed-project', unreportable,
           evidence_retention_failed: scenario === 'retention-failed', review_required: scenario === 'retention-failed',
@@ -149,6 +157,11 @@ try {
         // Missing required hook evidence makes the measured session unreportable through
         // the orchestration path: the record says why, the cell is invalid, the schedule stops.
         assert.match(out.record.reason, /not reportable \(hook evidence missing\)/, out.record.reason);
+        assert.equal(out.stop, true);
+        assert.equal(evaluations, 0);
+      }
+      if (scenario === 'hook-registration-only') {
+        assert.match(out.record.reason, /hook evidence insufficient/);
         assert.equal(out.stop, true);
         assert.equal(evaluations, 0);
       }

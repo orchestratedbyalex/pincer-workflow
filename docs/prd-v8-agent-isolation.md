@@ -58,15 +58,24 @@ before. Whether the pinned CLI's hook debug lines name each executed hook comman
 exit status is a smoke finding: it is documented behavior, not yet observed here.
 
 **Required hook evidence** (`environment.hook_evidence = { status, required, missing }`).
-The plain arm requires a retained log; a kit arm's retained log must name both installed
-hook scripts (`.claude/hooks/block-dangerous.sh`, `.claude/hooks/ticket-guard.sh`).
+The plain arm requires a nonempty retained log. Kit arms require a recognized completion
+line for each installed hook: `[DEBUG] Hook command completed with status <0..255>: bash
+"$CLAUDE_PROJECT_DIR"/.claude/hooks/<script>.sh` (optionally preceded by an ISO UTC
+timestamp). Both `block-dangerous.sh` and `ticket-guard.sh` must complete. A denial exit
+status is evidence of execution, not task acceptance. Registration-only lines, attempts
+without outcomes, malformed statuses and unknown formats are insufficient. This narrow
+grammar is fixture-tested; matching the pinned CLI's native format remains a smoke
+observation, and any format adjustment must be reviewed and frozen before measured use.
 `status` is `missing` (no log), `unreadable`, `unretained` (no durable copy), `insufficient`
 (retained but not showing the required hooks) or `sufficient`. Anything but `sufficient`
 makes a measured session unreportable, with the reason named in `unreportable`.
 
 **Retention failure.** If the redacted copy cannot be written, the launcher preserves what
-it can in the retained scratch: a redacted copy if that succeeds, otherwise the raw file
-renamed there and flagged `redacted: false`. The result carries
+a redacted recovery copy in the retained scratch. If reading fails or neither redacted
+copy can be written, it preserves the original protected session directory instead of
+deleting the last copy. `hook_capture.recovered` names the file relative to scratch;
+`original_preserved: true` and `redacted: false` identify raw evidence requiring review.
+Unexpected exceptions also preserve the session directory conservatively. The result carries
 `evidence_retention_failed: true` and `review_required: true`; the allocator stops the
 allocation (`ALLOCATION_EVIDENCE_UNRETAINED`), so no further paid session starts before an
 explicit recovery decision.

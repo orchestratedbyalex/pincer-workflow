@@ -28,7 +28,7 @@ is `study.json` beside it.
   `--permission-prompts none`, empty MCP, and `--debug hooks --debug-file
   <session>/debug.log` whose redacted copy is retained as `logs/<S>.debug.log`
   (`hook_capture {present, retained, file, bytes}`, graded by `hook_evidence {status,
-  required, missing}`; a kit arm needs both hook scripts named). `reportability()` is the
+  required, missing}`; a kit arm needs recognized completion records with exit outcomes for both hooks). `reportability()` is the
   one gate: attestation, cleanup, capture, canary and hook evidence each a named reason the
   orchestrator writes into `record.reason`. A retention failure preserves the log in the
   attempt's scratch and stops the allocation (`ALLOCATION_EVIDENCE_UNRETAINED`).
@@ -105,3 +105,7 @@ is `study.json` beside it.
   Google Chrome auto-updates, so T-107's pass on it is not evidence for a pinned copy.
 - `claude --help` does not list `--max-turns`, but 2.1.273 accepts it (checked with a
   `--version` probe, parse-level only).
+
+Review correction: unreadable or uncopyable hook evidence now preserves the original
+protected session directory. Registration-only logs cannot pass. Historical external
+study drafts must be refreshed for the corrected execution code before launch.

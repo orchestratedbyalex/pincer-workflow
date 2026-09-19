@@ -245,14 +245,16 @@ function checkCanary(canary, texts) {
 }
 // Retain the CLI's hook debug log as a redacted copy beside the captures. The raw file is
 // removed with the session root. Absence is recorded, never assumed to mean "no hooks".
-// When the redacted copy cannot be written, the evidence is preserved where it can be:
-// a redacted copy in the retained scratch if that works, otherwise the raw file moved
-// there (a metadata-only rename survives a full disk) and flagged as unredacted.
+// If no redacted copy can be retained, keep the original protected session directory.
+// Never move or delete the last copy: even an unreadable file may be recoverable later.
 function retainHookDebug(debugFile, target, clean, recovery, io = fs) {
   if (!fs.existsSync(debugFile)) return { capture: { present: false }, text: '' };
+  const original = error => ({ present: true, retained: false,
+    recovered: path.relative(recovery.dir, debugFile), redacted: false,
+    original_preserved: true, error });
   let raw;
-  try { raw = fs.readFileSync(debugFile, 'utf8'); }
-  catch (error) { return { capture: { present: true, readable: false, retained: false, error: error.code || 'UNKNOWN' }, text: '' }; }
+  try { raw = io.readFileSync(debugFile, 'utf8'); }
+  catch (error) { return { capture: { ...original(error.code || 'UNKNOWN'), readable: false }, text: '', preserveSession: true }; }
   const safe = clean(raw), bytes = Buffer.byteLength(safe);
   if (!target) return { capture: { present: true, retained: false, file: null, bytes }, text: safe };
   let error;
@@ -260,16 +262,21 @@ function retainHookDebug(debugFile, target, clean, recovery, io = fs) {
   catch (e) { error = e.code || 'UNKNOWN'; }
   const recovered = path.join(recovery.dir, `${recovery.name}.debug.log`);
   try { io.writeFileSync(`${recovered}.redacted`, safe, { flag: 'wx', mode: 0o600 }); return { capture: { present: true, retained: false, recovered: `${recovery.name}.debug.log.redacted`, redacted: true, error }, text: safe }; } catch {}
-  try { fs.renameSync(debugFile, `${recovered}.unredacted`); fs.chmodSync(`${recovered}.unredacted`, 0o600); return { capture: { present: true, retained: false, recovered: `${recovery.name}.debug.log.unredacted`, redacted: false, error }, text: safe }; }
-  catch { return { capture: { present: true, retained: false, recovered: null, error }, text: safe }; }
+  return { capture: original(error), text: safe, preserveSession: true };
 }
 // Required hook evidence per arm: the plain arm has no kit hooks, so a retained log is
-// enough; a kit arm's log must show both installed hook scripts. A log that exists but
-// does not is insufficient, and insufficient is not "present".
+// enough; kit arms require complete, recognized command-completion records. This narrow
+// grammar is exercised by fixtures, not yet attested by the pinned native CLI. Unknown
+// native formats remain insufficient until reviewed; registration text is never evidence.
 const KIT_HOOK_SCRIPTS = ['.claude/hooks/block-dangerous.sh', '.claude/hooks/ticket-guard.sh'];
 function hookEvidence(arm, capture, text) {
   const required = arm === 'plain' ? [] : KIT_HOOK_SCRIPTS;
-  const missing = required.filter(script => !text.includes(script));
+  const completed = new Set();
+  for (const line of text.split(/\r?\n/)) {
+    const event = line.match(/^(?:\d{4}-\d{2}-\d{2}T[\d:.]+Z )?\[DEBUG\] Hook command completed with status (0|[1-9]\d{0,2}): bash "\$CLAUDE_PROJECT_DIR"\/(\.claude\/hooks\/(?:block-dangerous|ticket-guard)\.sh)$/);
+    if (event && Number(event[1]) <= 255) completed.add(event[2]);
+  }
+  const missing = required.filter(script => !completed.has(script));
   let status;
   if (!capture.present) status = 'missing';
   else if (capture.readable === false) status = 'unreadable';
@@ -395,6 +402,8 @@ async function runSession(options, nativePreflight = null) {
   const clean = redactor(options.apiKey);
   const started = new Date().toISOString();
   const logFiles = options.logDir ? { stdout: path.join(options.logDir, `${options.name}.json`), stderr: path.join(options.logDir, `${options.name}.err`), debug: path.join(options.logDir, `${options.name}.debug.log`) } : null;
+  // On an unexpected exception, preserve rather than erase possible evidence.
+  let preserveSession = true;
   try {
     if (logFiles) {
       if (!/^[A-Za-z0-9_-]+$/.test(options.name || '')) fail('LOG_NAME_INVALID', 'a safe session identity is required');
@@ -407,7 +416,8 @@ async function runSession(options, nativePreflight = null) {
     const result = await supervise({ cwd: fs.realpathSync(options.workspace), env, payload,
       timeoutMs: native ? options.caps.wall_clock_minutes * 60000 : options.timeoutMs || options.caps.wall_clock_minutes * 60000,
       onGroup: options.onGroup, signal: options.signal, logFiles, captureIO: native ? fs : options.fixtureCaptureIO || fs });
-    const hookDebug = retainHookDebug(debugFileFor(settingsPath), logFiles?.debug || null, clean, { dir: root, name: options.name || 'session' }, options.fixtureRetainIO || fs);
+    const retainIO = !native && options.fixtureRetainIO ? { ...fs, ...options.fixtureRetainIO } : fs;
+    const hookDebug = retainHookDebug(debugFileFor(settingsPath), logFiles?.debug || null, clean, { dir: root, name: options.name || 'session' }, retainIO);
     const isolationCanary = checkCanary(canary, [result.stdout, result.stderr, hookDebug.text]);
     const evidence = hookEvidence(options.arm, hookDebug.capture, hookDebug.text);
     // A log that existed but could not be retained where the record expects it is a
@@ -433,11 +443,15 @@ async function runSession(options, nativePreflight = null) {
       configuration: PROFILE, env_names: Object.keys(env).filter(k => k !== 'ANTHROPIC_API_KEY').sort(),
     };
     const { reportable, unreportable } = reportability({ nativePreflight, attestedModel: native ? attestedModel : options.model, model: options.model, result, canary: isolationCanary, hookEvidence: evidence });
+    preserveSession = hookDebug.preserveSession === true;
     return { ...result, started, ended: new Date().toISOString(), environment, assets: assets.files, logFiles,
       reportable, unreportable, evidence_retention_failed: evidenceRetentionFailed, review_required: evidenceRetentionFailed, observation: !native ? 'controlled fixture plumbing; not native CLI isolation evidence' : !attestedModel ? 'provider model attestation missing; operational only' : options.readiness.purpose,
       end: result.timedOut ? 'capped' : result.status === 124 ? 'ambiguous' : 'completed',
       limit: /usage limit|session limit|rate limit|quota/i.test(`${result.stdout}\n${result.stderr}`), refused: false };
-  } finally { fs.rmSync(sessionRoot, { recursive: true, force: true }); }
+  } finally {
+    // Refusals before the tool starts have no hook evidence to preserve.
+    if (!preserveSession || !fs.existsSync(debugFileFor(settingsPath))) fs.rmSync(sessionRoot, { recursive: true, force: true });
+  }
 }
 async function observeFixture(options) { return runSession(options); }
 async function launchNative(options) {
@@ -533,4 +547,4 @@ if (require.main === module && process.argv[2] === '--session-supervisor') {
       session_root: path.dirname(flag('--settings')), args: input.args, prompt }));
   }
 } else if (require.main === module) { process.stderr.write('isolated-launch: direct native launch is unavailable until the T-109 isolation observation gate\n'); process.exitCode = 3; }
-module.exports = { PROFILE, KIT_HOOK_SCRIPTS, assetsFor, settingsFor, observationTarget, checkNativeReadiness, preflightExecution, preflightNative, buildEnvironment, argumentsFor, reportability, observeFixture, launchNative };
+module.exports = { PROFILE, KIT_HOOK_SCRIPTS, assetsFor, settingsFor, observationTarget, checkNativeReadiness, preflightExecution, preflightNative, buildEnvironment, argumentsFor, hookEvidence, reportability, observeFixture, launchNative };

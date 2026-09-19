@@ -362,3 +362,9 @@ Files: `isolated-launch.cjs`, `test/benchmark-environment.test.js`, `docs/prd-v8
 ## [2026-09-19] end | T-109 observation gate: graded hook evidence, canary ≠ demonstration
 `isolation_canary` now {leak_detected, user_hook_ran, user_settings_loaded, user_instructions_loaded} with `unknown` where evidence is insufficient; `hook_evidence.status` (missing/unreadable/unretained/insufficient/sufficient) feeds one `reportability()` gate with named reasons written to `record.reason`; retention failure preserves the log in scratch and stops the allocation (`ALLOCATION_EVIDENCE_UNRETAINED`). Corrected the false "phrase is never retained" claim.
 Tested at the gate, fixture tool, allocator and orchestration path. Files: `isolated-launch.cjs`, `allocation.cjs`, `orchestrator.cjs`, three suites, `docs/prd-v8-agent-isolation.md`, cohort `b0299e7e…` → `fef7ffdc…`, package §1/§2/§4/§5/§9/§11/§12, progress, wiki. Worktree at `499fb6b`, drafts `12535053…`. No paid launch, push or publication.
+
+- 2026-09-19: Direct review fix rejects registration-only hook evidence and preserves
+  unreadable/uncopyable raw evidence in its original protected directory. Eight focused
+  suites pass; full-suite verification is limited by sandbox socket/process restrictions.
+  T-109's pinned verifier records failure honestly. External study drafts need refreshing.
+  See `docs/prd-v8-progress.md` and [[study-readiness-gate]].

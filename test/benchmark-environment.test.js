@@ -151,22 +151,67 @@ try {
     assert.ok(partial.unreportable.some(reason => /hook evidence insufficient .*ticket-guard/.test(reason)), JSON.stringify(partial.unreportable));
   }
   {
-    // Retention failure: the redacted copy cannot be written. The raw log is preserved in
-    // the retained scratch (unredacted, flagged), the result demands review, and nothing
-    // pretends the evidence was retained.
+    // Registration, attempts, missing outcomes and unknown formats prove no completion.
+    const scripts = isolation.KIT_HOOK_SCRIPTS;
+    const capture = { present: true, retained: true };
+    const completion = (script, status = '0') => `[DEBUG] Hook command completed with status ${status}: bash "$CLAUDE_PROJECT_DIR"/${script}`;
+    for (const text of [
+      `Registered but NEVER EXECUTED: ${scripts.join(' and ')}`,
+      scripts.map(script => `[DEBUG] Starting hook: ${script}`).join('\n'),
+      scripts.map(script => completion(script, 'null')).join('\n'),
+      scripts.map(script => completion(script, '256')).join('\n'),
+      scripts.map(script => `Registered: ${completion(script)}`).join('\n'),
+      scripts.map(script => `${completion(script)} (not executed)`).join('\n'),
+      completion(scripts[0]),
+    ]) {
+      const evidence = isolation.hookEvidence('strict', capture, text);
+      assert.equal(evidence.status, 'insufficient', text);
+      assert.equal(isolation.reportability({ nativePreflight: { reportable: true }, attestedModel: 'm', model: 'm',
+        result: { cleanup_complete: true }, canary: { leak_detected: false }, hookEvidence: evidence }).reportable, false);
+    }
+    assert.equal(isolation.hookEvidence('strict', capture, scripts.map(script => completion(script, '2')).join('\n')).status,
+      'sufficient', 'a completed denial is execution evidence, not proof of task acceptance');
+  }
+  for (const failure of ['unreadable', 'all-writes', 'primary-write']) {
+    // Exercise the real session cleanup path, not only the retention helper. Failed
+    // reading or exhausted recovery must preserve the original bytes and protected root.
     const options = fixture('pincer');
     options.logDir = path.join(options.root, 'captures'); options.name = 'S1';
     const fault = () => { const error = new Error(SECRET); error.code = 'ENOSPC'; throw error; };
-    const result = await isolation.observeFixture({ ...options, fixtureRetainIO: { writeFileSync: fault } });
+    let original, originalBytes;
+    const io = {
+      readFileSync(file, encoding) {
+        original = file; originalBytes = fs.readFileSync(file);
+        if (failure === 'unreadable') fault();
+        return originalBytes.toString(encoding);
+      },
+      writeFileSync(file, ...args) {
+        if (failure === 'all-writes' || file === path.join(options.logDir, 'S1.debug.log')) fault();
+        return fs.writeFileSync(file, ...args);
+      },
+    };
+    const result = await isolation.observeFixture({ ...options, fixtureRetainIO: io });
     assert.equal(result.status, 0, result.stderr);
-    assert.deepEqual(result.environment.hook_capture, { present: true, retained: false, recovered: 'S1.debug.log.unredacted', redacted: false, error: 'ENOSPC' });
-    assert.equal(result.environment.hook_evidence.status, 'unretained');
+    const capture = result.environment.hook_capture;
+    assert.equal(capture.retained, false);
+    assert.equal(result.environment.hook_evidence.status, failure === 'unreadable' ? 'unreadable' : 'unretained');
     assert.equal(result.evidence_retention_failed, true);
     assert.equal(result.review_required, true);
     assert.equal(fs.existsSync(result.logFiles.debug), false);
-    const recovered = path.join(options.stateRoot, 'S1.debug.log.unredacted');
+    const recovered = path.join(options.stateRoot, capture.recovered);
     assert.ok(fs.existsSync(recovered), 'the raw log survives for review');
-    assert.equal(fs.statSync(recovered).mode & 0o777, 0o600);
+    if (failure === 'primary-write') {
+      assert.equal(capture.redacted, true);
+      assert.equal(fs.existsSync(original), false, 'a successful redacted recovery permits cleanup');
+      assert.equal(fs.statSync(recovered).mode & 0o777, 0o600);
+      assert.ok(!fs.readFileSync(recovered, 'utf8').includes(SECRET));
+    } else {
+      assert.equal(capture.original_preserved, true);
+      assert.equal(capture.redacted, false);
+      assert.equal(fs.realpathSync(recovered), fs.realpathSync(original));
+      assert.deepEqual(fs.readFileSync(recovered), originalBytes, 'the last copy survives byte for byte');
+      assert.equal(fs.statSync(path.dirname(recovered)).mode & 0o777, 0o700, 'raw evidence stays in its protected session directory');
+    }
     assert.match(fs.readFileSync(recovered, 'utf8'), /block-dangerous/);
     assert.ok(!JSON.stringify(result).includes(SECRET), 'the fault message never reaches the result');
   }
@@ -195,7 +240,7 @@ try {
   {
     // A tool that reads user-level configuration despite the profile trips the canary:
     // the planted hook runs and the planted phrase reaches the captures. The result is
-    // unreportable and the record says why; the phrase itself is never retained.
+    // unreportable and the record says why; the emitted phrase remains in the captures.
     const leaked = await isolation.observeFixture({ ...fixture(), mode: 'leak-canary' });
     assert.equal(leaked.status, 0, leaked.stderr);
     const canary = leaked.environment.isolation_canary;

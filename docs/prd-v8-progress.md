@@ -340,3 +340,60 @@ re-verified through the pinned kit at 20:54Z: its four suites pass and the measu
 readiness gate exits 2 by design with 14 pending reasons (`last_check … failed
 c936a9b60fc5`). No CI run exists for these commits; the branch is not pushed. T-109 and
 T-102 remain in progress.
+
+### Direct review correction — 19 September 2026
+
+User authorized the reviewing agent to fix the remaining defects directly. Changes over
+`5bbde21` reject registration-only hook logs and preserve the last copy of hook evidence
+on failed reads or exhausted copy recovery. The completion parser accepts only recognized
+command-completion records with numeric exit outcomes for both kit hooks; unknown native
+formats remain insufficient pending actual smoke inspection. A completed denial is hook
+execution evidence, not task acceptance.
+
+Retention first tries the normal redacted capture and a redacted scratch recovery copy.
+If neither works, or the original cannot be read, the protected original session directory
+survives byte-for-byte. The record carries a relative recovery reference,
+`original_preserved: true`, `redacted: false`, and the existing retention-failure/review
+flags. The allocator's stop remains unchanged. Fixture-only I/O injection cannot affect
+native execution. Regression tests cover registration-only text reaching an invalid run,
+missing/malformed outcomes, read faults, both copy writes failing, successful redacted
+recovery, protected directory permissions and preserved original bytes.
+
+Eight focused suites pass: benchmark-environment, benchmark-study-launch,
+benchmark-terminal-records, benchmark-usage-completeness, readiness-contracts,
+execution-freeze, study-readiness and benchmark-effective-inputs. Frozen inputs match
+`1027f120893440680170df9d942855ae3c062a27af98c22b5dd77eceaf168ca9`.
+
+Full `npm test` was attempted: the first nine suites passed, then recovery.test.js stopped
+because this sandbox refuses a local server bind (`listen EPERM 127.0.0.1`). Separately,
+benchmark-allocation fails with `CUSTODY_INVALID`: `ps` is denied by this sandbox, so it
+cannot establish supervisor identity. The pinned v0.6.0 kit re-verified T-109 and recorded
+that actual failure (exit 1, block digest `c936a9b60fc5`), not a successful receipt or an
+observation. Standalone measured readiness still exits 2 with 14 pending reasons.
+Logs: `/tmp/pincer-review-full-test.log`, `/tmp/pincer-review-t109-verify.log`, and
+`/tmp/pincer-review-readiness.json`. Full verification needs a host allowing local sockets
+and process inspection; no checks were weakened to bypass those restrictions.
+
+No template changes, paid sessions, external actions or project access occurred. Existing
+untracked guide/diagrams were preserved. The external study checkout remains at
+`499fb6b`; its drafts are explicitly stale and must be refreshed for this code and a
+CI-verified candidate before launch. No runtime readiness or live observation is claimed.
+
+### Requested commit, push and npm upgrade — 19 September 2026
+
+The user explicitly authorized committing all changes (including the previously untracked
+guide and diagrams), pushing and upgrading npm. Git staging was attempted and refused by
+the session filesystem policy: `.git/index.lock` cannot be created (`Operation not
+permitted`). No commit or push occurred; HEAD remains `5bbde21`.
+
+Prepared package version `0.7.0` for the added coverage-scaffold and brief-resume features,
+using `npm version minor --no-git-tag-version --ignore-scripts`, then regenerated adapters
+and plugin. Distribution parity, packed-install and release-preparation tests pass. The package is built at
+`/tmp/pincer-release-0.7.0/pincer-workflow-0.7.0.tgz` (72 files; SHA-1
+`566bbde47225d346c09b89ce46dd640a4a5101d7`). npm cache is confined to that temporary
+release directory. Registry inspection returned `0.6.0`; no package was published.
+
+Commit all pending files in a Git-writable session, push the updated branch and obtain
+candidate-wide CI before publication. Current PR #6 checks cover the older remote source,
+not these local corrections or the version bump. Version preparation does not close the
+remaining v8 observational tickets or claim measured delivery superiority.

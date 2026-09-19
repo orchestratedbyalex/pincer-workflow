@@ -26,8 +26,14 @@ into one reportability gate with named reasons, separates "canary not triggered"
 allocation on a retention failure. `07af4be` points T-109's verification at the study
 checkout's manifest and keeps the measured gate. The study root is
 `/Users/Shared/pincer-v8-study` (detached worktree at `499fb6b` + copied CLI, K0 and Chrome
-for Testing). The proposed inputs resolve there; only decisions and reviewed evidence
-summaries remain pending.
+for Testing). The external checkout and draft effective inputs are now stale for the direct review
+correction over `5bbde21`. Refresh them before execution; decisions and reviewed evidence
+summaries also remain pending.
+
+The direct review correction requires recognized hook completion events with outcomes,
+rejects registration-only text, and preserves the protected original directory when hook
+logs cannot be read or copied. Frozen cohort: `1027f120…`. The current sandbox denies
+`ps`; allocation custody verification must be rerun on a host that permits it.
 
 ## Active / next task
 
