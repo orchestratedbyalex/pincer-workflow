@@ -40,7 +40,9 @@ node test/study-readiness.test.js
 node test/benchmark-allocation.test.js
 node test/benchmark-prepared-bases.test.js
 node test/benchmark-study-launch.test.js
-node scripts/delivery-benchmark-v7/readiness.cjs --manifest docs/prd-v8-artifacts/execution/study.json --require-ready
+# The launchable manifest and every artifact it references live in the study root, which
+# cannot be this repository; the inspector reads the study checkout's copy of the manifest.
+node scripts/delivery-benchmark-v7/readiness.cjs --manifest /Users/Shared/pincer-v8-study/pincer-workflow/docs/prd-v8-artifacts/execution/study.json --input-root /Users/Shared/pincer-v8-study --require-ready
 ```
 
 The named new command/test files are deliverables of this ticket or its predecessors,
