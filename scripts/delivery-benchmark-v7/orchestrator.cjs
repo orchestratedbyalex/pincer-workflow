@@ -156,13 +156,22 @@ function nextRepetition(runsRoot, brief, arm) {
 // again after an interrupted study and what makes it the resume checkpoint.
 function plan(runsRoot, options) {
   const ids = options.ids || briefs.briefIds();
-  for (const cell of schedule.schedule(ids)) validateCell(cell);
+  for (const cell of scheduledCells(ids, options.repetitions)) validateCell(cell);
   planOwned(runsRoot, options, true);
   const claim = claims.acquire(runsRoot, 'plan', 'schedule planning');
   try { return planOwned(runsRoot, options); } finally { claims.release(claim); }
 }
-function planOwned(runsRoot, { cohort, provenance = {}, environment = {}, ids = briefs.briefIds(), effective = null }, dryRun = false) {
-  const cells = schedule.schedule(ids);
+// The scheduled cells, optionally limited to the first `repetitions` repetitions. An
+// operational smoke approves one session per arm; without this prefix, planning a brief
+// would materialise cells the smoke allocation never approved, and the allocation's
+// unlisted-run guard would then refuse every launch. Cell identities are unchanged, so a
+// later full plan of the same runs root simply adds the remaining repetitions.
+function scheduledCells(ids, repetitions = schedule.REPETITIONS) {
+  if (!Number.isInteger(repetitions) || repetitions < 1 || repetitions > schedule.REPETITIONS) throw new Error(`repetitions must select a prefix of the ${schedule.REPETITIONS} scheduled repetitions`);
+  return schedule.schedule(ids).filter(cell => cell.repetition <= repetitions);
+}
+function planOwned(runsRoot, { cohort, provenance = {}, environment = {}, ids = briefs.briefIds(), effective = null, repetitions }, dryRun = false) {
+  const cells = scheduledCells(ids, repetitions);
   if (effective) {
     const manifest = effectiveInputs.assertCurrent(effective);
     ({ provenance, environment } = effectiveInputs.recordInputs(manifest));
@@ -371,11 +380,15 @@ function driveSession({ run, workspace, promptFile, model, maxTurns, wallClockMi
 // flag remains an extra opt-in; it cannot manufacture a study grant or a budget.
 function studyFor(runsRoot, opts, run = null, name = null, prompt = null) {
   if (!opts.effective?.manifest) throw new Error('An effective manifest is required before study execution');
-  if (!opts.allocation?.manifestPath || opts.allocation.purpose !== 'measured') {
-    throw new Error('A concrete measured-study manifest and allocation are required');
+  // The purpose is the approved manifest's label. A measured launch needs the reviewed
+  // native isolation observation; an operational smoke is the launch that collects it,
+  // and its sessions are never reportable study results.
+  const purpose = opts.allocation?.purpose;
+  if (!opts.allocation?.manifestPath || !['measured', 'operational-smoke'].includes(purpose)) {
+    throw new Error('A concrete measured-study or operational-smoke manifest and allocation are required');
   }
   const context = { manifestPath: opts.allocation.manifestPath,
-    inputRoot: opts.allocation.inputRoot, purpose: 'measured' };
+    inputRoot: opts.allocation.inputRoot, purpose };
   const inspected = studyReadiness.inspectStudy(context);
   if (!inspected.ready || !inspected.launchGrant) {
     const codes = (inspected.pending || []).map(item => item.code).join(', ');
@@ -397,20 +410,26 @@ function studyFor(runsRoot, opts, run = null, name = null, prompt = null) {
     }
     context.nextSessionId = selected.id;
   }
-  const observationPath = effectiveInputs.contained(grant.inputRoot, grant.observationFile);
   const executionRoot = fs.realpathSync(opts.effective.inputRoot || opts.effective.root);
   if (fs.realpathSync(grant.inputRoot) !== fs.realpathSync(executionRoot)) {
     throw new Error('Study and execution artifacts must use the same declared root');
   }
-  const observationFile = path.relative(executionRoot, observationPath).split(path.sep).join('/');
-  effectiveInputs.contained(executionRoot, observationFile);
+  // Only a measured launch carries the reviewed observation; the smoke that produces
+  // it has none yet, and the launcher refuses a measured launch without it.
+  let observationFile = null;
+  if (purpose === 'measured') {
+    const observationPath = effectiveInputs.contained(grant.inputRoot, grant.observationFile);
+    observationFile = path.relative(executionRoot, observationPath).split(path.sep).join('/');
+    effectiveInputs.contained(executionRoot, observationFile);
+  }
   const project = selected && grant.projects.find(item => item.id === selected.project);
   if (selected && !project) throw new Error('The selected study project has no approved immutable base');
   return {
     projectBase: project?.base || null,
     allocation: context,
-    readiness: { purpose: 'measured', spendingAuthorized: true, projectAccessAuthorized: true,
-      hostPolicyPreserved: true, decisionRef: grant.decision.ref, observationReviewed: true },
+    readiness: { purpose, spendingAuthorized: true, projectAccessAuthorized: true,
+      hostPolicyPreserved: true, decisionRef: grant.decision.ref,
+      ...(purpose === 'measured' ? { observationReviewed: true } : {}) },
     observationFile,
   };
 }
@@ -636,14 +655,20 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
     const providerCap = s.status === 0 && result?.type === 'result' && result.is_error === true &&
       ['error_max_turns', 'error_max_budget_usd'].includes(result.subtype);
     const nativeUnreportable = typeof opts.fixtureSession !== 'function' && s.reportable !== true;
+    // An operational smoke session is unreportable by purpose, not by defect: it runs
+    // the whole path, including independent evaluation, is finalized as an invalid
+    // operational record, launches no further prompt, and stops the schedule so the
+    // operator inspects it before the next paid session.
+    const operational = typeof opts.fixtureSession !== 'function' && s.observation === 'operational-smoke';
     if (allocationStopped || nativeUnreportable) {
       const reason = allocationStopped
         ? 'Study allocation stopped after this session; retained accounting or custody requires review.'
-        : 'Native session did not attest the required model, isolation or process cleanup; artifacts retained.';
+        : operational ? 'Operational smoke session: retained as operational evidence, never a study result.'
+          : 'Native session did not attest the required model, isolation or process cleanup; artifacts retained.';
       // Once custody is gone, an independent evaluator may inspect a capped
       // candidate even though accounting/model attestation is incomplete. No
       // subsequent paid prompt is permitted, and experiment validity stays invalid.
-      if ((s.end === 'capped' || providerCap) && s.cleanup_complete === true && !s.limit) {
+      if ((s.end === 'capped' || providerCap || operational) && s.cleanup_complete === true && !s.limit) {
         executionFailure = reason;
         stopAfterEvaluation = true;
       } else return finalize('invalid', reason, true);
@@ -682,7 +707,7 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
     }
     if (s.end !== 'capped' && !providerCap) {
       if (s.status !== 0 || s.end === 'failed' || !result || result.type !== 'result' || result.subtype !== 'success' || result.is_error === true) {
-        return finalize('invalid', `Session ${p.name} has no successful provider completion; retained payload determines accounting.`);
+        return finalize('invalid', `Session ${p.name} has no successful provider completion; retained payload determines accounting.`, stopAfterEvaluation);
       }
     }
     if (executionFailure) break;
@@ -720,7 +745,7 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
 // after a reset window and it continues where the limit stopped it.
 async function driveSchedule(runsRoot, opts) {
   const { ids = briefs.briefIds(), kit = null } = opts;
-  const cells = schedule.schedule(ids);
+  const cells = scheduledCells(ids, opts.repetitions);
   if (typeof opts.fixtureSession !== 'function') {
     const refuse = reason => ({ driven: [], stopped: cells[0]?.run || null, reason, refused: true });
     if (opts.spendingCap !== true) return refuse('No spending cap asserted; no browser or session launched');
@@ -778,6 +803,8 @@ async function main(argv) {
       'usage: node orchestrator.cjs --runs <dir> --execution-inputs <json> [options]',
       '--input-root <dir>  root containing kit and browser artifacts (default repository)',
       '--study-manifest <json> --study-input-root <dir>  actual decisions and retained readiness evidence',
+      '--study-purpose measured|operational-smoke  the approved manifest purpose (default measured)',
+      '--repetitions <n>  plan and drive only the first n scheduled repetitions (an operational smoke uses 1)',
       '--model <provider-id> --max-turns <n> --wall-clock-minutes <n> --max-budget-usd <n>',
       '--kit <relative-tarball> --browser <module>  override entries from execution inputs',
       'Missing browser leaves UI checks unavailable; browser dependency roots must be declared.',
@@ -806,7 +833,8 @@ async function main(argv) {
     spendingCap: args['i-have-a-spending-cap'] === true,
     allocation: args['study-manifest'] ? { manifestPath: path.resolve(args['study-manifest']),
       inputRoot: args['study-input-root'] ? path.resolve(args['study-input-root']) : inputRoot,
-      purpose: 'measured' } : null,
+      purpose: args['study-purpose'] || 'measured' } : null,
+    repetitions: args.repetitions,
     apiKey: process.env.ANTHROPIC_API_KEY,
     provenance: {
       protocol: manifest.inputs.protocol, prompts: manifest.inputs.briefs, driver: manifest.inputs.driver,

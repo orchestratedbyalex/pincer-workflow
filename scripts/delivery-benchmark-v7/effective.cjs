@@ -198,7 +198,7 @@ function recordInputs(manifest) {
   };
 }
 function parseArgs(argv) {
-  const valued = new Set(['runs', 'execution-inputs', 'input-root', 'study-manifest', 'study-input-root', 'model', 'max-turns', 'wall-clock-minutes', 'max-budget-usd', 'kit', 'browser']);
+  const valued = new Set(['runs', 'execution-inputs', 'input-root', 'study-manifest', 'study-input-root', 'study-purpose', 'repetitions', 'model', 'max-turns', 'wall-clock-minutes', 'max-budget-usd', 'kit', 'browser']);
   const boolean = new Set(['help', 'plan-only', 'i-have-a-spending-cap']);
   const out = {};
   for (let i = 0; i < argv.length; i++) {
@@ -213,6 +213,14 @@ function parseArgs(argv) {
   for (const key of ['max-turns', 'wall-clock-minutes', 'max-budget-usd']) if (Object.hasOwn(out, key)) {
     if (!/^(?:[1-9]\d*)(?:\.\d+)?$/.test(out[key])) throw new Error(`--${key}: invalid numeric cap`);
     out[key] = positive(Number(out[key]), key, key !== 'max-budget-usd');
+  }
+  // The study purpose is an explicit label on the approved manifest, never inferred.
+  if (Object.hasOwn(out, 'study-purpose') && !['measured', 'operational-smoke'].includes(out['study-purpose'])) throw new Error('--study-purpose: expected measured or operational-smoke');
+  if (Object.hasOwn(out, 'study-purpose') && !Object.hasOwn(out, 'study-manifest')) throw new Error('--study-purpose: requires --study-manifest');
+  // A repetition prefix plans and drives only the first N scheduled repetitions.
+  if (Object.hasOwn(out, 'repetitions')) {
+    if (!/^[1-9]$/.test(out.repetitions)) throw new Error('--repetitions: expected a single positive digit');
+    out.repetitions = Number(out.repetitions);
   }
   return out;
 }

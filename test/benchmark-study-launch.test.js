@@ -33,7 +33,7 @@ try {
       hostPolicyPreserved: true, observationReviewed: true, decisionRef: 'unsupported-boolean-claim' } };
   const noManifest = await runner.driveRun(root, planned.cells[0], options);
   assert.equal(noManifest.refused, true);
-  assert.match(noManifest.detail, /concrete measured-study manifest/);
+  assert.match(noManifest.detail, /concrete measured-study or operational-smoke manifest/);
 
   const pending = { ...options, allocation: {
     manifestPath, inputRoot: root, purpose: 'measured',
@@ -63,7 +63,11 @@ try {
     preflight: isolation.preflightExecution, launch: isolation.launchNative,
     reserve: allocator.reserve, reconcile: allocator.reconcile, evaluate: harness.evaluateCandidate };
   try {
-    for (const scenario of ['wall-cap', 'provider-cap', 'noncap', 'cleanup-unknown', 'changed-project']) {
+    for (const scenario of ['wall-cap', 'provider-cap', 'noncap', 'cleanup-unknown', 'changed-project', 'operational', 'operational-failed']) {
+      // An operational smoke is unreportable by purpose: it must still run the whole
+      // path and evaluate, launch no second prompt, and stop for operator inspection.
+      const operational = scenario.startsWith('operational');
+      const purpose = operational ? 'operational-smoke' : 'measured';
       const runs = tempDir(), inputRoot = tempDir(), baseWorkspace = tempDir();
       harness.prepare(baseWorkspace, 'scope-revision', { arm: 'plain' });
       const base = harness.git(baseWorkspace, 'rev-parse', 'HEAD');
@@ -77,27 +81,32 @@ try {
       const sessions = prompts.map((prompt, index) => ({ id: prompt.name, run, name: prompt.name,
         arm: 'plain', project: scenario === 'changed-project' && index > 0 ? 'other' : 'approved',
         effective_digest: cohort, prompt_digest: effort.sha256(prompt.prompt) }));
-      readiness.inspectStudy = () => ({ ready: true, launchGrant: {
-        inputRoot, observationFile: 'observation.json', allocation: { root: runs },
+      let inspectedPurpose = null;
+      readiness.inspectStudy = context => { inspectedPurpose = context.purpose; return { ready: true, launchGrant: {
+        // The smoke that collects the native observation has none to reference yet.
+        inputRoot, observationFile: operational ? null : 'observation.json', allocation: { root: runs },
         execution: { effective_digest: cohort }, sessions, decision: { ref: 'controlled-decision' },
         projects: [{ id: 'approved', base }, { id: 'other', base: 'd'.repeat(40) }],
-      } });
+      } }; };
       const manifest = { cohort, effective: { model: 'synthetic' }, caps: { turns_per_session: 5, wall_clock_minutes: 1 } };
       effective.assertCurrent = () => manifest;
       isolation.preflightExecution = () => ({ ok: true });
-      let launches = 0, reservations = 0, evaluations = 0;
+      let launches = 0, reservations = 0, evaluations = 0, launched = null;
       allocator.reserve = () => { reservations++; return { fixture: true }; };
-      allocator.reconcile = () => ({ stopped: scenario !== 'changed-project' });
+      allocator.reconcile = () => ({ stopped: !operational && scenario !== 'changed-project' });
       isolation.launchNative = async options => {
         launches++;
+        launched = { readiness: options.readiness, observationFile: options.observationFile };
         fs.mkdirSync(options.logDir, { recursive: true });
         const capped = scenario === 'wall-cap' || scenario === 'cleanup-unknown';
+        const failed = scenario === 'operational-failed';
         const result = { type: 'result', subtype: scenario === 'provider-cap' ? 'error_max_turns' : 'success',
           is_error: scenario === 'provider-cap', total_cost_usd: 0.1, duration_api_ms: 1,
           modelUsage: { fixture: { inputTokens: 1, outputTokens: 1, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 } } };
-        fs.writeFileSync(path.join(options.logDir, `${options.name}.json`), capped ? '{partial' : JSON.stringify(result));
-        return { status: capped ? 124 : 0, end: capped ? 'capped' : 'completed',
+        fs.writeFileSync(path.join(options.logDir, `${options.name}.json`), capped || failed ? '{partial' : JSON.stringify(result));
+        return { status: capped ? 124 : failed ? 7 : 0, end: capped ? 'capped' : failed ? 'failed' : 'completed',
           cleanup_complete: scenario !== 'cleanup-unknown', reportable: scenario === 'changed-project',
+          observation: operational ? 'operational-smoke' : 'measured',
           ended: new Date().toISOString(), environment: { fixture: true, tool: 'synthetic-native-boundary' } };
       };
       harness.evaluateCandidate = async () => { evaluations++; return {
@@ -105,19 +114,31 @@ try {
       }; };
       const out = await runner.driveRun(runs, cell, { cohort, spendingCap: true, model: 'synthetic', maxTurns: 5, wallClockMinutes: 1,
         kit: fs.realpathSync(path.join(inputRoot, 'kit.tgz')), effective: { manifest, inputRoot, input: { kit: { path: 'kit.tgz' } } },
-        allocation: { manifestPath: path.join(inputRoot, 'study.json'), inputRoot, purpose: 'measured' } });
+        allocation: { manifestPath: path.join(inputRoot, 'study.json'), inputRoot, purpose } });
       assert.equal(launches, 1, scenario+JSON.stringify(out));
-      assert.equal(reservations, 1, 'changed project or stopped allocation cannot reserve a later paid session');
+      assert.equal(reservations, 1, 'changed project, stopped allocation or an operational smoke cannot reserve a later paid session');
+      assert.equal(inspectedPurpose, purpose, 'the approved purpose reaches the inspector unchanged');
       if (scenario === 'changed-project') {
         assert.equal(out.refused, true);
         assert.equal(evaluations, 0);
       } else {
         assert.equal(out.record.status, 'invalid', JSON.stringify(out));
         assert.equal(out.stop, true);
-        const canEvaluate = ['wall-cap', 'provider-cap'].includes(scenario);
+        const canEvaluate = ['wall-cap', 'provider-cap', 'operational'].includes(scenario);
         assert.equal(evaluations, canEvaluate ? 1 : 0, scenario);
         assert.equal(out.record.evaluation?.outcome || null, canEvaluate ? 'accepted' : null);
         assert.deepEqual(effort.problems(out.record), []);
+      }
+      if (operational) {
+        assert.equal(launched.readiness.purpose, 'operational-smoke');
+        assert.equal(launched.readiness.observationReviewed, undefined, 'a smoke claims no reviewed native observation');
+        assert.equal(launched.observationFile, null);
+        assert.match(out.record.reason, scenario === 'operational' ? /Operational smoke session/ : /no successful provider completion/);
+      } else if (scenario !== 'changed-project') {
+        assert.equal(launched.readiness.purpose, 'measured');
+        assert.equal(launched.readiness.observationReviewed, true);
+        assert.equal(launched.observationFile, 'observation.json');
+        assert.doesNotMatch(out.record.reason, /Operational smoke/);
       }
     }
   } finally {
@@ -127,4 +148,40 @@ try {
   }
 }
 
-console.log('benchmark study launch tests passed (pending decisions, exact session bases, capped native-boundary evaluation)');
+// A repetition prefix plans and drives only the approved first repetitions, so a
+// three-session smoke never materialises cells its allocation did not approve.
+{
+  const runs = tempDir(), kitRoot = tempDir();
+  const first = runner.plan(runs, { cohort, ids: ['ui-states'], repetitions: 1 });
+  assert.deepEqual(first.cells.map(cell => cell.run), ['ui-states/rep-1/pincer', 'ui-states/rep-1/strict', 'ui-states/rep-1/plain']);
+  assert.equal(first.created.length, 3);
+  for (const repetitions of [0, 4, 1.5, '1']) assert.throws(() => runner.plan(runs, { cohort, ids: ['ui-states'], repetitions }), /prefix/);
+  // Tiny local archive exercises the real kit-install path without any released-kit claim.
+  const pkg = path.join(kitRoot, 'archive/package');
+  fs.mkdirSync(path.join(pkg, 'bin'), { recursive: true });
+  fs.writeFileSync(path.join(pkg, 'package.json'), JSON.stringify({ version: '1.0.0' }));
+  fs.writeFileSync(path.join(pkg, 'bin/pincer.js'), `const fs=require('node:fs');fs.mkdirSync('.claude',{recursive:true});fs.writeFileSync('.claude/CLAUDE.md','synthetic kit fixture\\n');`);
+  const archive = path.join(kitRoot, 'fixture-kit.tgz');
+  assert.equal(harness.sh('tar', ['-czf', archive, '-C', path.dirname(pkg), 'package']).status, 0);
+  let sessions = 0;
+  const fixtureSession = async () => { sessions++; throw new Error('controlled: no session is launched'); };
+  const prefix = await runner.driveSchedule(runs, { cohort, ids: ['ui-states'], repetitions: 1, spendingCap: true, kit: archive, fixtureSession });
+  assert.equal(prefix.stopped, null, JSON.stringify(prefix));
+  assert.deepEqual(prefix.driven.map(d => [d.run, d.status]), first.cells.map(cell => [cell.run, 'invalid']));
+  assert.equal(sessions, 3);
+  assert.equal(fs.existsSync(path.join(runs, 'ui-states/rep-2')), false, 'a prefix never materialises unapproved repetitions');
+  const full = runner.plan(runs, { cohort, ids: ['ui-states'] });
+  assert.equal(full.cells.length, 9);
+  assert.equal(full.created.length, 6, 'the remaining repetitions keep their identities');
+  const rest = await runner.driveSchedule(runs, { cohort, ids: ['ui-states'], spendingCap: true, kit: archive, fixtureSession });
+  assert.equal(rest.driven.filter(d => d.skipped).length, 3, 'terminal prefix cells are never redriven');
+  assert.equal(sessions, 9);
+}
+{
+  assert.deepEqual(effective.parseArgs(['--study-manifest', 'study.json', '--study-purpose', 'operational-smoke', '--repetitions', '1']),
+    { 'study-manifest': 'study.json', 'study-purpose': 'operational-smoke', repetitions: 1 });
+  for (const args of [['--study-purpose', 'operational-smoke'], ['--study-manifest', 'study.json', '--study-purpose', 'smoke'],
+    ['--repetitions', '0'], ['--repetitions', '10'], ['--repetitions', '1', '--repetitions', '1']]) assert.throws(() => effective.parseArgs(args), args.join(' '));
+}
+
+console.log('benchmark study launch tests passed (pending decisions, exact session bases, capped native-boundary evaluation, operational smoke, repetition prefix)');
