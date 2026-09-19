@@ -1,10 +1,14 @@
 ---
 ticket: T-103
-status: open
+status: done
 size: M
 prd: .prd/prd-v8.md
 depends_on: [T-101]
 timeout: 900
+started: 2026-09-19T06:49:07Z
+last_check: 2026-09-19T07:08:24Z passed 4af8199123f2
+verified: 2026-09-19T07:08:24Z 4af8199123f2
+finished: 2026-09-19T07:08:24Z
 ---
 
 ## Objective
@@ -26,9 +30,9 @@ Prevent two operators or processes from launching or rewriting the same measured
 Use atomic exclusive ownership and unique atomic record writes. Define ownership liveness and recovery in T-100; test simultaneous processes and real termination of stand-in processes. This is study-run ownership, not a redesign of the installed runtime transaction engine.
 
 ## Acceptance Criteria
-- [ ] S-10: Two simultaneous attempts to execute one cell produce exactly one launch and one explicit busy refusal; separate cells can proceed without sharing mutable workspaces or event files.
-- [ ] S-11: Run ownership, rerun-slot allocation and record publication survive injected crashes before and after claim/write boundaries; live ownership cannot be reclaimed as stale and an abandoned claim has an explicit recoverable disposition.
-- [ ] S-12: A losing claimant or malformed/escaping run identity changes no workspace or artifacts; recovery preserves original logs and completed records and creates no duplicate paid work silently.
+- [x] S-10: Two simultaneous attempts to execute one cell produce exactly one launch and one explicit busy refusal; separate cells can proceed without sharing mutable workspaces or event files.
+- [x] S-11: Run ownership, rerun-slot allocation and record publication survive injected crashes before and after claim/write boundaries; live ownership cannot be reclaimed as stale and an abandoned claim has an explicit recoverable disposition.
+- [x] S-12: A losing claimant or malformed/escaping run identity changes no workspace or artifacts; recovery preserves original logs and completed records and creates no duplicate paid work silently.
 
 ## Verification
 Proves: The focused checks exercise the stated controls and failure paths. Static assertions are sufficient only for authored contracts/generated artifacts; behavioral claims require observed outputs, side effects or refusal behavior.

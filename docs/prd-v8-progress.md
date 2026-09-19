@@ -56,3 +56,12 @@ idempotency, unrelated-work refusal, truncated writes and candidate freshness. P
 review found and corrected API-only validation and partial-effects/idempotency gaps.
 Distribution and historical-contract suites pass. No repository version was changed;
 no candidate was selected, tagged or published.
+
+### T-103
+
+Independent-process controls prove one launch per cell, separate-cell concurrency,
+exclusive rerun allocation, complete atomic checkpoints, and explicit dead-owner recovery.
+Surviving inherited or registered detached children prevent reclaim. Parent review added
+complete recovery-receipt publication and retry validation. The sandbox denies the process
+group inspection needed by these tests; verification passed outside it. Ambiguous hosts
+remain blocked rather than assumed dead. T-104 still owns checkpoint replay and attempts.

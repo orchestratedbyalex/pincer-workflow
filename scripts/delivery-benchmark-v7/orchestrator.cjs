@@ -38,6 +38,7 @@ const harness = require('./harness.cjs');
 const effort = require('./effort.cjs');
 const freeze = require('./freeze.cjs');
 const effectiveInputs = require('./effective.cjs');
+const claims = require('./run-claims.cjs');
 
 const DRIVER = path.join(__dirname, 'live-driver.sh');
 
@@ -75,8 +76,8 @@ const CAP_MARKER = /wall-clock cap/;
 const LIMIT_RE = /usage limit|session limit|rate limit|quota/i;
 
 // The schedule owns repetitions 1..REPETITIONS; a rerun takes the next free number above
-// it, up to MAX_REPETITION. The presence of record.json is the allocation lock, and it is
-// crash-safe because `plan` and `claimRerun` never overwrite one.
+// it, up to MAX_REPETITION. Pair-level exclusive claims serialize allocation; cell
+// claims protect complete atomic record publication. Existing records are never replaced.
 const RERUN_FIRST = schedule.REPETITIONS + 1;
 
 const iso = () => new Date().toISOString();
@@ -85,12 +86,21 @@ const iso = () => new Date().toISOString();
 // none, so derive it the same way `effort` does rather than keeping a second spelling.
 const idOf = cell => cell.run || effort.runId(cell.brief, cell.repetition, cell.arm);
 
+function validateCell(cell) {
+  if (!cell || !briefs.briefIds().includes(cell.brief) || !schedule.ARMS.includes(cell.arm) || !Number.isInteger(cell.repetition) || cell.repetition < 1 || cell.repetition > schedule.MAX_REPETITION || (cell.run !== undefined && cell.run !== effort.runId(cell.brief, cell.repetition, cell.arm))) {
+    throw Object.assign(new Error('invalid or escaping study cell identity'), { code: 'RUN_ID_INVALID' });
+  }
+  return cell;
+}
+function cellKey(cell) { validateCell(cell); return `cell.${cell.brief}.${cell.repetition}.${cell.arm}`; }
 function runDir(runsRoot, cell) {
-  return path.join(runsRoot, cell.brief, `rep-${cell.repetition}`, cell.arm);
+  validateCell(cell);
+  return claims.contained(runsRoot, `${cell.brief}/rep-${cell.repetition}/${cell.arm}`);
 }
 
 function recordPath(runsRoot, cell) {
-  return path.join(runDir(runsRoot, cell), 'record.json');
+  runDir(runsRoot, cell);
+  return claims.contained(runsRoot, `${cell.brief}/rep-${cell.repetition}/${cell.arm}/record.json`);
 }
 
 function readRecord(runsRoot, cell) {
@@ -101,14 +111,17 @@ function readRecord(runsRoot, cell) {
 // Written through a temp file and renamed, so a process killed mid-write leaves the
 // previous record intact rather than a truncated one. A half-written checkpoint is worse
 // than none: resume would skip the cell.
-function writeRecord(runsRoot, cell, record) {
-  const dir = runDir(runsRoot, cell);
-  fs.mkdirSync(dir, { recursive: true });
-  const p = path.join(dir, 'record.json');
-  const tmp = `${p}.tmp`;
-  fs.writeFileSync(tmp, `${JSON.stringify(record, null, 2)}\n`);
-  fs.renameSync(tmp, p);
-  return p;
+function writeRecord(runsRoot, cell, record, claim = null) {
+  const key = cellKey(cell);
+  if (record.run !== idOf(cell) || record.brief !== cell.brief || record.arm !== cell.arm || record.repetition !== cell.repetition) throw new Error('record identity does not match cell');
+  const owned = claim || claims.acquire(runsRoot, key, 'record publication');
+  try {
+    claims.assertOwner(owned, runsRoot, key);
+    const dir = runDir(runsRoot, cell); fs.mkdirSync(dir, { recursive: true });
+    const file = claims.contained(runsRoot, `${cell.brief}/rep-${cell.repetition}/${cell.arm}/record.json`);
+    claims.atomicWrite(file, `${JSON.stringify(record, null, 2)}\n`);
+    return file;
+  } finally { if (!claim) claims.release(owned); }
 }
 
 const limitHit = text => LIMIT_RE.test(String(text || ''));
@@ -133,7 +146,14 @@ function nextRepetition(runsRoot, brief, arm) {
 // Materialise the schedule as pending records. Idempotent by construction: a cell that
 // already has a record is left exactly as it is, which is what makes `plan` safe to call
 // again after an interrupted study and what makes it the resume checkpoint.
-function plan(runsRoot, { cohort, provenance = {}, environment = {}, ids = briefs.briefIds(), effective = null }) {
+function plan(runsRoot, options) {
+  const ids = options.ids || briefs.briefIds();
+  for (const cell of schedule.schedule(ids)) validateCell(cell);
+  planOwned(runsRoot, options, true);
+  const claim = claims.acquire(runsRoot, 'plan', 'schedule planning');
+  try { return planOwned(runsRoot, options); } finally { claims.release(claim); }
+}
+function planOwned(runsRoot, { cohort, provenance = {}, environment = {}, ids = briefs.briefIds(), effective = null }, dryRun = false) {
   const cells = schedule.schedule(ids);
   if (effective) {
     const manifest = effectiveInputs.assertCurrent(effective);
@@ -162,19 +182,25 @@ function plan(runsRoot, { cohort, provenance = {}, environment = {}, ids = brief
       }
     }
     inspect(runsRoot);
+    if (dryRun) return;
     fs.mkdirSync(runsRoot, { recursive: true });
-    if (!fs.existsSync(manifestPath)) fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, { flag: 'wx' });
+    if (!fs.existsSync(manifestPath)) claims.atomicWrite(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   }
+  if (dryRun) return;
   const created = [];
   for (const cell of cells) {
+    if (readRecord(runsRoot, cell)) continue;
+    const claim = claims.acquire(runsRoot, cellKey(cell), 'new planned cell');
+    try {
     if (readRecord(runsRoot, cell)) continue;
     const record = effort.empty({
       run: idOf(cell), cohort,
       brief: cell.brief, arm: cell.arm, repetition: cell.repetition, order: cell.order,
       provenance, environment,
     });
-    writeRecord(runsRoot, cell, record);
+    writeRecord(runsRoot, cell, record, claim);
     created.push(record.run);
+    } finally { claims.release(claim); }
   }
   return { cells, created };
 }
@@ -182,7 +208,16 @@ function plan(runsRoot, { cohort, provenance = {}, environment = {}, ids = brief
 // Claim a rerun slot for an invalidated cell. The replaced run is named in the new
 // record's reason and in an `operator` event, so a reader never has to infer which run a
 // rerun replaces — and the original stays on disk with its own reason.
-function claimRerun(runsRoot, cell, { cohort, provenance = {}, environment = {} }) {
+function claimRerun(runsRoot, cell, options) {
+  validateCell(cell);
+  const allocation = claims.acquire(runsRoot, `reruns.${cell.brief}.${cell.arm}`, 'rerun slot allocation');
+  let original;
+  try {
+    original = claims.acquire(runsRoot, cellKey(cell), 'inspect original for rerun');
+    return claimRerunOwned(runsRoot, cell, options);
+  } finally { if (original) claims.release(original); claims.release(allocation); }
+}
+function claimRerunOwned(runsRoot, cell, { cohort, provenance = {}, environment = {} }) {
   const original = readRecord(runsRoot, cell);
   if (!original) throw new Error(`no record to rerun at ${idOf(cell)}`);
   if (original.status !== 'invalid') throw new Error(`${original.run} is ${original.status}, not invalid; only an invalid run is rerun`);
@@ -358,6 +393,19 @@ function driveSession({ run, workspace, promptFile, model, maxTurns, wallClockMi
 // limit, which is the single condition that must halt the whole schedule rather than
 // this cell.
 async function driveRun(runsRoot, cell, opts) {
+  const key = cellKey(cell);
+  // Validate containment before creating claim metadata, even for a losing claimant.
+  runDir(runsRoot, cell);
+  let claim;
+  try { claim = claims.acquire(runsRoot, key, 'execute study cell'); }
+  catch (error) {
+    if (!['RUN_BUSY', 'RUN_RECOVERY_REQUIRED'].includes(error.code)) throw error;
+    return { record: readRecord(runsRoot, cell), stop: true, refused: true, code: error.code, detail: error.message };
+  }
+  try { return await driveRunOwned(runsRoot, cell, opts, claim); }
+  finally { claims.release(claim); }
+}
+async function driveRunOwned(runsRoot, cell, opts, claim) {
   const {
     cohort, kit = null, model = 'sonnet', maxTurns = 150, wallClockMinutes = 30,
     dir = briefs.BRIEFS_DIR, tools = harness.DEFAULT_TOOLS(), browser = null,
@@ -455,7 +503,7 @@ async function driveRun(runsRoot, cell, opts) {
   record.events.push({ kind: 'stage', id: `${record.run}:setup`, stage: 'setup', started: setupStart, ended: iso() });
   // The first checkpoint that says this cell was actually started. Everything above is
   // recoverable from the workspace; from here on a crash costs money.
-  writeRecord(runsRoot, cell, record);
+  writeRecord(runsRoot, cell, record, claim);
 
   const sessionNames = brief.prompts.map(x => x.name);
   for (const p of brief.prompts) {
@@ -467,6 +515,7 @@ async function driveRun(runsRoot, cell, opts) {
     const s = await session({
       run: record.run, workspace: ws, promptFile, model, maxTurns,
       wallClockMinutes, cohort, logDir: logs, name: p.name, spendingCap, effective: opts.effective,
+      onGroup: group => claims.registerGroup(claim, group),
     });
     if (s.refused) return refuse(`${record.run}: the driver refused the session; no spending cap has been asserted`);
     record.events.push({
@@ -476,7 +525,7 @@ async function driveRun(runsRoot, cell, opts) {
     // Checkpointed per SESSION, not per cell. A cell is up to three paid sessions; a
     // crash after the second used to leave a record reading `pending` with no events,
     // so nothing on disk said those sessions had been bought.
-    writeRecord(runsRoot, cell, record);
+    writeRecord(runsRoot, cell, record, claim);
 
     // An account limit ends the study, not the cell. Marking it invalid keeps the
     // partial work and its reason; walking on would convert every later cell into a
@@ -488,7 +537,7 @@ async function driveRun(runsRoot, cell, opts) {
         kind: 'intervention', id: `${record.run}:${p.name}:limit`, started: s.ended, ended: s.ended,
         intervention: 'operator', detail: record.reason,
       });
-      writeRecord(runsRoot, cell, record);
+      writeRecord(runsRoot, cell, record, claim);
       return { record, stop: true };
     }
 
@@ -504,7 +553,7 @@ async function driveRun(runsRoot, cell, opts) {
     } else if (s.end === 'ambiguous') {
       record.status = 'invalid';
       record.reason = `session ${p.name} exited ${s.status} without a matching cap marker; the cap and the exit status disagree`;
-      writeRecord(runsRoot, cell, record);
+      writeRecord(runsRoot, cell, record, claim);
       return { record, stop: false };
     }
   }
@@ -517,7 +566,7 @@ async function driveRun(runsRoot, cell, opts) {
   } catch (e) {
     record.status = 'invalid';
     record.reason = `evaluation failed: ${String(e.message).slice(0, effort.LIMITS.reason)}`;
-    writeRecord(runsRoot, cell, record);
+    writeRecord(runsRoot, cell, record, claim);
     return { record, stop: false };
   }
   record.evaluation = {
@@ -527,7 +576,7 @@ async function driveRun(runsRoot, cell, opts) {
   record.events.push({ kind: 'evaluation', id: `${record.run}:evaluation`, started: evalStart, ended: iso() });
   record.status = harness.statusFor(evaluation.outcome);
   const problems = complete(record, { logDir: logs, workspace: ws, sessions: sessionNames });
-  writeRecord(runsRoot, cell, record);
+  writeRecord(runsRoot, cell, record, claim);
   return { record, stop: false, problems };
 }
 
@@ -545,11 +594,11 @@ async function driveSchedule(runsRoot, opts) {
   const driven = [];
   for (const cell of cells) {
     const result = await driveRun(runsRoot, cell, opts);
-    driven.push({ run: result.record.run, status: result.record.status, skipped: Boolean(result.skipped) });
+    driven.push({ run: result.record?.run || idOf(cell), status: result.record?.status || 'pending', skipped: Boolean(result.skipped) });
     if (result.stop) {
       // A refusal reports its own detail: the cell is untouched and still pending, so its
       // record carries no reason to read.
-      return { driven, stopped: result.record.run, reason: result.detail || result.record.reason, refused: Boolean(result.refused) };
+      return { driven, stopped: result.record?.run || idOf(cell), reason: result.detail || result.record?.reason, refused: Boolean(result.refused) };
     }
   }
   return { driven, stopped: null, reason: null, refused: false };
@@ -629,7 +678,9 @@ module.exports = {
   main,
   DRIVER, CAP_EXIT, CAP_MARKER, LIMIT_RE, RERUN_FIRST,
   ARM_PREAMBLE, CHANGES_DIR,
-  runDir, recordPath, readRecord, writeRecord,
+  runDir, recordPath, readRecord, writeRecord, cellKey, validateCell,
+  inspectClaim: (root, cell) => claims.inspect(root, cellKey(cell)),
+  recoverRun: (root, cell, decision) => claims.recover(root, cellKey(cell), decision),
   observeAdoption, readUsage, complete,
   limitHit, endOf, nextRepetition, plan, claimRerun, installKit,
   driveSession, driveRun, driveSchedule,
