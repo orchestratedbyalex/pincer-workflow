@@ -334,5 +334,9 @@ session, launch, push, merge or publication; no decision inferred.
   (harness only); dry-run effective cohort `141a70da…` → `12535053…`; worktree moved to
   `499fb6b`, drafts regenerated, `runs/smoke` untouched.
 
-The full `npm test` result and the pinned-kit re-verification are recorded below this
-entry once complete.
+The full `npm test` chain (76 suites) passed locally on 19 September 2026 (started 20:38Z,
+finished 20:54Z, exit 0) on the tree at `499fb6b` plus the documentation edits. T-109 was
+re-verified through the pinned kit at 20:54Z: its four suites pass and the measured
+readiness gate exits 2 by design with 14 pending reasons (`last_check … failed
+c936a9b60fc5`). No CI run exists for these commits; the branch is not pushed. T-109 and
+T-102 remain in progress.
