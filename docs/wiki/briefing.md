@@ -17,9 +17,12 @@ installation, not observed live support; no paid session has run under v8.
 The first operational smoke is packaged, not authorized:
 `docs/prd-v8-artifacts/execution/T-109-smoke-execution-package.md` ([[study-readiness-gate]]).
 An independent review found the documented launch command planned 24 cells (the CLI had no
-brief selection); `bffcfc8` adds the required `--briefs`, retains `cleanup_complete` in the
-record, and the package's §5/§8 b/§12 were corrected. The study root is
-`/Users/Shared/pincer-v8-study` (detached worktree at `bffcfc8` + copied CLI, K0 and Chrome
+brief selection); `bffcfc8` adds the required `--briefs` and retains `cleanup_complete`.
+`f504c80` finishes the native-observation preparation: a synthetic isolation canary in the
+per-session HOME/config and a redacted copy of the CLI's hook debug log
+(`--debug hooks --debug-file`); nothing personal is read. `07af4be` points T-109's
+verification at the study checkout's manifest and keeps the measured gate. The study root is
+`/Users/Shared/pincer-v8-study` (detached worktree at `f504c80` + copied CLI, K0 and Chrome
 for Testing). The proposed inputs resolve there; only decisions and reviewed evidence
 summaries remain pending.
 
@@ -50,6 +53,8 @@ Reviewer attention: the protocol corrections proposed in the package §8.
   never this repo's copy (`PATH_INVALID`) ([[study-readiness-gate]]).
 - The orchestrator CLI plans every brief unless `--briefs` is given; the smoke purpose
   requires it. Test the entry point by spawning it, not via `plan()` with `ids`.
+- Changing any `PROFILE` field in `isolated-launch.cjs` moves the observation target; never
+  observe isolation by reading the operator's real `~/.claude` (synthetic canary instead).
 - `orchestrator.cjs`, `effective.cjs`, `readiness.cjs`, `allocation.cjs`,
   `isolated-launch.cjs` and the v8 protocol/isolation/usage docs are in `SPEC.harness`:
   after editing any, regenerate `test/fixtures/delivery-benchmark-v7/frozen.json` (command

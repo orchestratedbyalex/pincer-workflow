@@ -20,10 +20,16 @@ is `study.json` beside it.
   `lifecycle(purpose)` reads ticket receipts from the checkout the orchestrator runs in:
   smoke needs T-101, T-103–T-108 done and T-102 verified; measured adds T-102 and T-109 done.
 - `isolated-launch.cjs` — profile `claude-project-isolated-v1`, pinned to CLI **2.1.273**,
-  explicit ten-variable environment, per-session empty HOME/config, `--permission-prompts
-  none`, empty MCP. `observationTarget` = profile + tool bytes/version + model + kit +
-  platform. A session is `reportable` only for the measured purpose with an attested model
-  and complete cleanup; a smoke session is unreportable by purpose.
+  explicit ten-variable environment, per-session HOME/config holding only a **synthetic
+  canary** (user-level `settings.json` with a `SessionStart` hook touching a marker, and a
+  `CLAUDE.md` with a random phrase; `environment.isolation_canary {ok, user_hook_ran,
+  phrase_in_captures}` after the run), `--permission-prompts none`, empty MCP, and
+  `--debug hooks --debug-file <session>/debug.log` whose redacted copy is retained as
+  `logs/<S>.debug.log` (`environment.hook_capture {present, file, bytes}`).
+  `observationTarget` = profile + tool bytes/version + model + kit + platform, so a PROFILE
+  field change moves it (`8af4d99d…` → `d53ff6f0…` on 2026-09-19). A session is
+  `reportable` only for the measured purpose with an attested model, complete cleanup and
+  an untripped canary; a smoke session is unreportable by purpose.
 - `orchestrator.cjs` — `studyFor` resolves the grant before any workspace work; per prompt:
   reserve → intent → launch → reconcile → evaluate → finalize. `--study-purpose
   operational-smoke`, `--repetitions 1` and `--briefs ui-states` (all added 2026-09-19) are
@@ -62,18 +68,24 @@ is `study.json` beside it.
   by spawning it; a suite that hands `ids` to `plan()` proves nothing about the CLI.
 - `orchestrator.cjs` and `effective.cjs` are in `SPEC.harness`: after editing either,
   regenerate `test/fixtures/delivery-benchmark-v7/frozen.json` (command at the top of
-  `freeze-spec.cjs`). Cohort moved `4113e10b…` → `f09e4312…` → `d1e57a17…` on 2026-09-19
-  for the smoke launch path and then `--briefs`; zero paid runs existed. The dry-run
-  effective cohort in the study root's `drafts/` moves with it (`976db3ee…` → `64325207…`)
+  `freeze-spec.cjs`). Cohort moved `4113e10b…` → `f09e4312…` → `d1e57a17…` → `b0299e7e…`
+  on 2026-09-19 for the smoke launch path, `--briefs`, then the canary and hook capture;
+  zero paid runs existed. The dry-run effective cohort in the study root's `drafts/` moves
+  with it (`976db3ee…` → `64325207…` → `141a70da…`)
   and the honest draft must be regenerated (script pattern: recompute `effective.resolve`
   from the study checkout, refresh `execution.{candidate,effective.digest,
   observation_target,evidence_target,inputs[].digest}` and `schedule[].effective_digest`).
 - The profile pins `--output-format json`, which captures only the final result object;
-  switching to `stream-json` is a profile change and a new cohort. Consequence for the
-  native observation: kit **hooks** write no file, so under `json` the smoke can show they
-  were installed and registered, never that they fired. `cleanup_complete` is retained in
-  `record.environment` since `bffcfc8`; the ledger's `ALLOCATION_CLEANUP_UNKNOWN` stop is
-  the second durable source.
+  switching to `stream-json` is a profile change and a new cohort. Kit **hook** firing no
+  longer depends on it: the CLI's own hook debug log is captured (`f504c80`). Whether the
+  pinned CLI's `hooks` debug category actually names each executed hook command and status
+  is a smoke finding (`hook_capture.present` and the log content). `cleanup_complete` is
+  retained in `record.environment` since `bffcfc8`; the ledger's `ALLOCATION_CLEANUP_UNKNOWN`
+  stop is the second durable source.
+- **Never observe isolation by reading the operator's real configuration.** The withdrawn
+  proposal to digest `~/.claude` and grep captures for private text is replaced by the
+  synthetic canary; the environment suite's hostile-home fixtures already prove the
+  launcher inherits nothing from the operator's process.
 - The real-browser gate defaults to `/Applications/Google Chrome` at 153.0.8010.48; point
   it at the pinned runtime with `PINCER_BROWSER_EXECUTABLE` and `PINCER_BROWSER_VERSION`.
   Google Chrome auto-updates, so T-107's pass on it is not evidence for a pinned copy.

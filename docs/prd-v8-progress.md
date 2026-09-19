@@ -258,3 +258,43 @@ locally on 19 September 2026 (started 17:38Z, finished 17:53Z, exit 0) on the tr
 17:53Z: its four suites pass and the readiness command still exits 2 by design
 (`last_check … failed 9f673d51f3aa`). No CI run exists for these commits; the branch is
 not pushed. T-109 and T-102 remain in progress.
+
+### T-109 — native-observation preparation (19 September 2026)
+
+Follow-up to the review corrections. No paid session, launch, push, merge, publication or
+new project access; no decision inferred. Commits `f504c80` (harness), `07af4be` (ticket
+verification path) and this documentation commit.
+
+- **Real personal configuration is out.** The package's earlier proposal to digest the
+  operator's `~/.claude` before and after the smoke, and to compare captures against
+  private instruction text, is withdrawn. Nothing personal is read, hashed or compared.
+- **Synthetic isolation canary.** The launcher plants user-level `settings.json` (a
+  `SessionStart` hook that touches a marker) and a `CLAUDE.md` with a random per-session
+  phrase in the per-session `HOME/.claude` and `CLAUDE_CONFIG_DIR`, where a CLI ignoring
+  `--setting-sources project` would read them, and records
+  `environment.isolation_canary { ok, user_hook_ran, phrase_in_captures }`. A tripped
+  canary is unreportable; the phrase is never retained. Profile `home` is now
+  `per-session-synthetic-canary`.
+- **Hook capture.** The argv adds `--debug hooks --debug-file <session>/debug.log`; the
+  launcher retains a redacted copy as `logs/S1.debug.log` (0600, append-preserved) and
+  records `environment.hook_capture { present, file, bytes }`. Absence is recorded, not
+  read as "no hooks". The result object on stdout, accounting, redaction and interruption
+  handling are unchanged. Profile field `hook_capture: debug-hooks-file`.
+- **Suites.** `test/benchmark-environment.test.js` covers a compliant tool (canary clean),
+  a leaking tool that reads the planted settings (canary tripped, unreportable), debug
+  redaction and mode, and a recorded absence. Fifteen focused suites passed after the
+  change. Cohort `d1e57a17…` → `b0299e7e…` (harness only); observation target
+  `8af4d99d…` → `d53ff6f0…`; dry-run effective cohort `64325207…` → `141a70da…` (worktree
+  moved to `f504c80`, drafts regenerated, `runs/smoke` untouched).
+- **Ticket verification path.** T-109's block now runs the inspector against the study
+  checkout's manifest with `--input-root /Users/Shared/pincer-v8-study` and keeps the
+  measured `--require-ready` gate: exercised from the repository, exit 2 with 14 pending
+  reasons including the native, smoke and report evidence, so the ticket cannot close
+  before those exist.
+- **Open smoke findings, not preparation facts:** whether the pinned CLI's `hooks` debug
+  category writes each executed hook command and status to the debug file, and whether
+  `--debug-file` keeps stdout clean. Both are documented behavior; a failure would surface
+  as `hook_capture.present: false` or an invalid record, never as a silent pass.
+
+The full `npm test` result and the pinned-kit re-verification are recorded below this
+entry once complete.

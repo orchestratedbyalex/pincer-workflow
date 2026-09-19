@@ -1,6 +1,7 @@
 # T-109 operational smoke — execution package
 
-Prepared 19 September 2026 on `feat/prd-v8`; corrected the same day after review (§12).
+Prepared 19 September 2026 on `feat/prd-v8`; corrected the same day after review and
+extended with the native-observation preparation (§12).
 No paid session, study launch, external message, merge, publication or new project access
 occurred. This package prepares the **first operational smoke** only; it authorizes nothing
 and forecasts nothing.
@@ -17,7 +18,7 @@ The checked-in [`study.json`](study.json) stays pending and lists the same gaps.
 
 | Item | Value | Status |
 | --- | --- | --- |
-| Runner candidate | `feat/prd-v8` HEAD at handoff (SHA in the handoff report and the progress journal). The dry run below used `bffcfc8`, the commit that added `--briefs` and retained cleanup in the record (§12); later commits are documentation only and leave the frozen inputs and helper closure unchanged. The reviewer pins the final SHA after CI runs on it. | Proposed |
+| Runner candidate | `feat/prd-v8` HEAD at handoff (SHA in the handoff report and the progress journal). The dry run below used `f504c80`, the commit that added the synthetic isolation canary and the hook capture (§12 item 4; `bffcfc8` added `--briefs`); later commits are documentation only and leave the frozen inputs and helper closure unchanged. The reviewer pins the final SHA after CI runs on it. | Proposed |
 | Study checkout | `/Users/Shared/pincer-v8-study/pincer-workflow`, a detached `git worktree` of the candidate; `execution.source_root` = `pincer-workflow`. | Proposed |
 | CLI | Claude Code **2.1.273**, Mach-O arm64, 212 228 880 bytes, sha256 `953e9880dbcb0b70f31c1f508de6a3fd389753d131688557fd992da9184693fb`. Source: `~/.local/share/claude/versions/2.1.273` (the target of `~/.local/bin/claude`); copied byte-for-byte to `inputs/tool/claude-2.1.273` in the study root. The isolation profile `claude-project-isolated-v1` accepts exactly this version. The profile's full argument vector parses on this binary (`--version` probe; parse-level only, no session). | Verified |
 | Model | `claude-sonnet-5`. Rationale: the v7 cohort pinned the `sonnet` alias, which the v8 contract no longer accepts; this is the current-generation resolution of that pin. Alternative: `claude-opus-5`. Reference prices (claude-api reference cached 2026-06-24, first-party API): Sonnet 5 $2/$10 per MTok in/out; Opus 5 $5/$25. The CLI must attest the same model string in its result payload or the session is unreportable; that attestation is a smoke finding, not a preparation fact. | Proposed / **Decision** |
@@ -25,7 +26,7 @@ The checked-in [`study.json`](study.json) stays pending and lists the same gaps.
 | Kit K0 | v0.6.0 at peeled commit `694241cc684f2dd95a0cfe7ffa2827414683e84a`; artifact = npm registry tarball `pincer-workflow-0.6.0.tgz`, 244 142 bytes, sha256 `cb6c63f97b6cd780456807339e8d9d01dbc94ad3370594010dc1e4914c835009`, sha1 `a6bc2b6efa2a27164579b87ca12d3cf88b20e8a5` (equals the registry `dist.shasum`). `bin/`, `template/` and `package.json` are byte-identical to the commit; `README.md` differs (4 diff lines, the tag message explains why) and `LICENSE` exists only in the tarball. Copied to `inputs/kits/pincer-workflow-0.6.0.tgz`. K1 and K2 are not selected. | Verified (artifact acceptance is a **Decision**) |
 | Platform | darwin 25.6.0 (macOS 26.6.2) arm64, Node v22.23.1; recorded by the resolver. | Verified |
 | Management kit | `/tmp/pincer-v8-management-694241c/scripts`, 34 files byte-identical to `v0.6.0:template/scripts`; aggregate digest `c0354c6452d0f5605a7d5a28c385321df4fc7fe7b5fe46fd7d6284cfc1d35cb9` (sorted `scripts/<path>` + NUL + content). | Verified |
-| Isolation configuration | `permission_mode: manual`, `cwd_kind: scratch`, `isolation_profile: claude-project-isolated-v1`; per-session empty `HOME`, `CLAUDE_CONFIG_DIR`, `TMPDIR`; `--setting-sources project`, `--permission-prompts none`, explicit empty MCP, no Chrome integration, no session persistence. | Verified (code) |
+| Isolation configuration | `permission_mode: manual`, `cwd_kind: scratch`, `isolation_profile: claude-project-isolated-v1`; per-session `HOME`, `CLAUDE_CONFIG_DIR`, `TMPDIR` holding only the synthetic canary (§5); `--setting-sources project`, `--permission-prompts none`, explicit empty MCP, no Chrome integration, no session persistence; `--debug hooks --debug-file <session>/debug.log` for the hook capture (§5). Observation target `d53ff6f0…` (profile, tool, model, kit, platform). | Verified (code) |
 
 ### Study root layout (Proposed)
 
@@ -87,7 +88,8 @@ caps taken from the effective manifest:
 claude --print --model <model> --permission-mode manual --permission-prompts none
   --setting-sources project --settings <session>/settings.json --strict-mcp-config
   --mcp-config {"mcpServers":{}} --no-chrome --no-session-persistence
-  --max-turns 3 --max-budget-usd 1 --input-format text --output-format json
+  --max-turns 3 --max-budget-usd 1 --debug hooks --debug-file <session>/debug.log
+  --input-format text --output-format json
 ```
 
 Environment: exactly `PATH`, `HOME`, `CLAUDE_CONFIG_DIR`, `TMPDIR`, `LANG`, `LC_ALL`,
@@ -99,9 +101,9 @@ decision differs from the proposal):
 
 ```json
 [
-  {"id":"smoke-1-pincer","run":"ui-states/rep-1/pincer","name":"S1","arm":"pincer","purpose":"operational-smoke","project":"ui-states","kit":"K0","prompt_digest":"152143dd60b7a98430464793178c3f349ed55eecfe7510dc9648e2cbd65307d8","effective_digest":"64325207102feaa5346ab9928f8a1298c052cf1f70059afc96c2a2ddb1b42f93"},
-  {"id":"smoke-1-strict","run":"ui-states/rep-1/strict","name":"S1","arm":"strict","purpose":"operational-smoke","project":"ui-states","kit":"K0","prompt_digest":"19ea7fde56f957de358f320fc341803c58dc2bff55b6645b41e504011d52a4d2","effective_digest":"64325207102feaa5346ab9928f8a1298c052cf1f70059afc96c2a2ddb1b42f93"},
-  {"id":"smoke-1-plain","run":"ui-states/rep-1/plain","name":"S1","arm":"plain","purpose":"operational-smoke","project":"ui-states","kit":"K0","prompt_digest":"e96d5cb31e05b762bf0af0d6d27e6cf1760f2d0296142becafcbc1020f553579","effective_digest":"64325207102feaa5346ab9928f8a1298c052cf1f70059afc96c2a2ddb1b42f93"}
+  {"id":"smoke-1-pincer","run":"ui-states/rep-1/pincer","name":"S1","arm":"pincer","purpose":"operational-smoke","project":"ui-states","kit":"K0","prompt_digest":"152143dd60b7a98430464793178c3f349ed55eecfe7510dc9648e2cbd65307d8","effective_digest":"141a70dabd4b8ac4512a46f4129e6f29d1fdae532cd62c4906880f8c8567abbc"},
+  {"id":"smoke-1-strict","run":"ui-states/rep-1/strict","name":"S1","arm":"strict","purpose":"operational-smoke","project":"ui-states","kit":"K0","prompt_digest":"19ea7fde56f957de358f320fc341803c58dc2bff55b6645b41e504011d52a4d2","effective_digest":"141a70dabd4b8ac4512a46f4129e6f29d1fdae532cd62c4906880f8c8567abbc"},
+  {"id":"smoke-1-plain","run":"ui-states/rep-1/plain","name":"S1","arm":"plain","purpose":"operational-smoke","project":"ui-states","kit":"K0","prompt_digest":"e96d5cb31e05b762bf0af0d6d27e6cf1760f2d0296142becafcbc1020f553579","effective_digest":"141a70dabd4b8ac4512a46f4129e6f29d1fdae532cd62c4906880f8c8567abbc"}
 ]
 ```
 
@@ -153,7 +155,7 @@ allocation. No cost forecast is made.
    (exit 2) and plans nothing. Before `bffcfc8` the entry point had no brief selection and
    this command planned all eight briefs (24 cells), which the allocation's unlisted-run
    guard would then have refused (§12). Verified against the study root with the proposed
-   inputs into `drafts/plan-dry-run/` (a draft, not evidence): `cohort 64325207…`, three
+   inputs into `drafts/plan-dry-run/` (a draft, not evidence; re-run at `f504c80`): `cohort 141a70da…`, three
    records, `order` 1 pincer, 2 strict, 3 plain; `runs/smoke` stays empty.
 
    (`smoke-execution-inputs.json` is the decided version of the
@@ -171,7 +173,8 @@ allocation. No cost forecast is made.
 
 ## 5. Checks the smoke must show, and where each is observed
 
-Evidence root: `runs/smoke/ui-states/rep-1/<arm>/` (`record.json`, `attempts/attempt-000001/{workspace,scratch,logs}`).
+Evidence root: `runs/smoke/ui-states/rep-1/<arm>/` (`record.json`, `attempts/attempt-000001/{workspace,scratch,logs}`;
+`logs/` holds `S1.json`, `S1.err` and the redacted hook log `S1.debug.log`).
 
 | Check | Observed in | Judged by |
 | --- | --- | --- |
@@ -185,18 +188,24 @@ Evidence root: `runs/smoke/ui-states/rep-1/<arm>/` (`record.json`, `attempts/att
 The four native observations separate what the launcher **configured** (retained at or
 before launch, true regardless of what the session did) from what the session **showed**
 (retained after it). Only the second column is observation; the first is construction.
-The profile's `--output-format json` keeps the final result object only, so anything that
-happens inside the conversation is unobservable unless §8 e changes the capture format.
+Nothing personal is read: isolation is observed through a **synthetic canary** the
+launcher plants and checks itself, and kit hooks through the CLI's own **hook debug log**,
+retained redacted (`f504c80`; `docs/prd-v8-agent-isolation.md`). The profile still keeps
+`--output-format json`, so conversation content stays unobservable (§8 e); the two
+additions do not depend on it.
 
-| Native observation | Configured (retained at launch) | Observed (retained after the session) | Not observable under `json` capture |
+| Native observation | Configured (retained at launch) | Observed (retained after the session) | Still not observable |
 | --- | --- | --- | --- |
-| `host_policy` | `record.environment.permission_mode: manual`, `permission_prompts: none`, `configuration` (the profile) and `env_names`; the argument vector is `isolated-launch.argumentsFor` | `logs/S1.json`: the result's `permission_denials` entries name tool uses the CLI denied automatically (the 2.1.273 help text: anything that would prompt is denied); the workspace commits and `record.evaluation` show what the session could still do; `S1.err` shows any refusal text the CLI printed | which tool calls were attempted; whether a denial changed the session's course |
-| `authentication` | `record.environment.authentication` (profile: key in memory only), `env_names` without any `ANTHROPIC_AUTH_TOKEN`/proxy variable (the key's own name is filtered from the list), empty `CLAUDE_CONFIG_DIR` so no keychain or subscription login is reachable | a billed result (`total_cost_usd` > 0, `modelUsage`) obtained with that empty config dir, which only the launcher's key can have paid for; `grep -r 'sk-ant-' logs/` finds nothing, `[REDACTED]` at most | the Console usage line for the key's workspace (operator check; external, not retained) |
-| `personal_configuration_absent` | `env_names` equals the ten profile variables with `HOME`/`CLAUDE_CONFIG_DIR`/`TMPDIR` under the session root that is removed after the run; `--setting-sources project`, empty MCP, `--no-chrome`, `--no-session-persistence` | **proposed new retained artifact**: a digest listing of the operator's `~/.claude` taken before the first and after the last session (`evidence/smoke/operator-config.{before,after}.sha256`, kept in the study root, never tracked), identical; the payload's `result` text contains no phrase from the operator's private instructions | whether any personal hook, plugin or instruction ran (the hostile-home suite in `test/benchmark-environment.test.js` proves the mechanism with fixtures, not this session) |
-| `kit_mechanisms` | `attempt.configuration_digest` equals the intended arm inventory (`assetsFor`), checked before launch or `ARM_ASSETS_CHANGED` refuses; the retained workspace holds the installed `CLAUDE.md`, `.claude/commands`, `.claude/hooks` and `settings.json` hook registrations at the kit-install commit `4cbde166…` | **commands and instructions**: artifacts only kit commands write in the retained `workspace/` and its git history: `tickets/*.md` receipts (`status`, `started`, `last_check`), `.prd/`, evidence files, and for the strict arm `coverage adopt` records; commits authored during the session that reference them | **hooks**: `block-dangerous.sh` and `ticket-guard.sh` write no file; a hook block is visible only inside the conversation, which `json` does not capture. The smoke can show hooks were installed and registered, not that they fired, unless the profile captures `stream-json` (§8 e) |
+| `host_policy` | `record.environment.permission_mode: manual`, `permission_prompts: none`, `configuration` (the profile) and `env_names`; the argument vector is `isolated-launch.argumentsFor` | `logs/S1.json`: the result's `permission_denials` entries name tool uses the CLI denied automatically (the 2.1.273 help text: anything that would prompt is denied); the workspace commits and `record.evaluation` show what the session could still do; `S1.err` shows any refusal text the CLI printed | which tool calls were attempted, and whether a denial changed the session's course |
+| `authentication` | `record.environment.authentication` (profile: key in memory only), `env_names` without any `ANTHROPIC_AUTH_TOKEN`/proxy variable (the key's own name is filtered from the list), a `CLAUDE_CONFIG_DIR` that holds only the canary, so no keychain or subscription login is reachable | a billed result (`total_cost_usd` > 0, `modelUsage`) obtained with that config dir, which only the launcher's key can have paid for; `grep -r 'sk-ant-' logs/` finds nothing, `[REDACTED]` at most | the Console usage line for the key's workspace (operator check; external, not retained) |
+| `personal_configuration_absent` | `env_names` equals the ten profile variables with `HOME`/`CLAUDE_CONFIG_DIR`/`TMPDIR` under the session root that is removed after the run; `--setting-sources project`, empty MCP, `--no-chrome`, `--no-session-persistence`; the canary planted in both user-level locations: `settings.json` with a `SessionStart` hook that touches a marker, `CLAUDE.md` with a random per-session phrase | `record.environment.isolation_canary`: `user_hook_ran: false` (the marker never appeared) and `phrase_in_captures: false` (the phrase reached neither `S1.json`, `S1.err` nor `S1.debug.log`), hence `ok: true`, for all three arms; a tripped canary makes the session unreportable. The operator's real `~/.claude` is never read, hashed or compared | a leak by a route other than user-level settings/instructions (the environment suite proves the launcher inherits nothing from the operator's process; that is a code property, not a smoke observation) |
+| `kit_mechanisms` | `attempt.configuration_digest` equals the intended arm inventory (`assetsFor`), checked before launch or `ARM_ASSETS_CHANGED` refuses; the retained workspace holds the installed `CLAUDE.md`, `.claude/commands`, `.claude/hooks` and `settings.json` hook registrations at the kit-install commit `4cbde166…` | **hooks**: `logs/S1.debug.log`, the CLI's hook log (`--debug hooks`), retained redacted; `record.environment.hook_capture.present: true` with its byte count. Expected content: hook matching for `PreToolUse` and the execution and exit status of `bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/block-dangerous.sh` and `ticket-guard.sh`. **Commands and instructions**: artifacts only kit commands write in the retained `workspace/` and its git history (`tickets/*.md` receipts, `.prd/`, evidence files, `coverage adopt` records for the strict arm) | the model's reasoning about the instructions; and, until the first session, whether the pinned CLI's `hooks` debug category names each executed hook command and status (documented behavior, not yet observed; `present: false` would be the finding) |
 
-If the reviewer requires observed hook activity, decide §8 e before the effective manifest
-is minted; changing the capture format afterwards re-freezes the cohort.
+The reviewed `native-isolation-observation` (T-102 format) is written from these retained
+files: `personal_configuration_absent` from `isolation_canary.ok` in all three records,
+`authentication_observed` from the billed results, `host_policy_observed` from the
+permission posture and denials; `evidence` lists the three `record.json`, `S1.json`,
+`S1.err` and `S1.debug.log` files by digest.
 
 Offline regeneration (no model call):
 
@@ -286,9 +295,9 @@ d. **Smoke launch path.** Before this preparation the orchestrator accepted only
    had no brief selection and the documented command planned all eight briefs (§12). The
    protocol's readiness section could name those three options.
 e. **Capture format.** The profile pins `--output-format json`, which retains only the
-   final result object. Whether that suffices to observe host policy, absence of personal
-   configuration and kit mechanisms is a reviewer judgment (§5 lists, per observation,
-   what `json` cannot show; kit **hook** activity is the clearest gap); `stream-json` would retain
+   final result object. Whether that suffices to observe host policy is a reviewer judgment; kit hook
+   execution and personal-configuration absence no longer depend on it (§5: the hook
+   debug log and the synthetic canary are captured separately); `stream-json` would retain
    every message but changes the frozen profile (new cohort) and must be decided before
    the effective manifest is minted.
 f. **K0 artifact provenance.** The registry tarball was published from `566b553`; the
@@ -298,7 +307,8 @@ f. **K0 artifact provenance.** The registry tarball was published from `566b553`
 ## 9. Readiness blockers (read-only inspector, this preparation)
 
 From the study root with the honest draft (real facts, decisions null; regenerated 19 Sep
-2026 against `bffcfc8`, `drafts/study.draft.json`, dry-run effective cohort `64325207…`),
+2026 against `f504c80`, `drafts/study.draft.json`, dry-run effective cohort `141a70da…`,
+observation target `d53ff6f0…`),
 purpose `operational-smoke`: the execution block and K0 validate; remaining pending reasons are
 `PROJECT_ACCESS_PENDING`, `INDEPENDENT_REVIEWERS_PENDING`, `SCHEDULE_INPUT_UNBOUND`
 (follows from the missing project), `NUMERIC_ALLOCATION_PENDING`,
@@ -335,7 +345,7 @@ pending list is the ten actual gaps listed there.
 8. Study root: `/Users/Shared/pincer-v8-study` (proposed).
 9. Capture format: keep `json` or switch the profile to `stream-json` (§8 e).
 10. Candidate pin and CI: push `feat/prd-v8`, then pin the SHA whose matrix passed.
-11. Ticket verification command: adopt the study-checkout form (§8 b), with or without `--purpose operational-smoke`.
+11. Ticket verification command: **applied** in `07af4be` — the block now reads the study checkout's manifest with `--input-root` and keeps the measured `--require-ready` gate as the completion criterion (14 pending reasons today, including the native, smoke and report evidence). The reviewer confirms the wording.
 
 Document shapes the inspector accepts (all `schema: 1`, `approved: true`, `decided_by`,
 `decided_at`, nonempty `evidence: [{ref, digest}]`): `project-access-decision` adds
@@ -352,7 +362,7 @@ be decided by `user`; `evidence-review-decision` adds `reviewer`, `candidate`,
 
 | Kind | Current raw evidence | Matches proposed identity | Missing for a retained summary |
 | --- | --- | --- | --- |
-| offline | Focused suites after each harness change, all passed locally 19 Sep 2026 (after `bffcfc8`: study-launch with the new CLI regression, environment, delivery-benchmark-v7, execution-freeze, orchestrator, effective-inputs, study-readiness, allocation, prepared-bases, readiness-contracts, effort-records, restart, terminal-records). Full `npm test` result: see the progress journal. | yes (same tree) | summary bound to the candidate and evidence target; reviewer decision |
+| offline | Focused suites after each harness change, all passed locally 19 Sep 2026 (after `f504c80`: environment with the canary and hook-capture cases, delivery-benchmark-v7, execution-freeze, study-launch, orchestrator, effective-inputs, study-readiness, restart, terminal-records, readiness-contracts, allocation, prepared-bases, run-claims, browser, usage-completeness, effort-records). Full `npm test` result: see the progress journal. | yes (same tree) | summary bound to the candidate and evidence target; reviewer decision |
 | browser | Real-browser gate passed 19 Sep 2026 on CfT 148.0.7778.97 (artifacts in the study root). T-107's earlier pass used Google Chrome 153.0.8010.48 at `/Applications` and does **not** match. | yes, for the proposed runtime | summary; reviewer decision |
 | packed | `test/distribution.test.js` and `test/release-preparation.test.js` are part of the full suite. | yes (same tree) | summary; reviewer decision |
 | ci | PR #6 runs `35447528639` and `35447527131` on `48df59c`: ubuntu/macos × Node 22/24, eight checks `SUCCESS`, completed 14:12–14:19Z. That commit **predates** the harness change. | no (older commit) | a run on the final candidate; summary; reviewer decision |
@@ -380,3 +390,23 @@ a decision.
    `record.environment`, and the ledger's stop code is named as the second source. §5
    now separates configured from observed evidence for each native observation and
    states what `json` capture cannot show, in particular kit hook execution.
+4. **Native-observation preparation finished** (`f504c80`, `07af4be`). The earlier §5
+   proposal to digest the operator's real `~/.claude` and compare captures against private
+   instruction text is withdrawn: nothing personal is read. Instead the launcher plants a
+   **synthetic canary** (user-level `settings.json` with a `SessionStart` hook touching a
+   marker, and a `CLAUDE.md` with a random per-session phrase) in the per-session
+   `HOME/.claude` and `CLAUDE_CONFIG_DIR`, and records `isolation_canary { ok,
+   user_hook_ran, phrase_in_captures }`; a tripped canary is unreportable. For kit hooks
+   the argv adds `--debug hooks --debug-file <session>/debug.log` and the launcher retains
+   a redacted copy as `logs/S1.debug.log` with `hook_capture { present, file, bytes }`;
+   stdout, result parsing, accounting, redaction and interruption handling are unchanged.
+   The environment suite exercises a compliant tool, a leaking tool, debug redaction and a
+   recorded absence. Profile fields `home: per-session-synthetic-canary` and
+   `hook_capture: debug-hooks-file` move the observation target `8af4d99d…` →
+   `d53ff6f0…`; cohort `d1e57a17…` → `b0299e7e…`; dry-run effective cohort `64325207…` →
+   `141a70da…`. The ticket's Verification block now reads the study checkout's manifest and
+   keeps the measured gate. Open smoke findings, not preparation facts: whether the CLI's
+   `hooks` debug category writes the executed hook commands and their status to the
+   debug file (`hook_capture.present` and the log content), and whether `--debug-file`
+   keeps stdout clean (result parsing would fail loudly otherwise and the session would
+   finalize invalid; no further paid prompt follows).
