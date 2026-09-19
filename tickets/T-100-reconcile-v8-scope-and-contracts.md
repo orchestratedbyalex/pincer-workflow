@@ -1,10 +1,14 @@
 ---
 ticket: T-100
-status: open
+status: done
 size: M
 prd: .prd/prd-v8.md
 depends_on: []
 timeout: 900
+started: 2026-09-19T06:32:21Z
+last_check: 2026-09-19T06:37:43Z passed a8dfa97fda3d
+verified: 2026-09-19T06:37:43Z a8dfa97fda3d
+finished: 2026-09-19T06:37:43Z
 ---
 
 ## Objective
@@ -26,9 +30,9 @@ Create one current account of delivered code, unfinished observations and the co
 Create the focused static-contract suite as part of this ticket. Preserve all frozen v6 assets; use a current overlay when an old file is frozen. Remove the suggestion that an unfrozen helper can change measurement without a cohort change. Review the v7 S-09 temporal obligation explicitly: later pilots cannot retroactively satisfy its original ordering. This ticket records proposed historical dispositions, not invented user decisions.
 
 ## Acceptance Criteria
-- [ ] S-01: Current-state documentation identifies the reviewed SHA, published versus main versions, evidence candidate and open tickets; every carried v7 obligation has an explicit v8 owner without editing historical receipts or pretending later observations preceded earlier code.
-- [ ] S-02: A preservation and contract document specifies effective execution identity, attempt ownership, complete measurements, guided-authoring grammar and release ordering; mutation cases identify how each guarantee can fail.
-- [ ] S-03: Stale wiki recommendations and live-support claims are reconciled; the unproven runtime lock race, hook false positives and obsolete installed-file cleanup receive evidence-based reproduce/fix/defer dispositions with rationale and follow-up ownership, without asserting an unproven defect is fixed.
+- [x] S-01: Current-state documentation identifies the reviewed SHA, published versus main versions, evidence candidate and open tickets; every carried v7 obligation has an explicit v8 owner without editing historical receipts or pretending later observations preceded earlier code.
+- [x] S-02: A preservation and contract document specifies effective execution identity, attempt ownership, complete measurements, guided-authoring grammar and release ordering; mutation cases identify how each guarantee can fail.
+- [x] S-03: Stale wiki recommendations and live-support claims are reconciled; the unproven runtime lock race, hook false positives and obsolete installed-file cleanup receive evidence-based reproduce/fix/defer dispositions with rationale and follow-up ownership, without asserting an unproven defect is fixed.
 
 ## Verification
 Proves: The focused checks exercise the stated controls and failure paths. Static assertions are sufficient only for authored contracts/generated artifacts; behavioral claims require observed outputs, side effects or refusal behavior.

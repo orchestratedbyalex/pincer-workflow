@@ -8,52 +8,25 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 
 ## Current state
 
-**0.6.0 is released and pushed.** Verified against the server, not inferred: `350823e`,
-`566b553` and `694241c` are all ancestors of `origin/main`, `main`'s `package.json` says
-0.6.0, `NOTES.md` carries the v5+v6 evaluation, and the tag `v0.6.0` resolves on the
-remote to `694241c`. The older handover claim that these were local-only is wrong and
-those threads are closed.
+The [v8 obligation overlay](../prd-v8-obligation-map.md) is the current account,
+reviewed at `c7cb6bc9906ecd418e9edddfc08d3bdd353f8aab` on 2026-09-19.
+Registry and checkout metadata say 0.6.0; main contains later scaffold/brief and
+runner changes. Historical v6 NOTES/evidence do not evaluate current source.
 
-**PRD v7 is merged and on `main` at `0534ea2`** — PR #3 (`ae796d6`) carried the PRD and
-T-87..T-97, PR #4 (`0534ea2`) carried T-98. The CI matrix ran green on the merge commit
-(run 34930700263, 4/4). Implemented as far as money-free work goes.
-
-- **Shipped:** `coverage scaffold --change <id> [--json]` and
-  `resume --brief [--change <id>] [--json]` — both read-only projections
-  ([[read-only-projections]]), documented in `template/docs/runtime-contracts.md`.
-- **Built:** the frozen protocol, the preservation matrix, the v7 effort record and
-  execution freeze, the benchmark edition with eight briefs and a 72-run schedule, the
-  observation validators, six replay cases, the review packet ([[v7-measured-friction]]).
-- **T-98** fixed the benchmark edition before its first run: the frozen driver placed and
-  capped nothing and there was no run loop at all ([[fix-the-driver-before-run-one]]).
-  Cohort re-minted openly, `eef74402…` → `6de061ec…`, at zero cost because no run existed.
-- **T-99 closed five more, found by the 2026-09-15 assessment and verified independently**
-  ([[v7-execution-gaps]]): the strict arm was byte-identical to the default arm, no record
-  passed `effort.problems()`, the preservation check was dead, a crash repeated a cell’s
-  paid sessions and poisoned its base, and execution inputs were never reconciled with the
-  freeze. Cohort `6de061ec…` → `47dedc0a…`, still free because no run exists. The
-  orchestrator now has an operator entry point. None of it ships to users.
-- **Outstanding, and the user's call:** every live observation. Three baseline pilots
-  (T-89), two platform journeys and the handoff (T-93), 72 benchmark runs and timed
-  reviews (T-95). 7 of 30 scenarios are `outstanding`, three more partly so;
-  `docs/prd-v7-review-packet.md` §6 lists what each needs.
+V7 has five done tickets and eight open, including implemented but dependency-blocked
+work. Its real strict pilots, platform journeys/handoff, comparison and human reviews
+remain unfinished. Packaged artifacts establish installation, not observed live support.
+The original S-09 pilot-before-code ordering remains unsatisfied; later pilots cannot
+backdate it. The overlay proposes a disposition, not an invented user waiver.
 
 ## Active / next task
 
-1. **The decisions nothing can proceed without.** A costed spending cap (~$181 central,
-   $215-220 realistic, over five or six account reset windows — see
-   [[v7-measured-friction]]), a wall-clock cap, three pilot projects and their access,
-   and **two non-implementing human reviewers**. The last one is not a budget problem: an
-   agent that implemented the candidate is `REVIEW_NOT_INDEPENDENT` by construction.
-2. **Codex is now pinned** (`codex-cli 0.153.4`, authenticated) — one prerequisite off
-   section 9 without spending anything. Both CLIs work headless on this host.
-3. **Evaluate.** No v7 candidate is selected and no v7 evidence exists; `NOTES.md` still
-   names the v6 evaluation. Authored docs and metadata are finished, so the candidate can
-   be chosen cleanly.
-4. **A browser adapter.** The orchestrator takes `--browser <module>` and warns without
-   one, but nobody has written or chosen an adapter, so nine of the 72 runs would be
-   `unavailable` ([[v7-execution-gaps]]).
-5. Other parked items are in [[open-threads]].
+T-100 establishes [v8 contracts](../prd-v8-contracts.md) and historical obligations.
+T-101–T-108 then repair provenance, isolation, ownership, restart, usage, terminal
+records, real-browser evaluation and release preparation before T-109's readiness gate.
+Only later do actual capped observations gate new usability implementation and studies.
+No spending allocation, project access or reviewer identity is inferred from this plan.
+Preserve historical frozen files, unrelated user work and legacy management mode.
 
 ## Recent decisions
 

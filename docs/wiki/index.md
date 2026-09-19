@@ -1,5 +1,8 @@
 # Wiki index
 
+Current state: [v8 obligation overlay](../prd-v8-obligation-map.md) and
+[v8 contracts](../prd-v8-contracts.md). Historical pages retain their dated evidence.
+
 ## Decisions
 - [[read-only-projections]] — the two v7 surfaces are projections of computed state; the draft's missing `schema` key is the guard
 - [[one-next-action-precedence]] — rules 2 and 3 of the next-action precedence in one module; two views of the same state drift, so delete one (T-80, 2026-09-13)
@@ -34,7 +37,8 @@
 
 Both PRDs were evaluated as one change on one candidate, `ce98abd` — v5 was never
 released and v6 builds directly on it. The record is `NOTES.md` plus
-`.prd/evidence/prd-v6/ce98abd…/`, which is **not yet on main** ([[open-threads]]).
+`.prd/evidence/prd-v6/ce98abd…/`, which is historical evidence already in the reviewed checkout. It does not evaluate
+the later v7/v8 implementation ([[open-threads]]).
 
 - [PRD v6](../../.prd/prd-v6.md) — complete requirement coverage, structural change impact and the independent delivery benchmark; T-66..T-78 plus fixes T-79..T-86, reviewed in [the v6 packet](../prd-v6-review-packet.md) and [the v6 trial](../trial-prd-v6.md)
 - [PRD v5](../../.prd/prd-v5.md) — change records, authorization and resume; T-47..T-65, reviewed in [the v5 packet](../prd-v5-review-packet.md); its dispositions are in NOTES.md rather than a manifest of its own
