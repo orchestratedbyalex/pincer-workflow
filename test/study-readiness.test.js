@@ -14,10 +14,14 @@ child.spawnSync=()=>{if(allowVersionProbe)return {status:0,stdout:'2.1.273 (Clau
 const {inspectStudy,evidenceTarget}=require('../scripts/delivery-benchmark-v7/readiness.cjs');
 const {canonical,resolve}=require('../scripts/delivery-benchmark-v7/effective.cjs');
 const {SPEC}=require('../scripts/delivery-benchmark-v7/freeze-spec.cjs');
-const {observationTarget,PROFILE}=require('../scripts/delivery-benchmark-v7/isolated-launch.cjs');
+const {observationTarget,PROFILE,NATIVE_PROFILE}=require('../scripts/delivery-benchmark-v7/isolated-launch.cjs');
 const sha=value=>crypto.createHash('sha256').update(value).digest('hex');
-function fixture(purpose='measured'){
+// schema 1 with the historical API-key profile validates exactly as before; schema 2 (T-121)
+// declares the billing mode, estimate caps, the agreed account-usage envelope and the
+// native-login checks for a native-login cohort.
+function fixture(purpose='measured',{schema=1,profile=PROFILE.name}={}){
  const root=tempDir(),candidate='c'.repeat(40);let cohort='a'.repeat(64);
+ fs.mkdirSync(path.join(root,'host/claude-config'),{recursive:true});
  const put=(rel,value)=>{const text=typeof value==='string'||Buffer.isBuffer(value)?value:JSON.stringify(value);write(root,rel,text);return {ref:rel,digest:sha(text)};};
  const backing=put('evidence/test-documents.txt','Controlled synthetic documents for validator tests. No actual native observation occurred.');
  const decision=(name,kind,rest={})=>put(`decisions/${name}.json`,{schema:1,kind,approved:true,decided_by:'user',decided_at:'2026-09-19T00:00:00Z',evidence:[backing],...rest});
@@ -25,22 +29,23 @@ function fixture(purpose='measured'){
  const tool=put('tool/native',Buffer.from('7f454c46756e69742d66697874757265','hex')),runtimeFile=put('runtime/browser','browser fixture bytes'),kit=put('kit.tgz','fixture kit archive');
  for(const rel of [SPEC.protocol,...SPEC.harness,SPEC.collector,SPEC.driver])if(!fs.existsSync(path.join(root,rel)))put(rel,'fixture source');
  put(`${SPEC.briefs}/fixture/brief.md`,'fixture brief');put(`${SPEC.briefs}/fixture/evaluator/evaluate.cjs`,'fixture evaluator');
- const inputs={model:'claude-sonnet-4-6',tool:{executable:path.join(root,tool.ref),version:PROFILE.tool_version,kind:'native'},caps:{turns_per_session:3,wall_clock_minutes:2,spend_usd:1},kit:{path:kit.ref,commit:'d'.repeat(40)},configuration:{permission_mode:'manual',cwd_kind:'scratch',isolation_profile:PROFILE.name},browser:{entry:adapter.ref,roots:[adapter.ref],runtime:{name:'fixture-browser',version:'153.0.8010.48',path:'runtime',executable:runtimeFile.ref}}};
+ const inputs={model:'claude-sonnet-4-6',tool:{executable:path.join(root,tool.ref),version:PROFILE.tool_version,kind:'native'},caps:{turns_per_session:3,wall_clock_minutes:2,spend_usd:1},kit:{path:kit.ref,commit:'d'.repeat(40)},configuration:{permission_mode:'manual',cwd_kind:'scratch',isolation_profile:profile},browser:{entry:adapter.ref,roots:[adapter.ref],runtime:{name:'fixture-browser',version:'153.0.8010.48',path:'runtime',executable:runtimeFile.ref}}};
  const resolved=()=>{allowVersionProbe=true;try{return resolve(root,SPEC,inputs,{inputRoot:root});}finally{allowVersionProbe=false;}};
- let retained=resolved();const target=observationTarget(retained);
- const native=put('evidence/native-isolation.json',{schema:1,kind:'native-isolation-observation',fixture:false,target,arms:['plain','pincer','strict'],host_policy_observed:true,authentication_observed:true,personal_configuration_absent:true,evidence:[{path:backing.ref,digest:backing.digest}]});
+ let retained=resolved();const target=(()=>{try{return observationTarget(retained);}catch{return 'f'.repeat(64);}})();
+ const native=put('evidence/native-isolation.json',{schema:1,kind:'native-isolation-observation',fixture:false,target,arms:['plain','pincer','strict'],host_policy_observed:true,authentication_observed:true,personal_configuration_absent:true,...(schema===2?{login_preserved:true,override_refused:true}:{}),evidence:[{path:backing.ref,digest:backing.digest}]});
  inputs.configuration.isolation_observation_digest=native.digest;retained=resolved();cohort=retained.cohort;
  const effective=put('evidence/effective.json',retained);
  const project={id:'fixture-project',base:'b'.repeat(40),access:decision('access','project-access-decision',{project:'fixture-project',base:'b'.repeat(40)})};
  const reviewers=['reviewer-one','reviewer-two'].map(id=>({id,independent:true,decision:decision(id,'reviewer-participation-decision',{reviewer:id,independent:true})}));
  const schedule=[{id:'fixture-session',run:'cli-greenfield/rep-1/plain',name:'S1',arm:'plain',purpose,project:project.id,kit:'K0',prompt_digest:'e'.repeat(64),effective_digest:cohort}];
- const allocation={id:'fixture-allocation',root:'runs',limit_usd:3,session_cap_usd:1,session_wall_minutes:2,max_elapsed_minutes:6,expires_at:new Date(Date.now()+86400000).toISOString()};
- const authorization=decision('authorization','study-authorization',{purpose,allocation_id:allocation.id,limit_usd:3,session_cap_usd:1,session_wall_minutes:2,max_elapsed_minutes:6,expires_at:allocation.expires_at,schedule_digest:sha(canonical(schedule))});allocation.decision=authorization;
+ const expires=new Date(Date.now()+86400000).toISOString(),accountUsage={max_sessions:3,max_elapsed_minutes:6,agreed:true};
+ const allocation=schema===2?{id:'fixture-allocation',root:'runs',session_estimate_cap_usd:1,limit_estimate_usd:3,session_wall_minutes:2,account_usage:accountUsage,expires_at:expires}:{id:'fixture-allocation',root:'runs',limit_usd:3,session_cap_usd:1,session_wall_minutes:2,max_elapsed_minutes:6,expires_at:expires};
+ const authorization=decision('authorization','study-authorization',schema===2?{purpose,allocation_id:allocation.id,billing_mode:'subscription',session_turns:3,session_wall_minutes:2,session_estimate_cap_usd:1,limit_estimate_usd:3,account_usage:accountUsage,expires_at:expires,schedule_digest:sha(canonical(schedule))}:{purpose,allocation_id:allocation.id,limit_usd:3,session_cap_usd:1,session_wall_minutes:2,max_elapsed_minutes:6,expires_at:expires,schedule_digest:sha(canonical(schedule))});allocation.decision=authorization;
  const evidence={};
  for(const kind of ['offline','browser','packed','ci','native','smoke','report']){
-  evidence[kind]=put(`evidence/${kind}.json`,{schema:1,kind,candidate,execution_target:evidenceTarget(retained),result:'passed',fixture:kind==='offline',purpose:'operational-smoke',arms:['plain','pincer','strict'],checks:Object.fromEntries(['host_policy','authentication','personal_configuration_absent','kit_mechanisms','payload_capture','isolation','browser','stop','cleanup','report_regeneration'].map(k=>[k,true])),matrix:['ubuntu','macos'].flatMap(os=>[22,24].map(node=>({os,node,result:'passed'}))),evidence:[backing],review:{reviewer:reviewers[0].id,decision:decision(`review-${kind}`,'evidence-review-decision',{reviewer:reviewers[0].id,candidate,kind_reviewed:kind})}});
+  evidence[kind]=put(`evidence/${kind}.json`,{schema:1,kind,candidate,execution_target:evidenceTarget(retained),result:'passed',fixture:kind==='offline',purpose:'operational-smoke',arms:['plain','pincer','strict'],checks:Object.fromEntries(['host_policy','authentication','personal_configuration_absent','kit_mechanisms','payload_capture','isolation','browser','stop','cleanup','report_regeneration','login_preserved','override_refused','status_record_sanitized','billing_mode_consistent','estimate_captured','charge_unavailable_labelled'].map(k=>[k,true])),matrix:['ubuntu','macos'].flatMap(os=>[22,24].map(node=>({os,node,result:'passed'}))),evidence:[backing],review:{reviewer:reviewers[0].id,decision:decision(`review-${kind}`,'evidence-review-decision',{reviewer:reviewers[0].id,candidate,kind_reviewed:kind})}});
  }
- const manifest={schema:1,kind:'pincer-study-readiness',status:'pending',execution:{candidate,effective,observation_target:target,evidence_target:evidenceTarget(retained),inputs:[...Object.entries(retained.effective.helpers.files).map(([ref,digest])=>({ref,digest})),tool,runtimeFile],browser_runtime_root:'runtime',native_observation:native},projects:[project],kits:[{id:'K0',commit:'d'.repeat(40),artifact:kit}],schedule,reviewers,authorization,allocation,stop_resume:{unknown_cost:'stop',account_limit:'stop',exhausted_allocation:'stop',changed_inputs:'stop',resume:'explicit-recorded-decision'},evidence,pending_notes:[]};
+ const manifest={schema,kind:'pincer-study-readiness',status:'pending',execution:{candidate,effective,observation_target:target,evidence_target:evidenceTarget(retained),inputs:[...Object.entries(retained.effective.helpers.files).map(([ref,digest])=>({ref,digest})),tool,runtimeFile],browser_runtime_root:'runtime',native_observation:native,...(schema===2?{billing:{mode:'subscription',tool_surface:'claude-code',status_record_contract:'claude-auth-status-json-v1'}}:{})},projects:[project],kits:[{id:'K0',commit:'d'.repeat(40),artifact:kit}],schedule,reviewers,authorization,allocation,stop_resume:{unknown_cost:'stop',account_limit:'stop',exhausted_allocation:'stop',changed_inputs:'stop',resume:'explicit-recorded-decision'},evidence,pending_notes:[]};
  const manifestPath=path.join(root,'study.json');
  const persist=()=>write(root,'study.json',JSON.stringify(manifest));persist();
  const inspect=()=>{persist();return inspectStudy({manifestPath,inputRoot:root,purpose});};
@@ -56,7 +61,8 @@ function fixture(purpose='measured'){
   assert.equal(observationTarget(retained),manifest.execution.observation_target,'narrow isolation target did not change');
   assert.notEqual(manifest.execution.evidence_target,beforeTarget,'full execution evidence target changed');
  };
- return {root,manifestPath,manifest,put,inspect,modifyEvidence,inputs,refreshExecution,retained};
+ const modifyAuthorization=change=>{const value=JSON.parse(fs.readFileSync(path.join(root,manifest.authorization.ref),'utf8'));change(value);manifest.authorization=put(manifest.authorization.ref,value);manifest.allocation.decision=manifest.authorization;};
+ return {root,manifestPath,manifest,put,inspect,modifyEvidence,modifyAuthorization,inputs,refreshExecution,retained};
 }
 function snapshot(root){const result={};const visit=(dir,prefix='')=>{for(const e of fs.readdirSync(dir,{withFileTypes:true})){const rel=prefix+e.name;if(e.isDirectory())visit(path.join(dir,e.name),rel+'/');else result[rel]=fs.lstatSync(path.join(dir,e.name)).isSymbolicLink()?'link':fs.readFileSync(path.join(dir,e.name)).toString('base64');}};visit(root);return result;}
 {
@@ -123,6 +129,41 @@ for(const mutate of [f=>f.put('runtime/browser','changed actual browser runtime 
  changed.effective.configuration.permission_mode='plan';
  assert.notEqual(evidenceTarget(changed),before,'other configuration remains bound');
 }
+// --- Schema 2 (T-121): the native-login manifest through the same read-only inspector -----
+{
+ const native=(purpose='measured',extra={})=>fixture(purpose,{schema:2,profile:NATIVE_PROFILE.name,...extra});
+ const codes=result=>result.pending.map(p=>p.code);
+ {
+  const f=native(),before=snapshot(f.root),result=f.inspect();
+  assert.equal(result.ready,true,JSON.stringify(result.pending));
+  assert.deepEqual(result.launchGrant.billing,{mode:'subscription',tool_surface:'claude-code',status_record_contract:'claude-auth-status-json-v1'});
+  assert.equal(result.launchGrant.allocation.billing_mode,'subscription');
+  assert.deepEqual(result.launchGrant.allocation.account_usage,{max_sessions:3,max_elapsed_minutes:6,agreed:true});
+  assert.equal(result.launchGrant.allocation.limit_estimate_usd,3);
+  assert.deepEqual(snapshot(f.root),before,'schema 2 inspection is read-only too');
+ }
+ assert.equal(native('operational-smoke').inspect().ready,true);
+ {const f=native();f.manifest.execution.billing=null;assert.ok(codes(f.inspect()).includes('BILLING_MODE_PENDING'));}
+ {const f=native();f.manifest.execution.billing.mode='either';assert.ok(codes(f.inspect()).includes('BILLING_MODE_PENDING'));}
+ {const f=native();f.manifest.execution.billing.tool_surface='codex';assert.ok(codes(f.inspect()).includes('SURFACE_UNSUPPORTED'),'a Codex record is refused, never relabelled');}
+ {const f=native();f.manifest.execution.billing.status_record_contract='invented';assert.ok(codes(f.inspect()).includes('LOGIN_STATUS_CONTRACT_PENDING'));}
+ {const f=native();f.manifest.allocation.account_usage=null;assert.ok(codes(f.inspect()).includes('ACCOUNT_USAGE_PENDING'));}
+ {const f=native();f.manifest.allocation.account_usage.agreed=false;assert.ok(codes(f.inspect()).includes('ACCOUNT_USAGE_PENDING'));}
+ {const f=native();f.modifyAuthorization(d=>{d.account_usage.max_sessions=9;});assert.ok(codes(f.inspect()).includes('ACCOUNT_USAGE_PENDING'),'the envelope is the user decision, not the manifest');}
+ {const f=native();f.modifyAuthorization(d=>{d.limit_usd=3;});assert.ok(codes(f.inspect()).includes('LEGACY_FIELD_REFUSED'));}
+ {const f=native();f.modifyAuthorization(d=>{d.billing_mode='api';});assert.ok(codes(f.inspect()).includes('BILLING_MODE_PENDING'));}
+ {const f=native();f.modifyAuthorization(d=>{d.session_turns=4;});assert.ok(codes(f.inspect()).includes('AUTHORIZATION_SCOPE_MISMATCH'));}
+ {const f=native();f.manifest.allocation.session_estimate_cap_usd=2;assert.ok(codes(f.inspect()).includes('CAPS_DECISION_MISMATCH'));}
+ {const f=native();f.modifyEvidence('native',v=>{v.checks.login_preserved=false;});assert.ok(codes(f.inspect()).includes('NATIVE_OBSERVATIONS_INCOMPLETE'));}
+ {const f=native();f.modifyEvidence('native',v=>{delete v.checks.override_refused;});assert.ok(codes(f.inspect()).includes('NATIVE_OBSERVATIONS_INCOMPLETE'));}
+ {const f=native();f.modifyEvidence('smoke',v=>{v.checks.charge_unavailable_labelled=false;});assert.ok(codes(f.inspect()).includes('SMOKE_OBSERVATIONS_INCOMPLETE'));}
+ {const f=native();f.modifyEvidence('smoke',v=>{v.checks.estimate_captured=false;});assert.ok(codes(f.inspect()).includes('SMOKE_OBSERVATIONS_INCOMPLETE'));}
+ // A native cohort under schema 1 is pending its billing declaration; schema 2 cannot carry
+ // the historical profile; an unknown profile is unbound.
+ assert.ok(codes(fixture('measured',{schema:1,profile:NATIVE_PROFILE.name}).inspect()).includes('BILLING_MODE_PENDING'));
+ assert.ok(codes(fixture('measured',{schema:2,profile:PROFILE.name}).inspect()).includes('PROFILE_INCOMPATIBLE'));
+ assert.ok(codes(fixture('measured',{schema:2,profile:'claude-project-native-login-v2'}).inspect()).includes('PROFILE_UNBOUND'));
+}
 for(const [key,value] of Object.entries(saved))child[key]=value;
 const command=path.join(repo,'scripts/delivery-benchmark-v7/readiness.cjs');
 const pending=saved.spawnSync(process.execPath,[command,'--manifest',path.join(repo,'docs/prd-v8-artifacts/execution/study.json'),'--require-ready'],{cwd:repo,encoding:'utf8'});
@@ -132,4 +173,4 @@ assert.equal(pending.status,2);assert.equal(JSON.parse(pending.stdout).ready,fal
  const result=saved.spawnSync(process.execPath,[command,'--manifest',f.manifestPath,'--input-root',f.root,'--require-ready'],{encoding:'utf8'});
  assert.equal(result.status,0,result.stdout+result.stderr);assert.deepEqual(snapshot(f.root),before);
 }
-console.log('study readiness tests passed (synthetic documents validate refusal mechanics only; no native evidence created)');
+console.log('study readiness tests passed (schema 1 and schema 2 synthetic documents validate refusal mechanics only; no native evidence created)');

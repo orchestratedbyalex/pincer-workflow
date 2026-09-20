@@ -155,6 +155,6 @@ No change record, strict adoption or authorization is manufactured by this break
 | Ticket | Requirement/scenarios | Depends on | Verification |
 | --- | --- | --- | --- |
 | [T-120](../tickets/T-120-define-native-tool-study-contracts.md) | R-21 / S-61, S-62, S-63 | — | `test/native-tool-contracts.test.js` over [the authored contracts](prd-v8-native-tool-contracts.md), plus human review of feasibility and honesty |
-| [T-121](../tickets/T-121-implement-native-login-study.md) | R-22 / S-64, S-65, S-66 | T-120 | Native-login entry-point suite, environment, allocation and launch suites; candidate CI |
+| [T-121](../tickets/T-121-implement-native-login-study.md) | R-22 / S-64, S-65, S-66 | T-120 | `test/native-login-study.test.js` (fixture executables through the real entry points), plus the environment, allocation, launch and execution-freeze suites; candidate CI once pushed. Fixtures are not native evidence: login preservation stays a T-109 observation |
 
 Native observation remains owned by T-102/T-109; these new tickets cannot replace it with fixtures.

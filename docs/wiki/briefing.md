@@ -32,15 +32,24 @@ summaries also remain pending.
 
 The direct review correction requires recognized hook completion events with outcomes,
 rejects registration-only text, and preserves the protected original directory when hook
-logs cannot be read or copied. Frozen cohort after T-120: `a6a6d474…` (`1027f120…` is the superseded API-key identity). The current sandbox denies
-`ps`; allocation custody verification must be rerun on a host that permits it.
+logs cannot be read or copied. **T-121 (2026-09-20) implemented the native-login path**: the
+runner signs in through the tool's own `claude auth login` in `<study root>/host/claude-config`,
+refuses every provider-key/billing override by name, holds an exclusive journaled custody lock on
+that directory, probes `auth status --json` before any workspace, measures under
+`claude-code-result-native-usage-v1` (estimate, never a charge) and reads study manifest
+schema 2. Frozen cohort after T-121: see `test/fixtures/delivery-benchmark-v7/frozen.json`
+(`3284061a…` was the T-120 identity, `1027f120…` the API-key one). Nothing native has been
+observed; the pinned CLI has never run under this profile.
 
 ## Active / next task
 
-20 September user scope amendment: Pincer operates through coding CLIs or GitHub Copilot with native tool login, not provider API keys (`docs/prd-v8-native-tool-plan.md`). **T-120 is authored** ([[native-tool-contracts]]): `docs/prd-v8-native-tool-contracts.md` fixes the host-login profile `claude-project-native-login-v1`, the sanitized `claude auth status` record, the billing-mode-aware usage profile and the comparison rule; the user still has to review it for feasibility and honesty. **Next: T-121** implements it (profile, usage reader, manifest schema 2, override refusal, `--i-agreed-the-usage-envelope`, replacement smoke package, fixture entry-point suite), then the external study checkout is refreshed and T-102/T-109 collect native observations. No live support claim changes. The checked-in launcher still requires an API key; do not ask the user for one or execute the superseded package.
+20 September user scope amendment: Pincer operates through coding CLIs or GitHub Copilot with native tool login, not provider API keys (`docs/prd-v8-native-tool-plan.md`). **T-120 authored and T-121 implemented** ([[native-tool-contracts]], [[study-readiness-gate]]): profile `claude-project-native-login-v1`, `login-custody.cjs`, native usage reader, manifest schema 2, `--i-agreed-the-usage-envelope`, replacement package `docs/prd-v8-artifacts/execution/T-121-native-smoke-execution-package.md`, suite `test/native-login-study.test.js`. **Next:** refresh the external study checkout (`/Users/Shared/pincer-v8-study/pincer-workflow`) to the T-121 commit; the user signs in under `host/claude-config` with the pinned CLI and writes the schema-2 decisions (billing mode, estimate caps, account-usage envelope, reviewers, project access); then T-102/T-109 run the bounded native smoke and observe `login_preserved`. No live support claim changes. Never ask the user for an API key.
 
 ## Recent decisions
 
+- [[study-readiness-gate]] — T-121: custody of the shared login directory is one journaled lock
+  held from the pre-workspace status probe through canary cleanup; changed files are preserved,
+  never deleted, and recovery is an explicit recorded decision (2026-09-20)
 - [[native-tool-contracts]] — the study signs in through the tool's own `claude auth login`
   in a study `CLAUDE_CONFIG_DIR`; unavailable subscription billing is expected and valid,
   a missing token/provider-time/status capture is not; dollar claims need evidenced API
@@ -64,7 +73,7 @@ logs cannot be read or copied. Frozen cohort after T-120: `a6a6d474…` (`1027f1
 - Changing any `PROFILE` field in `isolated-launch.cjs` moves the observation target; never
   observe isolation by reading the operator's real `~/.claude` (synthetic canary instead).
 - `orchestrator.cjs`, `effective.cjs`, `readiness.cjs`, `allocation.cjs`,
-  `isolated-launch.cjs` and the v8 protocol/isolation/usage/native-tool-contracts docs are in `SPEC.harness`:
+  `isolated-launch.cjs`, `login-custody.cjs`, `effort.cjs` and the v8 protocol/isolation/usage/native-tool-contracts docs are in `SPEC.harness`:
   after editing any, regenerate `test/fixtures/delivery-benchmark-v7/frozen.json` (command
   at the top of `freeze-spec.cjs`). Append to `SPEC.harness`, never prepend.
 - **Never add a file under `scripts/delivery-benchmark/`** (the v6 freeze digests the
@@ -76,12 +85,16 @@ logs cannot be read or copied. Frozen cohort after T-120: `a6a6d474…` (`1027f1
 - Never hand-edit `status`/`started`/`last_check`/`verified`/`finished`; the guard blocks
   `git checkout`/`restore`/`reset --hard`/`stash` touching `tickets/` and refuses a compound
   `git add <protected path> && git commit …` — split add and commit.
-- Live runs need `--i-have-a-spending-cap`; that flag asserts a human agreed a cap and is
-  not the agent's to pass. Numeric budgets come from a `study-authorization` decided by
-  `user`, never from the flag.
+- Live runs need `--i-agreed-the-usage-envelope` (the old spending-cap flag is refused by
+  name); it asserts a human agreed the estimate cap and the account-usage envelope and is
+  not the agent's to pass. Numbers come from a `study-authorization` decided by `user`.
+- The orchestrator refuses to run while any `ANTHROPIC_*`/`CLAUDE_CODE_*` credential or
+  provider variable is set in its environment; unset them in the launching shell. It never
+  reads their values. The login directory (`host/claude-config`) is never read, only its
+  entry names; recovery after a custody fault is `login-custody.recover()` with a reason.
 - `docs/prd-v7-artifacts/v6-preservation.json` digests 674 v6 files individually;
   `docs/prd-v6-review-packet.md`'s stale "(51 suites)" must **stay** stale.
-- `npm test` is 77 suites and about fifteen minutes. CI is {ubuntu,macos} × Node {22,24}.
+- `npm test` is 78 suites and about fifteen minutes. CI is {ubuntu,macos} × Node {22,24}.
   Adding a suite means updating `package.json` **and** the packet rows that pin the count.
 - **Every CLI write goes through `pincer-runtime/io.cjs`**; do not turn `process.exit(N)`
   into `process.exitCode = N` ([[runtime]]). Any report that renders a next action must

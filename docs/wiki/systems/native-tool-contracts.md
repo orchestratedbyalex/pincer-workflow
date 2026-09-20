@@ -72,4 +72,18 @@ refused. Study manifest schema 2 and pending reasons `BILLING_MODE_PENDING`,
 
 The Claude record schema now rejects Codex/Copilot records instead of accepting relabelled Claude authentication. The contract specifies a directory-wide lock and durable canary ownership/recovery journal; changed or unowned files are preserved, never automatically deleted. T-121 must exercise concurrency and interruption cases. The historical T-120 closure is preserved because the pinned legacy kit has no ticket-reopen operation; a fresh verification receipt records the corrected contract. This technical review does not impersonate a human reviewer or claim native observations. The old `a6a6d474…` cohort is historical after this correction.
 
-Corrected cohort: `3284061a…`; pinned-kit T-120 verification passed all three suites on 20 September at 09:17:26Z. T-121 implementation and native observations remain pending.
+Corrected cohort: `3284061a…`; pinned-kit T-120 verification passed all three suites on 20 September at 09:17:26Z.
+
+## Implemented — T-121 (20 September 2026)
+
+The contract is now code: `isolated-launch.cjs` (`NATIVE_PROFILE`, `probeLogin`,
+`overridePresent`, `establishLogin`, `accountLimit`), `login-custody.cjs` (lock, journal,
+`plant`/`remove`/`recover`), `usage.cjs` (`NATIVE_PROFILE`, `billingFor`), `allocation.cjs`
+(`limits`), `readiness.cjs` (schema 2), `orchestrator.cjs` (`--i-agreed-the-usage-envelope`,
+held custody, credential refusal before planning). Fixture suites:
+`test/native-login-study.test.js` (entry points, custody concurrency/interruption/recovery,
+orchestration scenarios, schema-2 ledger), `test/benchmark-environment.test.js` (profile and
+gate), `test/study-readiness.test.js` (schema 2). Operator-facing:
+`docs/prd-v8-artifacts/execution/T-121-native-smoke-execution-package.md`. Still unobserved:
+login preservation on 2.1.273, the CLI's own login-directory entry names, the hook-log format.
+The `caps.spend_usd` key name survives as the `--max-budget-usd` estimate cap.

@@ -219,3 +219,62 @@ If it does not, the result is the blocker `NATIVE_LOGIN_NOT_PRESERVED`, and the 
 alternative is a declared controlled-host baseline approved by the user as a methodology
 revision under a new profile name. An API key is never the fallback. Codex and Copilot
 isolation are specified or explicitly unobserved in the contract; neither is scheduled.
+
+## Implemented native-login profile (T-121, 20 September 2026)
+
+`isolated-launch.cjs` now exports both profiles. `PROFILE` (`claude-project-isolated-v1`)
+is kept only so retained fixture records and their observation target stay readable;
+`checkExecutionReadiness` refuses it with `PROFILE_HISTORICAL`. `NATIVE_PROFILE`
+(`claude-project-native-login-v1`) adds `login_dir: host/claude-config`,
+`status_record: claude-auth-status-json-v1` and `billing_mode: declared-in-study-manifest`
+to the fields above, so its observation target differs from `d53ff6f0…`.
+
+**Order of a launch.** `preflightExecution` runs before any workspace exists: the launching
+environment is checked for the nine credential/provider variables of the contract
+(`BILLING_OVERRIDE_PRESENT`, name only); custody of the login directory is acquired
+(`login-custody.cjs`); the directory's entry names are inspected (`PROFILE_HOST_DIRTY`);
+`<tool> auth status --json` runs with a throwaway `HOME` and the login directory as
+`CLAUDE_CONFIG_DIR` (`LOGIN_REQUIRED`, `LOGIN_STATUS_INVALID`, `PROFILE_INCOMPATIBLE`,
+`BILLING_MODE_MISMATCH`). The orchestrator holds custody through kit installation, the
+session, capture retention and canary cleanup, and releases it only after a durable
+receipt. In the session the launcher plants the synthetic canary in the per-session
+`HOME/.claude` as before and, with exclusive creation under custody, in the login directory;
+probes the status again in the actual session environment; and then starts the supervisor,
+which verifies that its parent holds custody and that the environment carries no credential
+variable before consuming the reservation. The child environment is `PATH`, `HOME`,
+`CLAUDE_CONFIG_DIR`, `TMPDIR`, `LANG`, `LC_ALL`, `CLAUDE_PROJECT_DIR`, `GIT_CONFIG_NOSYSTEM`,
+`GIT_CONFIG_GLOBAL`. `caps.spend_usd` keeps its historical key name; it is the
+`--max-budget-usd` list-price estimate cap and is never a charge.
+
+**Custody and recovery** (`login-custody.cjs`). One lock per canonical login directory in
+`host/.login-custody/`, outside the credential directory, with a journal that records the
+owner (pid, host, token, process start), the allocation/run/session ids and every canary
+write as `intended` then `created` (identity and digest). Aliases of one directory share
+the lock; a symlinked login root or one inside the operator's home is `LOGIN_DIR_INVALID`. A
+live owner is `LOGIN_DIR_BUSY`; a dead or unknown owner is `LOGIN_DIR_RECOVERY_REQUIRED`
+and is never stolen. Cleanup deletes one owned file at a time only when its identity and
+digest still match the journal; a changed, replaced, symlinked or undeletable file is
+preserved, a recovery marker is written before the lock is released, the record says
+`login_directory.recovery_required: true`, and the allocation stops
+(`ALLOCATION_LOGIN_DIR_RECOVERY`). `recover(root, {token, reason})` needs the owner proven
+gone, removes only verified unchanged owned files, preserves the rest (a write without its
+receipt is uncertain ownership), leaves a receipt, and launches nothing. Nothing in the
+directory is ever read, sized or hashed except the runner's own two canary files.
+
+**Record additions.** `environment.authentication` holds exactly `checked`, `logged_in`,
+`auth_method`, `api_provider`, `subscription_type`; `environment.billing` the declared
+mode with `attributable_charge_usd: null` and its reason; `environment.account_limit` a
+classified `{kind, at}` or `null`; `environment.login_directory` the custody summary;
+`isolation_canary` gains `login_dir_hook_ran`. A reviewed `native-isolation-observation`
+for a measured launch must now also carry `login_preserved: true` and
+`override_refused: true`.
+
+**What the fixtures established, and what they did not.** `test/native-login-study.test.js`
+and `test/benchmark-environment.test.js` exercise every refusal above with a synthetic
+status command and tool, competing invocations on aliased roots, a crash before and after
+the canary receipt, a replaced canary, a deletion fault, recovery and the clean session that
+follows, the orchestrator holding and releasing custody, the account-limit stop, and the
+subscription-unavailable versus missing-capture distinction, while proving the synthetic
+credential file is never opened. None of this observes the pinned CLI: whether 2.1.273
+preserves the login under this construction, what entry names it leaves in the directory,
+and whether its hook log matches the grammar remain T-109 observations.

@@ -24,7 +24,7 @@ const cell={brief:'cli-greenfield',arm:'plain',repetition:1};
 const wait=()=>new Promise(()=>setInterval(()=>{},1000));
 const mark=(name,text='yes')=>fs.writeFileSync(path.join(control,name),text);
 h.evaluateCandidate=async()=>({outcome:'rejected',checks:[{id:'controlled',result:'failed',independent:true}]});
-o.driveRun(root,cell,{cohort:'a'.repeat(64),spendingCap:true,model:'fixture',unrelatedEdits:{'operator-notes.md':{kind:'untracked',content:'original unrelated bytes'}},fixtureCheckpoint:async(name,state)=>{
+o.driveRun(root,cell,{cohort:'a'.repeat(64),usageEnvelopeAgreed:true,model:'fixture',unrelatedEdits:{'operator-notes.md':{kind:'untracked',content:'original unrelated bytes'}},fixtureCheckpoint:async(name,state)=>{
  if(name===boundary){
   fs.mkdirSync(state.scratch,{recursive:true});fs.writeFileSync(path.join(state.scratch,'browser-fixture.png'),'retained fixture evidence');
   fs.writeFileSync(path.join(state.workspace,'DEAD-ATTEMPT'),'uncommitted prior work');
@@ -37,7 +37,8 @@ o.driveRun(root,cell,{cohort:'a'.repeat(64),spendingCap:true,model:'fixture',unr
 },fixtureSession:async options=>{
  if(boundary==='streaming'){
   const watch=setInterval(()=>{const file=path.join(options.logDir,'S1.json');if(fs.existsSync(file)&&fs.readFileSync(file,'utf8').includes('fixture-stream-chunk')){mark('boundary');clearInterval(watch);}},20);
-  return isolate.observeFixture({...options,prompt:'controlled fixture',arm:'plain',stateRoot:path.dirname(options.promptFile),toolVersion:isolate.PROFILE.tool_version,permissionMode:'manual',model:'claude-sonnet-4-6',apiKey:'fixture-key',caps:{turns_per_session:5,wall_clock_minutes:1,spend_usd:1},mode:'stream-descendant',heartbeat:path.join(control,'heartbeat'),timeoutMs:60000});
+  const study=path.join(control,'study');fs.mkdirSync(path.join(study,'host','claude-config'),{recursive:true});
+  return isolate.observeFixture({...options,prompt:'controlled fixture',arm:'plain',stateRoot:path.dirname(options.promptFile),toolVersion:isolate.NATIVE_PROFILE.tool_version,permissionMode:'manual',model:'claude-sonnet-4-6',inputRoot:study,billingMode:'subscription',caps:{turns_per_session:5,wall_clock_minutes:1,spend_usd:1},mode:'stream-descendant',heartbeat:path.join(control,'heartbeat'),timeoutMs:60000});
  }
  fs.mkdirSync(options.logDir,{recursive:true});fs.writeFileSync(path.join(options.logDir,options.name+'.json'),JSON.stringify({type:'result',subtype:'success',total_cost_usd:1.25,duration_api_ms:1000,modelUsage:{fixture:{inputTokens:120,outputTokens:1,cacheReadInputTokens:0,cacheCreationInputTokens:0}}}));fs.writeFileSync(path.join(options.logDir,options.name+'.err'),'');
  return {status:0,end:'completed',started:new Date().toISOString(),ended:new Date().toISOString()};
@@ -47,7 +48,7 @@ function start(root,control,boundary){const child=spawn(process.execPath,[worker
 async function killRecover(root,child){const owner=o.inspectClaim(root,cell).owner;for(const group of owner.groups)groups.add(group);child.kill('SIGKILL');await child.done;for(const group of owner.groups)try{process.kill(-group,'SIGKILL');}catch{}await until(()=>o.inspectClaim(root,cell).state==='dead','all killed custody gone');o.recoverRun(root,cell,{token:owner.token,reason:'Controlled killed processes inspected; no remaining children'});}
 const originalEvaluate=harness.evaluateCandidate;
 harness.evaluateCandidate=async()=>({outcome:'rejected',checks:[{id:'controlled',result:'failed',independent:true}]});
-async function resume(root,attempt){return o.driveRun(root,cell,{cohort,spendingCap:true,model:'fixture',resumeInterrupted:{attempt,reason:'Explicit controlled restart from clean base'},fixtureSession:async options=>{
+async function resume(root,attempt){return o.driveRun(root,cell,{cohort,usageEnvelopeAgreed:true,model:'fixture',resumeInterrupted:{attempt,reason:'Explicit controlled restart from clean base'},fixtureSession:async options=>{
  fs.mkdirSync(options.logDir,{recursive:true});fs.writeFileSync(path.join(options.logDir,options.name+'.json'),JSON.stringify({type:'result',subtype:'success',total_cost_usd:2,duration_api_ms:1000,modelUsage:{fixture:{inputTokens:30,outputTokens:1,cacheReadInputTokens:0,cacheCreationInputTokens:0}}}));fs.writeFileSync(path.join(options.logDir,options.name+'.err'),'');
  return {status:0,end:'completed',started:new Date().toISOString(),ended:new Date().toISOString()};
 }});}
@@ -64,8 +65,8 @@ for(const boundary of ['setup','session-start','session-end','pre-evaluation','s
  if(boundary==='streaming')assert.match(fs.readFileSync(path.join(home,checkpoint.attempts[0].sessions[0].payload),'utf8'),/fixture-stream-chunk/,'raw bytes arrive durably before driver completion');
  await killRecover(root,child);
  const oldDir=path.join(home,checkpoint.attempts[0].directory),old=snap(oldDir),before=snap(root);
- const refusal=await o.driveRun(root,cell,{cohort,spendingCap:true,fixtureSession:()=>{throw new Error('must not launch');}});assert.equal(refusal.code,'ATTEMPT_RESUME_REQUIRED');assert.deepEqual(snap(root),before);
- const wrong=await o.driveRun(root,cell,{cohort,spendingCap:true,resumeInterrupted:{attempt:'wrong',reason:'not matching'},fixtureSession:()=>{throw new Error('must not launch');}});assert.equal(wrong.code,'ATTEMPT_RESUME_REQUIRED');assert.deepEqual(snap(root),before);
+ const refusal=await o.driveRun(root,cell,{cohort,usageEnvelopeAgreed:true,fixtureSession:()=>{throw new Error('must not launch');}});assert.equal(refusal.code,'ATTEMPT_RESUME_REQUIRED');assert.deepEqual(snap(root),before);
+ const wrong=await o.driveRun(root,cell,{cohort,usageEnvelopeAgreed:true,resumeInterrupted:{attempt:'wrong',reason:'not matching'},fixtureSession:()=>{throw new Error('must not launch');}});assert.equal(wrong.code,'ATTEMPT_RESUME_REQUIRED');assert.deepEqual(snap(root),before);
  const originalPrepare=harness.prepare;harness.prepare=()=>{throw new Error('Regeneration must not run on resume');};
  let result;try{result=await resume(root,'attempt-000001');}finally{harness.prepare=originalPrepare;}
  assert.equal(result.record.attempts[1].base,result.record.attempts[0].base,'resume retains the exact original base commit');assert.deepEqual(result.problems,[],JSON.stringify(result.record));assert.deepEqual(effort.problems(result.record),[]);
@@ -111,7 +112,7 @@ for(const boundary of ['setup','session-start','session-end','pre-evaluation','s
  const root=planned(),home=o.runDir(root,cell),record=o.readRecord(root,cell),time=new Date().toISOString();
  record.events=[{kind:'stage',id:record.run+':setup',stage:'setup',started:time,ended:time},{kind:'session',id:record.run+':S1',started:time,ended:time}];o.writeRecord(root,cell,record);
  fs.mkdirSync(path.join(home,'logs'));fs.writeFileSync(path.join(home,'logs/S1.json'),'{"total_cost_usd":1.25}');fs.mkdirSync(path.join(home,'scratch'));fs.writeFileSync(path.join(home,'scratch/browser-artifact.png'),'historical fixture');
- const beforeNative=snap(root);const refusedNative=await o.driveRun(root,cell,{cohort,spendingCap:true,resumeInterrupted:{attempt:'legacy',reason:'Must refuse unknown native originalbase'}});assert.equal(refusedNative.code,'ORIGINAL_BASE_UNAVAILABLE');assert.deepEqual(snap(root),beforeNative);
+ const beforeNative=snap(root);const refusedNative=await o.driveRun(root,cell,{cohort,usageEnvelopeAgreed:true,resumeInterrupted:{attempt:'legacy',reason:'Must refuse unknown native originalbase'}});assert.equal(refusedNative.code,'ORIGINAL_BASE_UNAVAILABLE');assert.deepEqual(snap(root),beforeNative);
  const logs=snap(path.join(home,'logs')),scratch=snap(path.join(home,'scratch')),result=await resume(root,'legacy');
  assert.deepEqual(result.record.events.slice(0,2),record.events);assert.equal(result.record.attempts[0].origin,'legacy');assert.deepEqual(effort.problems(result.record),[]);
  assert.deepEqual(snap(path.join(home,'logs')),logs);assert.deepEqual(snap(path.join(home,'scratch')),scratch);

@@ -282,9 +282,12 @@ protected host mechanism" or describe an API key, this amendment governs:
 - **Readiness.** The study manifest gains schema 2 (`execution.billing`, estimate-cap and
   account-usage allocation fields, `login_preserved`/`override_refused` native checks) with
   pending reasons `BILLING_MODE_PENDING`, `ACCOUNT_USAGE_PENDING` and
-  `LOGIN_STATUS_CONTRACT_PENDING`. Schema 1 manifests stay readable. T-121 implements this;
-  the checked-in inspector and the superseded smoke package still describe the API-key path
-  until then.
+  `LOGIN_STATUS_CONTRACT_PENDING`. Schema 1 manifests stay readable. T-121 implemented this
+  on 20 September 2026 (`readiness.cjs` schema 2, `login-custody.cjs`, the native-login
+  launcher profile and the `claude-code-result-native-usage-v1` reader); the replacement
+  package is `docs/prd-v8-artifacts/execution/T-121-native-smoke-execution-package.md`. The
+  implementation is fixture-verified only: no native login, isolation or session has been
+  observed under it.
 
 The proposed first allocation above keeps its numbers as a proposal; its `$1` and `$3` are
 estimate caps, not charges, and the API-key authorization written on 20 September 2026 is

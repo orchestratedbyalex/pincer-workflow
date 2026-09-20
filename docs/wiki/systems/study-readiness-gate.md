@@ -6,9 +6,27 @@ prepared. Related: [[v7-execution-gaps]], [[delivery-benchmark]],
 `docs/prd-v8-artifacts/execution/T-109-smoke-execution-package.md`; the pending manifest
 is `study.json` beside it.
 
-**Superseded for execution (2026-09-20):** the API-key profile below is historical. The
-replacement host-login design is [[native-tool-contracts]] (T-120), implemented by T-121
-before any T-109 smoke.
+**Native-login path (2026-09-20, T-121):** the API-key profile described below is historical
+and refused (`PROFILE_HISTORICAL`). The current path is [[native-tool-contracts]]: the user
+signs in with `claude auth login` under `<study root>/host/claude-config`; `preflightExecution`
+refuses credential/billing overrides by name, takes exclusive custody of that directory
+(`login-custody.cjs`: lock plus journal in `host/.login-custody/`, aliases share it, dead
+owners are never stolen), inspects its entry names, probes `auth status --json` with a
+throwaway HOME, and the orchestrator holds custody through the session and releases it after
+canary cleanup. Records carry `authentication` (five sanitized fields), `billing` (declared
+mode, no charge), `account_limit`, `login_directory`. `readiness.cjs` reads manifest schema 2
+(`execution.billing`, `session_estimate_cap_usd`, `limit_estimate_usd`, `account_usage`,
+native checks `login_preserved`/`override_refused`/`status_record_sanitized`/
+`billing_mode_consistent`, smoke checks `estimate_captured`/`charge_unavailable_labelled`);
+schema 1 validates exactly as before. `allocation.cjs` accepts both grant shapes via
+`limits()`, counts `max_sessions`, and stops on `ALLOCATION_LOGIN_DIR_RECOVERY`,
+`ALLOCATION_CAPTURE_INCOMPLETE`, `ALLOCATION_ACCOUNT_LIMIT`, `BILLING_MODE_MISMATCH`; T-121
+must be `done` before any launch. The launch flag is `--i-agreed-the-usage-envelope`. The
+replacement package is `docs/prd-v8-artifacts/execution/T-121-native-smoke-execution-package.md`.
+Gotchas: the readiness inspector never runs the CLI, so it cannot check the login (the launcher
+does); a new CLI-owned entry name in the login directory surfaces as `PROFILE_HOST_DIRTY` and
+needs a reviewed addition to `ALLOWED_ENTRIES` (cohort re-mint); tests that acquire custody
+in-process must release it (`releaseCustody`) or the next acquisition is `LOGIN_DIR_BUSY`.
 
 ## Pieces (all under `scripts/delivery-benchmark-v7/`)
 

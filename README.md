@@ -13,8 +13,10 @@ safety guardrails, and installation.
 
 Pincer runs inside your coding tool and uses that tool's normal account sign-in.
 Pincer itself requires no model-provider API key and does not manage model credentials.
-The separate maintainer study runner still has a historical API-key profile; its
-[replacement plan](docs/prd-v8-native-tool-plan.md) is pending implementation.
+The separate maintainer study runner signs in the same way, through the tool's own
+`claude auth login` in a dedicated study directory ([contracts](docs/prd-v8-native-tool-contracts.md),
+[replacement plan](docs/prd-v8-native-tool-plan.md)); its former API-key profile is historical
+and refused. Whether the pinned CLI preserves that login has not been observed yet.
 
 ## Install
 

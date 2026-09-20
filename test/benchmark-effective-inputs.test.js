@@ -131,11 +131,11 @@ function snapshot(root) {
   assert.throws(() => runner.plan(runs, opts), /changed/);
   assert.deepEqual(snapshot(runs), before);
   const cell = planned.cells[0];
-  const result = await runner.driveRun(runs, cell, { cohort: bundle.manifest.cohort, spendingCap: true });
+  const result = await runner.driveRun(runs, cell, { cohort: bundle.manifest.cohort, usageEnvelopeAgreed: true });
   assert.equal(result.refused, true);
   assert.match(result.detail, /effective manifest/);
   assert.deepEqual(snapshot(runs), before, 'historical direct API cannot prepare or launch');
-  const session = runner.driveSession({ spendingCap: true, cohort: bundle.manifest.cohort, logDir: path.join(runs, 'never-created') });
+  const session = runner.driveSession({ usageEnvelopeAgreed: true, cohort: bundle.manifest.cohort, logDir: path.join(runs, 'never-created') });
   assert.equal(session.refused, true);
   assert.deepEqual(snapshot(runs), before);
 }

@@ -1,10 +1,14 @@
 ---
 ticket: T-121
-status: open
+status: done
 size: L
 prd: .prd/prd-v8.md
 depends_on: [T-120]
 timeout: 900
+started: 2026-09-20T10:22:38Z
+last_check: 2026-09-20T10:39:21Z passed 826a1616422f
+verified: 2026-09-20T10:39:21Z 826a1616422f
+finished: 2026-09-20T10:39:21Z
 ---
 
 ## Objective
@@ -28,9 +32,13 @@ Follow native-tool contracts §2.4: lock the canonical shared login directory ac
 The current executable study schema is Claude-only. Reject Codex/Copilot records instead of relabelling Claude status/profile data. Codex needs a separate surface-specific profile before T-110/T-111; no Pincer Codex hook adapter exists and Claude hook evidence is not applicable. GitHub Copilot's shipped surface is VS Code; CLI research is separate.
 
 ## Acceptance Criteria
-- [ ] S-64: The actual launch entry point uses supported native login, refuses missing login and provider-key overrides before a task, and never records secrets or credential hashes.
-- [ ] S-65: Entry-point fixture regressions exercise subscription billing unavailability versus missing evidence, account limits, isolation leakage, interruption/restart and retention faults while preserving stop/freshness protections.
-- [ ] S-66: The replacement package, proposed inputs, cohort and regression results describe the implemented path; actual native login and isolation remain explicitly unobserved until T-102/T-109.
+- [x] S-64: The actual launch entry point uses supported native login, refuses missing login and provider-key overrides before a task, and never records secrets or credential hashes.
+- [x] S-65: Entry-point fixture regressions exercise subscription billing unavailability versus missing evidence, account limits, isolation leakage, interruption/restart and retention faults while preserving stop/freshness protections.
+- [x] S-66: The replacement package, proposed inputs, cohort and regression results describe the implemented path; actual native login and isolation remain explicitly unobserved until T-102/T-109.
+
+## Implementation — 20 September 2026
+
+Implemented in `scripts/delivery-benchmark-v7/` (`isolated-launch.cjs` native-login profile with status probe, override refusal and billing block; new `login-custody.cjs` for the shared login-directory lock, journal and recovery; `usage.cjs` versioned native reader; `allocation.cjs` schema-2 grants, `max_sessions`, custody and account-limit stops; `readiness.cjs` manifest schema 2; `orchestrator.cjs` `--i-agreed-the-usage-envelope`, credential refusal, held custody; `effective.cjs`, `effort.cjs`, `freeze-spec.cjs`). Suite `test/native-login-study.test.js` runs fixture executables through the real entry points; `test/benchmark-environment.test.js` and `test/study-readiness.test.js` carry the profile and schema-2 cases. Replacement package: `docs/prd-v8-artifacts/execution/T-121-native-smoke-execution-package.md`; `study.json` is schema 2 and pending; the proposed inputs name the native profile. The criteria above are ticked as fixture-verified implementation deliverables. A fixture is not native evidence: no account login, live session or spending occurred, and native login preservation, the CLI's own login-directory entry names and its hook-log format remain T-102/T-109 observations.
 
 ## Verification
 Proves: The declared contract or fixture entry-point behavior matches the amended native-login design, including rejection paths. These commands do not prove actual account authentication or execute a live study.

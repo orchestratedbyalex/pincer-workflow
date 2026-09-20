@@ -19,7 +19,7 @@ Current state: [v8 obligation overlay](../prd-v8-obligation-map.md) and
 - [[requirements-through-delivery]] — stable `R-NN` IDs plan→narrow→evaluate, `Proves:` behavioral checks, `profile: small|standard`, one shared authorization rule, guarded ticket recovery (PRD v2)
 
 ## Systems
-- [[native-tool-contracts]] — PRD v8 T-120: host-login study profile, sanitized status, billing-mode-aware usage and comparison rules; what remains unobserved
+- [[native-tool-contracts]] — PRD v8 T-120/T-121: host-login study profile, login-directory custody, sanitized status, billing-mode-aware usage and comparison rules, now implemented; what remains unobserved
 - [[strict-coverage]] — PRD v6: the PRD as inventory, the authored map, agreement binding, declared checks, evidence schema 3, the coverage and impact reports
 - [[v7-measured-friction]] — the v7 measurement tooling, what the baseline measured, and what an operator-driven measurement cannot show
 - [[study-readiness-gate]] — PRD v8: the read-only readiness inspector, the allocation ledger, the isolated launcher and the operational-smoke path; the study root landmine

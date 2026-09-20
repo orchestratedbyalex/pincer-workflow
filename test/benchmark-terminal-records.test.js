@@ -37,7 +37,7 @@ function fixture(options = {}) {
   };
 }
 async function drive(p, options = {}) {
-  return runtime.driveRun(p.root, p.cell, { cohort, spendingCap: true, model: 'synthetic', fixtureSession: fixture(), ...options });
+  return runtime.driveRun(p.root, p.cell, { cohort, usageEnvelopeAgreed: true, model: 'synthetic', fixtureSession: fixture(), ...options });
 }
 async function evaluated(result, body) {
   const previous = harness.evaluateCandidate;
@@ -123,7 +123,7 @@ for (const subtype of ['error_max_turns', 'error_max_budget_usd', 'error_during_
   const p = planned();
   const before = fs.readFileSync(path.join(p.home, 'record.json'));
   let calls = 0;
-  const out = await drive(p, { spendingCap: false, fixtureSession: () => { calls++; } });
+  const out = await drive(p, { usageEnvelopeAgreed: false, fixtureSession: () => { calls++; } });
   assert.equal(out.refused, true);
   assert.equal(calls, 0);
   assert.deepEqual(fs.readFileSync(path.join(p.home, 'record.json')), before);

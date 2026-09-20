@@ -193,16 +193,23 @@ function recordInputs(manifest) {
       os: e.platform.os, node: e.platform.node, platform_release: e.platform.release,
       permission_mode: e.configuration.permission_mode, caps,
       ...(e.configuration.isolation_profile ? { isolation_profile: e.configuration.isolation_profile } : {}),
+      // A native-login cohort is measured under the native usage profile from the plan on, so
+      // its records never read as legacy API-key accounting (T-121).
+      ...(e.configuration.isolation_profile === 'claude-project-native-login-v1' ? { measurement_profile: 'claude-code-result-native-usage-v1', tool_surface: 'claude-code' } : {}),
       ...(e.configuration.isolation_observation_digest ? { isolation_observation_digest: e.configuration.isolation_observation_digest } : {}),
       fixture: e.tool.kind === 'version-probe-fixture' },
   };
 }
 function parseArgs(argv) {
   const valued = new Set(['runs', 'execution-inputs', 'input-root', 'study-manifest', 'study-input-root', 'study-purpose', 'repetitions', 'briefs', 'model', 'max-turns', 'wall-clock-minutes', 'max-budget-usd', 'kit', 'browser']);
-  const boolean = new Set(['help', 'plan-only', 'i-have-a-spending-cap']);
+  // The launch assertion carries no numbers and is not the agent's to pass: a human agreed
+  // the estimate cap AND the account-usage envelope (native-tool contracts §5.3). The former
+  // spending-cap spelling is refused by name so old automation fails before planning.
+  const boolean = new Set(['help', 'plan-only', 'i-agreed-the-usage-envelope']);
   const out = {};
   for (let i = 0; i < argv.length; i++) {
     const name = argv[i].startsWith('--') ? argv[i].slice(2) : '';
+    if (name === 'i-have-a-spending-cap') throw new Error('--i-have-a-spending-cap was renamed: --i-agreed-the-usage-envelope asserts that a human agreed the estimate cap and the account-usage envelope');
     if ((!valued.has(name) && !boolean.has(name)) || Object.hasOwn(out, name)) throw new Error('unknown or duplicate option');
     if (boolean.has(name)) out[name] = true;
     else {

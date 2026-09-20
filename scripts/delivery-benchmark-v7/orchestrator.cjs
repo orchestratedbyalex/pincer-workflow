@@ -25,10 +25,13 @@
 //     the original left on disk and its reason kept.
 //   * the kit is INSTALLED per arm. `harness.prepare()` does not do it.
 //
-// This file spends no money by itself and cannot: it reaches a model only by executing
-// `live-driver.sh`, which refuses without an explicit spending-cap assertion. The
-// orchestrator refuses the same way, one level up, so that a caller cannot slip past the
-// decision by driving the loop instead of the session.
+// This file spends no money by itself and cannot: it reaches a model only through the
+// isolated launcher (the historical `live-driver.sh` route refuses every call), and only
+// after a human asserted `--i-agreed-the-usage-envelope`: the estimate cap and the
+// account-usage envelope of a user-decided study authorization. The orchestrator refuses
+// the same way, one level up, so that a caller cannot slip past the decision by driving the
+// loop instead of the session. It reads no credential variable and refuses to run while one
+// is present in its environment (native-tool contracts §5.3).
 const fs = require('node:fs');
 const finalization = require('./finalization.cjs');
 const os = require('node:os');
@@ -363,17 +366,17 @@ function installKit(ws, arm, kit) {
 // One session, through the frozen driver. Nothing else in this file may reach a model,
 // and this function adds nothing to the prompt: a driver — or an orchestrator — that
 // coaches is measuring itself rather than the workflow.
-function driveSession({ run, workspace, promptFile, model, maxTurns, wallClockMinutes, cohort, logDir, name, spendingCap, effective = null,
-  arm, stateRoot, apiKey, expectedAssets, onGroup, readiness, observationFile, allocation, signal }) {
-  if (spendingCap !== true) {
-    return { refused: true, status: 3, stdout: '', stderr: 'orchestrator: refused: no spending cap has been asserted' };
+function driveSession({ run, workspace, promptFile, model, maxTurns, wallClockMinutes, cohort, logDir, name, usageEnvelopeAgreed, effective = null,
+  arm, stateRoot, expectedAssets, onGroup, readiness, observationFile, allocation, custody = null, signal }) {
+  if (usageEnvelopeAgreed !== true) {
+    return { refused: true, status: 3, stdout: '', stderr: 'orchestrator: refused: no usage envelope has been agreed' };
   }
   try {
     const current = effectiveInputs.assertCurrent(effective);
     if (current.cohort !== cohort || current.effective.model !== model || current.caps.turns_per_session !== maxTurns || current.caps.wall_clock_minutes !== wallClockMinutes) throw new Error('session inputs differ from effective manifest');
   } catch (error) { return { refused: true, status: 3, stdout: '', stderr: error.message }; }
   return isolation.launchNative({ effective, arm, workspace, stateRoot, logDir, name,
-    prompt: fs.readFileSync(promptFile, 'utf8'), apiKey, expectedAssets, onGroup, readiness, observationFile, allocation, signal });
+    prompt: fs.readFileSync(promptFile, 'utf8'), expectedAssets, onGroup, readiness, observationFile, allocation, custody, signal });
 }
 
 // Resolve actual recorded decisions before any workspace preparation. The old cap
@@ -424,13 +427,16 @@ function studyFor(runsRoot, opts, run = null, name = null, prompt = null) {
   }
   const project = selected && grant.projects.find(item => item.id === selected.project);
   if (selected && !project) throw new Error('The selected study project has no approved immutable base');
+  // These booleans restate the inspector's validated decisions. The billing mode is the
+  // manifest's declaration; the launcher cross-checks it against the retained login status.
   return {
     projectBase: project?.base || null,
     allocation: context,
-    readiness: { purpose, spendingAuthorized: true, projectAccessAuthorized: true,
-      hostPolicyPreserved: true, decisionRef: grant.decision.ref,
+    readiness: { purpose, usageEnvelopeAgreed: true, projectAccessAuthorized: true,
+      hostPolicyPreserved: true, decisionRef: grant.decision.ref, billingMode: grant.billing?.mode ?? null,
       ...(purpose === 'measured' ? { observationReviewed: true } : {}) },
     observationFile,
+    ids: { allocation: grant.allocation.id, run },
   };
 }
 
@@ -448,18 +454,22 @@ async function driveRun(runsRoot, cell, opts) {
     return { record: readRecord(runsRoot, cell), stop: true, refused: true, code: error.code, detail: error.message };
   }
   let result;
-  try { result = await driveRunOwned(runsRoot, cell, opts, claim); return result; }
+  const custody = { handle: null, outcome: null };
+  try { result = await driveRunOwned(runsRoot, cell, opts, claim, custody); return result; }
   finally {
+    // Login-directory custody is released only after the session's cleanup receipt; a
+    // recovery-required outcome leaves the marker that refuses the next acquisition.
+    if (custody.handle) { try { isolation.releaseCustody(custody.handle, { recovery_required: Boolean(custody.outcome?.login_dir_recovery_required), detail: custody.outcome?.code || null }); } catch {} }
     // If even diagnostic storage failed, retain ownership: automatic retry cannot
     // safely distinguish the last checkpoint from an unrecorded terminal decision.
     if (!result?.diagnosticFailure) claims.release(claim);
   }
 }
-async function driveRunOwned(runsRoot, cell, opts, claim) {
+async function driveRunOwned(runsRoot, cell, opts, claim, custody = { handle: null, outcome: null }) {
   const {
     cohort, kit = null, model = 'sonnet', maxTurns = 150, wallClockMinutes = 30,
     dir = briefs.BRIEFS_DIR, tools = harness.DEFAULT_TOOLS(), browser = null,
-    spendingCap = false, unrelatedEdits = null, frozen = null,
+    usageEnvelopeAgreed = false, unrelatedEdits = null, frozen = null,
   } = opts;
   const record = readRecord(runsRoot, cell);
   if (!record) throw new Error(`no planned record at ${idOf(cell)}`);
@@ -487,7 +497,7 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
     }
   } catch (error) { return { ...refuse(error.message), code: error.code || 'RECORD_INVALID' }; }
   let effectiveBrowser = browser;
-  if (spendingCap !== true) return refuse(`${record.run}: no spending cap has been asserted; nothing was prepared and no session was launched`);
+  if (usageEnvelopeAgreed !== true) return refuse(`${record.run}: no usage envelope has been agreed; nothing was prepared and no session was launched`);
   if (cohort !== record.cohort) {
     return refuse(`${record.run}: the cohort given to the driver (${String(cohort).slice(0, 12)}) is not the cohort this cell was planned under (${String(record.cohort).slice(0, 12)})`);
   }
@@ -507,9 +517,12 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
       const inputRoot = opts.effective.inputRoot || opts.effective.root;
       if (kit !== effectiveInputs.contained(inputRoot, opts.effective.input.kit.path)) throw new Error('runtime kit differs from effective manifest');
       if (dir !== briefs.BRIEFS_DIR || opts.tools || browser || opts.unrelatedEdits) throw new Error('unbound brief, tool or browser override');
-      const gate = isolation.preflightExecution({ effective: opts.effective, apiKey: opts.apiKey,
-        ...nativeStudy, onGroup: group => claims.registerGroup(claim, group) });
+      // Before any workspace exists: custody of the login directory, the directory
+      // inspection and the login status probe. Custody is held through the session.
+      const gate = isolation.preflightExecution({ effective: opts.effective,
+        ...nativeStudy, onGroup: group => claims.registerGroup(claim, group), holdCustody: true });
       if (!gate.ok) throw new Error(gate.detail);
+      custody.handle = gate.custody;
       if (cell.brief === 'ui-states') effectiveBrowser = await prepareBrowser(opts.effective, { signal: opts.signal });
     } catch (error) { return refuse(error.message); }
   }
@@ -631,11 +644,12 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
     let s;
     try { s = await session({
       run: record.run, workspace: ws, promptFile, model, maxTurns,
-      wallClockMinutes, cohort, logDir: logs, name: p.name, spendingCap, effective: opts.effective,
+      wallClockMinutes, cohort, logDir: logs, name: p.name, usageEnvelopeAgreed, effective: opts.effective,
       onGroup: group => claims.registerGroup(claim, group),
-      arm: cell.arm, stateRoot: scratch, apiKey: opts.apiKey, expectedAssets,
+      arm: cell.arm, stateRoot: scratch, expectedAssets, custody: custody.handle,
       ...(nativeStudy || {}), signal: opts.signal,
-    }); } catch { return finalize('invalid', 'Session execution threw before completion; retained output may be partial.'); }
+    }); } catch { custody.outcome = { login_dir_recovery_required: true, code: 'SESSION_THREW' }; return finalize('invalid', 'Session execution threw before completion; retained output may be partial.'); }
+    custody.outcome = s;
     attempts.sessionEnd(record, attempt, intent, s);
     if (s.environment) record.environment = { ...record.environment, ...s.environment };
     // Checkpointed per SESSION, not per cell. A cell is up to three paid sessions; a
@@ -654,6 +668,19 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
     try { result = JSON.parse(fs.readFileSync(path.join(logs, `${p.name}.json`), 'utf8')); } catch {}
     const providerCap = s.status === 0 && result?.type === 'result' && result.is_error === true &&
       ['error_max_turns', 'error_max_budget_usd'].includes(result.subtype);
+    // An account limit ends the study, not the cell, whatever the purpose. Marking it invalid
+    // keeps the partial work and its reason; walking on would convert every later cell into a
+    // one-turn failure, which is precisely how v6 lost six runs. No wait, rotation, top-up or
+    // key fallback follows (native-tool contracts §1.2); resume is an explicit decision.
+    if (s.limit) {
+      record.status = 'invalid';
+      record.reason = `account limit during ${p.name}${s.account_limit?.kind ? ` (${s.account_limit.kind})` : ''}; the schedule stopped rather than continuing into it`;
+      record.events.push({
+        kind: 'intervention', id: attempts.eventId(record, attempt, `${p.name}:limit`), started: s.ended, ended: s.ended,
+        intervention: 'operator', detail: record.reason,
+      });
+      return finalize(record.status, record.reason, true);
+    }
     const nativeUnreportable = typeof opts.fixtureSession !== 'function' && s.reportable !== true;
     // An operational smoke session is unreportable by purpose, not by defect: it runs
     // the whole path, including independent evaluation, is finalized as an invalid
@@ -674,19 +701,6 @@ async function driveRunOwned(runsRoot, cell, opts, claim) {
         executionFailure = reason;
         stopAfterEvaluation = true;
       } else return finalize('invalid', reason, true);
-    }
-
-    // An account limit ends the study, not the cell. Marking it invalid keeps the
-    // partial work and its reason; walking on would convert every later cell into a
-    // one-turn failure, which is precisely how v6 lost six runs.
-    if (s.limit) {
-      record.status = 'invalid';
-      record.reason = `account limit during ${p.name}; the schedule stopped rather than continuing into it`;
-      record.events.push({
-        kind: 'intervention', id: attempts.eventId(record, attempt, `${p.name}:limit`), started: s.ended, ended: s.ended,
-        intervention: 'operator', detail: record.reason,
-      });
-      return finalize(record.status, record.reason, true);
     }
 
     if (s.end === 'capped' || providerCap) {
@@ -750,7 +764,9 @@ async function driveSchedule(runsRoot, opts) {
   const cells = scheduledCells(ids, opts.repetitions);
   if (typeof opts.fixtureSession !== 'function') {
     const refuse = reason => ({ driven: [], stopped: cells[0]?.run || null, reason, refused: true });
-    if (opts.spendingCap !== true) return refuse('No spending cap asserted; no browser or session launched');
+    if (opts.usageEnvelopeAgreed !== true) return refuse('No usage envelope agreed; no browser or session launched');
+    const override = isolation.overridePresent(process.env);
+    if (override) return refuse(`${override} is set in the launching environment (its value was not read); the native-login study never uses a provider key or billing override`);
     if (cells.some(cell => !readRecord(runsRoot, cell))) return refuse('Every scheduled cell must be planned before execution');
     const next = cells.find(cell => readRecord(runsRoot, cell)?.status === 'pending');
     if (!next) return { driven: cells.map(cell => ({ run: idOf(cell),
@@ -759,8 +775,9 @@ async function driveSchedule(runsRoot, opts) {
       const first = briefs.loadBrief(next.brief).prompts[0];
       const nativeStudy = studyFor(runsRoot, opts, idOf(next), first.name,
         `${ARM_PREAMBLE[next.arm] || ''}${first.prompt}`);
-      const gate = isolation.preflightExecution({ effective: opts.effective, apiKey: opts.apiKey,
-        ...nativeStudy, onGroup: () => {} });
+      // A preflight-only gate: custody is taken for the probe and released; nothing planted.
+      const gate = isolation.preflightExecution({ effective: opts.effective,
+        ...nativeStudy, onGroup: () => {}, holdCustody: false });
       if (!gate.ok) return refuse(gate.detail);
     }
     catch (error) { return refuse(error.message); }
@@ -811,12 +828,21 @@ async function main(argv) {
       '--model <provider-id> --max-turns <n> --wall-clock-minutes <n> --max-budget-usd <n>',
       '--kit <relative-tarball> --browser <module>  override entries from execution inputs',
       'Missing browser leaves UI checks unavailable; browser dependency roots must be declared.',
-      '--plan-only --i-have-a-spending-cap',
+      '--plan-only --i-agreed-the-usage-envelope',
+      'The envelope flag asserts a human agreed the estimate cap and the account-usage envelope of the',
+      'user-decided study authorization; it carries no numbers and is not an agent\'s to pass.',
+      'The study signs in through the tool\'s own login in <study root>/host/claude-config; no provider',
+      'API key is read, and the orchestrator refuses to run while a credential or billing override',
+      'variable is present in its environment.',
       'Execution inputs must pin tool executable/version, model, caps, kit commit, and configuration.',
       '',
     ].join('\n'));
     return args.help ? 0 : 2;
   }
+  // Before planning anything: the launching environment must carry no provider key or
+  // billing override. The name is reported; the value is never read.
+  const override = isolation.overridePresent(process.env);
+  if (override) { process.stderr.write(`orchestrator: refused: ${override} is set in the launching environment (its value was not read); the native-login study never uses a provider key or billing override\n`); return 3; }
   if (!args['execution-inputs']) throw new Error('--execution-inputs is required; historical plans are read-only');
   const unknownBriefs = (args.briefs || []).filter(id => !briefs.briefIds().includes(id));
   if (unknownBriefs.length) { process.stderr.write(`orchestrator: --briefs: unknown brief ${unknownBriefs.join(', ')}\n`); return 2; }
@@ -835,13 +861,12 @@ async function main(argv) {
     cohort: manifest.cohort, frozen: manifest, effective,
     kit: effectiveInputs.contained(inputRoot, input.kit.path), model: input.model,
     maxTurns: manifest.caps.turns_per_session, wallClockMinutes: manifest.caps.wall_clock_minutes,
-    spendingCap: args['i-have-a-spending-cap'] === true,
+    usageEnvelopeAgreed: args['i-agreed-the-usage-envelope'] === true,
     allocation: args['study-manifest'] ? { manifestPath: path.resolve(args['study-manifest']),
       inputRoot: args['study-input-root'] ? path.resolve(args['study-input-root']) : inputRoot,
       purpose: args['study-purpose'] || 'measured' } : null,
     repetitions: args.repetitions,
     ...(args.briefs ? { ids: args.briefs } : {}),
-    apiKey: process.env.ANTHROPIC_API_KEY,
     provenance: {
       protocol: manifest.inputs.protocol, prompts: manifest.inputs.briefs, driver: manifest.inputs.driver,
       collector: manifest.inputs.collector, evaluator: manifest.inputs.evaluators,

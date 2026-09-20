@@ -73,19 +73,24 @@ function inspectStudy({ manifestPath, inputRoot, purpose, nextSessionId } = {}) 
     full=path.join(fs.realpathSync(path.dirname(path.resolve(manifestPath))),path.basename(manifestPath));root=fs.realpathSync(inputRoot || process.cwd());
     manifest=json(root,path.relative(root,full).split(path.sep).join('/'));
     shape(manifest,['schema','kind','status','execution','projects','kits','schedule','reviewers','authorization','allocation','stop_resume','evidence','pending_notes'],'STUDY_MANIFEST_INVALID');
-    need(manifest.schema===1&&manifest.kind==='pincer-study-readiness','STUDY_MANIFEST_INVALID');
+    // Schema 1 (historical API-key path) validates exactly as before. Schema 2 (T-121) adds
+    // the declared billing mode, estimate-cap allocation fields, the agreed account-usage
+    // envelope and the native-login evidence checks.
+    need([1,2].includes(manifest.schema)&&manifest.kind==='pincer-study-readiness','STUDY_MANIFEST_INVALID');
   } catch(error) { add(/^[A-Z_]+$/.test(error.message)?error.message:'MANIFEST_UNREADABLE','manifest');return {ready:false,phase:'pending',pending,launchGrant:null,settlementGrant:null,allocation:null}; }
   purpose=purpose || 'measured';
   if(!['operational-smoke','measured'].includes(purpose))add('PURPOSE_INVALID','purpose');
   const check=(at,fn)=>{try{return fn();}catch(error){add(/^[A-Z_]+$/.test(error.message)?error.message:'REQUIRED_ARTIFACT_UNAVAILABLE',at);return null;}};
   const execution=check('execution',()=>{
     const ex=manifest.execution;
-    shape(ex,['candidate','effective','observation_target','evidence_target','inputs','native_observation','browser_runtime_root','source_root'],'EXECUTION_IDENTITY_PENDING');
+    shape(ex,['candidate','effective','observation_target','evidence_target','inputs','native_observation','browser_runtime_root','source_root',...(manifest.schema===2?['billing']:[])],'EXECUTION_IDENTITY_PENDING');
     need(COMMIT.test(ex.candidate||'')&&SHA.test(ex.observation_target||''),'EXECUTION_IDENTITY_PENDING');
     const retained=reference(root,ex.effective);
     need(retained?.schema===2&&SHA.test(retained.cohort||'')&&retained.effective?.tool?.kind==='native','NATIVE_EFFECTIVE_IDENTITY_REQUIRED');
     need(object(retained.inputs)&&Array.isArray(retained.order)&&retained.inputs.effective===hash(canonical(retained.effective))&&retained.cohort===hash(canonical({inputs:retained.inputs,order:retained.order}))&&canonical(retained.caps)===canonical(retained.effective.caps),'EFFECTIVE_MANIFEST_INCONSISTENT');
-    need(ex.observation_target===require('./isolated-launch.cjs').observationTarget(retained),'OBSERVATION_TARGET_MISMATCH');
+    const launcher=require('./isolated-launch.cjs');
+    need(Object.hasOwn(launcher.PROFILES,retained.effective.configuration?.isolation_profile),'PROFILE_UNBOUND');
+    need(ex.observation_target===launcher.observationTarget(retained),'OBSERVATION_TARGET_MISMATCH');
     need(ex.evidence_target===evidenceTarget(retained),'EVIDENCE_TARGET_MISMATCH');
     need(retained.effective.browser&&retained.effective.configuration?.isolation_profile,'EXECUTION_CAPABILITIES_PENDING');
     need(Array.isArray(ex.inputs)&&ex.inputs.length>0&&ex.inputs.length<=10000,'CURRENT_INPUT_INVENTORY_REQUIRED');
@@ -103,6 +108,19 @@ function inspectStudy({ manifestPath, inputRoot, purpose, nextSessionId } = {}) 
     need(ex.inputs.some(x=>x.digest===retained.effective.tool.digest),'TOOL_ARTIFACT_UNBOUND');
     return {...ex,retained,effective_digest:retained.cohort};
   });
+  // The declared billing mode (schema 2). A native-login cohort under a schema-1 manifest has
+  // no declaration and is pending; a historical API-key cohort cannot carry a schema-2 one.
+  const NATIVE_PROFILE=require('./isolated-launch.cjs').NATIVE_PROFILE.name;
+  const nativeCohort=execution?execution.retained.effective.configuration.isolation_profile===NATIVE_PROFILE:null;
+  const billing=execution?check('execution.billing',()=>{
+    if(manifest.schema===1){need(!nativeCohort,'BILLING_MODE_PENDING');return null;}
+    need(nativeCohort,'PROFILE_INCOMPATIBLE');
+    const b=manifest.execution.billing;shape(b,['mode','tool_surface','status_record_contract'],'BILLING_MODE_PENDING');
+    need(['subscription','api'].includes(b.mode),'BILLING_MODE_PENDING');
+    need(b.tool_surface==='claude-code','SURFACE_UNSUPPORTED');
+    need(b.status_record_contract==='claude-auth-status-json-v1','LOGIN_STATUS_CONTRACT_PENDING');
+    return b;
+  }):null;
   const projects=check('projects',()=>{
     need(Array.isArray(manifest.projects)&&manifest.projects.length>0&&manifest.projects.length<=100,'PROJECT_ACCESS_PENDING');
     const ids=new Set();
@@ -127,19 +145,40 @@ function inspectStudy({ manifestPath, inputRoot, purpose, nextSessionId } = {}) 
     return manifest.schedule;
   });
   const allocation=check('allocation',()=>{
-    const a=manifest.allocation;shape(a,['id','root','decision','limit_usd','session_cap_usd','session_wall_minutes','max_elapsed_minutes','expires_at'],'NUMERIC_ALLOCATION_PENDING');
-    need(typeof a.id==='string'&&/^[a-zA-Z0-9_-]+$/.test(a.id)&&positive(a.limit_usd)&&positive(a.session_cap_usd)&&a.session_cap_usd<=a.limit_usd&&Number.isSafeInteger(a.session_wall_minutes)&&a.session_wall_minutes>0&&positive(a.max_elapsed_minutes),'NUMERIC_ALLOCATION_PENDING');
+    const a=manifest.allocation;
+    if(manifest.schema===2){
+      // Estimate caps and the agreed account-usage envelope. `session_estimate_cap_usd` is the
+      // `--max-budget-usd` list-price cap, `limit_estimate_usd` the aggregate the allocator may
+      // reserve; neither is a charge, and the runner enforces no plan quota.
+      shape(a,['id','root','decision','session_estimate_cap_usd','limit_estimate_usd','session_wall_minutes','account_usage','expires_at'],'NUMERIC_ALLOCATION_PENDING');
+      need(typeof a.id==='string'&&/^[a-zA-Z0-9_-]+$/.test(a.id)&&positive(a.limit_estimate_usd)&&positive(a.session_estimate_cap_usd)&&a.session_estimate_cap_usd<=a.limit_estimate_usd&&Number.isSafeInteger(a.session_wall_minutes)&&a.session_wall_minutes>0,'NUMERIC_ALLOCATION_PENDING');
+      const u=a.account_usage;shape(u,['max_sessions','max_elapsed_minutes','agreed'],'ACCOUNT_USAGE_PENDING');
+      need(Number.isSafeInteger(u.max_sessions)&&u.max_sessions>0&&positive(u.max_elapsed_minutes)&&u.agreed===true,'ACCOUNT_USAGE_PENDING');
+    } else {
+      shape(a,['id','root','decision','limit_usd','session_cap_usd','session_wall_minutes','max_elapsed_minutes','expires_at'],'NUMERIC_ALLOCATION_PENDING');
+      need(typeof a.id==='string'&&/^[a-zA-Z0-9_-]+$/.test(a.id)&&positive(a.limit_usd)&&positive(a.session_cap_usd)&&a.session_cap_usd<=a.limit_usd&&Number.isSafeInteger(a.session_wall_minutes)&&a.session_wall_minutes>0&&positive(a.max_elapsed_minutes),'NUMERIC_ALLOCATION_PENDING');
+    }
     need(Number.isFinite(Date.parse(a.expires_at)),'ALLOCATION_EXPIRY_INVALID');
     need(!unsafe(a.root),'ALLOCATION_ROOT_INVALID');
     // Ledger creation belongs to the allocator; inspection accepts a nonexistent leaf.
     let ancestor=root;for(const part of a.root.split('/')){ancestor=path.join(ancestor,part);if(fs.existsSync(ancestor))need(!fs.lstatSync(ancestor).isSymbolicLink(),'ALLOCATION_ROOT_INVALID');}
-    need(execution&&execution.retained.caps.spend_usd===a.session_cap_usd&&execution.retained.caps.wall_clock_minutes===a.session_wall_minutes,'CAPS_DECISION_MISMATCH');
-    return {...a,root:path.join(root,a.root)};
+    const sessionCap=manifest.schema===2?a.session_estimate_cap_usd:a.session_cap_usd;
+    need(execution&&execution.retained.caps.spend_usd===sessionCap&&execution.retained.caps.wall_clock_minutes===a.session_wall_minutes,'CAPS_DECISION_MISMATCH');
+    return {...a,root:path.join(root,a.root),...(manifest.schema===2&&billing?{billing_mode:billing.mode}:{})};
   });
   const authorization=check('authorization',()=>{
     need(manifest.authorization,'ACTUAL_AUTHORIZATION_PENDING');
     const d=decision(root,manifest.authorization,'study-authorization');
-    need(d.decided_by==='user'&&d.purpose===purpose&&allocation&&d.allocation_id===allocation.id&&d.limit_usd===allocation.limit_usd&&d.session_cap_usd===allocation.session_cap_usd&&d.session_wall_minutes===allocation.session_wall_minutes&&d.max_elapsed_minutes===allocation.max_elapsed_minutes&&d.expires_at===allocation.expires_at&&schedule&&d.schedule_digest===hash(canonical(schedule)),'AUTHORIZATION_SCOPE_MISMATCH');
+    if(manifest.schema===2){
+      // The user's decision names the billing mode, the estimate caps, the turn cap and the
+      // account-usage envelope; the historical dollar fields are refused, never reinterpreted.
+      for(const legacy of ['limit_usd','session_cap_usd','max_elapsed_minutes','api_key','apiKey'])need(!Object.hasOwn(d,legacy),'LEGACY_FIELD_REFUSED');
+      need(billing&&d.billing_mode===billing.mode,'BILLING_MODE_PENDING');
+      need(allocation&&object(d.account_usage)&&canonical(d.account_usage)===canonical(allocation.account_usage),'ACCOUNT_USAGE_PENDING');
+      need(d.decided_by==='user'&&d.purpose===purpose&&allocation&&d.allocation_id===allocation.id&&d.limit_estimate_usd===allocation.limit_estimate_usd&&d.session_estimate_cap_usd===allocation.session_estimate_cap_usd&&d.session_wall_minutes===allocation.session_wall_minutes&&execution&&d.session_turns===execution.retained.caps.turns_per_session&&d.expires_at===allocation.expires_at&&schedule&&d.schedule_digest===hash(canonical(schedule)),'AUTHORIZATION_SCOPE_MISMATCH');
+    } else {
+      need(d.decided_by==='user'&&d.purpose===purpose&&allocation&&d.allocation_id===allocation.id&&d.limit_usd===allocation.limit_usd&&d.session_cap_usd===allocation.session_cap_usd&&d.session_wall_minutes===allocation.session_wall_minutes&&d.max_elapsed_minutes===allocation.max_elapsed_minutes&&d.expires_at===allocation.expires_at&&schedule&&d.schedule_digest===hash(canonical(schedule)),'AUTHORIZATION_SCOPE_MISMATCH');
+    }
     need(canonical(manifest.authorization)===canonical(manifest.allocation.decision),'ALLOCATION_DECISION_MISMATCH');return manifest.authorization;
   });
   check('stop_resume',()=>{const s=manifest.stop_resume;shape(s,['unknown_cost','account_limit','exhausted_allocation','changed_inputs','resume'],'STOP_RESUME_PENDING');need(['unknown_cost','account_limit','exhausted_allocation','changed_inputs'].every(k=>s[k]==='stop')&&s.resume==='explicit-recorded-decision','STOP_RESUME_PENDING');});
@@ -156,14 +195,20 @@ function inspectStudy({ manifestPath, inputRoot, purpose, nextSessionId } = {}) 
       need(observation?.schema===1&&observation.kind==='native-isolation-observation'&&observation.fixture===false&&observation.target===execution.observation_target&&ARMS.every(a=>observation.arms?.includes(a))&&observation.host_policy_observed===true&&observation.authentication_observed===true&&observation.personal_configuration_absent===true,'NATIVE_ISOLATION_OBSERVATION_INVALID');
       support(root,observation.evidence?.map(x=>({ref:x.path,digest:x.digest})));
     });
+    // Schema 2 adds the native-login checks: the login survived the constructed environment,
+    // the override refusal was exercised (offline, with a synthetic variable), the status
+    // record holds only its sanitized fields, and the billing mode matched the login; the
+    // smoke additionally labelled the estimate and the unavailable charge.
+    const nativeChecks=['host_policy','authentication','personal_configuration_absent','kit_mechanisms',...(manifest.schema===2?['login_preserved','override_refused','status_record_sanitized','billing_mode_consistent']:[])];
+    const smokeChecks=['payload_capture','isolation','browser','stop','cleanup','report_regeneration',...(manifest.schema===2?['estimate_captured','charge_unavailable_labelled']:[])];
     const native=retained('native',{native:true});
-    if(native)check('evidence.native.checks',()=>need(ARMS.every(arm=>native.arms?.includes(arm))&&['host_policy','authentication','personal_configuration_absent','kit_mechanisms'].every(k=>native.checks?.[k]===true),'NATIVE_OBSERVATIONS_INCOMPLETE'));
+    if(native)check('evidence.native.checks',()=>need(ARMS.every(arm=>native.arms?.includes(arm))&&nativeChecks.every(k=>native.checks?.[k]===true),'NATIVE_OBSERVATIONS_INCOMPLETE'));
     const smoke=retained('smoke',{native:true});
-    if(smoke)check('evidence.smoke.checks',()=>need(smoke.purpose==='operational-smoke'&&ARMS.every(arm=>smoke.arms?.includes(arm))&&['payload_capture','isolation','browser','stop','cleanup','report_regeneration'].every(k=>smoke.checks?.[k]===true),'SMOKE_OBSERVATIONS_INCOMPLETE'));
+    if(smoke)check('evidence.smoke.checks',()=>need(smoke.purpose==='operational-smoke'&&ARMS.every(arm=>smoke.arms?.includes(arm))&&smokeChecks.every(k=>smoke.checks?.[k]===true),'SMOKE_OBSERVATIONS_INCOMPLETE'));
     retained('report',{native:true});
   }
   let launchGrant=null, settlementGrant=null, accounting=null;
-  if(!pending.length){launchGrant={schema:1,manifestPath:full,manifestDigest:hash(read(root,path.relative(root,full).split(path.sep).join('/'))),inputRoot:root,purpose,allocation,projects,kits,sessions:schedule.filter(s=>s.purpose===purpose),execution:{candidate:execution.candidate,effective_digest:execution.effective_digest,observation_target:execution.observation_target,evidence_target:execution.evidence_target},decision:authorization,authorization:{decisionRef:authorization.ref,decisionDigest:authorization.digest},observationFile:execution.native_observation?.ref||null,session:nextSessionId?schedule.find(s=>s.id===nextSessionId):null};
+  if(!pending.length){launchGrant={schema:1,manifestPath:full,manifestDigest:hash(read(root,path.relative(root,full).split(path.sep).join('/'))),inputRoot:root,purpose,allocation,projects,kits,sessions:schedule.filter(s=>s.purpose===purpose),execution:{candidate:execution.candidate,effective_digest:execution.effective_digest,observation_target:execution.observation_target,evidence_target:execution.evidence_target},decision:authorization,authorization:{decisionRef:authorization.ref,decisionDigest:authorization.digest},observationFile:execution.native_observation?.ref||null,billing:billing||null,session:nextSessionId?schedule.find(s=>s.id===nextSessionId):null};
     if(Date.parse(allocation.expires_at)<=Date.now()){
       settlementGrant={...launchGrant,settlementOnly:true};launchGrant=null;
       add('ALLOCATION_EXPIRED','allocation');

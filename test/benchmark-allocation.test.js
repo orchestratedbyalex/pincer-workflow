@@ -17,7 +17,7 @@ function fixture() {
   const receipt = '2026-09-19T00:00:00Z';
   const command = 'node --version\n';
   const blockHash = crypto.createHash('sha256').update(command).digest('hex').slice(0, 12);
-  for (const name of fs.readdirSync(path.join(original, '../../tickets')).filter(name => /^T-10[1-9]-/.test(name))) {
+  for (const name of fs.readdirSync(path.join(original, '../../tickets')).filter(name => /^T-1(?:0[1-9]|21)-/.test(name))) {
     fs.writeFileSync(path.join(home, 'tickets', name), `---\nstatus: done\nlast_check: ${receipt} passed ${blockHash}\nverified: ${receipt} ${blockHash}\nfinished: ${receipt}\n---\n\n## Verification\n` + '```bash\n' + command + '```\n');
   }
   // This copied inspector grants only a controlled fixture allocation. No native
@@ -81,7 +81,7 @@ try {
   {
     const pinned = require(path.resolve('template/scripts/pincer-runtime/parse.cjs'));
     const local = require(path.join(original, 'allocation.cjs')).verificationHash;
-    for (const name of fs.readdirSync(path.resolve('tickets')).filter(name => /^T-10[1-9]-/.test(name))) {
+    for (const name of fs.readdirSync(path.resolve('tickets')).filter(name => /^T-1(?:0[1-9]|21)-/.test(name))) {
       const text = fs.readFileSync(path.resolve('tickets', name), 'utf8');
       assert.equal(local(text), pinned.legacyBlockHash(text), `${name}: verification hash matches runtime parser`);
     }

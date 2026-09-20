@@ -262,7 +262,7 @@ function workspace() {
   // A kit arm with no kit is refused before the first session, not at the cell that needs
   // one: discovering it halfway through is discovering it after the paid runs behind it.
   await assert.rejects(
-    orchestrator.driveSchedule(tempDir(), { cohort: COHORT, ids, spendingCap: true, model: 'stand-in' }),
+    orchestrator.driveSchedule(tempDir(), { cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in' }),
     /no kit was given/,
   );
 
@@ -272,7 +272,7 @@ function workspace() {
   process.env.FAKE_MODE = 'limit';
   let result;
   try {
-    result = await orchestrator.driveSchedule(runs, { cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit });
+    result = await orchestrator.driveSchedule(runs, { cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit });
   } finally {
     process.env.PATH = savedPath;
     if (savedMode === undefined) delete process.env.FAKE_MODE; else process.env.FAKE_MODE = savedMode;
@@ -296,7 +296,7 @@ function workspace() {
   process.env.FAKE_MODE = 'limit';
   let resumed;
   try {
-    resumed = await orchestrator.driveSchedule(runs, { cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit });
+    resumed = await orchestrator.driveSchedule(runs, { cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit });
   } finally {
     process.env.PATH = savedPath;
     if (savedMode === undefined) delete process.env.FAKE_MODE; else process.env.FAKE_MODE = savedMode;
@@ -334,7 +334,7 @@ function workspace() {
   const kit = fakeKit();
   const fake = fakeCli();
   orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
-  const opts = { cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit };
+  const opts = { cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit };
   await withStandIn(fake, 'tidy', async () => {
     for (const arm of ['plain', 'pincer', 'strict']) {
       await orchestrator.driveRun(runs, cellFor(ids, 'cli-greenfield', arm), opts);
@@ -364,7 +364,7 @@ function workspace() {
     orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
     const cell = cellFor(ids, 'cli-greenfield', arm);
     const out = await withStandIn(fake, mode, () => orchestrator.driveRun(runs, cell, {
-      cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+      cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit,
     }));
     const record = orchestrator.readRecord(runs, cell);
     assert.deepEqual(effort.problems(record), [], `the ${arm} arm's record validates`);
@@ -393,7 +393,7 @@ function workspace() {
     orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
     const cell = cellFor(ids, 'cli-greenfield', 'strict');
     await withStandIn(fake, 'tidy', () => orchestrator.driveRun(runs, cell, {
-      cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+      cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit,
     }));
     const record = orchestrator.readRecord(runs, cell);
     assert.equal(record.status, 'invalid');
@@ -408,7 +408,7 @@ function workspace() {
     orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
     const cell = cellFor(ids, 'cli-greenfield', 'plain');
     await withStandIn(fake, 'bare', () => orchestrator.driveRun(runs, cell, {
-      cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+      cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit,
     }));
     const record = orchestrator.readRecord(runs, cell);
     for (const key of ['tokens', 'cost_usd', 'provider_minutes']) {
@@ -453,7 +453,7 @@ function workspace() {
     orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
     const cell = cellFor(ids, 'brownfield-maintenance', arm);
     await withStandIn(fake, arm === 'strict' ? 'adopt' : 'tidy', () => orchestrator.driveRun(runs, cell, {
-      cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+      cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit,
     }));
     const record = orchestrator.readRecord(runs, cell);
     const ws = path.join(orchestrator.runDir(runs, cell), record.attempts.at(-1).directory, 'workspace');
@@ -482,7 +482,7 @@ function workspace() {
     orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
     const cell = cellFor(ids, 'brownfield-maintenance', 'pincer');
     await withStandIn(fake, 'ok', () => orchestrator.driveRun(runs, cell, {
-      cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+      cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit,
     }));
     const record = orchestrator.readRecord(runs, cell);
     const check = record.evaluation.checks.find(c => c.id === 'unrelated-edits');
@@ -521,7 +521,7 @@ function workspace() {
   fs.writeFileSync(path.join(home, 'logs', 'S1.json'), '{"result":"the killed session"}');
 
   await withStandIn(fake, 'tidy', () => orchestrator.driveRun(runs, cell, {
-    cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+    cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit,
     resumeInterrupted: { attempt: 'legacy', reason: 'Explicitly restart the retained historical interrupted fixture' },
   }));
   const record = orchestrator.readRecord(runs, cell);
@@ -546,7 +546,7 @@ function workspace() {
 {
   const ids = ['cli-greenfield'];
   const kit = fakeKit();
-  const base = { ids, spendingCap: true, model: 'stand-in', maxTurns: 5, wallClockMinutes: 30, kit };
+  const base = { ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, wallClockMinutes: 30, kit };
 
   const cases = [
     ['a different cohort', { cohort: 'b'.repeat(64) }, /not the cohort this cell was planned under/],
@@ -554,7 +554,7 @@ function workspace() {
     ['a different model', { cohort: COHORT, model: 'other' }, /planned for model stand-in/],
     ['a different turn cap', { cohort: COHORT, maxTurns: 400 }, /planned for 5 turns per session/],
     ['a different wall clock', { cohort: COHORT, wallClockMinutes: 5 }, /planned for a 30-minute wall clock/],
-    ['no spending cap', { cohort: COHORT, spendingCap: false }, /no spending cap has been asserted/],
+    ['no usage envelope', { cohort: COHORT, usageEnvelopeAgreed: false }, /no usage envelope has been agreed/],
   ];
   for (const [what, override, expected] of cases) {
     const runs = tempDir();
@@ -606,7 +606,7 @@ function workspace() {
   assert.match(help.stdout, /--runs <dir>/, 'and documents how to run it');
   assert.match(help.stdout, /--browser <module>/, 'including how to supply a browser adapter');
   assert.match(help.stdout, /unavailable/, 'and what happens to UI checks without one');
-  assert.match(help.stdout, /--i-have-a-spending-cap/, 'and that spending is an assertion a human makes');
+  assert.match(help.stdout, /--i-agreed-the-usage-envelope/, 'and that the usage envelope is an assertion a human makes');
   assert.equal(spawnSync(process.execPath, [path.join(V7, 'orchestrator.cjs')], { encoding: 'utf8' }).status, 2, 'and refuses with no --runs');
 }
 

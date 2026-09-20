@@ -454,3 +454,60 @@ this commit yet.
 Corrected four issues from review: Claude-only record schemas now reject Codex/Copilot relabelling; Codex evidence follows its shipped skills/runtime/platform controls without an invented hook adapter; Copilot VS Code is distinguished from CLI research; shared login-directory canaries require exclusive canonical-directory custody, durable ownership records and explicit interruption recovery preserving changed files. T-121 now names the runtime failure/concurrency tests. No launcher implementation, account login or live study was performed. Historical T-120 lifecycle fields are preserved; the pinned kit has no legacy ticket-reopen operation, so corrected contracts are reverified using its supported verify path.
 
 Validation: pinned-kit `verify T-120` passed all three suites (native-tool contracts, readiness contracts, execution freeze) and wrote receipt `2026-09-20T09:17:26Z 5ed85d4c3f23`. An initial check exposed a stale text assertion after the Copilot wording correction; that assertion was corrected and the kit rerun successfully. New frozen cohort: `3284061a67bd06536d4f88f25017573881e767e178a53619197a5c798d034721`. Full npm test was not rerun for this contract/test-only correction. No changes were committed or pushed.
+
+
+## 20 September 2026 — T-121: native-login study path implemented
+
+Implemented the T-120 contracts in the runner. `isolated-launch.cjs` gains the
+`claude-project-native-login-v1` profile: the launching environment is refused by name when
+any of the nine credential/provider variables is present (`BILLING_OVERRIDE_PRESENT`, value
+never read), the historical `claude-project-isolated-v1` is refused (`PROFILE_HISTORICAL`),
+`<tool> auth status --json` runs in the constructed environment before any workspace and
+again before the tool starts (`LOGIN_REQUIRED` with the tool's own login instruction and no
+fallback; `LOGIN_STATUS_INVALID`; `PROFILE_INCOMPATIBLE`; `BILLING_MODE_MISMATCH`), and the
+record retains exactly five sanitized status fields plus a billing block, a classified
+account limit and the custody summary. New `login-custody.cjs` gives the shared login
+directory one exclusive lock keyed by its canonical path, a durable journal outside the
+credential directory, exclusive-creation canaries journaled before and after each write,
+custody-safe cleanup that preserves anything changed, a recovery marker written before
+release, and `recover()` as an explicit recorded decision that removes only verified
+unchanged owned files. `usage.cjs` adds the `claude-code-result-native-usage-v1` reader
+(`estimate_usd` plus `billing`; `cost_usd` stays null with the billing reason; profiles never
+pooled). `allocation.cjs` reads schema-2 grants (`limits()`), counts `max_sessions`, and
+stops on `ALLOCATION_LOGIN_DIR_RECOVERY`, `ALLOCATION_CAPTURE_INCOMPLETE`,
+`ALLOCATION_ACCOUNT_LIMIT` and `BILLING_MODE_MISMATCH`; T-121 joins the lifecycle
+prerequisites. `readiness.cjs` reads manifest schema 2 with the pending reasons
+`BILLING_MODE_PENDING`, `ACCOUNT_USAGE_PENDING`, `LOGIN_STATUS_CONTRACT_PENDING`,
+`SURFACE_UNSUPPORTED`, `LEGACY_FIELD_REFUSED`, `PROFILE_INCOMPATIBLE`; schema 1 validates
+exactly as before. `orchestrator.cjs` takes `--i-agreed-the-usage-envelope` (the old flag is
+refused by name), refuses to run while a credential variable is set, holds login custody
+from the pre-workspace gate through the session, and names the account-limit kind in the
+record reason. `effort.cjs` reports `estimate_usd` and `billing` and refuses mixed-profile
+aggregates.
+
+New suite `test/native-login-study.test.js` (78th) runs fixture executables through the real
+entry points: clean session, sanitized status, logged-out and session-lost refusals, billing
+mismatch, malformed status, all nine override names, dirty/symlinked/missing/in-home login
+directories, replaced canary, deletion fault, recovery then a clean next session, competing
+invocations on aliased roots, crashes before and after the canary receipt, an unknown-host
+owner, the orchestrator CLI refusing a synthetic key before planning, a native-profile plan,
+orchestration scenarios (subscription-complete versus missing-capture, api charge
+unavailable, account limit, login lost, custody recovery) and the schema-2 ledger.
+`benchmark-environment`, `study-readiness`, `benchmark-restart` and `benchmark-allocation`
+were updated for the profile, schema 2 and the T-121 prerequisite. Replacement package:
+`docs/prd-v8-artifacts/execution/T-121-native-smoke-execution-package.md`; `study.json` is
+schema 2 and pending; the proposed inputs name the native profile. The frozen cohort was
+re-minted (harness, collector and frozen documents changed).
+
+Not done and not claimed: no account login, live session or spending occurred; the pinned
+CLI has never run under this profile, so login preservation, the CLI's own login-directory
+entry names and the hook-log format remain T-102/T-109 observations. The external study
+checkout is stale until refreshed to this commit. CI has not run on it.
+
+Verification: `node test/native-login-study.test.js`, environment, allocation, study-launch
+and execution-freeze passed through the pinned v0.6.0 kit; T-121 was started at 10:22Z,
+verified (receipt `826a1616422f`) and closed at 10:39Z. The full `npm test` chain (78 suites)
+passed twice on 20 September 2026: 10:22Z–10:38Z (an `effort.cjs` validator edit and a cohort
+re-mint landed at 10:25Z, before the benchmark suites ran) and again on the final tree,
+10:39Z–10:54Z, exit 0. Final frozen cohort `99368435…`. Not pushed; no CI run exists for
+this commit; the packed-parity and exact-candidate CI requirement therefore waits for a push.

@@ -9,10 +9,19 @@ Dated entries below are historical reports, not current live-support claims.
   under a study `CLAUDE_CONFIG_DIR` when HOME is fresh and settings are project-only is
   documented, not observed. First T-109 observation; failure is
   `NATIVE_LOGIN_NOT_PRESERVED` ([[native-tool-contracts]])
-- [2026-09-20] T-121 must implement the contract: new profile, usage reader, manifest
-  schema 2, override refusal, `--i-agreed-the-usage-envelope`, and a replacement smoke
-  package; then refresh the external study checkout (its `1c91c6ef…` manifest and the
-  API-key settlement documents are superseded history) ([[native-tool-contracts]])
+- [2026-09-20] T-121 implemented the contract (fixture-verified only). Next: refresh the
+  external study checkout at `/Users/Shared/pincer-v8-study/pincer-workflow` to the T-121
+  commit (its `1c91c6ef…` manifest and the API-key settlement documents under `decisions/`
+  are superseded history), have the user sign in under `host/claude-config` with the pinned
+  CLI, and write the schema-2 decisions ([[study-readiness-gate]])
+- [2026-09-20] `login-custody.ALLOWED_ENTRIES` lists the login-directory names the CLI is
+  expected to own; the pinned 2.1.273 has never run there, so the first smoke may surface a
+  new name as `PROFILE_HOST_DIRTY` (a reviewed addition re-mints the cohort). Likewise the
+  contract lists `plugins/` as dirty; if the CLI creates it on login, that is a finding
+  ([[study-readiness-gate]])
+- [2026-09-20] CI has not run on the T-121 commit; the branch is not pushed. The candidate
+  needs its own matrix run and a packed-parity check before its ci summary can exist
+  ([[study-readiness-gate]])
 - [2026-09-20] Copilot CLI is not installed here and has no study profile; Codex has a
   profile sketch but no hook-capture grammar. Neither is scheduled ([[native-tool-contracts]])
 - [2026-09-20] The `openai-docs` skill named by T-120/T-121 is not installed in this

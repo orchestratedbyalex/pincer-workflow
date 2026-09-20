@@ -7,6 +7,13 @@ evidence that native login, isolation or subscription measurement works: every "
 column below is empty until a retained native record fills it. No live session, account
 access, spending, merge or publication is authorized by this document.
 
+Implementation status (T-121, 20 September 2026): the runner now implements §2.1, §2.4,
+§3.1–§3.3 and §5.3 (`isolated-launch.cjs`, `login-custody.cjs`, `usage.cjs`,
+`allocation.cjs`, `readiness.cjs`, `orchestrator.cjs`), exercised with fixtures in
+`test/native-login-study.test.js`; the replacement package is
+`prd-v8-artifacts/execution/T-121-native-smoke-execution-package.md`. Every "observed"
+column below is still empty.
+
 `node test/native-tool-contracts.test.js` checks the JSON examples in this document
 against the declared rules (billing that is ambiguous, a mandatory observation that is
 missing, and a profile that is incompatible with the billing mode are each rejected), and
@@ -30,8 +37,8 @@ model request and the bill. Pincer therefore:
 
 The installed product already satisfies this: the kit is Markdown, shell hooks and a Node
 runtime that never contact a model provider. The one component that did not was the
-maintainer study runner: `isolated-launch.cjs` profile `claude-project-isolated-v1` requires
-`apiKey` and injects `ANTHROPIC_API_KEY` into a fresh environment. That profile is
+maintainer study runner: `isolated-launch.cjs` profile `claude-project-isolated-v1` required
+`apiKey` and injected `ANTHROPIC_API_KEY` into a fresh environment (until T-121). That profile is
 **historical**: its identity, its retained fixture records and its frozen cohorts remain
 readable, and it is not the execution path of any future session.
 

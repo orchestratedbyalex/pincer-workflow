@@ -28,7 +28,7 @@ isolation.preflightExecution = forbidden;
 effective.assertCurrent = forbidden;
 harness.prepare = forbidden;
 try {
-  const options = { cohort, spendingCap: true, ids: ['cli-greenfield'],
+  const options = { cohort, usageEnvelopeAgreed: true, ids: ['cli-greenfield'],
     effective: { manifest: { cohort } },
     readiness: { purpose: 'measured', spendingAuthorized: true, projectAccessAuthorized: true,
       hostPolicyPreserved: true, observationReviewed: true, decisionRef: 'unsupported-boolean-claim' } };
@@ -125,7 +125,7 @@ try {
       harness.evaluateCandidate = async () => { evaluations++; return {
         outcome: 'accepted', checks: [{ id: 'controlled-independent-check', result: 'passed', independent: true }],
       }; };
-      const out = await runner.driveRun(runs, cell, { cohort, spendingCap: true, model: 'synthetic', maxTurns: 5, wallClockMinutes: 1,
+      const out = await runner.driveRun(runs, cell, { cohort, usageEnvelopeAgreed: true, model: 'synthetic', maxTurns: 5, wallClockMinutes: 1,
         kit: fs.realpathSync(path.join(inputRoot, 'kit.tgz')), effective: { manifest, inputRoot, input: { kit: { path: 'kit.tgz' } } },
         allocation: { manifestPath: path.join(inputRoot, 'study.json'), inputRoot, purpose } });
       assert.equal(launches, 1, scenario+JSON.stringify(out));
@@ -197,7 +197,7 @@ try {
   assert.equal(harness.sh('tar', ['-czf', archive, '-C', path.dirname(pkg), 'package']).status, 0);
   let sessions = 0;
   const fixtureSession = async () => { sessions++; throw new Error('controlled: no session is launched'); };
-  const prefix = await runner.driveSchedule(runs, { cohort, ids: ['ui-states'], repetitions: 1, spendingCap: true, kit: archive, fixtureSession });
+  const prefix = await runner.driveSchedule(runs, { cohort, ids: ['ui-states'], repetitions: 1, usageEnvelopeAgreed: true, kit: archive, fixtureSession });
   assert.equal(prefix.stopped, null, JSON.stringify(prefix));
   assert.deepEqual(prefix.driven.map(d => [d.run, d.status]), first.cells.map(cell => [cell.run, 'invalid']));
   assert.equal(sessions, 3);
@@ -205,7 +205,7 @@ try {
   const full = runner.plan(runs, { cohort, ids: ['ui-states'] });
   assert.equal(full.cells.length, 9);
   assert.equal(full.created.length, 6, 'the remaining repetitions keep their identities');
-  const rest = await runner.driveSchedule(runs, { cohort, ids: ['ui-states'], spendingCap: true, kit: archive, fixtureSession });
+  const rest = await runner.driveSchedule(runs, { cohort, ids: ['ui-states'], usageEnvelopeAgreed: true, kit: archive, fixtureSession });
   assert.equal(rest.driven.filter(d => d.skipped).length, 3, 'terminal prefix cells are never redriven');
   assert.equal(sessions, 9);
 }

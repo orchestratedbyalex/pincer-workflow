@@ -41,7 +41,7 @@ const held=()=>new Promise(resolve=>{const timer=setInterval(()=>{if(fs.existsSy
  }
  if(mode==='rerun') {try {const r=o.claimRerun(root,cell,{cohort:'a'.repeat(64)});mark('result',JSON.stringify({repetition:r?.cell.repetition}));}catch(e){mark('result',JSON.stringify({code:e.code,message:e.message}));}return;}
  h.evaluateCandidate=async()=>({outcome:'rejected',checks:[{id:'fixture',result:'failed',independent:true}]});
- const result=await o.driveRun(root,cell,{cohort:'a'.repeat(64),spendingCap:true,model:'fixture',fixtureSession:async options=>{
+ const result=await o.driveRun(root,cell,{cohort:'a'.repeat(64),usageEnvelopeAgreed:true,model:'fixture',fixtureSession:async options=>{
    fs.mkdirSync(options.logDir,{recursive:true});fs.writeFileSync(path.join(options.logDir,options.name+'.json'),JSON.stringify({total_cost_usd:1,duration_ms:1000,usage:{input_tokens:1,output_tokens:1}}));mark('launched',options.workspace);await held();return {started:new Date().toISOString(),ended:new Date().toISOString(),end:'completed',status:0};
  }});mark('result',JSON.stringify({code:result.code,refused:result.refused,skipped:result.skipped,status:result.record?.status}));
 })().catch(e=>{mark('error',e.stack);process.exitCode=1});
@@ -59,7 +59,7 @@ async function kill(child) { child.kill('SIGKILL'); await child.done; }
  const root=planned(), control=tempDir(); const a=worker(root,control,'drive'), b=worker(root,control,'drive');
  await until(()=>markers(control,'launched').length===1 && markers(control,'result').length===1,'one launch and busy refusal');
  const loser=JSON.parse(fs.readFileSync(path.join(control,markers(control,'result')[0]))); assert.equal(loser.code,'RUN_BUSY');assert.equal(loser.refused,true);
- const before=snapshot(root); const out=await runner.driveRun(root,cell,{cohort,spendingCap:true,fixtureSession:()=>{throw new Error('must not launch');}});
+ const before=snapshot(root); const out=await runner.driveRun(root,cell,{cohort,usageEnvelopeAgreed:true,fixtureSession:()=>{throw new Error('must not launch');}});
  assert.equal(out.code,'RUN_BUSY');assert.deepEqual(snapshot(root),before,'losing claimant changes no retained artifact or workspace');
  fs.writeFileSync(path.join(control,'release'),'yes');await Promise.all([finish(a),finish(b)]);assert.equal(markers(control,'launched').length,1);
  const terminal=snapshot(root); const skipped=await runner.driveRun(root,cell,{});assert.equal(skipped.skipped,true);assert.deepEqual(snapshot(root),terminal);

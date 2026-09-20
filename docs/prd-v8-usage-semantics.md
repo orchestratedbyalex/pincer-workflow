@@ -84,3 +84,18 @@ A missing token count, provider time or login status record is `MISSING_REQUIRED
 and makes the record incomplete exactly as a missing payload does today. Unavailable
 subscription billing does not. Dollar comparisons follow the contract's admissibility rule;
 the aggregate `cost_usd` total of the legacy profile has no native counterpart.
+
+### Implemented reader (T-121, 20 September 2026)
+
+`usage.cjs` selects the profile from `record.environment.measurement_profile`, which a
+native-login cohort carries from the plan on (`effective.recordInputs`). Under the native
+profile the metric keys are `tokens`, `estimate_usd`, `provider_minutes`; `measurement.billing`
+is `{mode, attributable_charge_usd: null, charge_reason, charge_evidence: null}` derived from
+the declared mode and never from a figure; `reported.cost_usd` stays `null` with
+`unavailable.cost_usd` naming the billing reason, so the legacy cost column is never filled
+from an estimate. `effort.report` adds `estimate_usd` and `billing`; `effort.aggregate` adds
+an `estimate_usd` column and refuses to pool the two profiles. The allocator reserves and
+settles by `estimate_usd` for native records, stops on a missing token or provider-time
+capture (`ALLOCATION_CAPTURE_INCOMPLETE`), on an unknown estimate, on an account limit and on
+a billing-mode disagreement with a retained record. All of this is exercised by fixtures in
+`test/native-login-study.test.js`; no native payload has been read yet.

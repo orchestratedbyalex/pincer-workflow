@@ -188,7 +188,9 @@ function problems(r, { frozen = null } = {}) {
   // Reported metrics: null needs a reason, and a number needs not to be a fake zero.
   // A `pending` run has not run yet, so nothing is expected of it; from the moment a
   // record is reportable, every null must say why it is null rather than zero.
-  for (const key of ['tokens', 'cost_usd', 'provider_minutes']) {
+  // Native-login records (T-121) add `estimate_usd`: the tool's list-price estimate, reported
+  // as an estimate and, when unknown, as unavailable with its reason, never as zero.
+  for (const key of ['tokens', 'cost_usd', 'provider_minutes', ...(Object.hasOwn(r.reported || {}, 'estimate_usd') ? ['estimate_usd'] : [])]) {
     const v = r.reported[key];
     if (v === null) {
       if (r.status !== 'pending' && !isStr(r.unavailable[key], LIMITS.reason)) bad('REASON_REQUIRED', `reported.${key} is null and needs unavailable.${key} to say why`);
@@ -196,7 +198,7 @@ function problems(r, { frozen = null } = {}) {
     else if (key in r.unavailable) bad('RECORD_INVALID', `reported.${key} is measured; unavailable.${key} must not be set`);
   }
   for (const key of Object.keys(r.unavailable)) {
-    if (!['tokens', 'cost_usd', 'provider_minutes', ...STAGES].includes(key)) bad('RECORD_INVALID', `unavailable.${key} names no metric`);
+    if (!['tokens', 'cost_usd', 'provider_minutes', 'estimate_usd', ...STAGES].includes(key)) bad('RECORD_INVALID', `unavailable.${key} names no metric`);
   }
 
   // Evaluation: the verdict must follow from the checks.
@@ -341,6 +343,10 @@ function report(r) {
     provider_minutes: r.reported.provider_minutes,
     tokens: r.reported.tokens,
     cost_usd: r.reported.cost_usd,
+    // Native-login records (T-121): the tool's list-price estimate, labelled as such, and the
+    // declared billing block. Under a subscription no charge is attributable; that is not zero.
+    estimate_usd: r.reported.estimate_usd ?? null,
+    billing: r.measurement?.billing ?? null,
     unavailable: { ...r.unavailable },
     sessions: sessions.length,
     commands: r.events.filter(e => e.kind === 'command').length,
@@ -354,10 +360,16 @@ const round = n => Math.round(n * 100) / 100;
 
 // Aggregate a set of reports per arm. Denominators are explicit: a rate is always
 // reported with the number of runs it was computed over and the number excluded.
+// One measurement profile per aggregate: legacy API-key records (`cost_usd`) and native-login
+// records (`estimate_usd`) are never pooled, and a dollar column is only ever the profile's
+// own labelled figure. Comparison admissibility beyond that is the report's rule, not this one.
 function aggregateUsage(reports, key) {
-  const supported = reports.length > 0 && reports.every(r => r.measurement?.profile === usage.PROFILE && r.measurement.coverage === 'attempt-ledger');
+  const profiles = new Set(reports.map(r => r.measurement?.profile));
+  const profile = profiles.size === 1 ? [...profiles][0] : null;
+  const compatible = profile === usage.PROFILE ? key !== 'estimate_usd' : profile === usage.NATIVE_PROFILE ? key !== 'cost_usd' : false;
+  const supported = reports.length > 0 && compatible && reports.every(r => r.measurement.coverage === 'attempt-ledger');
   const measured = reports.filter(r => r[key] !== null && typeof r[key] === 'number');
-  const values = reports.map(r => r.measurement ? r.measurement.metrics[key].measured_subtotal : r[key]).filter(v => typeof v === 'number');
+  const values = reports.map(r => r.measurement?.metrics?.[key] ? r.measurement.metrics[key].measured_subtotal : r[key]).filter(v => typeof v === 'number');
   const subtotal = values.reduce((a, b) => a + b, 0);
   const safe = Number.isFinite(subtotal) && (key !== 'tokens' || Number.isSafeInteger(subtotal));
   const complete = supported && measured.length === reports.length && safe;
@@ -367,7 +379,11 @@ function aggregateUsage(reports, key) {
     of: measured.length,
     unmeasured: reports.length - measured.length,
     complete,
-    limitation: !supported ? 'Legacy, unknown or mixed accounting coverage; no comparable total.' : complete ? null : 'One or more sessions have unavailable usage or the sum exceeds the numeric range.',
+    limitation: !supported
+      ? (profiles.size > 1 ? 'Mixed measurement profiles (legacy API-key and native-login) are never pooled; no comparable total.'
+        : profile === usage.NATIVE_PROFILE && key === 'cost_usd' ? 'Native-login records carry no attributable cost; see estimate_usd (list-price estimate) and the billing block.'
+          : 'Legacy, unknown or mixed accounting coverage; no comparable total.')
+      : complete ? null : 'One or more sessions have unavailable usage or the sum exceeds the numeric range.',
   };
 }
 
@@ -388,6 +404,7 @@ function aggregate(reports) {
       // Every rate carries the denominator it was computed over.
       acceptance: valid.length ? { accepted: valid.filter(r => r.outcome === 'accepted').length, of: valid.length } : null,
       cost_usd: aggregateUsage(all, 'cost_usd'),
+      estimate_usd: aggregateUsage(all, 'estimate_usd'),
       tokens: aggregateUsage(all, 'tokens'),
       provider_minutes: aggregateUsage(all, 'provider_minutes'),
       active_minutes: { total: sum(measured('active_minutes')), of: measured('active_minutes').length, unmeasured: valid.length - measured('active_minutes').length },

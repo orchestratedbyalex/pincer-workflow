@@ -24,18 +24,34 @@ function read(file) {
   catch { fail('ALLOCATION_METADATA_INVALID', 'Allocation metadata is not valid JSON.'); }
 }
 
+// Two allocation vocabularies. Schema-1 (historical API-key) grants carry `limit_usd`,
+// `session_cap_usd` and `max_elapsed_minutes`. Schema-2 (native-login, T-121) grants carry
+// `limit_estimate_usd`, `session_estimate_cap_usd`, `billing_mode` and the user's agreed
+// `account_usage` envelope. Both are list-price estimates reserved the same way; neither is
+// a bill, and under a subscription no dollar amount here is a charge.
+function limits(a) {
+  if (Object.hasOwn(a, 'limit_estimate_usd') || Object.hasOwn(a, 'account_usage')) {
+    return { limit: a.limit_estimate_usd, sessionCap: a.session_estimate_cap_usd, elapsed: a.account_usage?.max_elapsed_minutes, maxSessions: a.account_usage?.max_sessions ?? null, mode: a.billing_mode || null, estimate: true };
+  }
+  return { limit: a.limit_usd, sessionCap: a.session_cap_usd, elapsed: a.max_elapsed_minutes, maxSessions: null, mode: null, estimate: false };
+}
+const BILLING_MODES = ['subscription', 'api'];
+const STATUS_MODES = { 'claude.ai': 'subscription', console: 'api' };
 function shape(grant, settlement = false) {
   const a = grant?.allocation;
+  const l = a ? limits(a) : {};
   if (!grant || grant.schema !== 1 || !/^[a-f0-9]{64}$/.test(grant.manifestDigest || '') || !a || !path.isAbsolute(a.root || '') ||
-      !Number.isFinite(a.limit_usd) || a.limit_usd <= 0 || !Number.isFinite(a.session_cap_usd) || a.session_cap_usd <= 0 ||
-      !Number.isFinite(a.session_wall_minutes) || a.session_wall_minutes <= 0 || !Number.isFinite(a.max_elapsed_minutes) || a.max_elapsed_minutes <= 0 || !Array.isArray(grant.sessions) ||
+      !Number.isFinite(l.limit) || l.limit <= 0 || !Number.isFinite(l.sessionCap) || l.sessionCap <= 0 ||
+      !Number.isFinite(a.session_wall_minutes) || a.session_wall_minutes <= 0 || !Number.isFinite(l.elapsed) || l.elapsed <= 0 || !Array.isArray(grant.sessions) ||
       typeof a.id !== 'string' || !/^[a-zA-Z0-9._-]+$/.test(a.id) || !a.decision?.ref || !/^[a-f0-9]{64}$/.test(a.decision?.digest || '')) fail('ALLOCATION_GRANT_INVALID', 'A checked numeric allocation grant is required.');
+  if (l.estimate && (!BILLING_MODES.includes(l.mode) || !Number.isSafeInteger(l.maxSessions) || l.maxSessions <= 0 || a.account_usage?.agreed !== true)) fail('ALLOCATION_GRANT_INVALID', 'A native-login allocation needs a declared billing mode and an agreed account-usage envelope.');
   if (!Number.isFinite(Date.parse(a.expires_at)) || (!settlement && (grant.settlementOnly === true || Date.parse(a.expires_at) <= Date.now()))) fail('ALLOCATION_EXPIRED', 'The approved allocation has expired.');
   if (grant.sessions.some(session => !RUN.test(session.run))) fail('ALLOCATION_PATH_INVALID', 'Unsupported scheduled run path.');
   return a;
 }
 function binding(grant) {
-  return { manifest: grant.manifestDigest, allocation: grant.allocation.id, decision: grant.allocation.decision };
+  const l = limits(grant.allocation);
+  return { manifest: grant.manifestDigest, allocation: grant.allocation.id, decision: grant.allocation.decision, ...(l.mode ? { billing_mode: l.mode } : {}) };
 }
 function stateFor(grant) {
   const file = safe(grant.allocation.root, '.allocation/state.json');
@@ -54,7 +70,7 @@ function stateFor(grant) {
     const key = session && `${session.run}/${session.id}`;
     if (!/^[a-f0-9]{32}$/.test(item.id || '') || ids.has(item.id) || sessions.has(key) ||
         !['reserved', 'consumed', 'settled', 'cancelled'].includes(item.status) ||
-        item.capUSD !== grant.allocation.session_cap_usd || !logical || !session || Object.keys(session).sort().join(',') !== 'attempt,id,name,payload,run' || session.run !== logical.run ||
+        item.capUSD !== limits(grant.allocation).sessionCap || !logical || !session || Object.keys(session).sort().join(',') !== 'attempt,id,name,payload,run' || session.run !== logical.run ||
         !/^attempt-[0-9]{6}$/.test(session.attempt || '') || !/^S[1-9][0-9]*$/.test(session.name || '') ||
         session.id !== `${session.attempt}:${session.name}` || (logical.name && session.name !== logical.name) ||
         session.payload !== `${session.run}/attempts/${session.attempt}/logs/${session.name}.json` ||
@@ -111,6 +127,12 @@ function accounting(grant, state, excludeIntent = null) {
     const record = read(file);
     if (effort.problems(record).length) fail('ALLOCATION_RECORD_INVALID', 'Retained effort record does not validate.');
     if (record.run !== run) fail('ALLOCATION_RECORD_INVALID', 'Run identity differs from its accounting location.');
+    // No session starts when the retained records disagree with this allocation's declared
+    // billing mode, whether by declaration or by the sanitized login status they retained.
+    const l = limits(grant.allocation);
+    const declared = record.environment?.billing?.mode, method = record.environment?.authentication?.auth_method;
+    if (l.mode && ((declared && declared !== l.mode) || (method && STATUS_MODES[method] !== l.mode))) fail('BILLING_MODE_MISMATCH', 'A retained session declares a different billing mode than this allocation.');
+    if (l.estimate !== (usage.profileOf(record) === usage.NATIVE_PROFILE)) fail('ALLOCATION_RECORD_INVALID', 'Legacy API-key and native-login records are never pooled in one allocation.');
     const home = safe(root, run);
     if (fs.readdirSync(home).some(name => /^logs(?:$|[-_])/.test(name))) fail('ALLOCATION_COST_UNKNOWN', 'Unledgered historical logs require review.');
     if (record.schema === 7 && record.status === 'pending' && Array.isArray(record.events) && record.events.length === 0) {
@@ -147,10 +169,16 @@ function accounting(grant, state, excludeIntent = null) {
       }
     }
     const collected = usage.collect(safe(root, run), counted);
+    // The reserved figure is the profile's own estimate column: `cost_usd` for legacy API-key
+    // records, `estimate_usd` for native-login records. An unknown estimate stops the allocation.
+    const column = collected.measurement.profile === usage.NATIVE_PROFILE ? 'estimate_usd' : 'cost_usd';
     for (const row of collected.measurement.sessions) {
-      if (row.metrics.cost_usd.value === null) fail('ALLOCATION_COST_UNKNOWN', 'At least one intended session has incomplete cost accounting.');
-      spent += row.metrics.cost_usd.value;
-      rows.set(`${run}/${row.id}`, { cost: row.metrics.cost_usd.value, digest: row.sha256, payload: `${run}/${row.payload}` });
+      // A native result without its mandatory token or provider-time capture is not the
+      // reviewed payload shape; nothing further starts before a person looks at it.
+      if (column === 'estimate_usd' && (row.metrics.tokens.value === null || row.metrics.provider_minutes.value === null)) fail('ALLOCATION_CAPTURE_INCOMPLETE', 'A native session lacks a mandatory capture (tokens or provider minutes); review before further execution.');
+      if (row.metrics[column].value === null) fail('ALLOCATION_COST_UNKNOWN', 'At least one intended session has incomplete estimate accounting.');
+      spent += row.metrics[column].value;
+      rows.set(`${run}/${row.id}`, { cost: row.metrics[column].value, digest: row.sha256, payload: `${run}/${row.payload}` });
     }
   }
   for (const item of state.reservations.filter(item => item.status === 'settled')) {
@@ -172,12 +200,16 @@ function inspect({ grant }) {
     let knownSpendUSD = null;
     try { knownSpendUSD = accounting(grant, state).spent; }
     catch (error) { reasons.push({ code: error.code || 'ALLOCATION_COST_UNKNOWN', detail: error.message }); }
+    const l = limits(a);
     const first = state.reservations[0]?.created;
     const elapsedMinutes = first ? (Date.now() - Date.parse(first)) / 60000 : 0;
-    const remainingMinutes = a.max_elapsed_minutes - elapsedMinutes;
+    const remainingMinutes = l.elapsed - elapsedMinutes;
     if (!Number.isFinite(remainingMinutes) || elapsedMinutes < 0 || remainingMinutes < a.session_wall_minutes) reasons.push({ code: 'ALLOCATION_TIME_EXHAUSTED', detail: 'Remaining elapsed-time allocation cannot cover the next session.' });
-    const remainingUSD = knownSpendUSD === null ? null : a.limit_usd - knownSpendUSD;
-    if (remainingUSD !== null && remainingUSD < a.session_cap_usd) reasons.push({ code: 'ALLOCATION_EXHAUSTED', detail: 'Remaining allocation cannot cover the approved next session cap.' });
+    const remainingUSD = knownSpendUSD === null ? null : l.limit - knownSpendUSD;
+    if (remainingUSD !== null && remainingUSD < l.sessionCap) reasons.push({ code: 'ALLOCATION_EXHAUSTED', detail: 'Remaining allocation cannot cover the approved next session cap.' });
+    // The agreed account-usage envelope: every reservation counts, cancelled ones included,
+    // because the runner cannot know what the tool consumed before a cancellation.
+    if (l.maxSessions !== null && state.reservations.length >= l.maxSessions) reasons.push({ code: 'ALLOCATION_SESSIONS_EXHAUSTED', detail: 'The agreed account-usage envelope admits no further session.' });
     return { ready: reasons.length === 0, knownSpendUSD, remainingUSD, remainingMinutes, reservation: unresolved ? { status: unresolved.status, session: unresolved.session.id } : null, status: state.stopped ? 'stopped' : unresolved ? 'unresolved' : 'available', reasons };
   } catch (error) {
     return { ready: false, knownSpendUSD: null, remainingUSD: null, reservation: null, status: 'unknown', reasons: [{ code: error.code || 'ALLOCATION_INVALID', detail: 'Allocation cannot be safely inspected.' }] };
@@ -204,7 +236,7 @@ function lifecycle(purpose) {
   const prerequisites = ['T-101-bind-effective-study-inputs.md', 'T-103-claim-study-runs-exclusively.md',
     'T-104-preserve-study-attempts-on-restart.md', 'T-105-account-for-partial-study-usage.md',
     'T-106-finalize-all-study-outcomes.md', 'T-107-supply-real-browser-evaluation.md',
-    'T-108-prepare-release-before-candidate-selection.md'];
+    'T-108-prepare-release-before-candidate-selection.md', 'T-121-implement-native-login-study.md'];
   const tickets = [...prerequisites, 'T-102-isolate-study-agent-configuration.md',
     ...(purpose === 'measured' ? ['T-109-gate-study-execution-readiness.md'] : [])];
   for (const name of tickets) {
@@ -268,7 +300,7 @@ function reserve(options) {
     if (!status.ready) fail(status.reasons[0].code, status.reasons[0].detail);
     if (state.reservations.some(item => item.session.run === session.run && item.session.id === session.id)) fail('ALLOCATION_REPLAY', 'This attempt session already has a reservation.');
     const item = { id: crypto.randomBytes(16).toString('hex'), status: 'reserved', logicalId: logical.id, session,
-      capUSD: grant.allocation.session_cap_usd, cellKey: options.cellClaim.key, cellToken: options.cellClaim.owner.token,
+      capUSD: limits(grant.allocation).sessionCap, cellKey: options.cellClaim.key, cellToken: options.cellClaim.owner.token,
       priorAccountingDigest: accountingDigest(accounting(grant, state)),
       created: new Date().toISOString(), pgid: null, actualUSD: null, payloadDigest: null };
     state.reservations.push(item);
@@ -285,14 +317,15 @@ function matching(grant, state, handle) {
 function verifyLaunch(options, expected = {}) {
   const grant = checked(options);
   const logical = selected(grant, options.nextSessionId);
+  const l = limits(grant.allocation);
   if ((expected.effectiveDigest && logical.effective_digest !== expected.effectiveDigest) || (expected.arm && logical.arm !== expected.arm) ||
-      (expected.caps && (expected.caps.spend_usd !== grant.allocation.session_cap_usd || expected.caps.wall_clock_minutes !== grant.allocation.session_wall_minutes)) ||
+      (expected.caps && (expected.caps.spend_usd !== l.sessionCap || expected.caps.wall_clock_minutes !== grant.allocation.session_wall_minutes)) ||
       (expected.prompt !== undefined && freeze.sha256(expected.prompt) !== logical.prompt_digest)) fail('ALLOCATION_EXECUTION_CHANGED', 'Actual execution differs from the approved session identity or caps.');
   if (options.handle) {
     const state = stateFor(grant);
     const item = matching(grant, state, options.handle);
     const first = Date.parse(state.reservations[0].created);
-    if (!Number.isFinite(first) || first > Date.now() || (Date.now() - first) / 60000 + grant.allocation.session_wall_minutes > grant.allocation.max_elapsed_minutes) fail('ALLOCATION_TIME_EXHAUSTED', 'Insufficient approved elapsed time remains.');
+    if (!Number.isFinite(first) || first > Date.now() || (Date.now() - first) / 60000 + grant.allocation.session_wall_minutes > l.elapsed) fail('ALLOCATION_TIME_EXHAUSTED', 'Insufficient approved elapsed time remains.');
     if (state.stopped || item.status !== 'reserved' || item.logicalId !== logical.id) fail('ALLOCATION_NOT_RESERVED', 'Reservation is stopped, consumed, or belongs to another session.');
     verifyAccounting(grant, state, item);
   } else {
@@ -306,7 +339,7 @@ function verifyAccounting(grant, state, item) {
   if (state.reservations.some(other => other.id !== item.id && ['reserved', 'consumed'].includes(other.status))) fail('ALLOCATION_UNRESOLVED', 'Another unresolved reservation prevents launch.');
   const prior = accounting(grant, state, item.session);
   if (accountingDigest(prior) !== item.priorAccountingDigest) fail('ALLOCATION_ACCOUNTING_CHANGED', 'Prior session accounting changed after reservation.');
-  if (prior.spent + item.capUSD > grant.allocation.limit_usd) fail('ALLOCATION_EXHAUSTED', 'Prior spend plus reserved cap exceeds the approved allocation.');
+  if (prior.spent + item.capUSD > limits(grant.allocation).limit) fail('ALLOCATION_EXHAUSTED', 'Prior spend plus reserved cap exceeds the approved allocation.');
 }
 function consume(options) {
   const grant = verifyLaunch(options, { requireReservation: true });
@@ -371,6 +404,9 @@ function reconcile(options) {
       return { settled: false, stopped: true, code, reason };
     };
     if (!groupGone(item.pgid) || options.result?.cleanup_complete === false) return stop('ALLOCATION_CLEANUP_UNKNOWN', 'Session process cleanup is unresolved; explicit review required.');
+    // The shared login directory holds a changed, replaced or unowned file, or cleanup did not
+    // complete: nothing further starts before an explicit recorded recovery decision.
+    if (options.result?.login_dir_recovery_required === true) return stop('ALLOCATION_LOGIN_DIR_RECOVERY', 'Login directory custody requires an explicit recovery decision before further execution.');
     // Evidence the record expects could not be retained where it belongs. Whatever was
     // recovered needs a reviewer before another paid session builds on this allocation.
     if (options.result?.evidence_retention_failed === true) return stop('ALLOCATION_EVIDENCE_UNRETAINED', 'Session evidence could not be retained; explicit review required before further execution.');
@@ -390,15 +426,15 @@ function reconcile(options) {
       if (effort.problems(record).length) throw new Error('Invalid effort record');
       const actual = accounting(grant, state).rows.get(`${item.session.run}/${item.session.id}`);
       row = actual && { metrics: { cost_usd: { value: actual.cost } }, sha256: actual.digest };
-    } catch { return stop('ALLOCATION_COST_UNKNOWN', 'Retained session accounting cannot be read safely.'); }
+    } catch (error) { return stop(error.code === 'ALLOCATION_CAPTURE_INCOMPLETE' || error.code === 'BILLING_MODE_MISMATCH' ? error.code : 'ALLOCATION_COST_UNKNOWN', error.code === 'ALLOCATION_CAPTURE_INCOMPLETE' || error.code === 'BILLING_MODE_MISMATCH' ? error.message : 'Retained session accounting cannot be read safely.'); }
     if (!row || row.metrics.cost_usd.value === null) return stop('ALLOCATION_COST_UNKNOWN', 'Session cost is unknown; the reservation cannot be refunded.');
     item.actualUSD = row.metrics.cost_usd.value;
     item.payloadDigest = row.sha256;
     item.status = 'settled';
     item.settled = new Date().toISOString();
-    if (options.result?.limit === true) return stop('ALLOCATION_ACCOUNT_LIMIT', 'Provider account or quota limit requires an explicit resume decision.');
-    if (item.actualUSD > item.capUSD) return stop('ALLOCATION_CAP_EXCEEDED', 'Observed cost exceeded its reserved session cap.');
+    if (options.result?.limit === true || (options.result?.account_limit && typeof options.result.account_limit === 'object')) return stop('ALLOCATION_ACCOUNT_LIMIT', 'Provider account or quota limit requires an explicit resume decision.');
+    if (item.actualUSD > item.capUSD) return stop('ALLOCATION_CAP_EXCEEDED', 'Observed estimate exceeded its reserved session cap.');
     return settled();
   });
 }
-module.exports = { inspect, reserve, consume, reconcile, verifyLaunch, verificationHash };
+module.exports = { inspect, reserve, consume, reconcile, verifyLaunch, verificationHash, limits };
