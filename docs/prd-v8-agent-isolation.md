@@ -278,3 +278,7 @@ subscription-unavailable versus missing-capture distinction, while proving the s
 credential file is never opened. None of this observes the pinned CLI: whether 2.1.273
 preserves the login under this construction, what entry names it leaves in the directory,
 and whether its hook log matches the grammar remain T-109 observations.
+
+### Custody correction — 20 September 2026
+
+Native login cleanup retires canaries to journaled private holding paths and retains their bytes; it never unlinks a mutable login-directory pathname after checking it. Replacements and uncertain files remain preserved for explicit recovery. Recovery holds its guard through cleanup and receipts. Both login and run claims record the detached supervisor group before task startup, so surviving children prevent recovery after owner death. See the native-tool contract's custody correction.

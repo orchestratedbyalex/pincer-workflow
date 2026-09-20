@@ -87,3 +87,7 @@ gate), `test/study-readiness.test.js` (schema 2). Operator-facing:
 `docs/prd-v8-artifacts/execution/T-121-native-smoke-execution-package.md`. Still unobserved:
 login preservation on 2.1.273, the CLI's own login-directory entry names, the hook-log format.
 The `caps.spend_usd` key name survives as the `--max-budget-usd` estimate cap.
+
+T-121 custody review correction: canaries are atomically moved into journaled private holding paths and retained, so mutable login paths are never check-then-unlinked. Recovery guards cover cleanup and receipts; login claims register detached session groups before tool startup. Cohort `725f586d…`; final pinned-kit verification and packed parity pass. Full regression is blocked by the sandbox's local-listener denial and exact-candidate CI remains pending.
+
+Next action: [candidate validation procedure](../../prd-v8-artifacts/execution/T-121-candidate-validation.md) provides host test, scoped commit and push commands plus the exact-SHA CI requirement. The native plan and smoke package now reflect implemented custody behavior. Refresh the external study checkout only after establishing the candidate; native observation decisions remain separate.

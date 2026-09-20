@@ -58,6 +58,60 @@ const guard = file => { if (String(file).endsWith('/.credentials.json')) { crede
 fs.readFileSync = (file, ...args) => { guard(file); return originalRead(file, ...args); };
 fs.openSync = (file, ...args) => { guard(file); return originalOpen(file, ...args); };
 
+// --- Cleanup replacement races and exclusive recovery -------------------------------------
+{
+  const root = study();
+  const handle = custody.acquire(root, { regression: 'replacement-after-check' });
+  custody.plant(handle, { 'CLAUDE.md': 'owned canary' });
+  const target = path.join(loginDir(root), 'CLAUDE.md');
+  let replaced = false;
+  const outcome = custody.remove(handle, { readFileSync(file) {
+    const bytes = fs.readFileSync(file);
+    if (!replaced && file === target) {
+      replaced = true;
+      fs.renameSync(target, `${target}.original`);
+      fs.writeFileSync(target, 'replacement must survive');
+    }
+    return bytes;
+  } });
+  assert.equal(outcome.recovery_required, true);
+  assert.equal(fs.readFileSync(target, 'utf8'), 'replacement must survive');
+  const entry = handle.journal.canaries[0];
+  assert.equal(fs.readFileSync(entry.quarantine, 'utf8'), 'replacement must survive');
+  custody.release(handle, outcome);
+  // Once recovery clears its marker, acquisition must STILL fail until its guard releases.
+  const originalRm = fs.rmSync;
+  let guarded = false;
+  fs.rmSync = (file, ...args) => {
+    const value = originalRm(file, ...args);
+    if (file === path.join(control(root), 'recovery-required.json')) {
+      guarded = true;
+      assert.throws(() => custody.acquire(root), e => e.code === 'LOGIN_DIR_BUSY');
+      assert.throws(() => custody.recover(root, { token: handle.token, reason: 'competing recovery' }), e => e.code === 'RUN_BUSY');
+    }
+    return value;
+  };
+  try { custody.recover(root, { token: handle.token, reason: 'Review replacement; preserve it' }); }
+  finally { fs.rmSync = originalRm; }
+  assert.equal(guarded, true);
+  assert.equal(fs.readFileSync(target, 'utf8'), 'replacement must survive');
+}
+{
+  const root = study();
+  const handle = custody.acquire(root, { regression: 'rename-before-receipt' });
+  custody.plant(handle, { 'CLAUDE.md': 'owned canary' });
+  // Fault immediately after atomic rename, before remove can journal completion.
+  const result = custody.remove(handle, { renameSync(from, to) { fs.renameSync(from, to); throw new Error('interrupted after rename'); } });
+  assert.equal(result.recovery_required, true);
+  custody.release(handle, result);
+  const recovered = custody.recover(root, { token: handle.token, reason: 'Inspect retained quarantine and finish cleanup' });
+  assert.deepEqual(recovered.removed, ['CLAUDE.md']);
+  assert.equal(fs.existsSync(path.join(loginDir(root), 'CLAUDE.md')), false);
+  assert.equal(fs.readFileSync(handle.journal.canaries[0].quarantine, 'utf8'), 'owned canary');
+  const next = custody.acquire(root); custody.requireClean(next.loginDir); custody.release(next);
+}
+console.log('native-login custody filesystem regressions: ok');
+
 // --- Identities ------------------------------------------------------------------------------
 {
   const p = isolation.NATIVE_PROFILE;
@@ -86,7 +140,14 @@ fs.openSync = (file, ...args) => { guard(file); return originalOpen(file, ...arg
 {
   const root = study();
   const options = fixture(root, 'pincer', { logDir: path.join(root, 'captures'), name: 'S1', fixtureStatus: 'unsanitized' });
+  let loginGroupRegistered = false;
+  options.onGroup = ({ pgid }) => {
+    const claim = JSON.parse(fs.readFileSync(path.join(control(root), '.claims', `${lockKey(root)}.json`), 'utf8'));
+    assert.ok(claim.groups.includes(pgid), 'login claim owns the detached group before the caller permits tool startup');
+    loginGroupRegistered = true;
+  };
   const result = await isolation.observeFixture(options);
+  assert.equal(loginGroupRegistered, true);
   assert.equal(result.status, 0, result.stderr);
   const observed = JSON.parse(result.stdout);
   assert.equal(observed.config_dir, loginDir(root), 'the tool reads its login from the study login directory');
@@ -175,13 +236,13 @@ fs.openSync = (file, ...args) => { guard(file); return originalOpen(file, ...arg
   fs.mkdirSync(path.join(linked, 'host'));
   fs.symlinkSync(loginDir(root), path.join(linked, 'host/claude-config'));
   await rejectsWith(isolation.observeFixture(fixture(linked)), 'LOGIN_DIR_INVALID');
-  const inHome = fs.mkdtempSync(path.join(os.homedir(), '.pincer-test-login-'));
+  const inHome = study();
+  const originalHomedir = os.homedir;
   try {
-    fs.mkdirSync(path.join(inHome, 'host/claude-config'), { recursive: true });
-    // A workspace under the home directory is already refused as an ancestor configuration;
-    // the login directory rule is checked on its own.
+    os.homedir = () => inHome;
     assert.throws(() => custody.loginDirectory(inHome), error => { assert.equal(error.code, 'LOGIN_DIR_INVALID'); assert.match(error.message, /operator home/); return true; });
-  } finally { fs.rmSync(inHome, { recursive: true, force: true }); }
+  } finally { os.homedir = originalHomedir; }
+
 }
 
 // --- Replaced canary, cleanup fault, recovery, then a clean next session --------------------
@@ -206,7 +267,7 @@ fs.openSync = (file, ...args) => { guard(file); return originalOpen(file, ...arg
   fs.unlinkSync(path.join(loginDir(root), 'CLAUDE.md'));
   assert.equal((await isolation.observeFixture(fixture(root))).status, 0, 'a clean next session follows the manual removal');
   // A deletion fault preserves both owned files and stops; recovery removes them once verified.
-  const faulted = await isolation.observeFixture(fixture(root, 'plain', { fixtureCustodyIO: { unlinkSync: () => { const error = new Error('EIO'); error.code = 'EIO'; throw error; } } }));
+  const faulted = await isolation.observeFixture(fixture(root, 'plain', { fixtureCustodyIO: { renameSync: () => { const error = new Error('EIO'); error.code = 'EIO'; throw error; } } }));
   assert.equal(faulted.login_dir_recovery_required, true);
   assert.deepEqual(fs.readdirSync(loginDir(root)).sort(), ['.credentials.json', 'CLAUDE.md', 'settings.json']);
   const faultToken = journals(root).find(j => j.state === 'recovery-required').owner.token;
@@ -230,6 +291,13 @@ try {
   const handle = custody.acquire(root, { worker: mode });
   process.stdout.write('acquired');
   if (mode === 'hold') setTimeout(() => { custody.release(handle); process.exit(0); }, 700);
+  else if (mode === 'crash-with-child') {
+    const fs = require('node:fs'), path = require('node:path');
+    const child = require('node:child_process').spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { detached: true, stdio: 'ignore' });
+    custody.registerGroup(handle, { pid: child.pid, pgid: child.pid });
+    fs.writeFileSync(path.join(root, 'child-pid'), String(child.pid));
+    process.kill(process.pid, 'SIGKILL');
+  }
   else if (mode === 'crash-after-receipt') { custody.plant(handle, { 'CLAUDE.md': 'worker canary\\n' }); process.kill(process.pid, 'SIGKILL'); }
   else if (mode === 'crash-before-receipt') custody.plant(handle, { 'CLAUDE.md': 'worker canary\\n' }, { afterWrite: () => process.kill(process.pid, 'SIGKILL') });
 } catch (error) { process.stdout.write(error.code || 'ERROR'); process.exitCode = 1; }
@@ -240,6 +308,15 @@ try {
     child.stdout.on('data', d => { out += d; });
     child.on('exit', () => { children.delete(child); resolve(out); });
   });
+  const orphanRoot = study();
+  await run(orphanRoot, 'crash-with-child');
+  const orphanPid = Number(fs.readFileSync(path.join(orphanRoot, 'child-pid'), 'utf8'));
+  try {
+    const orphanJournal = journals(orphanRoot)[0];
+    assert.throws(() => custody.recover(orphanRoot, { token: orphanJournal.owner.token, reason: 'owner died but child remains' }), /recovery is blocked/);
+    assert.equal(custody.status(orphanRoot).owner_state, 'unknown');
+    assert.equal(locks(orphanRoot).length, 1, 'live detached session retains login custody after owner death');
+  } finally { try { process.kill(-orphanPid, 'SIGKILL'); } catch {} }
   const [a, b] = await Promise.all([run(root, 'hold'), run(alias, 'hold')]);
   assert.deepEqual([a, b].sort(), ['LOGIN_DIR_BUSY', 'acquired'], 'two spellings of one login directory share one lock; exactly one wins');
   const holder = spawn(process.execPath, [worker, root, 'hold'], { detached: true, stdio: ['ignore', 'pipe', 'ignore'] }); children.add(holder);

@@ -6,7 +6,7 @@ Decision date: 20 September 2026. Basis: the user's instruction that Pincer shou
 
 Pincer supplies instructions, tickets, local runtime checks, and saved evidence inside Claude Code, Codex CLI, and GitHub Copilot. The coding tool handles its own account login and model requests. Pincer must not ask for provider API keys, extract OAuth tokens, proxy model traffic, or implement a model-provider client. A subscription or account entitlement may still be required by the host tool. This does not prohibit application credentials needed by software a user is building.
 
-The installed workflow already follows the host-tool approach. The mismatch is in the maintainer benchmark: `isolated-launch.cjs` requires `apiKey` and injects `ANTHROPIC_API_KEY` into a fresh HOME/config environment. That was chosen to isolate sessions without depending on existing login storage. It is an implementation choice, not a Pincer product requirement.
+The installed workflow follows the host-tool approach. The historical maintainer benchmark required `apiKey` and injected `ANTHROPIC_API_KEY` into a fresh HOME/config environment. T-121 replaced that launch path with `claude-project-native-login-v1`; the historical profile remains readable but is refused for launch. Native login preservation still requires a real observation.
 
 ## Revised order
 
@@ -49,7 +49,7 @@ T-120 updates protocol, isolation, usage and readiness contracts, affected ticke
 
 Each frozen-input edit requires a new cohort; the external study checkout and drafts must be refreshed. Existing management receipts and native acceptance checkboxes are not rewritten into passes. Use the pinned independent kit for verification. No template changes are implied by this planning amendment; if implementation changes templates, regenerate adapters and plugin.
 
-The old smoke package is marked superseded. The checked-in runner has **not** been converted yet and remains unsuitable for the new native-login study. No live session is authorized by this amendment.
+The old smoke package is superseded by the [native-login execution package](prd-v8-artifacts/execution/T-121-native-smoke-execution-package.md). The runner is implemented and fixture-tested, including custody review corrections. Full regression on the corrected candidate and exact-candidate CI remain pending; packed-install parity passed. Refresh the external study checkout and drafts only after establishing the candidate. Native login, isolation and hook capture remain unobserved. No live session is authorized by this amendment.
 
 ## Official references checked for this revision
 

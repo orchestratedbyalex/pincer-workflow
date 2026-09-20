@@ -555,3 +555,11 @@ Read 20 September 2026; installed help output recorded above.
 None of these pages demonstrates that the pinned Claude Code 2.1.273 preserves a login
 under a dedicated `CLAUDE_CONFIG_DIR` with a fresh HOME and project-only settings. That is
 the first thing the native smoke must observe.
+
+## Custody review correction — 20 September 2026
+
+Cleanup must not check a mutable pathname and then unlink it. The implementation atomically moves an apparently owned canary into a unique private holding directory under the custody control area, journals the destination before the move, and verifies the moved object. Both verified canaries and unexpected replacements are retained there; a replacement is restored by exclusive linking where possible, never by overwriting a newer file. `removed` means removed from the active login directory, not destroyed. Changed or uncertain files require recovery and their retained locations are recorded. No automatic recursive cleanup of these holding directories is permitted.
+
+Explicit recovery holds the recovery guard throughout canary inspection, retirement and durable receipts, including marker removal. Dead-owner recovery keeps the abandoned claim until that work completes. Released-owner recovery acquires the same guard and rechecks that no new owner exists. A recovery-in-progress marker survives exceptions.
+
+Before allowing a session supervisor to start its tool, its detached process group must be registered in both the login-directory claim and the run claim. Owner death alone cannot permit login-directory recovery while a registered group remains live or uncertain. Registration failure launches no tool. T-121 includes replacement-after-check, rename-before-receipt, competing recovery/acquisition and detached-child-after-owner-death regressions.

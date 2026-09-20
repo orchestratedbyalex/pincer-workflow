@@ -89,7 +89,7 @@ function release(claim) {
   if (claim.owner.groups.some(group => alive(-group) !== 'dead')) throw error('CUSTODY_BUSY', 'A registered session group may still be live; ownership retained for investigation');
   fs.unlinkSync(locations(claim.root, claim.key).file);
 }
-function recover(root, key, { token, reason } = {}) {
+function recover(root, key, { token, reason, beforeRelease } = {}) {
   if (typeof reason !== 'string' || !reason.trim() || reason.length > 500) throw error('RECOVERY_REASON_REQUIRED', 'Explicit recovery requires a bounded operator reason');
   const initial = inspect(root, key);
   if (!initial?.owner || initial.owner.token !== token || initial.state !== 'dead') throw error('RECOVERY_REFUSED', `${key}: ${initial?.reason || 'no matching abandoned claim'}`);
@@ -113,6 +113,8 @@ function recover(root, key, { token, reason } = {}) {
         if (previous.owner?.token !== token || previous.owner?.key !== key || previous.launches !== 0 || !previous.reason) throw error('RECOVERY_REFUSED', 'Existing recovery receipt does not describe this owner');
       }
     } finally { fs.rmSync(staging, { force: true }); }
+    // Keep both the abandoned claim and recovery guard through caller cleanup.
+    if (beforeRelease) beforeRelease();
     fs.unlinkSync(locations(root, key).file);
     return { recovered: true, archive, launches: 0, next: 'Inspect retained checkpoints and explicitly choose resume or disposition; recovery itself launches nothing.' };
   } finally { release(guard); }

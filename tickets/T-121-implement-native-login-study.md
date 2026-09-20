@@ -6,9 +6,9 @@ prd: .prd/prd-v8.md
 depends_on: [T-120]
 timeout: 900
 started: 2026-09-20T10:22:38Z
-last_check: 2026-09-20T10:39:21Z passed 826a1616422f
-verified: 2026-09-20T10:39:21Z 826a1616422f
+last_check: 2026-09-20T18:05:38Z passed 826a1616422f
 finished: 2026-09-20T10:39:21Z
+verified: 2026-09-20T18:05:38Z 826a1616422f
 ---
 
 ## Objective
@@ -58,3 +58,7 @@ New test files are deliverables, not checks claimed to exist or pass today. Use 
 - Preserve evidence freshness, prior failures, restart safety, unrelated work and historical cohort identities.
 - No live model session, account access, spending, merge or publication is authorized by this planning ticket.
 - Regenerate adapters/plugin after any template changes; regenerate the cohort after frozen-input changes.
+
+## Custody review corrections — 20 September 2026
+
+Addressed replacement-after-check deletion by journaled atomic retirement with retained bytes, kept recovery guarded through cleanup/receipt completion, and registered detached session groups in the login claim as well as the run claim before startup. Added filesystem race/interruption regressions and a real detached-child owner-death regression. Historical closure is retained; no lifecycle field is hand-edited. Exact-candidate CI and packed parity remain separate checks, and native login is still unobserved.

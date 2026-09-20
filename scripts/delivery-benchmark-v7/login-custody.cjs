@@ -184,18 +184,42 @@ function verifiedOwned(entry, io = {}) {
   if (digest !== entry.digest) return { ok: false, detail: 'the owned canary content changed' };
   return { ok: true };
 }
+// Never unlink a mutable login-directory pathname. Move it atomically into a private,
+// journaled quarantine, then verify the moved object. Even verified canaries are retained:
+// there is no later check/unlink race. A replacement is preserved and restored without
+// overwriting any newer destination. Quarantine is outside the CLI configuration tree.
+function retireOwned(handle, entry, io = {}) {
+  if (!entry.quarantine) {
+    const dir = fs.mkdtempSync(path.join(handle.control, 'canary-'));
+    entry.quarantine = path.join(dir, entry.name);
+    writeJournal(handle); // intent precedes rename; interruption is recoverable
+  }
+  const exists = file => { try { fs.lstatSync(file); return true; } catch (e) { if (e.code === 'ENOENT') return false; throw e; } };
+  if (!exists(entry.quarantine)) {
+    // Inspect before moving too: known replacements stay at their original path.
+    const before = verifiedOwned(entry, io);
+    if (!before.ok) return before;
+    try { (io.renameSync || fs.renameSync)(entry.path, entry.quarantine); }
+    catch { return { ok: false, detail: 'the owned canary could not be quarantined' }; }
+  }
+  const verdict = verifiedOwned({ ...entry, path: entry.quarantine }, io);
+  if (!verdict.ok) {
+    // link is exclusive; unlike rename it cannot overwrite a new destination.
+    try { fs.linkSync(entry.quarantine, entry.path); } catch {}
+    return { ok: false, detail: `${verdict.detail}; retained at ${entry.quarantine}` };
+  }
+  if (exists(entry.path)) return { ok: false, detail: 'a new entry appeared after quarantine; both entries preserved' };
+  return { ok: true };
+}
 function remove(handle, io = {}) {
   const removed = [], preserved = [];
   for (const entry of handle.journal.canaries) {
     if (entry.state === 'removed') continue;
     if (entry.state !== 'created') { preserved.push({ name: entry.name, detail: entry.detail || 'ownership of this file is uncertain' }); continue; }
-    const verdict = verifiedOwned(entry, io);
-    if (verdict.ok) {
-      try { (io.unlinkSync || fs.unlinkSync)(entry.path); entry.state = 'removed'; entry.at = iso(); removed.push(entry.name); continue; }
-      catch { verdict.detail = 'the owned canary could not be deleted'; }
-    }
-    entry.state = 'preserved'; entry.detail = verdict.detail; entry.at = iso();
-    preserved.push({ name: entry.name, detail: verdict.detail });
+    const verdict = retireOwned(handle, entry, io);
+    if (verdict.ok) { entry.state = 'removed'; entry.at = iso(); removed.push(entry.name); }
+    else { entry.state = 'preserved'; entry.detail = verdict.detail; entry.at = iso(); preserved.push({ name: entry.name, detail: verdict.detail }); }
+    writeJournal(handle);
   }
   writeJournal(handle);
   const recovery = preserved.length > 0;
@@ -206,6 +230,7 @@ function remove(handle, io = {}) {
   }
   return { removed, preserved, recovery_required: recovery };
 }
+function registerGroup(handle, group) { claims.registerGroup(handle.claim, group); }
 // Custody is released only after a durable receipt. A recovery-required outcome keeps the
 // marker (written before release), so the next acquisition is refused until a decision.
 function release(handle, outcome = {}) {
@@ -247,32 +272,49 @@ function recover(inputRoot, { token, reason } = {}) {
   if (journal.login_dir !== login.path) fail('LOGIN_DIR_RECOVERY_REFUSED', 'the journal describes a different login directory');
   const owner = ownerState(control, key, journal);
   if (owner.state === 'alive' || owner.state === 'unknown') fail('LOGIN_DIR_RECOVERY_REFUSED', `custody owner ${owner.state}: ${owner.reason || 'termination is not proven'}; recovery is blocked`);
-  if (owner.state === 'dead') {
-    if (owner.owner.token !== token) fail('LOGIN_DIR_RECOVERY_REFUSED', 'the lock belongs to a different owner than the journal names');
-    claims.recover(control, key, { token, reason });
-  }
-  const handle = { inputRoot: fs.realpathSync(inputRoot), loginDir: login.path, control, key, token, journalPath: journalPath(control, token), journal };
-  const removed = [], preserved = [];
-  for (const entry of journal.canaries) {
-    if (entry.state === 'removed') continue;
-    // Created, or preserved after a cleanup fault with its receipt intact: re-verify identity
-    // and digest now; only an unchanged owned file may go.
-    if (entry.state === 'created' || (entry.state === 'preserved' && entry.dev !== null && entry.digest)) {
-      const verdict = verifiedOwned(entry);
-      if (verdict.ok) { try { fs.unlinkSync(entry.path); entry.state = 'removed'; entry.at = iso(); removed.push(entry.name); continue; } catch { verdict.detail = 'the owned canary could not be deleted'; } }
-      entry.state = 'preserved'; entry.detail = verdict.detail;
-    } else if (entry.state === 'intended') {
-      // Create-before-receipt crash: a file may or may not be ours. Never delete it.
-      entry.state = 'preserved'; entry.detail = fs.existsSync(entry.path) ? 'written without a receipt; ownership uncertain, preserved for manual review' : 'never written';
-      if (entry.detail === 'never written') { entry.state = 'removed'; continue; }
+  const marker = readMarker(control);
+  if (marker && marker.token !== token) fail('LOGIN_DIR_RECOVERY_REFUSED', 'the recovery marker belongs to another journal');
+  const cleanup = () => {
+    const currentMarker = readMarker(control);
+    if (currentMarker && currentMarker.token !== token) fail('LOGIN_DIR_RECOVERY_REFUSED', 'recovery marker changed');
+    writeMarker(control, { schema: 1, token, reason: 'explicit recovery in progress', at: iso() });
+    const handle = { inputRoot: fs.realpathSync(inputRoot), loginDir: login.path, control, key, token, journalPath: journalPath(control, token), journal };
+    const removed = [], preserved = [];
+    for (const entry of journal.canaries) {
+      if (entry.state === 'removed') continue;
+      // Created, or preserved after a cleanup fault with its receipt intact: re-verify identity
+      // and digest now; only an unchanged owned file may go.
+      if (entry.state === 'created' || (entry.state === 'preserved' && entry.dev !== null && entry.digest)) {
+        const verdict = retireOwned(handle, entry);
+        if (verdict.ok) { entry.state = 'removed'; entry.at = iso(); removed.push(entry.name); continue; }
+        entry.state = 'preserved'; entry.detail = verdict.detail;
+      } else if (entry.state === 'intended') {
+        // Create-before-receipt crash: a file may or may not be ours. Never delete it.
+        entry.state = 'preserved'; entry.detail = fs.existsSync(entry.path) ? 'written without a receipt; ownership uncertain, preserved for manual review' : 'never written';
+        if (entry.detail === 'never written') { entry.state = 'removed'; continue; }
+      }
+      entry.at = iso();
+      preserved.push({ name: entry.name, detail: entry.detail });
     }
-    entry.at = iso();
-    preserved.push({ name: entry.name, detail: entry.detail });
+    journal.state = 'recovered';
+    journal.recovery = { at: iso(), reason, by: { pid: process.pid, host: os.hostname() }, removed, preserved };
+    writeJournal(handle);
+    fs.rmSync(markerPath(control), { force: true });
+    return { recovered: true, removed, preserved, next: preserved.length ? 'Preserved files stay in the login directory; the next launch is refused as PROFILE_HOST_DIRTY until a person reviews and removes them. Recovery launches nothing.' : 'The login directory holds no owned canary; the next launch may proceed after its own inspection. Recovery launches nothing.' };
+  };
+  let result;
+  if (owner.state === 'dead') {
+    if (owner.owner.token !== token) fail('LOGIN_DIR_RECOVERY_REFUSED', 'the lock belongs to another journal');
+    claims.recover(control, key, { token, reason, beforeRelease: () => { result = cleanup(); } });
+  } else {
+    // A released claim still needs a recovery guard. Normal acquire checks this guard
+    // both before and after publishing its claim, closing the acquisition race.
+    const guard = claims.acquire(control, `recovery.${key}`, 'login directory recovery');
+    try {
+      if (claims.inspect(control, key)) fail('LOGIN_DIR_RECOVERY_REFUSED', 'custody changed before recovery');
+      result = cleanup();
+    } finally { claims.release(guard); }
   }
-  journal.state = 'recovered';
-  journal.recovery = { at: iso(), reason, by: { pid: process.pid, host: os.hostname() }, removed, preserved };
-  writeJournal(handle);
-  fs.rmSync(markerPath(control), { force: true });
-  return { recovered: true, removed, preserved, next: preserved.length ? 'Preserved files stay in the login directory; the next launch is refused as PROFILE_HOST_DIRTY until a person reviews and removes them. Recovery launches nothing.' : 'The login directory holds no owned canary; the next launch may proceed after its own inspection. Recovery launches nothing.' };
+  return result;
 }
-module.exports = { LOGIN_DIR, CONTROL_DIR, ALLOWED_ENTRIES, DIRTY_ENTRIES, CANARY_FILES, loginDirectory, controlArea, inspectEntries, requireClean, acquire, annotate, verifyHeld, plant, remove, release, status, recover, readJournal };
+module.exports = { LOGIN_DIR, CONTROL_DIR, ALLOWED_ENTRIES, DIRTY_ENTRIES, CANARY_FILES, loginDirectory, controlArea, inspectEntries, requireClean, acquire, annotate, registerGroup, verifyHeld, plant, remove, release, status, recover, readJournal };

@@ -603,7 +603,7 @@ async function runSession(options, nativePreflight = null) {
       { kind: 'fixture', args, prompt: options.prompt, mode: options.mode || 'ok', model: options.model, heartbeat: options.heartbeat || null };
     const result = await supervise({ cwd: fs.realpathSync(options.workspace), env, payload,
       timeoutMs: native ? options.caps.wall_clock_minutes * 60000 : options.timeoutMs || options.caps.wall_clock_minutes * 60000,
-      onGroup: options.onGroup, signal: options.signal, logFiles, captureIO: native ? fs : options.fixtureCaptureIO || fs });
+      onGroup: async group => { custody.registerGroup(handle, group); if (options.onGroup) await options.onGroup(group); }, signal: options.signal, logFiles, captureIO: native ? fs : options.fixtureCaptureIO || fs });
     const retainIO = !native && options.fixtureRetainIO ? { ...fs, ...options.fixtureRetainIO } : fs;
     const hookDebug = retainHookDebug(debugFileFor(settingsPath), logFiles?.debug || null, clean, { dir: root, name: options.name || 'session' }, retainIO);
     const isolationCanary = checkCanary(canary, [result.stdout, result.stderr, hookDebug.text]);
@@ -646,7 +646,7 @@ async function runSession(options, nativePreflight = null) {
       limit: limit !== null, refused: false };
   } finally {
     if (!outcome) { try { outcome = custody.remove(handle, custodyIO); } catch {} }
-    if (acquiredHere) { try { custody.release(handle, { recovery_required: Boolean(outcome?.recovery_required), detail: outcome?.recovery_required ? 'canary cleanup incomplete' : null }); } catch {} }
+    if (acquiredHere) { try { custody.release(handle, { recovery_required: !outcome || Boolean(outcome.recovery_required), detail: outcome?.recovery_required ? 'canary cleanup incomplete' : null }); } catch {} }
     // Refusals before the tool starts have no hook evidence to preserve.
     if (!preserveSession || !fs.existsSync(debugFileFor(settingsPath))) fs.rmSync(sessionRoot, { recursive: true, force: true });
   }
@@ -669,7 +669,7 @@ async function launchNative(options) {
     if (releaseHere) { releaseCustody(preflight.custody, { recovery_required: Boolean(result.login_dir_recovery_required), detail: result.code || null }); preflight.acquired = false; }
     return result;
   } finally {
-    if (releaseHere && preflight.acquired) { try { releaseCustody(preflight.custody, { detail: 'launch did not complete' }); } catch {} }
+    if (releaseHere && preflight.acquired) { try { releaseCustody(preflight.custody, { recovery_required: true, detail: 'launch did not complete' }); } catch {} }
   }
 }
 // The inert supervisor cannot launch a native tool until it independently verifies

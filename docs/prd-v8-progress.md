@@ -511,3 +511,14 @@ passed twice on 20 September 2026: 10:22Z–10:38Z (an `effort.cjs` validator ed
 re-mint landed at 10:25Z, before the benchmark suites ran) and again on the final tree,
 10:39Z–10:54Z, exit 0. Final frozen cohort `99368435…`. Not pushed; no CI run exists for
 this commit; the packed-parity and exact-candidate CI requirement therefore waits for a push.
+
+
+## 20 September 2026 — T-121 custody race corrections
+
+Fixed three review findings: cleanup now atomically retires canaries to private journaled holding paths and retains bytes instead of unlinking checked mutable paths; recovery keeps a guard through inspection, cleanup and durable receipts; detached session groups are registered with the login claim before task startup as well as with the run claim. Recovery-in-progress markers survive failures. Added regressions for replacement after content checking, rename-before-receipt interruption, competing recovery/acquisition, group registration before startup, and owner death with a surviving detached child. The home-directory rejection test uses a synthetic home rather than writing into the operator's real home.
+
+Pinned-kit `verify T-121` passed all five required suites on the final test tree: receipt `2026-09-20T11:06:40Z 826a1616422f`. Native-tool/readiness contract and execution-freeze suites passed separately. Distribution parity and packed-install tests passed. Full `npm test` was attempted: first nine suites passed, then recovery.test.js stopped at sandbox-denied `listen EPERM 127.0.0.1`; retained output is `/tmp/pincer-t121-custody-full-test.log`. This is not a full-regression pass. Exact-candidate CI remains pending. Frozen cohort: `725f586d06d1a7d75241d706bd36b43bfdc8d2aa0fdb12370d86e36ab247b847`. No native session, login, commit or push occurred.
+
+A separate direct invocation of `test/benchmark-run-claims.test.js` timed out waiting for `owner reaped` (the transition to proven-dead custody). This environment also denies direct `ps` execution; the standalone claims suite therefore remains unverified here and must be rerun on the permitted host. The final pinned-kit T-121 suite did pass its detached-child custody regressions.
+
+Candidate preparation: corrected the native-tool plan's stale pre-implementation status and the replacement smoke package's cleanup and sanitized-field descriptions. Added `docs/prd-v8-artifacts/execution/T-121-candidate-validation.md` with the host regression, pinned-kit verification, scoped commit, push and exact-SHA CI procedure. Native-tool contracts, readiness contracts and execution-freeze checks passed after these documentation edits; `git diff --check` passed. Full regression and CI remain pending. No commit, push, login or study session occurred.
