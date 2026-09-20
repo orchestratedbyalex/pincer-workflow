@@ -58,6 +58,32 @@ const guard = file => { if (String(file).endsWith('/.credentials.json')) { crede
 fs.readFileSync = (file, ...args) => { guard(file); return originalRead(file, ...args); };
 fs.openSync = (file, ...args) => { guard(file); return originalOpen(file, ...args); };
 
+// --- Concurrent control-directory creation -----------------------------------------------
+for (const kind of ['directory', 'file', 'symlink', 'denied']) {
+  const root = study(), target = control(root);
+  const mkdir = fs.mkdirSync;
+  let injected = false;
+  fs.mkdirSync = (file, options) => {
+    if (file === target && !injected) {
+      injected = true;
+      // Another invocation creates the path immediately before our mkdir.
+      if (kind === 'directory') mkdir(file, options);
+      if (kind === 'file') fs.writeFileSync(file, 'preserve');
+      if (kind === 'symlink') fs.symlinkSync(loginDir(root), file);
+      if (kind === 'denied') throw Object.assign(new Error('denied'), { code: 'EACCES' });
+    }
+    return mkdir(file, options);
+  };
+  try {
+    if (kind === 'directory') assert.equal(custody.controlArea(root), target);
+    else assert.throws(() => custody.controlArea(root), { code: kind === 'denied' ? 'EACCES' : 'LOGIN_DIR_INVALID' });
+    assert.equal(injected, true);
+  } finally { fs.mkdirSync = mkdir; }
+  if (kind === 'file') assert.equal(fs.readFileSync(target, 'utf8'), 'preserve');
+  if (kind === 'symlink') assert.equal(fs.lstatSync(target).isSymbolicLink(), true);
+}
+console.log('native-login control-directory race regressions: ok');
+
 // --- Cleanup replacement races and exclusive recovery -------------------------------------
 {
   const root = study();

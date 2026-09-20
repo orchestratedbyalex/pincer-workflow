@@ -53,8 +53,13 @@ function controlArea(inputRoot) {
   const root = fs.realpathSync(inputRoot);
   const control = path.join(root, ...CONTROL_DIR.split('/'));
   for (const part of [path.join(root, 'host'), control]) {
-    if (fs.existsSync(part)) { if (fs.lstatSync(part).isSymbolicLink()) fail('LOGIN_DIR_INVALID', 'the login custody control area must not be a symbolic link'); }
-    else fs.mkdirSync(part, { mode: 0o700 });
+    // Concurrent first acquisitions may both need this shared directory. Its
+    // existence is not lock ownership; only claims.acquire decides the winner.
+    try { fs.mkdirSync(part, { mode: 0o700 }); }
+    catch (error) { if (error.code !== 'EEXIST') throw error; }
+    const stat = fs.lstatSync(part);
+    if (stat.isSymbolicLink()) fail('LOGIN_DIR_INVALID', 'the login custody control area must not be a symbolic link');
+    if (!stat.isDirectory()) fail('LOGIN_DIR_INVALID', 'the login custody control area must be a directory');
   }
   return control;
 }
