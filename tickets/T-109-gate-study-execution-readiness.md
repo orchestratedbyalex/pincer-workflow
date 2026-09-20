@@ -63,3 +63,7 @@ keep any observation criterion unchecked until its linked artifacts have been re
   by this ticket. Reuse actual session decisions; obtain only missing execution inputs.
 - Preserve historical frozen records and report changed execution/scoring under explicit
   cohort identity. New scenario scope or an unsupported design needs a recorded revision.
+
+## Solo operational-smoke amendment
+
+20 September 2026: user has Claude Pro and no independent reviewers. Schema-2 operational-smoke alone permits one non-independent operator under the candidate-bound `operational-smoke-reviewer-decision` contract in the protocol. Evidence reviews, project access and actual usage authorization remain mandatory. Measured/comparative readiness still requires two independent human reviewers. No live launch or reviewer approval is inferred.

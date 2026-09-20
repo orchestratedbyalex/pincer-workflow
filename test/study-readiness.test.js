@@ -174,3 +174,25 @@ assert.equal(pending.status,2);assert.equal(JSON.parse(pending.stdout).ready,fal
  assert.equal(result.status,0,result.stdout+result.stderr);assert.deepEqual(snapshot(f.root),before);
 }
 console.log('study readiness tests passed (schema 1 and schema 2 synthetic documents validate refusal mechanics only; no native evidence created)');
+
+// A solo operator is allowed only for schema-2 operational smoke, with a scoped decision.
+function soloSmoke(){
+ const f=fixture('operational-smoke',{schema:2,profile:NATIVE_PROFILE.name});
+ const reviewer=f.manifest.reviewers[0];
+ const decision=JSON.parse(fs.readFileSync(path.join(f.root,reviewer.decision.ref),'utf8'));
+ Object.assign(decision,{kind:'operational-smoke-reviewer-decision',purpose:'operational-smoke',candidate:f.manifest.execution.candidate,independent:false});
+ reviewer.independent=false;reviewer.decision=f.put(reviewer.decision.ref,decision);f.manifest.reviewers=[reviewer];
+ return {f,reviewer,decision};
+}
+{
+ const {f}=soloSmoke();assert.equal(f.inspect().ready,true);
+ const result=inspectStudy({manifestPath:f.manifestPath,inputRoot:f.root,purpose:'measured'});
+ assert.equal(result.ready,false);assert.ok(result.pending.some(p=>p.code==='INDEPENDENT_REVIEWERS_PENDING'));
+}
+for(const change of [d=>d.purpose='measured',d=>d.candidate='f'.repeat(40),d=>d.decided_by='agent',d=>d.approved=false,d=>d.independent=true]){
+ const {f,reviewer,decision}=soloSmoke();change(decision);reviewer.decision=f.put(reviewer.decision.ref,decision);
+ assert.equal(f.inspect().ready,false,'unapproved or differently scoped operator decision is refused');
+}
+{const {f}=soloSmoke();f.manifest.reviewers=[];assert.equal(f.inspect().ready,false);}
+{const {f}=soloSmoke();f.modifyEvidence('ci',v=>v.review=null);assert.equal(f.inspect().ready,false,'solo smoke still needs actual evidence review');}
+console.log('solo operational-smoke reviewer boundaries passed');

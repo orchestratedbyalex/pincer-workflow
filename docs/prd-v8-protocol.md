@@ -99,7 +99,7 @@ limits. See [cost and usage documentation](https://code.claude.com/docs/en/agent
 and [cache token semantics](https://platform.claude.com/docs/en/build-with-claude/prompt-caching),
 reviewed 19 September 2026. Actual pinned-tool smoke payloads are still required.
 
-At least two non-implementing human reviewers follow the retained v7 rubric. Record
+For measured/comparative studies, at least two non-implementing human reviewers follow the retained v7 rubric. Record
 exposure/order, elapsed review time, decisions, missed faults and confidence. A validator
 checks record consistency; it cannot establish that the human review happened.
 
@@ -164,7 +164,7 @@ Schema 1 uses these explicit fields:
   cohort; a kit/model/configuration change requires separately resolved inputs and a
   separate allocation decision. Operational and measured purposes cannot share
   an authorization implicitly.
-- `reviewers`: at least two unique independent reviewer IDs with participation decisions.
+- `reviewers`: measured studies require at least two unique independent reviewer IDs with participation decisions. Schema-2 `operational-smoke` alone may instead name one operator with `independent: false` and an `operational-smoke-reviewer-decision` made by `user`, binding that reviewer, `independent: false`, `purpose: operational-smoke` and the exact candidate. This is technical self-review, not independent evaluation or evidence of comparative benefit. Schema-1 behavior is unchanged.
 - `authorization`: a referenced `study-authorization` decision made by the user, binding
   purpose, exact canonical schedule digest, allocation ID, expiry and all numeric limits.
 - `allocation`: ID, runs-root path, the same decision reference, `limit_usd`,
@@ -183,7 +183,7 @@ reviewer independence. No secret value belongs in any of these documents.
 
 Evidence summaries bind kind, candidate, full `evidence_target` as `execution_target`,
 passing result, supporting
-artifact references and a review decision by a listed independent reviewer. The review
+artifact references and a review decision by a listed reviewer (independent for measured studies; the explicitly declared operator is permitted only for schema-2 operational smoke). The review
 decision names both candidate and evidence kind. Native and real-browser summaries
 must explicitly declare `fixture: false`; this denotes actual observation even when
 the tested page is a local fixture. Offline controlled faults may be labelled fixtures.

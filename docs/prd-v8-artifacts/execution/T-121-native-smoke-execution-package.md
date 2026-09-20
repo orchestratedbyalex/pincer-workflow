@@ -56,7 +56,7 @@ establish.
 ## 3. Decisions bundle (Decision)
 
 The [superseded package](T-109-smoke-execution-package.md) §10 items 1, 2, 4, 5, 7, 8, 9
-and 10 (model, browser runtime, project access, two independent reviewers, K0 artifact,
+and 10 (model, browser runtime, project access, reviewer arrangement, K0 artifact,
 study root, capture format, candidate pin and CI) are unchanged in kind. The allocation and
 authorization change shape:
 
@@ -150,3 +150,11 @@ is not reused.
 - That Copilot behaves like either CLI, or that a quiet canary proves absence.
 - Any dollar cost. Under a subscription the estimate is a list-price figure and no charge is
   attributable; dollar-superiority claims are withheld (`COST_COMPARISON_INCOMPATIBLE`).
+
+## Solo operational-smoke amendment — 20 September 2026
+
+The user reports Claude Pro and no available independent reviewers. Record subscription billing; Pro availability for the proposed pinned model remains to be observed through native login. This does not authorize any account usage or session.
+
+For schema-2 operational smoke only, one operator may review technical captures with `independent: false`. A referenced `operational-smoke-reviewer-decision` must have the usual decision envelope and bind `decided_by: user`, the operator's `reviewer` ID, `independent: false`, `purpose: operational-smoke`, and the exact `candidate`. Per-kind evidence reviews, retained artifacts, project access, numeric limits and separate execution authorization are still required. No participation or evidence-review decision is inferred from this amendment.
+
+Measured and comparative studies still require two independent non-implementing human reviewers. Solo smoke establishes technical observations only; it cannot establish workflow superiority or independent review effort. The gate rejects the solo arrangement for measured use. This gate change creates a new candidate and cohort: the earlier green commit and draft are historical and must be refreshed after candidate CI.

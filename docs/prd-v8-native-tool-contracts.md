@@ -418,7 +418,7 @@ hand-edited.
    sanitized status fields.
 2. **Decisions bundle (user).** Model; caps (`session_turns`, `session_wall_minutes`,
    `session_estimate_cap_usd`); `limit_estimate_usd`; `account_usage`; `billing_mode`;
-   K0 artifact acceptance; capture format; project access; two independent reviewers;
+   K0 artifact acceptance; capture format; project access; two independent reviewers for measured studies (schema-2 operational smoke may use one explicitly non-independent operator under the protocol’s candidate-bound decision);
    the `study-authorization` document. The generator that turns these into inspector
    documents must refuse to write a review decision for anyone who has not confirmed a
    review, exactly as `settle-smoke.cjs` does today.

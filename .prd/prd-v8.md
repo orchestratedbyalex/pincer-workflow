@@ -187,7 +187,7 @@ Prepare consistent versioned distribution artifacts before evaluation without pu
 Provide a single auditable readiness decision before the study incurs cost.
 
 - **S-28:** The repaired runner passes offline end-to-end controls and fault injections, the real-browser fixture gate, packed parity and full CI; the amended cohort manifest is minted before the first measured run and lists the complete execution path.
-- **S-29:** A study manifest names projects/access, immutable kits and bases, exact task schedule, independent reviewers, numeric spending/wall-clock caps and stop/resume rules; missing decisions produce specific pending reasons and launch nothing.
+- **S-29:** A study manifest names projects/access, immutable kits and bases, exact task schedule, independent reviewers (or one explicitly non-independent operator for schema-2 operational smoke only), numeric spending/wall-clock caps and stop/resume rules; missing decisions produce specific pending reasons and launch nothing.
 - **S-30:** A controlled short live smoke, once separately authorized and capped, proves actual payload capture, isolation, browser access, stop behavior and report regeneration before the full schedule; smoke artifacts remain labelled operational and never silently replace scheduled study cells.
 
 ### R-11 — Observe the baseline strict journeys and rank friction

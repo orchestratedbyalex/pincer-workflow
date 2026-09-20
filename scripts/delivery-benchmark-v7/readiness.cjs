@@ -133,6 +133,16 @@ function inspectStudy({ manifestPath, inputRoot, purpose, nextSessionId } = {}) 
     return manifest.kits;
   });
   const reviewers=check('reviewers',()=>{
+    // A schema-2 operational smoke checks mechanics, not comparative benefit.
+    // Its sole operator is explicitly non-independent and cannot qualify measured use.
+    if(manifest.schema===2&&purpose==='operational-smoke'&&Array.isArray(manifest.reviewers)&&manifest.reviewers.length===1){
+      const reviewer=manifest.reviewers[0];
+      shape(reviewer,['id','independent','decision'],'REVIEWER_INVALID');
+      need(typeof reviewer.id==='string'&&reviewer.id.trim()&&reviewer.independent===false,'REVIEWER_INVALID');
+      const d=decision(root,reviewer.decision,'operational-smoke-reviewer-decision');
+      need(d.decided_by==='user'&&d.reviewer===reviewer.id&&d.independent===false&&d.purpose==='operational-smoke'&&d.candidate===execution?.candidate,'REVIEWER_DECISION_MISMATCH');
+      return manifest.reviewers;
+    }
     need(Array.isArray(manifest.reviewers)&&manifest.reviewers.length>=2&&manifest.reviewers.length<=20,'INDEPENDENT_REVIEWERS_PENDING');const ids=new Set();
     for(const reviewer of manifest.reviewers){shape(reviewer,['id','independent','decision'],'REVIEWER_INVALID');need(typeof reviewer.id==='string'&&reviewer.id.trim()&&!ids.has(reviewer.id)&&reviewer.independent===true,'REVIEWER_INVALID');ids.add(reviewer.id);const d=decision(root,reviewer.decision,'reviewer-participation-decision');need(d.reviewer===reviewer.id&&d.independent===true,'REVIEWER_DECISION_MISMATCH');}
     return manifest.reviewers;
