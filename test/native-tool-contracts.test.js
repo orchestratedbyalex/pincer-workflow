@@ -24,7 +24,7 @@ const NATIVE_ISOLATION = 'claude-project-native-login-v1';
 const HISTORICAL_USAGE = 'claude-code-result-modelusage-v1';
 const NATIVE_USAGE = 'claude-code-result-native-usage-v1';
 const BILLING_MODES = ['subscription', 'api'];
-const SURFACES = ['claude-code', 'codex'];
+const SURFACES = ['claude-code'];
 const CREDENTIAL_ENV = ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_PROFILE', 'ANTHROPIC_FEDERATION_RULE_ID', 'ANTHROPIC_BASE_URL', 'CLAUDE_CODE_USE_BEDROCK', 'CLAUDE_CODE_USE_VERTEX', 'CLAUDE_CODE_USE_FOUNDRY', 'OPENAI_API_KEY', 'CODEX_API_KEY', 'COPILOT_GITHUB_TOKEN', 'GH_TOKEN', 'GITHUB_TOKEN'];
 const STATUS_RETAINED = ['checked', 'logged_in', 'auth_method', 'api_provider', 'subscription_type'];
 const STATUS_FORBIDDEN = ['email', 'orgId', 'org_id', 'orgName', 'org_name', 'configDirectory', 'config_directory', 'projectsDirectory', 'projects_directory'];
@@ -47,6 +47,7 @@ function recordProblems(r) {
   const a = r.authentication;
   if (!object(a) || Object.keys(a).sort().join(',') !== STATUS_RETAINED.slice().sort().join(',') || a.checked !== true || a.logged_in !== true) add('MISSING_REQUIRED_CAPTURE');
   if (object(a) && STATUS_FORBIDDEN.some(key => Object.hasOwn(a, key))) add('STATUS_RECORD_UNSANITIZED');
+  if (object(a) && (!['claude.ai', 'console'].includes(a.auth_method) || a.api_provider !== 'firstParty')) add('PROFILE_INCOMPATIBLE');
   const m = r.metrics;
   if (!object(m) || Object.keys(m).sort().join(',') !== 'estimate_usd,provider_minutes,tokens' || !Object.values(m).every(metric)) add('MISSING_REQUIRED_CAPTURE');
   else {
@@ -172,6 +173,9 @@ rejects('account limit malformed', subscription, r => { r.account_limit = { kind
 // --- Incompatible profiles are rejected -----------------------------------------------------
 rejects('historical isolation profile with a subscription', subscription, r => { r.isolation_profile = HISTORICAL_ISOLATION; }, 'PROFILE_INCOMPATIBLE');
 rejects('historical usage profile on a native record', subscription, r => { r.measurement_profile = HISTORICAL_USAGE; }, 'PROFILE_INCOMPATIBLE');
+rejects('unknown authentication method', subscription, r => { r.authentication.auth_method = 'invented'; }, 'PROFILE_INCOMPATIBLE');
+rejects('wrong authentication provider', subscription, r => { r.authentication.api_provider = 'other'; }, 'PROFILE_INCOMPATIBLE');
+rejects('VS Code has no Claude profile', subscription, r => { r.tool_surface = 'copilot-vscode'; }, 'SURFACE_UNSUPPORTED');
 rejects('unknown isolation profile', subscription, r => { r.isolation_profile = 'claude-project-native-login-v2'; }, 'PROFILE_INCOMPATIBLE');
 for (const name of CREDENTIAL_ENV) rejects(`credential variable ${name} in env_names`, subscription, r => { r.env_names.push(name); }, 'PROFILE_INCOMPATIBLE');
 rejects('secret-looking variable in env_names', subscription, r => { r.env_names.push('MY_PROVIDER_SECRET'); }, 'PROFILE_INCOMPATIBLE');
@@ -180,7 +184,9 @@ rejects('copilot surface has no profile', subscription, r => { r.tool_surface = 
   const codex = clone(subscription); codex.tool_surface = 'codex';
   assert.ok(recordProblems(codex).includes('PROFILE_INCOMPATIBLE'), 'codex with a dollar estimate is incompatible');
   codex.metrics.estimate_usd = { value: null, reason: 'TOOL_REPORTS_NO_ESTIMATE' };
-  assert.deepEqual(recordProblems(codex), [], 'codex with the declared absent estimate validates');
+  assert.ok(recordProblems(codex).includes('SURFACE_UNSUPPORTED'), 'removing the estimate cannot turn a Claude record into a Codex profile');
+  codex.authentication.auth_method = 'chatgpt';
+  assert.ok(recordProblems(codex).includes('SURFACE_UNSUPPORTED'), 'Codex needs a separate schema even with its own login vocabulary');
 }
 
 // --- Authorization: no inferred numbers, no legacy API fields, no secrets -------------------
@@ -223,7 +229,7 @@ for (const phrase of [
   'A quiet canary', 'does not', 'demonstrate isolation',
   'declared controlled-host baseline',
   'is never a fallback the runner selects on its own, and an API key is never a fallback',
-  'Copilot has', 'no study profile', 'live behavior is unobserved',
+  'Copilot has', 'no study profile', 'live behavior unobserved',
   'expected, valid, not a failure',
   'never a charge',
   'is not the agent\'s to pass',
@@ -236,8 +242,11 @@ assert.match(contract, /Claude Code CLI \| 2\.1\.278 installed help; 2\.1\.273 i
 assert.match(contract, /Codex CLI \| 0\.155\.1 installed/);
 assert.match(contract, /GitHub Copilot CLI \| not installed on this host; version unobserved/);
 // No live observation is claimed anywhere in the surface table.
-for (const row of contract.split('\n').filter(l => /^\| (Claude Code CLI|Codex CLI|GitHub Copilot CLI) \|/.test(l))) assert.match(row, /\*\*None\.\*\*/, `no observed live behavior claimed: ${row.slice(0, 40)}`);
+for (const row of contract.split('\n').filter(l => /^\| (Claude Code CLI|Codex CLI|GitHub Copilot CLI|GitHub Copilot \(VS Code\)) \|/.test(l))) assert.match(row, /\*\*None\.\*\*/, `no observed live behavior claimed: ${row.slice(0, 40)}`);
 assert.doesNotMatch(flat, /Copilot (is|was) observed/i);
+assert.match(contract, /GitHub Copilot \(VS Code\) \| editor\/extension versions unobserved/);
+assert.ok(flat.includes('Claude-only hook checks are explicitly **not applicable**'));
+for (const rule of ['LOGIN_DIR_BUSY', 'LOGIN_DIR_RECOVERY_REQUIRED', 'process-start identity', 'exclusive write', 'Never recursively clean', 'explicit recorded recovery decision', 'create-before-receipt crash']) assert.ok(flat.includes(rule), `missing ownership contract: ${rule}`);
 // Every local link resolves; official references are listed with the date they were read.
 for (const match of contract.matchAll(/\]\(([^)#]+)(?:#[^)]*)?\)/g)) if (!match[1].includes('://')) assert.ok(fs.existsSync(path.resolve(root, 'docs', match[1])), `missing document: ${match[1]}`);
 assert.match(contract, /Read 20 September 2026/);

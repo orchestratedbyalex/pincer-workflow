@@ -28,9 +28,9 @@ future runs under it.
   "isn't relevant for billing purposes".
 - **Codex CLI** 0.155.1. `codex login` / `--device-auth`; `codex login status`; `codex
   doctor --json` (redacted auth check). `--ignore-user-config` keeps auth in `CODEX_HOME`;
-  `exec --json` gives `turn.completed.usage` tokens and **no dollar field**. Specified, not
-  scheduled; no hook-capture grammar yet.
-- **Copilot CLI** not installed. Docs: `copilot login`, token env precedence
+  `exec --json` gives `turn.completed.usage` tokens and **no dollar field**. Research only; a separate study profile is pending. Pincer ships no Codex hook adapter, so Claude hook evidence is not applicable.
+- **Copilot in VS Code** is the shipped installation surface. Native IDE journey, editor/extension versions and capture remain unobserved.
+- **Copilot CLI** is separate research, not installed. Docs: `copilot login`, token env precedence
   `COPILOT_GITHUB_TOKEN` > `GH_TOKEN` > `GITHUB_TOKEN`, `-p`, `--output-format json`,
   premium requests (1 per prompt × model rate). **No study profile; unobserved.**
 
@@ -67,3 +67,9 @@ refused. Study manifest schema 2 and pending reasons `BILLING_MODE_PENDING`,
 - The test pins phrases in the protocol/isolation/usage docs, nine tickets, the README,
   the superseded package, `freeze-spec.cjs` and `package.json`.
 - The `openai-docs` skill the ticket names is not installed; official pages were read.
+
+## Review correction — 20 September 2026
+
+The Claude record schema now rejects Codex/Copilot records instead of accepting relabelled Claude authentication. The contract specifies a directory-wide lock and durable canary ownership/recovery journal; changed or unowned files are preserved, never automatically deleted. T-121 must exercise concurrency and interruption cases. The historical T-120 closure is preserved because the pinned legacy kit has no ticket-reopen operation; a fresh verification receipt records the corrected contract. This technical review does not impersonate a human reviewer or claim native observations. The old `a6a6d474…` cohort is historical after this correction.
+
+Corrected cohort: `3284061a…`; pinned-kit T-120 verification passed all three suites on 20 September at 09:17:26Z. T-121 implementation and native observations remain pending.

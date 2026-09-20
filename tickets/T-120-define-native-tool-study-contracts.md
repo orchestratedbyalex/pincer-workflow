@@ -6,9 +6,9 @@ prd: .prd/prd-v8.md
 depends_on: []
 timeout: 900
 started: 2026-09-20T08:01:07Z
-last_check: 2026-09-20T08:12:49Z passed 5ed85d4c3f23
-verified: 2026-09-20T08:12:49Z 5ed85d4c3f23
+last_check: 2026-09-20T09:17:26Z passed 5ed85d4c3f23
 finished: 2026-09-20T08:12:49Z
+verified: 2026-09-20T09:17:26Z 5ed85d4c3f23
 ---
 
 ## Objective
@@ -50,3 +50,9 @@ The contract is `docs/prd-v8-native-tool-contracts.md`; the protocol, isolation 
 - Preserve evidence freshness, prior failures, restart safety, unrelated work and historical cohort identities.
 - No live model session, account access, spending, merge or publication is authorized by this planning ticket.
 - Regenerate adapters/plugin after any template changes; regenerate the cohort after frozen-input changes.
+
+## Technical review corrections — 20 September 2026
+
+Corrected the cross-surface schema acceptance, removed the invented Codex hook prerequisite, restored Copilot VS Code as the shipped surface, and specified shared login-directory custody and interruption recovery. Authored-contract checks reject relabelled records and unknown Claude authentication providers/methods. T-121 carries the required runtime failure/concurrency tests. No native behavior is claimed.
+
+The pinned legacy kit supports verification of completed tickets but has no ticket-reopen command (`start` rejects done tickets). Historical lifecycle fields were not edited by hand; correction verification is recorded through the kit. This is an assistant technical review, not a claimed independent human sign-off.

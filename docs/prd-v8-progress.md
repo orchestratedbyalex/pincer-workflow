@@ -447,3 +447,10 @@ The full `npm test` chain (77 suites) passed locally on 20 September 2026 (start
 finished 08:25Z, exit 0) after the frozen-input change. T-120 was verified and closed
 through the pinned kit (receipt `5ed85d4c3f23`, 08:12Z). Not pushed; no CI run exists for
 this commit yet.
+
+
+## 20 September 2026 — T-120 technical review corrections
+
+Corrected four issues from review: Claude-only record schemas now reject Codex/Copilot relabelling; Codex evidence follows its shipped skills/runtime/platform controls without an invented hook adapter; Copilot VS Code is distinguished from CLI research; shared login-directory canaries require exclusive canonical-directory custody, durable ownership records and explicit interruption recovery preserving changed files. T-121 now names the runtime failure/concurrency tests. No launcher implementation, account login or live study was performed. Historical T-120 lifecycle fields are preserved; the pinned kit has no legacy ticket-reopen operation, so corrected contracts are reverified using its supported verify path.
+
+Validation: pinned-kit `verify T-120` passed all three suites (native-tool contracts, readiness contracts, execution freeze) and wrote receipt `2026-09-20T09:17:26Z 5ed85d4c3f23`. An initial check exposed a stale text assertion after the Copilot wording correction; that assertion was corrected and the kit rerun successfully. New frozen cohort: `3284061a67bd06536d4f88f25017573881e767e178a53619197a5c798d034721`. Full npm test was not rerun for this contract/test-only correction. No changes were committed or pushed.

@@ -75,7 +75,7 @@ keeps the token and provider-time rules unchanged and replaces the cost metric:
 
 | Field | Meaning under the native profile |
 | --- | --- |
-| `estimate_usd` | The tool's `total_cost_usd`, an estimate at list price; mandatory capture for Claude Code, labelled estimate, never a charge. Absent for Codex (`TOOL_REPORTS_NO_ESTIMATE`). |
+| `estimate_usd` | The tool's `total_cost_usd`, an estimate at list price; mandatory capture for Claude Code, labelled estimate, never a charge. Codex research reports no estimate (`TOOL_REPORTS_NO_ESTIMATE`), but Codex records require a separate future schema and are rejected by this Claude profile. |
 | `billing.mode` | `subscription` or `api`, declared by the user's authorization and cross-checked against the retained sanitized login status; anything else is `AMBIGUOUS_BILLING`. |
 | `billing.attributable_charge_usd` | Under `subscription`: null with `SUBSCRIPTION_NOT_ATTRIBUTABLE`, an expected valid outcome. Under `api`: a number only with retained billing evidence, otherwise null with `CHARGE_EVIDENCE_MISSING`. Never derived from the estimate. |
 | `account_limit` | A tool-reported session, weekly, model or spend limit; any value stops the allocation. |

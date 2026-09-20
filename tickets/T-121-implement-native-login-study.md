@@ -21,6 +21,12 @@ Implement the approved T-120 contracts across launcher/environment construction,
 
 Create test/native-login-study.test.js using fixture executables through the real entry point, asserting side effects, captures, stop behavior and absence of extra task launches. A fixture is not native evidence. Keep legacy cohort readers valid, regenerate frozen inputs, replace the superseded smoke proposals, and document the controlled-host setup and user login steps. Add the suite to npm test and update current suite counts. Run full regression, packed parity and exact-candidate CI at the implementation boundary. T-109 handles separately authorized real smoke; this ticket must not depend on T-109 and create a cycle.
 
+## Review corrections to implement
+
+Follow native-tool contracts §2.4: lock the canonical shared login directory across allocations before probing or planting; journal owned canary creation durably; preserve changed/unowned files; block uncertain custody and require recorded recovery. Test concurrent launches, path aliases, partial creation and interruption, replaced canaries, cleanup/retention faults and recovery before a later session. Never read credentials or recursively clean the login directory.
+
+The current executable study schema is Claude-only. Reject Codex/Copilot records instead of relabelling Claude status/profile data. Codex needs a separate surface-specific profile before T-110/T-111; no Pincer Codex hook adapter exists and Claude hook evidence is not applicable. GitHub Copilot's shipped surface is VS Code; CLI research is separate.
+
 ## Acceptance Criteria
 - [ ] S-64: The actual launch entry point uses supported native login, refuses missing login and provider-key overrides before a task, and never records secrets or credential hashes.
 - [ ] S-65: Entry-point fixture regressions exercise subscription billing unavailability versus missing evidence, account limits, isolation leakage, interruption/restart and retention faults while preserving stop/freshness protections.

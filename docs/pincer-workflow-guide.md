@@ -3,6 +3,8 @@
 PINCER means **Plan, Investigate, Narrow, Code, Evaluate, Release**.
 Investigation happens inside Plan, so there are five main commands.
 
+New to the workflow? Read the [main-flow walkthrough for junior developers](pincer-main-flow-explained.md) for an explanation of every box and decision, with a running example.
+
 Read the main journey first. The three detail charts explain its ticket loop,
 interruptions, and security/cost decisions. Diamonds are gates: follow the labeled
 answer. A blocked gate means fix the cause, not bypass the check.

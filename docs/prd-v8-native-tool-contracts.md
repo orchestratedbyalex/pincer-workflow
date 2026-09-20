@@ -41,7 +41,8 @@ readable, and it is not the execution path of any future session.
 | --- | --- | --- | --- |
 | Claude Code CLI | 2.1.278 installed help; 2.1.273 is the pinned study copy at `/Users/Shared/pincer-v8-study/inputs/tool` | `claude --help`, `claude auth --help`, `claude auth status --help`; official authentication, costs, CLI reference and programmatic-use pages | **None.** No native session has run under v8. |
 | Codex CLI | 0.155.1 installed | `codex --help`, `codex login --help`, `codex login status --help`, `codex doctor --help`, `codex exec --help`; official authentication and non-interactive pages | **None.** |
-| GitHub Copilot CLI | not installed on this host; version unobserved | official install, about, programmatic reference and billing pages only | **None.** Copilot is an installation target whose live behavior is unobserved; nothing here claims parity. |
+| GitHub Copilot (VS Code) | editor/extension versions unobserved | repository README and generated `.github` adapter; official GitHub IDE sign-in and VS Code prompt-file documentation | **None.** Shipped installation target; no native journey observed. |
+| GitHub Copilot CLI | not installed on this host; version unobserved | official install, about, programmatic reference and billing pages only | **None.** Separate research only; the shipped Copilot target is VS Code, not this CLI. |
 
 A version not listed here has no reviewed contract. A different installed version is
 refused by the runner until its help and documentation are re-read and this table is
@@ -117,18 +118,32 @@ pages, read 20 September 2026):
 - Billing: ChatGPT plans use included usage; API key "at standard API rates".
 - Overrides: `OPENAI_API_KEY` and `CODEX_API_KEY` select API billing.
 
-Consequences: the Codex profile is **specified, not scheduled**. Login is the user's
+Consequences: Codex capability notes are **research, not a defined study profile**. Login is the user's
 `codex login` inside `CODEX_HOME=<study root>/host/codex-home`; status is `codex login
 status` (exit code and method line) plus the redacted `codex doctor --json` auth check;
 the refusal list is `OPENAI_API_KEY`, `CODEX_API_KEY`, and a stored API key reported by
 the doctor check; the estimate field is **absent** (`estimate_usd: null`, reason
-`TOOL_REPORTS_NO_ESTIMATE`), so a Codex cell can never enter a dollar comparison; tokens
+`TOOL_REPORTS_NO_ESTIMATE`), so no dollar comparison is specified here; documented tokens
 come from `turn.completed.usage`, summed across turns, each field required. Hooks: Codex
 0.155.1 exposes `--dangerously-bypass-hook-trust`, so a hook mechanism exists, but its
-capture format is **unreviewed**; a Codex kit arm has no hook-evidence grammar until it is
-observed and frozen.
+capture format is **unreviewed**; this does not create a requirement for a Pincer Codex hook adapter. The shipped kit has none.
 
-### 1.4 GitHub Copilot CLI: documented, uninstalled, unobserved
+### 1.4 GitHub Copilot in VS Code: shipped surface, live behavior unobserved
+
+This is Pincer's existing Copilot installation target, distinct from Copilot CLI.
+The user signs into GitHub through VS Code. Pincer ships `.github/copilot-instructions.md`
+and `.github/prompts/*.prompt.md`; the instructions link to project rules and prompt
+files invoke the workflow. Official IDE sign-in and prompt-file documentation was checked
+for this correction; editor and extension versions, instruction loading, permission
+behavior, capture and a full Pincer journey were not observed.
+
+A future IDE trial must pin VS Code and extension versions, observe the actual prompt
+and instruction loading, retain permitted session/review artifacts, and assess native
+permission controls and runtime verification. Do not replace the IDE with a CLI or API
+client, assume Claude hook logs exist, or manufacture unavailable token/cost telemetry.
+No IDE study record schema or automated launch profile is defined by this revision.
+
+### 1.5 GitHub Copilot CLI: separate research, uninstalled, unobserved
 
 Official statements relied on (install, about, programmatic reference and billing pages,
 read 20 September 2026; nothing executed):
@@ -152,7 +167,7 @@ read 20 September 2026; nothing executed):
 Consequences: Copilot has **no study profile** in this revision. Not observed here: a hook
 mechanism, a debug log, a settings-source switch, model attestation in the JSON output, the
 exact JSON shape, or whether a fresh `COPILOT_HOME` isolates configuration. Pincer's
-Copilot support claim stays "installation target, live behavior unobserved". A Copilot
+Copilot **VS Code** support claim stays "installation target, live behavior unobserved". A Copilot
 study scope needs its own recorded breakdown, an installed pinned version, and this table
 revised. Injecting `GH_TOKEN`-family variables into a session is credential transport and
 is excluded; the user signs in through `copilot login` inside a study `COPILOT_HOME`.
@@ -177,8 +192,8 @@ is excluded; the user signs in through `copilot login` inside a study `COPILOT_H
 Construction rules:
 
 1. **Study login directory.** `CLAUDE_CONFIG_DIR=<study root>/host/claude-config`. The user
-   creates it by signing in there; the runner never creates a credential in it, never lists
-   or reads `.credentials.json`, and never touches the operator's `~/.claude`. Documentation
+   creates it by signing in there; the runner never creates a credential in it, never reads or hashes
+   `.credentials.json` (entry names may be listed by rule 2), and never touches the operator's `~/.claude`. Documentation
    says the credential and keychain entry are keyed to this directory. **Whether the pinned
    2.1.273 CLI honors that under `--setting-sources project` with a fresh HOME is a T-109
    observation, not a fact this contract asserts.**
@@ -190,12 +205,15 @@ Construction rules:
    `CLAUDE.md`, `hooks/`, `commands/`, `agents/`, `skills/`, `plugins/`, `.mcp.json` or any
    unlisted name is `PROFILE_HOST_DIRTY`: a specific blocker naming the entry, never a silent
    relaxation.
-3. **Canary placement.** The synthetic canary (`settings.json` with a `SessionStart` marker
-   hook and a `CLAUDE.md` phrase) is planted in the per-session HOME as before and, when the
-   login directory has none of those files, also in the login directory; both copies are
-   removed after the session and their digests must be unchanged. If the tool rewrites or
-   refuses a planted file, the record says `canary.config_dir: not_plantable` and isolation
-   for that source is `unknown`, not `absent`.
+3. **Canary placement and custody.** Apply the exclusive ownership and recovery rules
+   in §2.4 before inspecting, planting, checking or removing login-directory canaries.
+   Plant only absent files with exclusive creation; never replace an existing file.
+   Per-session HOME and the shared login directory receive owned synthetic canaries.
+   Hash only the runner's own synthetic files. Cleanup removes only unchanged owned
+   files. Changed files, symlinks, unknown ownership or incomplete cleanup are preserved
+   and stop the allocation with `LOGIN_DIR_RECOVERY_REQUIRED`; they are not silently
+   reduced to `not_plantable` while continuing the run. An approved design that cannot
+   plant a source records isolation as unknown and needs a separately reviewed profile.
 4. **Explicit child environment.** The launcher constructs the environment from nothing:
    `PATH`, `HOME`, `CLAUDE_CONFIG_DIR`, `TMPDIR`, `CLAUDE_PROJECT_DIR`, locale and terminal
    variables as today, **no credential variable of any kind**. The refusal list in §1.2
@@ -228,16 +246,67 @@ Construction rules:
   a new profile name and cohort, and claims exactly what the canary and hook log observed.
   It is never a fallback the runner selects on its own, and an API key is never a fallback.
 
-### 2.3 Codex isolation (specified, not scheduled)
+### 2.3 Codex isolation and evidence: future surface-specific profile
 
-`CODEX_HOME=<study root>/host/codex-home` established by the user's `codex login`;
-`--ignore-user-config` and `--ephemeral` on every session; the same dirty-directory,
-explicit-environment and override-refusal rules with the Codex variable list; the canary is
-a `config.toml` `notify`/hook-free marker only if Codex 0.155.1's configuration surface is
-reviewed first. Until a Codex hook-capture grammar is observed and frozen, a Codex kit arm
-is `unreportable` for the measured purpose.
+The login/configuration research in §1.3 is input to a future Codex profile, not a
+launch contract. Before T-110/T-111 use Codex, define its own authentication vocabulary,
+isolation identity, usage schema, supported captures and stop rules, and verify them
+against the pinned tool. Do not require Claude's `provider_minutes`, status fields or
+estimate allocator when the Codex surface does not expose them.
+
+Pincer installs Codex skills and project instructions, not a Codex hook adapter. Observe
+skill/instruction use, runtime checks, sandbox and permission controls, recovery and
+candidate evidence. Claude-only hook checks are explicitly **not applicable** to that
+surface, with the reason retained; missing evidence for an applicable control still blocks
+its claim. The existence of a host hook option creates no Pincer hook requirement.
+
+The Claude schema in §3 and its examples reject every Codex/Copilot record with
+`SURFACE_UNSUPPORTED`, including relabelled Claude records. This does not withdraw product
+support or cancel T-111: it makes the missing Codex study profile an explicit prerequisite
+before its native journey. There is no implied Codex profile in T-121's Claude smoke path.
+
+### 2.4 Shared login-directory ownership and recovery
+
+These are implementation obligations for T-121, not implemented guarantees.
+
+- Acquire an exclusive lock keyed by the canonical login-directory path before any auth
+  probe, directory inspection or canary mutation. Hold it through the child process's
+  termination, capture retention and cleanup. All study invocations using that directory,
+  across arms, allocations and workspaces, share this lock. A live owner yields
+  `LOGIN_DIR_BUSY` and launches no task. Account login/maintenance must run only while the
+  directory is released; unmanaged tool use during a run invalidates controlled custody.
+- Store the lock and durable ownership journal outside the credential directory, in the
+  protected study control area. Record allocation/attempt/session IDs and owner identity
+  including process-start identity (PID alone is insufficient). Record only canonical
+  directory identity and owned synthetic paths/digests, never credential contents/hashes.
+- Reject symlinked login roots and canary destinations. Journal intended creation before
+  each exclusive write; durably record each created file's identity and synthetic digest.
+  Never overwrite an existing file. Partial creation remains recoverable from the journal;
+  a create-before-receipt crash is uncertain ownership and must preserve the file.
+- Delete only files whose owner, path, file identity and digest still match the journal,
+  using custody-safe checks. Never recursively clean the shared login directory. On a
+  mismatch, replacement, unexpected file or retention/cleanup failure, preserve files and
+  recovery metadata, stop the allocation and report `LOGIN_DIR_RECOVERY_REQUIRED`.
+- A dead or unknown lock owner does not authorize automatic lock stealing or deletion.
+  Recovery requires proven owner termination plus an explicit recorded recovery decision.
+  If process custody cannot be established, block. Recovery may remove verified owned
+  unchanged canaries; it must preserve altered/unowned files and never read credentials.
+  Release custody only after durable cleanup/recovery receipts; retain the history.
+- T-121 must test competing invocations, aliases to the same root, partial creation,
+  interruption before/after writes, changed/replaced canaries, failed cleanup, unavailable
+  owner identity and recovery followed by a clean next session. Fixtures establish these
+  controls; T-109 still observes actual login preservation and host behavior.
 
 ## 3. Subscription-aware usage, allocation, readiness and comparison (S-63)
+
+The executable schema specified here is **Claude-only**: `tool_surface: claude-code`,
+`isolation_profile: claude-project-native-login-v1`, and
+`measurement_profile: claude-code-result-native-usage-v1`. Authentication must use the
+reviewed Claude status vocabulary (`claude.ai` for subscription, `console` for API billing;
+`api_provider: firstParty`); unknown methods/providers are refused. A future surface must
+have its own schema and profile instead of changing only `tool_surface` in a Claude record.
+The API-billed example describes Console account login, not a provider-key fallback or
+permission to schedule API billing; the subscription smoke remains the intended path.
 
 ### 3.1 Measurement profile `claude-code-result-native-usage-v1`
 
@@ -294,8 +363,8 @@ charge" is never computed by the allocator; it is imported as evidence by T-119.
 Schema 1 manifests remain readable and validate exactly as today. Schema 2 adds, and the
 inspector requires for any native-login purpose:
 
-- `execution.billing`: `{ mode, tool_surface: 'claude-code'|'codex', status_record_contract:
-  'claude-auth-status-json-v1'|'codex-login-status-v1' }`;
+- `execution.billing`: `{ mode, tool_surface: 'claude-code', status_record_contract:
+  'claude-auth-status-json-v1' }`; other surfaces are `SURFACE_UNSUPPORTED`;
 - `allocation.session_estimate_cap_usd`, `allocation.limit_estimate_usd`,
   `allocation.account_usage` matching the decision;
 - the `native` evidence summary's checks gain `login_preserved`, `override_refused`,
@@ -371,7 +440,7 @@ hand-edited.
 - **T-109** — the smoke's decisions bundle and checks are §5; the inspector's schema-2
   fields are §3.3; "numeric spending caps" means estimate caps plus an account-usage
   envelope, and "hard provider billing cap" is not claimed for any surface.
-- **T-110/T-111** — Copilot stays unobserved (§1.4); Codex sessions use §2.3 or stay out.
+- **T-110/T-111** — Copilot VS Code stays unobserved (§1.4); Copilot CLI is separate research (§1.5). Codex needs the separate profile and applicable-control evidence described in §2.3 before its journeys.
 - **T-114/T-115/T-116/T-118** — "total cost" is reported by billing mode under §3.4;
   dollar claims are conditional.
 
@@ -468,7 +537,9 @@ Read 20 September 2026; installed help output recorded above.
   (both reached by redirect from `developers.openai.com/codex/…`). The `openai-docs`
   skill named by the ticket is not installed in this environment; the official pages were
   read directly instead.
-- GitHub Copilot CLI: [Install](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli),
+- GitHub Copilot in VS Code: [IDE sign-in](https://docs.github.com/en/copilot/how-tos/chat-with-copilot/chat-in-ide),
+  [Prompt files](https://code.visualstudio.com/docs/agent-customization/prompt-files).
+- GitHub Copilot CLI (separate research): [Install](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli),
   [About](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli),
   [Programmatic reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-programmatic-reference),
   [Command reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference),
