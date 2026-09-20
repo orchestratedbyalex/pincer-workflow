@@ -7,6 +7,20 @@ profile: standard
 
 # Prove reliable delivery with less effort
 
+## Scope amendment — native tool login, 20 September 2026
+
+The user requested: “pincer should only be used with a cli or github copilot and not api key based”. This authorizes revising the plan and ticket breakdown around that boundary; it supplies no study allocation, account access, or live-run authorization.
+
+Pincer is a workflow installed into Claude Code, Codex CLI, or GitHub Copilot. The host tool owns model execution and account authentication. Pincer must not require a provider API key, collect or transport login tokens, implement direct model API calls, or silently switch a signed-in tool to API billing. This applies to the representative evaluation path as well as the product. The host may use remote services internally; this is not an offline-model requirement. Authentication for an application being developed is a separate concern.
+
+The former API-key study profile and smoke proposal are superseded for future execution, not evidence of native-login support. They remain historical implementation artifacts until replaced. The installed product already uses host tools; the adaptation is primarily in study execution, isolation, usage measurement, and documentation.
+
+Read [the revised execution plan](../docs/prd-v8-native-tool-plan.md). T-120 defines the replacement contracts; T-121 implements and verifies them offline. They precede T-109's smoke and T-102's remaining native observations. T-110 onward retain their product objectives and evidence obligations. Copilot remains a supported installation target with live behavior unobserved until demonstrated; this amendment does not claim parity or add Copilot CLI as an observed surface.
+
+Subscription runs report elapsed time, operations, interventions, available usage and account-limit events. Unavailable marginal dollar cost is explicitly unavailable, never zero or a fabricated API-price estimate. Expected unavailable subscription billing is distinct from missing required capture and must not automatically make every subscription run invalid. API-dollar cost targets become conditional on genuinely comparable observed billing; unavailable data cannot support a cost-superiority claim. Existing sample sizes remain planned, pending tool feasibility and separately agreed allocations; they are not launch commitments.
+
+This amendment takes precedence over earlier API-key prerequisites and API-dollar-only execution assumptions below and in linked packages. It is a planning revision, not a claim that the existing runner now supports account login. Historical receipts remain intact; revised verification must be run through the pinned management kit before any new completion claim.
+
 ## 1. Problem and authorization
 
 Pincer has a substantial runtime foundation but its operational evidence remains incomplete.
@@ -256,6 +270,18 @@ Give reviewers a reproducible, candidate-bound account of every requirement and 
 - **S-59:** Final version metadata, authored docs and generated outputs precede candidate selection; full regression, real-browser gate, generator/packed parity and Ubuntu/macOS by Node 22/24 CI pass for the selected implementation candidate.
 - **S-60:** Evaluation and a read-only release audit bind the selected candidate with the unchanged evidence allowlist; later changes stale it normally, measured targets have honest met/missed dispositions, and merging/tagging/publishing remain separate authorized actions.
 
+### R-21 — Define evaluation through native tool authentication
+
+- **S-61:** Product and study contracts require host-managed sign-in, exclude Pincer-owned provider keys/direct model API execution, and identify exact platform/version capabilities and unobserved limits.
+- **S-62:** The revised isolation design uses a supported host login without copying credentials or personal configuration; unsupported separation is an explicit blocker or a declared controlled-host baseline, never a hidden relaxation.
+- **S-63:** Subscription measurement distinguishes actual billing, estimates, unavailable billing, missing capture and account limits; revised execution prerequisites preserve explicit authorization and honest comparison boundaries.
+
+### R-22 — Implement the native-login study path
+
+- **S-64:** The real study entry point uses the supported logged-in tool, refuses provider-key fallback or missing login before a task, and captures no credentials or credential hashes.
+- **S-65:** Offline entry-point regressions cover clean login, missing login, API override, unavailable subscription cost, missing required evidence, account limits, restart and capture/retention failures; prior stop and freshness protections remain effective.
+- **S-66:** The regenerated package and frozen cohort describe the new execution path, retain historical records, pass relevant regression/packed/CI gates, and clearly leave actual login/isolation behavior pending T-102/T-109 native observations.
+
 ## 5. Architecture and interface decisions
 
 | Component | Ownership / approach |
@@ -296,7 +322,7 @@ new sibling modules and browser dependencies. Versioned data readers preserve hi
 
 1. T-100 defines contracts and reconciles obligations.
 2. T-101–T-108 repair execution, provenance, browser and release preparation in dependency order.
-3. T-109 establishes the offline integrity gate and concrete live prerequisites.
+3. T-120 defines native-login and subscription measurement contracts; T-121 implements the replacement execution path. Then T-109 establishes the offline integrity gate and concrete live prerequisites.
 4. T-110–T-111 observe baseline journeys and handoff; findings gate product design.
 5. T-112–T-113 implement the bounded usability hypothesis only after supporting observations.
 6. T-114 measures before/after benefit; T-115–T-116 complete delivery and human review studies.
@@ -325,7 +351,7 @@ All original scenarios remain required; synthetic checks cannot close native obs
 | Observable user benefit | Paired pilots: target halve avoidable operations and reduce authoring/recovery effort without weaker invariants |
 | Delivery cost and accuracy understood | 72 accounted cells, retries/failed costs retained, stage distributions and independent review minutes/accuracy |
 | Competitive claims supported or withheld | Separate pinned 27-cell study, methodology and limitations, honest negative results |
-| Reviewable completion | All 60 scenarios mapped and dispositioned with actual candidate/observation evidence; full CI and normal release audit |
+| Reviewable completion | All 66 scenarios mapped and dispositioned with actual candidate/observation evidence; full CI and normal release audit |
 
 Improvement targets are objectives, not guaranteed acceptance thresholds for the measurement
 tickets. A valid negative study can complete measurement; it must not become an improvement

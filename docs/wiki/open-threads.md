@@ -3,6 +3,21 @@
 Current overlay: [v8 obligations and secondary triage](../prd-v8-obligation-map.md).
 Dated entries below are historical reports, not current live-support claims.
 
+## Native-login study path (2026-09-20)
+
+- [2026-09-20] Whether pinned Claude Code 2.1.273 preserves a `claude auth login` made
+  under a study `CLAUDE_CONFIG_DIR` when HOME is fresh and settings are project-only is
+  documented, not observed. First T-109 observation; failure is
+  `NATIVE_LOGIN_NOT_PRESERVED` ([[native-tool-contracts]])
+- [2026-09-20] T-121 must implement the contract: new profile, usage reader, manifest
+  schema 2, override refusal, `--i-agreed-the-usage-envelope`, and a replacement smoke
+  package; then refresh the external study checkout (its `1c91c6ef…` manifest and the
+  API-key settlement documents are superseded history) ([[native-tool-contracts]])
+- [2026-09-20] Copilot CLI is not installed here and has no study profile; Codex has a
+  profile sketch but no hook-capture grammar. Neither is scheduled ([[native-tool-contracts]])
+- [2026-09-20] The `openai-docs` skill named by T-120/T-121 is not installed in this
+  environment; official pages were read directly
+
 ## Release state of 0.6.0 (2026-09-14)
 
 **Resolved 2026-09-14:** the evaluation, the bump and the tag are all on `origin/main`

@@ -18,6 +18,10 @@ Test competitive value against relevant specification workflows before making a 
 - Source: [readiness assessment](../docs/pincer-readiness-2026-09-15.md).
 - Order, predecessor obligations and verification limits: [v8 ticket map](../docs/prd-v8-ticket-map.md).
 
+## Current scope amendment
+
+Matched-billing comparison follows the [native-tool contracts](../docs/prd-v8-native-tool-contracts.md) (T-120) §3.4: alternatives run under the same tool surface and declared billing mode; mixed or subscription cells cannot support a monetary claim (`COST_COMPARISON_INCOMPATIBLE`). The 27 cells remain a planned obligation, not a launch commitment.
+
 ## Requirements
 - A separately frozen competitive protocol pins Pincer and two relevant alternatives, provisionally Spec Kit and OpenSpec, on three representative task types with three repetitions per tool (27 cells), matched model/caps, fair documented setup and held-out acceptance.
 - After separate concrete access/spending approval, all scheduled cells retain actual outcomes, failures, setup/recovery/review effort and total cost; unavailable capabilities or changed versions remain explicit and cannot silently shrink the denominator.

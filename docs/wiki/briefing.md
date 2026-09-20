@@ -11,7 +11,7 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 PRD v8 on `feat/prd-v8` (draft PR #6). T-100, T-101, T-103–T-108 are done through the
 pinned v0.6.0 management kit; T-102 has a verified implementation with its native
 acceptance unchecked; T-109's offline gate is implemented and deliberately fails
-`--require-ready`. Registry and checkout say 0.6.0. Packaged artifacts establish
+`--require-ready`. Checkout/package metadata is 0.7.0; live registry availability was not confirmed in the latest network-blocked check. Packaged artifacts establish
 installation, not observed live support; no paid session has run under v8.
 
 The first operational smoke is packaged, not authorized:
@@ -32,20 +32,19 @@ summaries also remain pending.
 
 The direct review correction requires recognized hook completion events with outcomes,
 rejects registration-only text, and preserves the protected original directory when hook
-logs cannot be read or copied. Frozen cohort: `1027f120…`. The current sandbox denies
+logs cannot be read or copied. Frozen cohort after T-120: `a6a6d474…` (`1027f120…` is the superseded API-key identity). The current sandbox denies
 `ps`; allocation custody verification must be rerun on a host that permits it.
 
 ## Active / next task
 
-User decisions for the smoke: model, browser runtime, caps/allocation/expiry, a
-project-access decision for the `ui-states` base, two independent reviewers, and the
-`study-authorization` document. Then: retain the effective manifest, fill `study.json`,
-push for CI on the candidate, run the three smoke sessions one invocation each, write the
-native/smoke/report summaries, and only then verify T-109 and T-102 through the kit.
-Reviewer attention: the protocol corrections proposed in the package §8.
+20 September user scope amendment: Pincer operates through coding CLIs or GitHub Copilot with native tool login, not provider API keys (`docs/prd-v8-native-tool-plan.md`). **T-120 is authored** ([[native-tool-contracts]]): `docs/prd-v8-native-tool-contracts.md` fixes the host-login profile `claude-project-native-login-v1`, the sanitized `claude auth status` record, the billing-mode-aware usage profile and the comparison rule; the user still has to review it for feasibility and honesty. **Next: T-121** implements it (profile, usage reader, manifest schema 2, override refusal, `--i-agreed-the-usage-envelope`, replacement smoke package, fixture entry-point suite), then the external study checkout is refreshed and T-102/T-109 collect native observations. No live support claim changes. The checked-in launcher still requires an API key; do not ask the user for one or execute the superseded package.
 
 ## Recent decisions
 
+- [[native-tool-contracts]] — the study signs in through the tool's own `claude auth login`
+  in a study `CLAUDE_CONFIG_DIR`; unavailable subscription billing is expected and valid,
+  a missing token/provider-time/status capture is not; dollar claims need evidenced API
+  billing on every cell (T-120, 2026-09-20)
 - [[study-readiness-gate]] — the smoke runs through the frozen orchestrator with
   `--study-purpose operational-smoke --repetitions 1`; an operational session is
   unreportable by purpose, is still evaluated, and stops the schedule (T-109, 2026-09-19)
@@ -65,7 +64,7 @@ Reviewer attention: the protocol corrections proposed in the package §8.
 - Changing any `PROFILE` field in `isolated-launch.cjs` moves the observation target; never
   observe isolation by reading the operator's real `~/.claude` (synthetic canary instead).
 - `orchestrator.cjs`, `effective.cjs`, `readiness.cjs`, `allocation.cjs`,
-  `isolated-launch.cjs` and the v8 protocol/isolation/usage docs are in `SPEC.harness`:
+  `isolated-launch.cjs` and the v8 protocol/isolation/usage/native-tool-contracts docs are in `SPEC.harness`:
   after editing any, regenerate `test/fixtures/delivery-benchmark-v7/frozen.json` (command
   at the top of `freeze-spec.cjs`). Append to `SPEC.harness`, never prepend.
 - **Never add a file under `scripts/delivery-benchmark/`** (the v6 freeze digests the
@@ -82,7 +81,7 @@ Reviewer attention: the protocol corrections proposed in the package §8.
   `user`, never from the flag.
 - `docs/prd-v7-artifacts/v6-preservation.json` digests 674 v6 files individually;
   `docs/prd-v6-review-packet.md`'s stale "(51 suites)" must **stay** stale.
-- `npm test` is 76 suites and about fifteen minutes. CI is {ubuntu,macos} × Node {22,24}.
+- `npm test` is 77 suites and about fifteen minutes. CI is {ubuntu,macos} × Node {22,24}.
   Adding a suite means updating `package.json` **and** the packet rows that pin the count.
 - **Every CLI write goes through `pincer-runtime/io.cjs`**; do not turn `process.exit(N)`
   into `process.exitCode = N` ([[runtime]]). Any report that renders a next action must

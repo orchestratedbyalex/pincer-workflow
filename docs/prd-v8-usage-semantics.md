@@ -64,3 +64,23 @@ Report regeneration uses retained files only and makes no model call. Validation
 session membership, metric summaries and the public reported/unavailable projections.
 Mixed profiles or unknown legacy coverage must remain visible in aggregate limitations.
 T-106 owns the common terminal finalizer, and T-109 owns live budget/readiness decisions.
+
+## Native-login revision (T-120, 20 September 2026)
+
+`claude-code-result-modelusage-v1` above remains the reader for every retained API-key
+record; such records are labelled `legacy-api-estimate` and are never pooled with native
+records. The replacement profile `claude-code-result-native-usage-v1`, specified in
+[the native-tool contracts](prd-v8-native-tool-contracts.md) §3 and implemented by T-121,
+keeps the token and provider-time rules unchanged and replaces the cost metric:
+
+| Field | Meaning under the native profile |
+| --- | --- |
+| `estimate_usd` | The tool's `total_cost_usd`, an estimate at list price; mandatory capture for Claude Code, labelled estimate, never a charge. Absent for Codex (`TOOL_REPORTS_NO_ESTIMATE`). |
+| `billing.mode` | `subscription` or `api`, declared by the user's authorization and cross-checked against the retained sanitized login status; anything else is `AMBIGUOUS_BILLING`. |
+| `billing.attributable_charge_usd` | Under `subscription`: null with `SUBSCRIPTION_NOT_ATTRIBUTABLE`, an expected valid outcome. Under `api`: a number only with retained billing evidence, otherwise null with `CHARGE_EVIDENCE_MISSING`. Never derived from the estimate. |
+| `account_limit` | A tool-reported session, weekly, model or spend limit; any value stops the allocation. |
+
+A missing token count, provider time or login status record is `MISSING_REQUIRED_CAPTURE`
+and makes the record incomplete exactly as a missing payload does today. Unavailable
+subscription billing does not. Dollar comparisons follow the contract's admissibility rule;
+the aggregate `cost_usd` total of the legacy profile has no native counterpart.

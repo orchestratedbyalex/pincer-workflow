@@ -1,9 +1,11 @@
 # PRD v8 ticket map — reliable delivery with less effort
 
 [PRD v8](../.prd/prd-v8.md) follows the [readiness assessment](pincer-readiness-2026-09-15.md).
-The 20-ticket plan is tracked through ticket runtime receipts. This map is not execution evidence,
+The 22-ticket plan is tracked through ticket runtime receipts. This map is not execution evidence,
 measured observations or runtime authorization. Scenario coverage and verification
 adequacy are the author's planning judgment; structural checks do not establish adequacy.
+
+The [20 September native-tool amendment](prd-v8-native-tool-plan.md) adds T-120/T-121 before T-109. Earlier API-key execution assumptions are superseded; existing observation obligations remain open.
 
 ## Tickets and dependencies
 
@@ -18,7 +20,7 @@ adequacy are the author's planning judgment; structural checks do not establish 
 | [T-106](../tickets/T-106-finalize-all-study-outcomes.md) | Finalize every terminal outcome into a valid record | M | T-105 | Offline implementation/review |
 | [T-107](../tickets/T-107-supply-real-browser-evaluation.md) | Supply and prove the real browser evaluator | M | T-101 | Offline implementation/review |
 | [T-108](../tickets/T-108-prepare-release-before-candidate-selection.md) | Make release preparation reproducible | M | T-100 | Offline implementation/review |
-| [T-109](../tickets/T-109-gate-study-execution-readiness.md) | Gate live work on offline integrity and concrete prerequisites | M | T-106, T-107, T-108 | Live evidence required |
+| [T-109](../tickets/T-109-gate-study-execution-readiness.md) | Gate live work on offline integrity and concrete prerequisites | M | T-106, T-107, T-108, T-121 | Live evidence required |
 | [T-110](../tickets/T-110-observe-baseline-strict-journeys.md) | Observe the baseline strict journeys and rank friction | L | T-102, T-109 | Live evidence required |
 | [T-111](../tickets/T-111-observe-file-only-agent-handoff.md) | Observe platform journeys and a file-only handoff | L | T-110 | Live evidence required |
 | [T-112](../tickets/T-112-guide-coverage-authoring.md) | Guide coverage authoring with reviewable proposals | L | T-110 | Offline implementation/review |
@@ -147,3 +149,12 @@ remains a separately recorded judgment. No reusable test can authenticate human 
 Existing untracked guide/diagrams remain outside the planning commit. This repository
 stays in legacy management mode, with a pinned external management kit for later work.
 No change record, strict adoption or authorization is manufactured by this breakdown.
+
+## Native-tool amendment tickets
+
+| Ticket | Requirement/scenarios | Depends on | Verification |
+| --- | --- | --- | --- |
+| [T-120](../tickets/T-120-define-native-tool-study-contracts.md) | R-21 / S-61, S-62, S-63 | — | `test/native-tool-contracts.test.js` over [the authored contracts](prd-v8-native-tool-contracts.md), plus human review of feasibility and honesty |
+| [T-121](../tickets/T-121-implement-native-login-study.md) | R-22 / S-64, S-65, S-66 | T-120 | Native-login entry-point suite, environment, allocation and launch suites; candidate CI |
+
+Native observation remains owned by T-102/T-109; these new tickets cannot replace it with fixtures.

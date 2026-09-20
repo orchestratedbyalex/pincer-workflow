@@ -84,7 +84,9 @@ validateDocuments(contracts, obligations);
 // without prematurely closing T-102. Measured work still has both completion gates.
 function validateV8Dependencies(dependencies) {
   assert.deepEqual(dependencies['T-106'], ['T-105']);
-  assert.deepEqual(dependencies['T-109'], ['T-106', 'T-107', 'T-108']);
+  assert.deepEqual(dependencies['T-109'], ['T-106', 'T-107', 'T-108', 'T-121']);
+  assert.deepEqual(dependencies['T-120'], []);
+  assert.deepEqual(dependencies['T-121'], ['T-120']);
   assert.deepEqual(dependencies['T-110'], ['T-102', 'T-109']);
   const visit = (id, ancestors = []) => {
     assert.ok(!ancestors.includes(id), `dependency cycle: ${[...ancestors, id].join(' -> ')}`);
@@ -94,14 +96,14 @@ function validateV8Dependencies(dependencies) {
   for (const id of Object.keys(dependencies)) visit(id);
 }
 const v8Dependencies = {};
-for (const file of fs.readdirSync(path.join(root, 'tickets')).filter(name => /^T-1[01]\d-/.test(name))) {
+for (const file of fs.readdirSync(path.join(root, 'tickets')).filter(name => /^T-1(?:[01]\d|2[01])-/.test(name))) {
   const content = read(`tickets/${file}`);
   const id = content.match(/^ticket: (T-\d+)$/m)[1];
   const field = content.match(/^depends_on: \[([^\]]*)\]$/m);
   v8Dependencies[id] = field ? field[1].split(',').map(value => value.trim()).filter(Boolean) : [];
 }
 validateV8Dependencies(v8Dependencies);
-for (const [id, dependencies] of [['T-106', ['T-102', 'T-105']], ['T-110', ['T-109']]]) {
+for (const [id, dependencies] of [['T-106', ['T-102', 'T-105']], ['T-110', ['T-109']], ['T-109', ['T-106', 'T-107', 'T-108']], ['T-120', ['T-109']]]) {
   assert.throws(() => validateV8Dependencies({ ...v8Dependencies, [id]: dependencies }));
 }
 // Fault the authored controls, not fake runtime outcomes. Each mutation must be rejected.

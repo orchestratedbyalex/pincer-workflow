@@ -24,6 +24,7 @@
   },
   "evidence": { "offline": null, "browser": null, "packed": null, "ci": null, "native": null, "smoke": null, "report": null },
   "pending_notes": [
+    "20 September amendment: this API-key execution proposal is superseded. T-120/T-121 must supply the native-login path and subscription-aware prerequisites before a replacement T-109 smoke; no API key is requested.",
     "References are relative to the dedicated study root /Users/Shared/pincer-v8-study (inspect with --input-root). The repository cannot be the input root: the launcher refuses workspaces under any CLAUDE.md or .claude ancestor, and the allocation root must lie inside the input root. See T-109-smoke-execution-package.md.",
     "K0 is resolved: released v0.6.0 at peeled commit 694241cc684f2dd95a0cfe7ffa2827414683e84a, registry tarball pincer-workflow-0.6.0.tgz sha256 cb6c63f97b6cd780456807339e8d9d01dbc94ad3370594010dc1e4914c835009 (bin/, template/ and package.json byte-identical to the commit; README differs). K1 and K2 are not selected.",
     "No project-access decision is supplied. The ui-states prepared base e5931061a4d3179302f96d4d3f15a09365f97b90 and its K0 install commit 4cbde1667dbb2cbb90370570d78ece07e4ca2f1c are reproducible offline; the access decision itself is the user's.",

@@ -18,6 +18,10 @@ Compare the pre-v8-usability kit with the final improved kit on real matched wor
 - Source: [readiness assessment](../docs/pincer-readiness-2026-09-15.md).
 - Order, predecessor obligations and verification limits: [v8 ticket map](../docs/prd-v8-ticket-map.md).
 
+## Current scope amendment
+
+"Total cost" follows the [native-tool contracts](../docs/prd-v8-native-tool-contracts.md) (T-120) §3.4: report tokens, provider time and labelled estimates under the declared billing mode; unavailable subscription billing is unavailable, never zero; a dollar-superiority claim needs evidenced API billing on every compared cell or is withheld.
+
 ## Requirements
 - Three paired K1-versus-K2 pilot comparisons record task equivalence, arm order, prior exposure and all session/candidate evidence; unrelated behavior and authorization/evidence invariants are preserved.
 - The report measures avoidable operations, map-authoring and recovery time, repeated approvals, active/provider time and total cost including retries; incomplete measurements remain explicitly unavailable and all failures stay in the denominator accounting.

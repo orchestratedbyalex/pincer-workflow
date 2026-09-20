@@ -38,6 +38,8 @@ original inputs and are never silently re-evaluated or pooled with changed execu
 
 ## Effective execution identity — T-101/T-102/T-107
 
+Native-login revision, 20 September 2026: the [native-tool contracts](prd-v8-native-tool-contracts.md) (T-120) supersede the API-key authentication assumption in this section for future execution. Authentication is the host tool's own sign-in in a study configuration directory; the runner refuses provider-key overrides; usage records declare a billing mode. Retained API-key fixture records keep their historical identities.
+
 Scheduling correction, 19 September 2026: verified T-102 implementation is sufficient
 for offline T-106 work after T-105. T-109's separately authorized operational smoke
 supplies native observations; it is not a measured run. Both T-102 and T-109 must be

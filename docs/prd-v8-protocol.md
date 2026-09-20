@@ -242,3 +242,50 @@ readiness remains false. Only reconciliation accepts this grant. It records know
 usage after process cleanup and retains the allocation stop; it cannot cancel,
 refund, authorize resume or launch a session under expired authority. Unknown or
 changed accounting still requires review.
+
+## Native-login amendment (T-120, 20 September 2026)
+
+The [native-tool contracts](prd-v8-native-tool-contracts.md) revise this protocol for the
+user's 20 September decision that Pincer operates through a coding tool's own account
+sign-in. Where the sections above say "authentication is supplied separately through a
+protected host mechanism" or describe an API key, this amendment governs:
+
+- **No provider API key.** The host tool (Claude Code, Codex CLI, or GitHub Copilot) owns
+  sign-in and billing. The study runner uses the user's documented sign-in in a dedicated
+  study configuration directory, never copies a credential, never reads a token to prove
+  login, and refuses to launch while a provider-key or billing override is present. A
+  missing login yields an instruction to use the tool's own login flow, with no fallback.
+  The `claude-project-isolated-v1` API-key profile and its retained records are historical.
+- **Declared `billing_mode`.** Every study authorization, allocation and session record
+  declares `subscription` or `api`; anything else is ambiguous and stops before launch.
+  The tool's `total_cost_usd` is a list-price estimate: under a subscription it is never a
+  charge, and it is reported as `estimate_usd`. An attributable charge exists only with
+  retained billing evidence. Unavailable subscription billing is recorded as unavailable,
+  never as zero, and is an expected, valid outcome distinct from a missing mandatory capture
+  (tokens, provider time, the sanitized login status record), which invalidates a record.
+- **Allocation semantics.** Session caps are turns, wall-clock minutes and an estimate cap
+  passed as `--max-budget-usd`; the aggregate is `limit_estimate_usd` plus an agreed
+  account-usage envelope (`max_sessions`, `max_elapsed_minutes`). The runner cannot enforce
+  a plan quota and does not claim to. An account-limit event stops the whole allocation;
+  resume is an explicit recorded decision; no account rotation, top-up or key fallback.
+- **Comparison boundary.** Time, operations, interventions, review minutes and acceptance
+  compare across billing modes. A dollar-superiority claim requires evidenced `api` billing
+  on every compared cell; otherwise the claim is withheld with
+  `COST_COMPARISON_INCOMPATIBLE`. Codex and Copilot cells expose no per-task dollar figure
+  and never enter a dollar comparison. Copilot remains an installation target whose live
+  behavior is unobserved; it has no study profile in this revision.
+- **Kit-bound smoke.** The first smoke uses K0 for all three arms. Every later kit cohort
+  (K1, K2) requires its own separately authorized smoke and native observation before
+  measured use; smoke evidence does not transfer across kits.
+- **Elapsed time.** The allocation's single `max_elapsed_minutes` covers sessions, setup,
+  evaluation and operator inspection, measured from the first reservation.
+- **Readiness.** The study manifest gains schema 2 (`execution.billing`, estimate-cap and
+  account-usage allocation fields, `login_preserved`/`override_refused` native checks) with
+  pending reasons `BILLING_MODE_PENDING`, `ACCOUNT_USAGE_PENDING` and
+  `LOGIN_STATUS_CONTRACT_PENDING`. Schema 1 manifests stay readable. T-121 implements this;
+  the checked-in inspector and the superseded smoke package still describe the API-key path
+  until then.
+
+The proposed first allocation above keeps its numbers as a proposal; its `$1` and `$3` are
+estimate caps, not charges, and the API-key authorization written on 20 September 2026 is
+superseded rather than rewritten.

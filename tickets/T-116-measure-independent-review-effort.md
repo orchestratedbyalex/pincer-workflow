@@ -18,6 +18,10 @@ Establish whether Pincer helps people make accurate review decisions with less e
 - Source: [readiness assessment](../docs/pincer-readiness-2026-09-15.md).
 - Order, predecessor obligations and verification limits: [v8 ticket map](../docs/prd-v8-ticket-map.md).
 
+## Current scope amendment
+
+"Total delivery cost" alongside review effort follows the [native-tool contracts](../docs/prd-v8-native-tool-contracts.md) (T-120) §3.4: estimates are labelled, unavailable subscription billing is unavailable, and dollar comparisons are withheld unless every cell has evidenced API billing.
+
 ## Requirements
 - At least two non-implementing human reviewers inspect matched tasks under a predeclared rubric, with arm blinding where feasible and recorded order, exposure, decision, confidence, elapsed minutes and missed seeded faults.
 - Missing/zero-as-placeholder review time, implementing reviewers, fabricated identities or absent candidate links cannot satisfy completion; actual review records and inspected artifacts support each observation.

@@ -18,6 +18,10 @@ Prove that a real strict change can move between Claude Code and Codex using the
 - Source: [readiness assessment](../docs/pincer-readiness-2026-09-15.md).
 - Order, predecessor obligations and verification limits: [v8 ticket map](../docs/prd-v8-ticket-map.md).
 
+## Current scope amendment
+
+Tool invocation contracts are the [native-tool contracts](../docs/prd-v8-native-tool-contracts.md) (T-120): Claude Code and Codex CLI use their own sign-in; GitHub Copilot has no study profile and remains unobserved until exercised through its actual supported interface, never simulated with an API client.
+
 ## Requirements
 - Each platform completes an actual strict journey with install, revision, pause/resume and evaluated candidate under recorded exact versions/configuration; overlapping T-110 sessions may be reused with explicit stage references.
 - A change begun on Claude Code resumes on Codex from files without conversational recap, preserving current authorization and requiring fresh verification when worktree-local attempt evidence is unavailable.

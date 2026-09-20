@@ -397,3 +397,53 @@ Commit all pending files in a Git-writable session, push the updated branch and 
 candidate-wide CI before publication. Current PR #6 checks cover the older remote source,
 not these local corrections or the version bump. Version preparation does not close the
 remaining v8 observational tickets or claim measured delivery superiority.
+
+
+## 20 September 2026 — native-tool scope amendment
+
+User requires CLI/Copilot operation without provider API keys. Revised PRD v8 with R-21/R-22 (S-61–S-66), added T-120/T-121, and made T-121 a predecessor of T-109. The prior API-key smoke package is explicitly superseded; the pending manifest records that boundary. Product documentation distinguishes host login from the historical maintainer runner. No launcher conversion, live login, study session, new receipt, commit or publication occurred in this planning revision. Next: T-120 contracts, T-121 implementation, then native T-102/T-109 observations.
+
+## 20 September 2026 — T-120: native-tool study contracts authored
+
+T-120 was started through the pinned v0.6.0 kit at 08:01Z. Deliverable:
+`docs/prd-v8-native-tool-contracts.md`, checked by the new
+`test/native-tool-contracts.test.js` (77th suite in `npm test`). What was checked against
+official contracts on 20 September 2026: Claude Code 2.1.278 installed help
+(`claude auth status --json` keys, `--permission-prompts`, `--max-budget-usd`, `--bare`,
+`--restricted`) plus the authentication, costs, CLI-reference and programmatic-use pages;
+Codex CLI 0.155.1 installed help (`codex login`, `login status`, `doctor --json`,
+`exec --json`) plus the authentication and non-interactive pages; GitHub Copilot CLI
+documentation only (install, about, programmatic reference, billing). Copilot CLI is not
+installed here and stays unobserved; the `openai-docs` skill named by the ticket is not
+installed, so the official pages were read directly.
+
+Design decisions recorded in the contract: `claude-project-isolated-v1` (API key) is
+historical; the replacement `claude-project-native-login-v1` signs in through the user's
+own `claude auth login` inside a study `CLAUDE_CONFIG_DIR`, retains only four sanitized
+status fields, refuses every credential/billing override by name without printing a value,
+blocks on a dirty login directory, and never falls back to a key. Whether the pinned
+2.1.273 CLI preserves that login under a fresh HOME is the first T-109 observation;
+failure is a named blocker, and the only alternative is a user-approved controlled-host
+baseline. Usage profile `claude-code-result-native-usage-v1` keeps tokens and provider
+time mandatory, renames the cost metric to `estimate_usd`, and adds a billing block in
+which unavailable subscription billing is an expected valid outcome while a missing
+mandatory capture is not; dollar-superiority claims need evidenced API billing on every
+cell. Schema/profile migration and rollback are tabulated; study manifest schema 2 and
+the `--i-agreed-the-usage-envelope` launch flag are specified for T-121.
+
+Frozen inputs changed (protocol, isolation and usage documents; the contract document is
+appended to `SPEC.harness`), so the cohort moved from `1027f120…` to `a6a6d474…`. The
+external study checkout, its `1c91c6ef…` effective manifest and the 20 September
+API-key settlement under `/Users/Shared/pincer-v8-study/{decisions,evidence}` are now
+superseded history, not inputs to the next smoke; `runs/smoke` is still empty and no
+session has run. Protocol corrections (a) kit-bound smoke and (c) single elapsed-time
+window from the superseded package §8 were applied in the amendment section. Affected
+tickets (T-102, T-105, T-109, T-110, T-111, T-114, T-115, T-116, T-118) carry a scope
+amendment paragraph; their receipts are unchanged. Acceptance criteria S-61–S-63 are
+ticked as authored-contract deliverables; the design still needs the user's review for
+feasibility and honesty, and nothing native has been observed.
+
+The full `npm test` chain (77 suites) passed locally on 20 September 2026 (started 08:10Z,
+finished 08:25Z, exit 0) after the frozen-input change. T-120 was verified and closed
+through the pinned kit (receipt `5ed85d4c3f23`, 08:12Z). Not pushed; no CI run exists for
+this commit yet.

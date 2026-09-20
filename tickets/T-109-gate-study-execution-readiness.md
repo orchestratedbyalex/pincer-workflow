@@ -3,7 +3,7 @@ ticket: T-109
 status: in_progress
 size: M
 prd: .prd/prd-v8.md
-depends_on: [T-106, T-107, T-108]
+depends_on: [T-106, T-107, T-108, T-121]
 timeout: 900
 started: 2026-09-19T07:50:54Z
 last_check: 2026-09-19T21:07:00Z failed c936a9b60fc5
@@ -19,6 +19,10 @@ Provide a single auditable readiness decision before the study incurs cost.
 - Relevant paths: `docs/prd-v8-protocol.md`, `docs/prd-v8-artifacts/execution/`, `scripts/delivery-benchmark-v7/orchestrator.cjs`, `scripts/delivery-benchmark-v7/readiness.cjs`.
 - Source: [readiness assessment](../docs/pincer-readiness-2026-09-15.md).
 - Order, predecessor obligations and verification limits: [v8 ticket map](../docs/prd-v8-ticket-map.md).
+
+## Current scope amendment
+
+The [native-tool plan](../docs/prd-v8-native-tool-plan.md) supersedes the API-key smoke proposal. Complete T-120/T-121 before preparing the replacement smoke. Use native sign-in and the revised subscription-aware allocation/evidence contract; do not request an API key. Existing receipts do not verify the revised scope. The authored contracts are in [docs/prd-v8-native-tool-contracts.md](../docs/prd-v8-native-tool-contracts.md) (T-120): host login in a study configuration directory, sanitized login status, billing-mode-aware allocation and evidence, and the checks the replacement smoke must show.
 
 ## Requirements
 - The repaired runner passes offline end-to-end controls and fault injections, the real-browser fixture gate, packed parity and full CI; the amended cohort manifest is minted before the first measured run and lists the complete execution path.

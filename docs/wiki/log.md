@@ -368,3 +368,6 @@ Tested at the gate, fixture tool, allocator and orchestration path. Files: `isol
   suites pass; full-suite verification is limited by sandbox socket/process restrictions.
   T-109's pinned verifier records failure honestly. External study drafts need refreshing.
   See `docs/prd-v8-progress.md` and [[study-readiness-gate]].
+
+## [2026-09-20] end | T-120 native-tool study contracts authored
+Authored docs/prd-v8-native-tool-contracts.md (host-tool boundary per surface with versions checked, native-login isolation profile, billing-mode-aware usage/allocation/readiness/comparison rules, migration and rollback, replacement package design); new suite test/native-tool-contracts.test.js (77 suites); amendment sections in protocol/isolation/usage docs and nine tickets; contract appended to SPEC.harness, cohort 1027f120… → a6a6d474…. Copilot unobserved; login preservation on 2.1.273 is the first T-109 observation. No live session.

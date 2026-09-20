@@ -22,6 +22,10 @@ Ensure cost, tokens and provider time include all attempts and never disguise pa
 - Source: [readiness assessment](../docs/pincer-readiness-2026-09-15.md).
 - Order, predecessor obligations and verification limits: [v8 ticket map](../docs/prd-v8-ticket-map.md).
 
+## Current scope amendment
+
+The [native-tool contracts](../docs/prd-v8-native-tool-contracts.md) (T-120) add a billing block to the frozen provider-field semantics for native-login records: `estimate_usd` is a list-price estimate, `billing.attributable_charge_usd` is null with `SUBSCRIPTION_NOT_ATTRIBUTABLE` under a subscription and requires retained billing evidence under API billing. T-121 delivers the versioned reader; this completed ticket's receipts and the `claude-code-result-modelusage-v1` reader for retained API-key records are unchanged.
+
 ## Requirements
 - One complete payload plus one missing, malformed or metric-incomplete payload produces a null aggregate with a specific reason, while retaining any clearly labelled measured subtotal; the $1.25/120-token reproduction no longer reports a complete total.
 - Usage across all completed, failed and discarded attempts is counted once with provider duration distinct from wall-clock/active intervals; all-null, explicitly reported zero and missing values remain distinguishable.

@@ -6,6 +6,10 @@ prepared. Related: [[v7-execution-gaps]], [[delivery-benchmark]],
 `docs/prd-v8-artifacts/execution/T-109-smoke-execution-package.md`; the pending manifest
 is `study.json` beside it.
 
+**Superseded for execution (2026-09-20):** the API-key profile below is historical. The
+replacement host-login design is [[native-tool-contracts]] (T-120), implemented by T-121
+before any T-109 smoke.
+
 ## Pieces (all under `scripts/delivery-benchmark-v7/`)
 
 - `readiness.cjs` — `inspectStudy({manifestPath, inputRoot, purpose, nextSessionId})`,

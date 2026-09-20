@@ -1,5 +1,7 @@
 # T-109 operational smoke — execution package
 
+> **Superseded for execution — 20 September 2026.** The user requires native CLI/Copilot login with no Pincer-supplied provider API key. Do not execute the API-key commands or use the adjacent proposed inputs below. They describe the previous profile only. [The replacement plan](../../prd-v8-native-tool-plan.md), the [native-tool contracts](../../prd-v8-native-tool-contracts.md) (T-120) and T-121 precede a refreshed T-109 smoke; §5 of the contracts is the replacement package design. This notice does not implement native-login support or authorize a session.
+
 Prepared 19 September 2026 on `feat/prd-v8`; corrected the same day after review and
 extended with the native-observation preparation (§12).
 No paid session, study launch, external message, merge, publication or new project access

@@ -18,6 +18,10 @@ Complete the already planned three-arm experiment with honest accounting of acce
 - Source: [readiness assessment](../docs/pincer-readiness-2026-09-15.md).
 - Order, predecessor obligations and verification limits: [v8 ticket map](../docs/prd-v8-ticket-map.md).
 
+## Current scope amendment
+
+Cost recomputation follows the [native-tool contracts](../docs/prd-v8-native-tool-contracts.md) (T-120) §3.4: tokens, provider time and labelled estimates by billing mode; unavailable subscription billing stays unavailable in the denominator accounting; dollar claims are conditional on evidenced API billing. The 72 cells remain a planned obligation subject to plan-usage feasibility, not a launch commitment.
+
 ## Requirements
 - Eight briefs times plain/default-Pincer/strict-Pincer times three matched repetitions produce 72 accounted scheduled cells under a frozen K2 cohort, with balanced order and observed strict adoption; reruns are separately linked and never replace originals invisibly.
 - Held-out acceptance/preservation/browser checks judge exported candidates independently of candidate-authored tests; cost, time, tokens, interventions, retry burden, exclusions, spread and per-brief/arm denominators recompute from retained records.

@@ -18,6 +18,10 @@ Complete genuine strict-coverage pilots and measure the friction that should dri
 - Source: [readiness assessment](../docs/pincer-readiness-2026-09-15.md).
 - Order, predecessor obligations and verification limits: [v8 ticket map](../docs/prd-v8-ticket-map.md).
 
+## Current scope amendment
+
+Sessions use the host tool's own sign-in per the [native-tool contracts](../docs/prd-v8-native-tool-contracts.md) (T-120); no API key is requested. Elapsed time, operations and interventions are the primary observations; any dollar figure is a labelled estimate under the declared billing mode. Copilot stays unobserved.
+
 ## Requirements
 - One greenfield and two brownfield projects complete pinned K0 and K1 journeys on matched disposable tasks, including adoption, actual revised-scope authorization, pause/recovery and candidate/schema 3 evaluation; one brownfield project preserves tracked and untracked unrelated work.
 - All six baseline journey records retain real session/candidate evidence, failures, repairs, unavailable stages and interventions; generic continue never stands in for revised approval and fixtures cannot close the observations.

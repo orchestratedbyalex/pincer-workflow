@@ -21,6 +21,10 @@ Make the plain baseline and kit arms reproducible under an explicit, observed ho
 - Source: [readiness assessment](../docs/pincer-readiness-2026-09-15.md).
 - Order, predecessor obligations and verification limits: [v8 ticket map](../docs/prd-v8-ticket-map.md).
 
+## Current scope amendment
+
+The [native-tool plan](../docs/prd-v8-native-tool-plan.md) supersedes the API-key implementation as the future execution path. T-120/T-121 replace that path; T-109 supplies remaining actual native-login/isolation observations. Historical implementation notes below describe the previous profile, not a current request for an API key. Do not close native acceptance from fixture tests. The authored contracts are in [docs/prd-v8-native-tool-contracts.md](../docs/prd-v8-native-tool-contracts.md) (T-120): host login in a study configuration directory, sanitized login status, billing-mode-aware allocation and evidence, and the checks the replacement smoke must show.
+
 ## Requirements
 - A controlled host containing synthetic personal instructions, hooks, plugins and environment settings launches each arm without those settings leaking into the measured session; intended arm instructions and required authentication remain functional.
 - Every launched record captures actual model/tool/version, OS/platform, Node, effective permission posture and allowlisted configuration; missing required metadata or an unverifiable isolation boundary prevents a reportable launch.

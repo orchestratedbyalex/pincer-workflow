@@ -193,3 +193,29 @@ cannot satisfy the measured-launch gate.
   and configuration-directory-specific credential storage/keychain identity.
 - [Settings precedence](https://code.claude.com/docs/en/settings): managed-policy precedence
   and project settings behavior.
+
+## Native-login revision (T-120, 20 September 2026)
+
+`claude-project-isolated-v1` above is **historical**: it authenticates with an injected
+`ANTHROPIC_API_KEY`, which the user's 20 September decision excludes. Its identity, fixture
+records, observation target `d53ff6f0…` and retained effective manifest `1c91c6ef…` remain
+readable under their own names; it is not the execution path of any future session, and no
+native observation was ever recorded under it.
+
+The replacement profile is `claude-project-native-login-v1`, specified in
+[the native-tool contracts](prd-v8-native-tool-contracts.md) §2 and implemented by T-121:
+`authentication: host-login-config-dir` (the user signs in once with `claude auth login`
+inside a study `CLAUDE_CONFIG_DIR`; the runner never creates, reads, copies or hashes a
+credential), the same per-session synthetic canary and hook capture, the same
+project-only settings, manual permissions, empty MCP and explicit environment, plus a
+pre-workspace `claude auth status --json` check retaining only `loggedIn`, `authMethod`,
+`apiProvider` and `subscriptionType`, a dirty-login-directory blocker
+(`PROFILE_HOST_DIRTY`), and refusal of every credential or billing override
+(`BILLING_OVERRIDE_PRESENT`) without printing a value or editing the user's shell.
+
+Whether the pinned CLI preserves that login under a fresh HOME with project-only settings
+is not established by documentation or by this profile; it is the first T-109 observation.
+If it does not, the result is the blocker `NATIVE_LOGIN_NOT_PRESERVED`, and the only
+alternative is a declared controlled-host baseline approved by the user as a methodology
+revision under a new profile name. An API key is never the fallback. Codex and Copilot
+isolation are specified or explicitly unobserved in the contract; neither is scheduled.
