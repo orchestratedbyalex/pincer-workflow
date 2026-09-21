@@ -523,6 +523,10 @@ async function driveRunOwned(runsRoot, cell, opts, claim, custody = { handle: nu
         ...nativeStudy, onGroup: group => claims.registerGroup(claim, group), holdCustody: true });
       if (!gate.ok) throw new Error(gate.detail);
       custody.handle = gate.custody;
+      // Allocation revalidates the setup checkpoint before reserving session one.
+      // Retain the approved, login-checked billing declaration before that checkpoint;
+      // waiting for a session result makes our own native record ambiguous and invalid.
+      if (gate.billing) record.environment.billing = { ...gate.billing };
       if (cell.brief === 'ui-states') effectiveBrowser = await prepareBrowser(opts.effective, { signal: opts.signal });
     } catch (error) { return refuse(error.message); }
   }

@@ -574,3 +574,29 @@ Host full-chain follow-up: the user supplied the complete `npm test` output with
 This supersedes the earlier host-verification pending status for this local change.
 The output is user-supplied evidence, not an independently retained CI receipt.
 Commit and exact-candidate CI remain pending; no native model session has run.
+
+
+### 21 September — first authorized smoke stopped before session reservation
+
+Candidate `622c6bc15d936825368d09f4ebfd3934c559fe39`, effective cohort
+`b25106a58874870d1b59cfbf122c9f777eb5f650d7f1980e678c45f357b7c8c7`.
+The operator executed the explicit approval-and-launch trigger. Readiness passed;
+setup of `ui-states/rep-1/pincer` completed, but the next allocation inspection refused
+`ALLOCATION_RECORD_INVALID`. The retained record's effort validator reports
+`USAGE_INVALID: AMBIGUOUS_BILLING: the record declares no billing mode.`
+
+The orchestrator had validated subscription billing at preflight but did not retain
+that declaration until a session result arrived. Its own setup checkpoint therefore
+failed the allocator's record validation before reservation. Local fix: copy the
+login-checked billing block into the record before the first attempt checkpoint.
+The native-login orchestration tests now validate that persisted checkpoint at
+reservation for subscription and API-billing fixture scenarios. All six extracted
+fixture scenarios pass locally; removing the fix makes the regression fail.
+
+Retained evidence: `/Users/Shared/pincer-v8-study/runs/smoke/ui-states/rep-1/pincer/record.json`.
+It contains setup only, zero session entries and no session intents. The runs root
+has no allocation ledger. The refusal occurs before `driveSession`; no native model
+session was launched. The stopped attempt is preserved without repair or replay.
+The revised runner has a new frozen cohort; host focused verification, commit, CI
+and a separately recorded recovery disposition are pending. Existing authorization
+is not silently transferred to a changed execution identity.

@@ -468,7 +468,12 @@ try {
       let preflights = [], releases = [], launches = 0, reconciledWith = null, launched = null;
       isolation.preflightExecution = options => { preflights.push({ holdCustody: options.holdCustody, billingMode: options.readiness.billingMode, envelope: options.readiness.usageEnvelopeAgreed }); return { ok: true, custody: handle, acquired: true, billing: { mode: billingMode } }; };
       isolation.releaseCustody = (h, outcome) => { releases.push({ same: h === handle, outcome }); return { at: 'now' }; };
-      allocator.reserve = () => ({ fixture: true });
+      allocator.reserve = () => {
+        const checkpoint = runner.readRecord(runs, cell);
+        assert.equal(checkpoint.environment.billing?.mode, billingMode, 'approved billing is retained before the first reservation');
+        assert.deepEqual(effort.problems(checkpoint), [], 'the allocation gate must accept the pre-session checkpoint');
+        return { fixture: true };
+      };
       // The ledger's own account-limit stop is exercised below; here the orchestrator's branch is.
       allocator.reconcile = options => { reconciledWith = options.result; return { stopped: scenario === 'recovery-required' }; };
       isolation.launchNative = async options => {
