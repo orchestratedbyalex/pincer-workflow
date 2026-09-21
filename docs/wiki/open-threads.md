@@ -1,5 +1,32 @@
 # Open threads
 
+Current overlay: [v8 obligations and secondary triage](../prd-v8-obligation-map.md).
+Dated entries below are historical reports, not current live-support claims.
+
+## Native-login study path (2026-09-20)
+
+- [2026-09-20] Whether pinned Claude Code 2.1.273 preserves a `claude auth login` made
+  under a study `CLAUDE_CONFIG_DIR` when HOME is fresh and settings are project-only is
+  documented, not observed. First T-109 observation; failure is
+  `NATIVE_LOGIN_NOT_PRESERVED` ([[native-tool-contracts]])
+- [2026-09-20] T-121 implemented the contract (fixture-verified only). Next: refresh the
+  external study checkout at `/Users/Shared/pincer-v8-study/pincer-workflow` to the T-121
+  commit (its `1c91c6ef…` manifest and the API-key settlement documents under `decisions/`
+  are superseded history), have the user sign in under `host/claude-config` with the pinned
+  CLI, and write the schema-2 decisions ([[study-readiness-gate]])
+- [2026-09-20] `login-custody.ALLOWED_ENTRIES` lists the login-directory names the CLI is
+  expected to own; the pinned 2.1.273 has never run there, so the first smoke may surface a
+  new name as `PROFILE_HOST_DIRTY` (a reviewed addition re-mints the cohort). Likewise the
+  contract lists `plugins/` as dirty; if the CLI creates it on login, that is a finding
+  ([[study-readiness-gate]])
+- [2026-09-20] CI has not run on the T-121 commit; the branch is not pushed. The candidate
+  needs its own matrix run and a packed-parity check before its ci summary can exist
+  ([[study-readiness-gate]])
+- [2026-09-20] Copilot CLI is not installed here and has no study profile; Codex has a
+  profile sketch but no hook-capture grammar. Neither is scheduled ([[native-tool-contracts]])
+- [2026-09-20] The `openai-docs` skill named by T-120/T-121 is not installed in this
+  environment; official pages were read directly
+
 ## Release state of 0.6.0 (2026-09-14)
 
 **Resolved 2026-09-14:** the evaluation, the bump and the tag are all on `origin/main`
@@ -12,12 +39,10 @@ and are deleted rather than carried.
   `test/distribution.test.js` red. Fixed by re-running `scripts/build-plugin.sh`.
   Worth making the bump a script that cannot be run the wrong way
   ([[distribution-channels]])
-- [2026-09-14] **Every release invalidates its own evaluation.** A version bump is a
-  post-candidate commit, so `status` reads `stale: candidate changed after evaluation:
-  package.json` from the bump onward, and so would a wiki edit. Decide whether
-  `notes_current` should exempt a version-only change to `package.json`, or whether
-  `stale`-after-release is simply correct and the release audit should be the thing that
-  runs before the bump ([[candidate-evidence]])
+- [2026-09-19] Release ordering is owned by T-108/T-119: finalize version metadata,
+  authored docs and generated artifacts before candidate selection, then evaluate and
+  audit. Keep normal stale-evidence behavior and the exact artifact allowlist.
+
 
 ## Coverage, evidence and the runtime
 
@@ -75,7 +100,7 @@ and are deleted rather than carried.
 - [2026-09-12] Trial-fixture lesson: `"test": "node --test test/"` fails on Node 22.23
   (bare directory arg); use `node --test`. Pre-authoring a later ticket's test file makes
   an earlier ticket's `npm test` check unpassable ([[runtime]])
-- [2026-09-14] `npm test` is 51 suites and ~10 minutes, dominated by
+- [2026-09-14] the then-current `npm test` was 51 suites and ~10 minutes, dominated by
   `delivery-benchmark`; `verify`/`done` on a ticket whose check is `npm test` runs it
   twice. If that becomes a problem, split the chain into a fast suite and a slow one
   rather than dropping the fault-injection coverage ([[delivery-benchmark]])
@@ -100,9 +125,33 @@ and are deleted rather than carried.
 - [2026-09-04] Copilot: `/pincer-*` prompt-file chain in VS Code untested end to end
   ([[distribution-channels]])
 - [2026-09-14] PRD v7's live work is unstarted: three baseline pilots, two platform journeys plus a handoff, 72 benchmark runs and timed reviews by two non-implementing people. Needs project selection and access, a costed spending cap and wall-clock cap, reviewers, and reviewers. The Codex CLI is no longer among them — T-98 pinned it at 0.153.4. ([[v7-measured-friction]])
-- [2026-09-14] No v7 candidate is selected and no v7 evidence exists; NOTES.md still names the v6 evaluation. Authored docs and metadata are finished, so the candidate can be chosen cleanly. ([[candidate-evidence]])
+- [2026-09-14] No v7 candidate is selected and no v7 evidence exists; NOTES.md still names the v6 evaluation. The v8 overlay requires release preparation and fresh candidate-bound evidence before readiness. ([[candidate-evidence]])
 - [2026-09-14] Three v7 benchmark faults are not separable from adjacent checks; the suite asserts the intended evaluator is among the failures, not alone. The UI browser adapter is a deterministic fake proving the seam, not a browser. ([[v7-measured-friction]])
-- [2026-09-14] Remote publication state of 0.6.0 is unverified: the reconciliation speaks only about this checkout, never the server.
+- [2026-09-19] Registry version 0.6.0 was rechecked with `npm view`; see the current overlay. Historical packets retain their original publication-verification limits.
+
+## PRD v8 operational smoke (2026-09-19)
+
+- [2026-09-19] The first smoke is packaged but blocked on user decisions: model, browser
+  runtime, caps/allocation/expiry, a project-access decision for `ui-states`, two
+  independent reviewers, and the `study-authorization` document. Nothing is inferred
+  ([[study-readiness-gate]])
+- [2026-09-19] Smoke evidence is kit-bound: K1 and K2 each need their own capped smoke and
+  native observation before measured use. Proposed protocol wording in the package §8 a;
+  editing the protocol re-freezes the cohort, so do it before minting the effective
+  manifest ([[study-readiness-gate]])
+- [2026-09-19] Decide whether `--output-format json` (final result only) is enough
+  native evidence for host policy, or whether the profile should capture `stream-json`
+  before the smoke. Kit hook firing and personal-configuration absence are now captured
+  separately (hook debug log, synthetic canary); the first smoke session must confirm the
+  pinned CLI writes hook lines to `--debug-file` ([[study-readiness-gate]])
+- [2026-09-19] CI has run only on `48df59c`, before the smoke launch path; the branch is
+  not pushed. The candidate needs its own matrix run before its ci summary can exist
+  ([[study-readiness-gate]])
+- [2026-09-19] K0's registry tarball was published from `566b553` while the K0 commit is
+  `694241c` (README differs, executables identical); accept or repack ([[study-readiness-gate]])
+- [2026-09-19] A detached worktree lives at `/Users/Shared/pincer-v8-study/pincer-workflow`
+  with 543 MB of copied inputs beside it; remove with `git worktree remove` when the
+  study is over ([[study-readiness-gate]])
 
 ## PRD v7 live execution (2026-09-14)
 
@@ -110,10 +159,6 @@ and are deleted rather than carried.
   spending cap, a wall-clock cap, three pilot projects with an access decision, and two
   non-implementing human reviewers. The reviewers are not a budget item — the implementing
   agent is `REVIEW_NOT_INDEPENDENT` by construction ([[v7-measured-friction]])
-- [2026-09-14] **Browser tooling is unreachable from a driven session.** Chrome is
-  installed but no binary is on PATH inside a `claude -p` run, so the `ui-states` brief's
-  held-out check is `unverified`, which makes those runs `unavailable` — never accepted.
-  Decide whether to configure an adapter or to record the gap ([[fix-the-driver-before-run-one]])
 - [2026-09-14] **The GitHub MCP server is failing to connect** (400, badly formatted
   Authorization header). `gh` works, so nothing is blocked, but remote-state checks go
   through the CLI until it is fixed
@@ -123,9 +168,5 @@ and are deleted rather than carried.
 All five verified findings and the three gaps verification added were closed before run #1,
 while re-minting was still free ([[v7-execution-gaps]]). Cohort `6de061ec…` → `47dedc0a…`.
 
-- [2026-09-15] Still open, and unchanged by T-99: **no browser adapter is configured**. The
-  orchestrator can now be given one (`--browser <module>`) and says so when it is not, but
-  choosing or writing the adapter is a decision, and without it the `ui-states` brief's nine
-  runs are `unavailable` — never accepted ([[v7-execution-gaps]])
 - [2026-09-15] The two non-implementing reviewers, the spending cap, the wall-clock cap and
   the three pilot projects remain the user's call. Nothing in T-99 moves them.

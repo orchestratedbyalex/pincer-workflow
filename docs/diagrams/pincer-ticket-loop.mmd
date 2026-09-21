@@ -1,0 +1,38 @@
+flowchart TD
+    enterLoop(["Start or continue CODE"])
+    gate{"Right change, branch, permission, and state?"}
+    blocked["Stop and follow the reported next step"]
+    safety[["Apply security and cost rules in chart 4"]]
+    nextTicket["Pick the next unfinished ticket"]
+    depends{"Earlier required tickets done?"}
+    earlier["Finish the blocking ticket first"]
+    startTicket["Runtime starts the ticket and records time"]
+    implement["Agent writes the code and tests"]
+    decision{"New scope or important decision?"}
+    handleDecision[["Follow decision path in chart 3"]]
+    verify["Runtime runs the ticket check and saves the result"]
+    passed{"Check passed?"}
+    unavailable["Keep failure or missing-tool result; repair cause"]
+    selfReview["Review changes, secrets, inputs, and errors"]
+    edited{"Code changed during review?"}
+    criteria["Tick only success checks actually verified"]
+    doneGate{"Latest check passes for current code and all boxes ticked?"}
+    done["Runtime marks done; commit only this ticket's files"]
+    more{"More tickets or stale checks?"}
+    finish(["Return to main chart: complete the change"])
+
+    enterLoop --> gate
+    gate -->|"No"| blocked --> gate
+    gate -->|"Yes"| safety --> nextTicket --> depends
+    depends -->|"No"| earlier --> nextTicket
+    depends -->|"Yes"| startTicket --> implement --> decision
+    decision -->|"Yes"| handleDecision --> gate
+    decision -->|"No"| verify --> passed
+    passed -->|"Failed or unavailable"| unavailable --> implement
+    passed -->|"Yes"| selfReview --> edited
+    edited -->|"Yes"| verify
+    edited -->|"No"| criteria --> doneGate
+    doneGate -->|"No"| blocked
+    doneGate -->|"Yes"| done --> more
+    more -->|"Yes"| gate
+    more -->|"No"| finish

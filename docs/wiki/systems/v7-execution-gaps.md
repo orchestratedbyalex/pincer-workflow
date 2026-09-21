@@ -22,11 +22,13 @@ either changes the cohort, and `effort.cjs:145` then refuses every earlier recor
 `COHORT_CHANGED`. Fixing at run 0 costs about a day. Fixing at run 30 costs those 30 runs —
 roughly $80 — because they can never be pooled with what follows.
 
-One escape hatch worth knowing: `SPEC.harness` is a **file list**, not a directory digest
-(unlike v6, which digested its directory whole). A new sibling module inside
-`scripts/delivery-benchmark-v7/` therefore does *not* change the cohort. If a defect
-surfaces mid-study, put the correction in an unfrozen sibling rather than patching
-`orchestrator.cjs`.
+Current correction (T-100): a file-list freeze is not permission to put a measurement
+correction in an untracked sibling. Every helper affecting execution or scoring must
+be included in effective provenance. Changed execution requires a new cohort identity
+or refusal, wherever its source file lives. Preserve earlier records under their own
+identity; any cross-cohort comparison needs explicit compatibility rules. See
+[the v8 contracts](../../prd-v8-contracts.md). T-99's historical fixes below do not
+resolve the later F-01–F-03 findings in the readiness assessment.
 
 ## The five as found, in the order they mattered
 

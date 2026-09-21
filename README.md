@@ -11,6 +11,13 @@ commit per ticket, review notes, and a pass/fail release audit.
 a twelve-sheet walkthrough of the workflow: why it exists, each command, the
 safety guardrails, and installation.
 
+Pincer runs inside your coding tool and uses that tool's normal account sign-in.
+Pincer itself requires no model-provider API key and does not manage model credentials.
+The separate maintainer study runner signs in the same way, through the tool's own
+`claude auth login` in a dedicated study directory ([contracts](docs/prd-v8-native-tool-contracts.md),
+[replacement plan](docs/prd-v8-native-tool-plan.md)); its former API-key profile is historical
+and refused. Whether the pinned CLI preserves that login has not been observed yet.
+
 ## Install
 
 ```bash

@@ -1,0 +1,17 @@
+{
+  "model": "claude-sonnet-5",
+  "tool": { "executable": "/Users/Shared/pincer-v8-study/inputs/tool/claude-2.1.273", "version": "2.1.273", "kind": "native" },
+  "caps": { "turns_per_session": 3, "wall_clock_minutes": 2, "spend_usd": 1 },
+  "kit": { "path": "inputs/kits/pincer-workflow-0.6.0.tgz", "commit": "694241cc684f2dd95a0cfe7ffa2827414683e84a" },
+  "browser": {
+    "entry": "pincer-workflow/scripts/delivery-benchmark-v7/browser.cjs",
+    "roots": ["pincer-workflow/scripts/delivery-benchmark-v7/browser.cjs"],
+    "runtime": {
+      "name": "chrome-for-testing",
+      "version": "148.0.7778.97",
+      "path": "inputs/browser/chrome-mac-arm64-148.0.7778.97",
+      "executable": "inputs/browser/chrome-mac-arm64-148.0.7778.97/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
+    }
+  },
+  "configuration": { "permission_mode": "manual", "cwd_kind": "scratch", "isolation_profile": "claude-project-current-account-login-v1" }
+}

@@ -15,7 +15,27 @@ import { repo, tempDir } from './helpers.js';
 
 const require = createRequire(import.meta.url);
 const V7 = path.join(repo, 'scripts/delivery-benchmark-v7');
-const orchestrator = require(path.join(V7, 'orchestrator.cjs'));
+const runtime = require(path.join(V7, 'orchestrator.cjs'));
+// Explicit fixture seam: all programmatic sessions terminate in this callback. It
+// executes only a verified synthetic script and never falls back to the live driver.
+function fixtureSession(options) {
+  const executable = path.join(process.env.PATH.split(path.delimiter)[0], 'claude');
+  assert.match(fs.readFileSync(executable, 'utf8'), /PINCER_SYNTHETIC_CLI/);
+  const started = new Date().toISOString();
+  const r = spawnSync('bash', [executable, fs.readFileSync(options.promptFile, 'utf8')], {
+    cwd: options.workspace, encoding: 'utf8', env: { ...process.env, CLAUDECODE: '', CLAUDE_CODE_ENTRYPOINT: '' },
+  });
+  const ended = new Date().toISOString();
+  fs.mkdirSync(options.logDir, { recursive: true });
+  fs.writeFileSync(path.join(options.logDir, `${options.name}.json`), r.stdout || '');
+  fs.writeFileSync(path.join(options.logDir, `${options.name}.err`), r.stderr || '');
+  return { ...r, started, ended, refused: false, end: runtime.endOf(r), limit: runtime.limitHit(r.stdout) || runtime.limitHit(r.stderr) };
+}
+const orchestrator = {
+  ...runtime,
+  driveRun: (runs, cell, opts) => runtime.driveRun(runs, cell, { ...opts, fixtureSession }),
+  driveSchedule: (runs, opts) => runtime.driveSchedule(runs, { ...opts, fixtureSession }),
+};
 const effort = require(path.join(V7, 'effort.cjs'));
 const schedule = require(path.join(V7, 'schedule.cjs'));
 const DRIVER = path.join(V7, 'live-driver.sh');
@@ -31,6 +51,7 @@ function fakeCli() {
   const prompts = path.join(dir, 'prompts.log');
   fs.writeFileSync(path.join(dir, 'claude'), `#!/usr/bin/env bash
 set -u
+# PINCER_SYNTHETIC_CLI
 echo "$PWD" >> ${JSON.stringify(sentinel)}
 # The prompt is the last positional argument. Recorded verbatim so a case can prove what
 # the agent was actually told, rather than inspecting the script that composes it.
@@ -43,7 +64,7 @@ case "\${FAKE_MODE:-ok}" in
   ok)
     git add -A >/dev/null 2>&1 || true
     git -c user.name=stand-in -c user.email=s@example.invalid commit -q --allow-empty -m "stand-in session" >/dev/null 2>&1 || true
-    echo '{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":1.25,"duration_ms":120000,"usage":{"input_tokens":1000,"output_tokens":500,"cache_read_input_tokens":250}}'
+    echo '{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":1.25,"duration_api_ms":120000,"modelUsage":{"test-model":{"inputTokens":1000,"outputTokens":500,"cacheReadInputTokens":250,"cacheCreationInputTokens":0}}}'
     ;;
   bare)
     git -c user.name=stand-in -c user.email=s@example.invalid commit -q --allow-empty -m "stand-in session" >/dev/null 2>&1 || true
@@ -51,7 +72,7 @@ case "\${FAKE_MODE:-ok}" in
     ;;
   tidy)
     git -c user.name=stand-in -c user.email=s@example.invalid commit -q --allow-empty -m "stand-in session" >/dev/null 2>&1 || true
-    echo '{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":1.25,"duration_ms":120000,"usage":{"input_tokens":1000,"output_tokens":500,"cache_read_input_tokens":250}}'
+    echo '{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":1.25,"duration_api_ms":120000,"modelUsage":{"test-model":{"inputTokens":1000,"outputTokens":500,"cacheReadInputTokens":250,"cacheCreationInputTokens":0}}}'
     ;;
   adopt)
     mkdir -p .prd/evidence/changes
@@ -60,7 +81,7 @@ case "\${FAKE_MODE:-ok}" in
 JSON
     git add .prd >/dev/null 2>&1 || true
     git -c user.name=stand-in -c user.email=s@example.invalid commit -q --allow-empty -m "stand-in session" >/dev/null 2>&1 || true
-    echo '{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":1.25,"duration_ms":120000,"usage":{"input_tokens":1000,"output_tokens":500}}'
+    echo '{"type":"result","subtype":"success","is_error":false,"result":"done","total_cost_usd":1.25,"duration_api_ms":120000,"modelUsage":{"test-model":{"inputTokens":1000,"outputTokens":500,"cacheReadInputTokens":0,"cacheCreationInputTokens":0}}}'
     ;;
   limit)
     echo '{"type":"result","subtype":"error","is_error":true,"result":"You'"'"'ve hit your session limit · resets 3pm","total_cost_usd":0}'
@@ -143,78 +164,17 @@ function workspace() {
   return dir;
 }
 
-// --- the driver refuses before it spends ------------------------------------------------
+// --- the historical direct shell route is closed ----------------------------------------
+// T-102's new isolation suite observes subprocess cwd, environment and watchdog
+// behavior. Legacy argv must not remain a second route to an inherited-config CLI.
 {
-  const fake = fakeCli();
-  const ws = workspace();
-  const prompt = path.join(ws, 'PROMPT.txt');
-
-  const noOptIn = drive(fake, flags(ws, prompt));
-  assert.equal(noOptIn.status, 3, 'without the spending-cap assertion it refuses');
-  assert.match(noOptIn.stderr, /no spending cap has been asserted/);
-  assert.equal(fake.invocations().length, 0, 'and it refuses before launching anything');
-
-  for (const [bad, what] of [['0', 'zero'], ['abc', 'non-numeric'], ['', 'empty']]) {
-    const r = drive(fake, [...flags(ws, prompt, { wall: bad }), '--i-have-a-spending-cap']);
-    assert.ok(r.status === 4 || r.status === 2, `a ${what} wall-clock cap is refused, not treated as no cap`);
+  const fake = fakeCli(), ws = workspace(), prompt = path.join(ws, 'PROMPT.txt');
+  for (const args of [flags(ws, prompt), [...flags(ws, prompt), '--i-have-a-spending-cap']]) {
+    const result = drive(fake, args);
+    assert.equal(result.status, 3);
+    assert.match(result.stderr, /historical direct launch route is disabled/);
   }
-  assert.equal(fake.invocations().length, 0, 'a bad cap never reaches a session');
-
-  const badCohort = drive(fake, [...flags(ws, prompt).slice(0, -1), 'not-a-cohort', '--i-have-a-spending-cap']);
-  assert.equal(badCohort.status, 4, 'a run must carry the cohort it belongs to');
-}
-
-// --- the session runs IN the workspace it was given --------------------------------------
-{
-  const fake = fakeCli();
-  const ws = workspace();
-  const elsewhere = tempDir();
-  const prompt = path.join(ws, 'PROMPT.txt');
-
-  // Driven from a DIFFERENT directory: before T-98 the session inherited this one while
-  // the frozen configuration recorded `cwd_kind: scratch`.
-  const r = drive(fake, [...flags(ws, prompt), '--i-have-a-spending-cap'], { cwd: elsewhere });
-  assert.equal(r.status, 0, `the stand-in session completed: ${r.stderr}`);
-  const seen = fake.invocations();
-  assert.equal(seen.length, 1, 'the stand-in ran, so the real CLI was never reached');
-  assert.equal(fs.realpathSync(seen[0]), fs.realpathSync(ws), 'the session ran in the workspace, not the caller directory');
-  assert.notEqual(fs.realpathSync(seen[0]), fs.realpathSync(elsewhere));
-}
-
-// --- a session's own exit status survives, and is never confused with the cap -------------
-{
-  const fake = fakeCli();
-  const ws = workspace();
-  const prompt = path.join(ws, 'PROMPT.txt');
-
-  const failed = drive(fake, [...flags(ws, prompt), '--i-have-a-spending-cap'], { mode: 'exit7' });
-  assert.equal(failed.status, 7, 'a failing session reports its own status');
-  assert.doesNotMatch(failed.stderr, orchestrator.CAP_MARKER, 'and is not labelled a cap');
-
-  // A session that exits 124 on its own carries no marker, so the orchestrator refuses to
-  // call it capped rather than guessing.
-  const own124 = drive(fake, [...flags(ws, prompt), '--i-have-a-spending-cap'], { mode: 'exit124' });
-  assert.equal(own124.status, 124);
-  assert.equal(orchestrator.endOf(own124), 'ambiguous', 'exit 124 without the marker is ambiguous, not a cap');
-}
-
-// --- the wall clock actually ends a session ----------------------------------------------
-// The cap is whole minutes, so this case takes about a minute. That is the price of
-// proving the watchdog rather than asserting it: the defect T-98 fixes was a cap that was
-// validated and never enforced, which reads identically in source to one that works.
-{
-  const fake = fakeCli();
-  const ws = workspace();
-  const prompt = path.join(ws, 'PROMPT.txt');
-  const started = Date.now();
-  const r = drive(fake, [...flags(ws, prompt, { wall: '1' }), '--i-have-a-spending-cap'], { mode: 'hang' });
-  const elapsed = (Date.now() - started) / 1000;
-
-  assert.equal(r.status, orchestrator.CAP_EXIT, 'a session that outruns the clock exits 124');
-  assert.match(r.stderr, orchestrator.CAP_MARKER, 'and says so, so 124 is never ambiguous');
-  assert.equal(orchestrator.endOf(r), 'capped');
-  assert.ok(elapsed < 120, `the cap ended it near its deadline, not late (${elapsed.toFixed(1)}s)`);
-  assert.ok(elapsed >= 55, `and not early (${elapsed.toFixed(1)}s)`);
+  assert.equal(fake.invocations().length, 0);
 }
 
 // --- the orchestrator refuses the same decision, one level up -----------------------------
@@ -302,7 +262,7 @@ function workspace() {
   // A kit arm with no kit is refused before the first session, not at the cell that needs
   // one: discovering it halfway through is discovering it after the paid runs behind it.
   await assert.rejects(
-    orchestrator.driveSchedule(tempDir(), { cohort: COHORT, ids, spendingCap: true, model: 'stand-in' }),
+    orchestrator.driveSchedule(tempDir(), { cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in' }),
     /no kit was given/,
   );
 
@@ -312,7 +272,7 @@ function workspace() {
   process.env.FAKE_MODE = 'limit';
   let result;
   try {
-    result = await orchestrator.driveSchedule(runs, { cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit });
+    result = await orchestrator.driveSchedule(runs, { cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit });
   } finally {
     process.env.PATH = savedPath;
     if (savedMode === undefined) delete process.env.FAKE_MODE; else process.env.FAKE_MODE = savedMode;
@@ -336,7 +296,7 @@ function workspace() {
   process.env.FAKE_MODE = 'limit';
   let resumed;
   try {
-    resumed = await orchestrator.driveSchedule(runs, { cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit });
+    resumed = await orchestrator.driveSchedule(runs, { cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit });
   } finally {
     process.env.PATH = savedPath;
     if (savedMode === undefined) delete process.env.FAKE_MODE; else process.env.FAKE_MODE = savedMode;
@@ -374,7 +334,7 @@ function workspace() {
   const kit = fakeKit();
   const fake = fakeCli();
   orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
-  const opts = { cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit };
+  const opts = { cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit };
   await withStandIn(fake, 'tidy', async () => {
     for (const arm of ['plain', 'pincer', 'strict']) {
       await orchestrator.driveRun(runs, cellFor(ids, 'cli-greenfield', arm), opts);
@@ -404,7 +364,7 @@ function workspace() {
     orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
     const cell = cellFor(ids, 'cli-greenfield', arm);
     const out = await withStandIn(fake, mode, () => orchestrator.driveRun(runs, cell, {
-      cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+      cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit,
     }));
     const record = orchestrator.readRecord(runs, cell);
     assert.deepEqual(effort.problems(record), [], `the ${arm} arm's record validates`);
@@ -433,7 +393,7 @@ function workspace() {
     orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
     const cell = cellFor(ids, 'cli-greenfield', 'strict');
     await withStandIn(fake, 'tidy', () => orchestrator.driveRun(runs, cell, {
-      cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+      cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit,
     }));
     const record = orchestrator.readRecord(runs, cell);
     assert.equal(record.status, 'invalid');
@@ -448,7 +408,7 @@ function workspace() {
     orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
     const cell = cellFor(ids, 'cli-greenfield', 'plain');
     await withStandIn(fake, 'bare', () => orchestrator.driveRun(runs, cell, {
-      cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+      cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit,
     }));
     const record = orchestrator.readRecord(runs, cell);
     for (const key of ['tokens', 'cost_usd', 'provider_minutes']) {
@@ -493,10 +453,10 @@ function workspace() {
     orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
     const cell = cellFor(ids, 'brownfield-maintenance', arm);
     await withStandIn(fake, arm === 'strict' ? 'adopt' : 'tidy', () => orchestrator.driveRun(runs, cell, {
-      cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+      cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit,
     }));
     const record = orchestrator.readRecord(runs, cell);
-    const ws = path.join(orchestrator.runDir(runs, cell), 'workspace');
+    const ws = path.join(orchestrator.runDir(runs, cell), record.attempts.at(-1).directory, 'workspace');
 
     assert.deepEqual(
       Object.keys(record.workspace.unrelated_edits).sort(), ['README.md', 'operator-notes.md'],
@@ -522,7 +482,7 @@ function workspace() {
     orchestrator.plan(runs, { cohort: COHORT, ids, provenance: PROVENANCE });
     const cell = cellFor(ids, 'brownfield-maintenance', 'pincer');
     await withStandIn(fake, 'ok', () => orchestrator.driveRun(runs, cell, {
-      cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+      cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit,
     }));
     const record = orchestrator.readRecord(runs, cell);
     const check = record.evaluation.checks.find(c => c.id === 'unrelated-edits');
@@ -561,18 +521,21 @@ function workspace() {
   fs.writeFileSync(path.join(home, 'logs', 'S1.json'), '{"result":"the killed session"}');
 
   await withStandIn(fake, 'tidy', () => orchestrator.driveRun(runs, cell, {
-    cohort: COHORT, ids, spendingCap: true, model: 'stand-in', maxTurns: 5, kit,
+    cohort: COHORT, ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, kit,
+    resumeInterrupted: { attempt: 'legacy', reason: 'Explicitly restart the retained historical interrupted fixture' },
   }));
   const record = orchestrator.readRecord(runs, cell);
 
-  assert.ok(!fs.existsSync(path.join(ws, 'DEAD-ATTEMPT')), 'the dead attempt is gone from the workspace');
-  const ancestor = spawnSync('git', ['merge-base', '--is-ancestor', dead, 'HEAD'], { cwd: ws });
+  const fresh = path.join(home, record.attempts.at(-1).directory, 'workspace');
+  assert.ok(fs.existsSync(path.join(ws, 'DEAD-ATTEMPT')), 'the historical workspace is preserved');
+  assert.ok(!fs.existsSync(path.join(fresh, 'DEAD-ATTEMPT')), 'the new workspace excludes dead work');
+  const ancestor = spawnSync('git', ['merge-base', '--is-ancestor', dead, 'HEAD'], { cwd: fresh });
   assert.notEqual(ancestor.status, 0, 'and its commit is not in the restarted run at all');
   assert.equal(
-    fs.readFileSync(path.join(home, 'logs-attempt-1', 'S1.json'), 'utf8'), '{"result":"the killed session"}',
+    fs.readFileSync(path.join(home, 'logs', 'S1.json'), 'utf8'), '{"result":"the killed session"}',
     'the killed session\'s log is retained rather than overwritten',
   );
-  const event = record.events.find(e => e.kind === 'intervention' && /interrupted attempt/.test(e.detail));
+  const event = record.events.find(e => e.kind === 'intervention' && /Explicit resume after legacy-000001/.test(e.detail));
   assert.ok(event, 'and the discarded attempt is named on the record, so the repetition is visible');
   assert.deepEqual(effort.problems(record), [], 'the re-driven record is reportable');
 }
@@ -583,7 +546,7 @@ function workspace() {
 {
   const ids = ['cli-greenfield'];
   const kit = fakeKit();
-  const base = { ids, spendingCap: true, model: 'stand-in', maxTurns: 5, wallClockMinutes: 30, kit };
+  const base = { ids, usageEnvelopeAgreed: true, model: 'stand-in', maxTurns: 5, wallClockMinutes: 30, kit };
 
   const cases = [
     ['a different cohort', { cohort: 'b'.repeat(64) }, /not the cohort this cell was planned under/],
@@ -591,7 +554,7 @@ function workspace() {
     ['a different model', { cohort: COHORT, model: 'other' }, /planned for model stand-in/],
     ['a different turn cap', { cohort: COHORT, maxTurns: 400 }, /planned for 5 turns per session/],
     ['a different wall clock', { cohort: COHORT, wallClockMinutes: 5 }, /planned for a 30-minute wall clock/],
-    ['no spending cap', { cohort: COHORT, spendingCap: false }, /no spending cap has been asserted/],
+    ['no usage envelope', { cohort: COHORT, usageEnvelopeAgreed: false }, /no usage envelope has been agreed/],
   ];
   for (const [what, override, expected] of cases) {
     const runs = tempDir();
@@ -643,7 +606,7 @@ function workspace() {
   assert.match(help.stdout, /--runs <dir>/, 'and documents how to run it');
   assert.match(help.stdout, /--browser <module>/, 'including how to supply a browser adapter');
   assert.match(help.stdout, /unavailable/, 'and what happens to UI checks without one');
-  assert.match(help.stdout, /--i-have-a-spending-cap/, 'and that spending is an assertion a human makes');
+  assert.match(help.stdout, /--i-agreed-the-usage-envelope/, 'and that the usage envelope is an assertion a human makes');
   assert.equal(spawnSync(process.execPath, [path.join(V7, 'orchestrator.cjs')], { encoding: 'utf8' }).status, 2, 'and refuses with no --runs');
 }
 

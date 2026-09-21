@@ -1,0 +1,45 @@
+{
+  "schema": 2,
+  "kind": "pincer-study-readiness",
+  "status": "pending",
+  "execution": null,
+  "projects": null,
+  "kits": [
+    {
+      "id": "K0",
+      "commit": "694241cc684f2dd95a0cfe7ffa2827414683e84a",
+      "artifact": {
+        "ref": "inputs/kits/pincer-workflow-0.6.0.tgz",
+        "digest": "cb6c63f97b6cd780456807339e8d9d01dbc94ad3370594010dc1e4914c835009"
+      }
+    }
+  ],
+  "schedule": null,
+  "reviewers": null,
+  "authorization": null,
+  "allocation": null,
+  "stop_resume": {
+    "unknown_cost": "stop",
+    "account_limit": "stop",
+    "exhausted_allocation": "stop",
+    "changed_inputs": "stop",
+    "resume": "explicit-recorded-decision"
+  },
+  "evidence": {
+    "offline": null,
+    "browser": null,
+    "packed": null,
+    "ci": null,
+    "native": null,
+    "smoke": null,
+    "report": null
+  },
+  "pending_notes": [
+    "20 September 2026: schema 2 (T-121). The API-key execution proposal is superseded; this manifest describes the native-login path and stays pending. No API key is requested, no session has run, and native login preservation is not observed.",
+    "References are relative to the dedicated study root /Users/Shared/pincer-v8-study (inspect with --input-root). The repository cannot be the input root: the launcher refuses workspaces under any CLAUDE.md or .claude ancestor, and the allocation root must lie inside the input root. See T-121-native-smoke-execution-package.md.",
+    "K0 is resolved: released v0.6.0 at peeled commit 694241cc684f2dd95a0cfe7ffa2827414683e84a, registry tarball pincer-workflow-0.6.0.tgz sha256 cb6c63f97b6cd780456807339e8d9d01dbc94ad3370594010dc1e4914c835009 (bin/, template/ and package.json byte-identical to the commit; README differs). K1 and K2 are not selected.",
+    "execution is pending: the user signs in under host/claude-config with the pinned CLI, then the effective manifest is re-minted from the native-login proposed inputs; execution.billing {mode, tool_surface: claude-code, status_record_contract: claude-auth-status-json-v1} is the user's billing-mode declaration.",
+    "No project-access decision, reviewer participation decisions, schema-2 allocation (session_estimate_cap_usd, limit_estimate_usd, account_usage) or study-authorization (decided by user, with billing_mode and account_usage) exist. The 20 September API-key authorization under decisions/ is superseded history and is not reused.",
+    "Native authentication/host-policy/isolation observations, the login-preservation observation and the separately authorized operational smoke remain outstanding. Passing offline fixture tests are implementation evidence, not native-session observations."
+  ]
+}

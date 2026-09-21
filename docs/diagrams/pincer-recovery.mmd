@@ -1,0 +1,41 @@
+flowchart TD
+    event(["Work stops or something changes"])
+    kind{"What happened?"}
+    pause["Pause and save a handoff note"]
+    newSession["New session reads resume report and files"]
+    local["Select the intended change in this working copy"]
+    state{"What does the report require?"}
+    wait["Wait while the check owner is still running"]
+    recover["Recover interrupted work after its owner stops"]
+    history["Keep history; reopen completed work or plan a replacement"]
+    current{"Permission still matches the plan?"}
+    proposal["Show the changed plan and affected work"]
+    delegated{"Already covered by explicit delegation?"}
+    user["Ask the user about the new decision"]
+    answer{"User allows it?"}
+    hold["Wait or revise; do not implement the new scope"]
+    record["Record the decision and permission for the revised plan"]
+    resume["Activate or resume without asking again"]
+    freshness{"Checks still match the current code?"}
+    recheck["Run stale or missing checks again"]
+    continueWork(["Follow the reported next stage"])
+
+    event --> kind
+    kind -->|"Pause or switch work"| pause --> newSession
+    kind -->|"Fresh session or handoff"| newSession
+    kind -->|"Crash or stuck check"| newSession
+    kind -->|"Scope or plan changed"| proposal
+    newSession --> local --> state
+    state -->|"Check still running"| wait --> newSession
+    state -->|"Interrupted work"| recover --> newSession
+    state -->|"Finished or retired change"| history
+    state -->|"Current work"| current
+    current -->|"No"| proposal --> delegated
+    delegated -->|"Yes"| record
+    delegated -->|"No"| user --> answer
+    answer -->|"No"| hold
+    answer -->|"Yes"| record
+    record --> newSession
+    current -->|"Yes"| resume --> freshness
+    freshness -->|"No"| recheck --> continueWork
+    freshness -->|"Yes"| continueWork

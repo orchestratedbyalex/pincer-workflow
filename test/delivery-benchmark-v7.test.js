@@ -33,12 +33,15 @@ const IDS = ['brownfield-maintenance', 'bugfix-brownfield', 'cli-greenfield', 'h
 const fakeBrowser = {
   name: 'fake-headless', version: '1.0.0',
   observe({ page, expectations }) {
-    if (!expectations.clickMustNotFire) return { ok: false, detail: 'unknown expectation' };
+    const observations = { fixture: true, note: 'markup simulation; not browser evidence' };
+    if (page.includes('<style>')) return { ok: false, detail: 'fixture simulates hidden state', observations };
+    if (expectations.state !== 'submitting') return { ok: true, detail: 'fixture simulates visible state', observations };
     const m = /<button[^>]*>/.exec(page);
-    if (!m) return { ok: false, detail: 'no button in the rendered page' };
+    if (!m) return { ok: false, detail: 'no button in the rendered page', observations };
     return /\sdisabled(\s|>|=)/.test(m[0])
-      ? { ok: true, detail: 'the browser refused to activate the button' }
-      : { ok: false, detail: `the browser activated the button: ${m[0]} carries no disabled attribute` };
+      ? { ok: true, detail: 'the browser refused to activate the button', observations }
+      : { ok: false, detail: `the browser activated the button: ${m[0]} carries no disabled attribute`, observations };
+
   },
 };
 
@@ -340,14 +343,14 @@ const failedIds = result => result.checks.filter(c => c.result !== 'passed').map
       assert.ok(!source.includes(forbidden), `${file} does not use ${forbidden}`);
     }
   }
-  // Spending lives in exactly one file, and it refuses to run without an explicit cap.
-  const driver = fs.readFileSync(path.join(V7, 'live-driver.sh'), 'utf8');
-  assert.match(driver, /claude -p/, 'the live driver is the one file that spends money');
-  assert.match(driver, /--i-have-a-spending-cap/, 'and it requires an explicit opt-in');
-  const refused = harness.sh('bash', [path.join(V7, 'live-driver.sh'), '--run', 'cli-greenfield/rep-1/plain', '--workspace', ROOT, '--prompt-file', path.join(V7, 'live-driver.sh'), '--model', 'sonnet', '--max-turns', '150', '--wall-clock-minutes', '30', '--cohort', frozen.cohort]);
-  assert.equal(refused.status, 3, 'without the opt-in it refuses rather than spending');
-  assert.match(refused.stderr, /no spending cap has been asserted/);
-  assert.match(refused.stderr, /must be costed before/);
+  // T-102 retires the historical direct launch route. Even its former opt-in
+  // cannot bypass the effective manifest, isolation and allocation gates.
+  for (const optIn of [[], ['--i-have-a-spending-cap']]) {
+    const refused = harness.sh('bash', [path.join(V7, 'live-driver.sh'), '--run', 'cli-greenfield/rep-1/plain', '--workspace', ROOT, '--prompt-file', path.join(V7, 'live-driver.sh'), '--model', 'sonnet', '--max-turns', '150', '--wall-clock-minutes', '30', '--cohort', frozen.cohort, ...optIn]);
+    assert.equal(refused.status, 3, 'the retired direct driver always refuses');
+    assert.match(refused.stderr, /historical direct launch route is disabled/);
+    assert.match(refused.stderr, /effective manifest and the isolated launch profile/);
+  }
 
   // The v6 edition still loads and is not this one.
   const v6 = require(path.join(repo, 'scripts/delivery-benchmark/lib.cjs'));

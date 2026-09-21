@@ -74,6 +74,12 @@ function unsafe(rel) {
 function digestOf(root, rel) {
   const problem = unsafe(rel);
   if (problem) throw new Error(`${rel}: ${problem}`);
+  root = fs.realpathSync(root);
+  let checked = root;
+  for (const part of rel.split('/')) {
+    checked = path.join(checked, part);
+    if (fs.lstatSync(checked).isSymbolicLink()) throw new Error(`${rel}: is a symbolic link in frozen input`);
+  }
   const files = walk(root, rel, []);
   const entries = files.map(f => [f, sha256(fs.readFileSync(path.join(root, f)))]);
   return { digest: sha256(entries.map(([f, d]) => `${f}\n${d}\n`).join('')), files: Object.fromEntries(entries) };
@@ -91,6 +97,7 @@ function fingerprint(config, { env = [] } = {}) {
     if (!(key in config)) continue;
     const value = config[key];
     if (value === null || value === undefined) continue;
+    if (!['string', 'number', 'boolean'].includes(typeof value) || (typeof value === 'number' && !Number.isFinite(value))) { rejected.push({ key, reason: 'configuration must contain finite scalar values' }); continue; }
     const why = secretIn(value);
     if (why) { rejected.push({ key, reason: `value ${why}` }); continue; }
     kept[key] = value;
@@ -147,6 +154,7 @@ function compute(root, { protocol, harness, briefs, collector, driver, caps, con
   // a different experiment.
   inputs.caps = sha256(JSON.stringify(caps, Object.keys(caps).sort()));
   const config = fingerprint(configuration.values || {}, { env: configuration.env || [] });
+  if (config.rejected.length) throw new Error('configuration contains rejected or unknown values');
   inputs.configuration = config.digest;
   const order = ['protocol', 'harness', 'briefs', 'evaluators', 'collector', 'driver', 'caps', 'configuration'];
   const cohort = sha256(order.map(k => `${k}\n${inputs[k]}\n`).join(''));

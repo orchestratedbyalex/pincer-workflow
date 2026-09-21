@@ -66,15 +66,19 @@ function evidenceCommit(ws, lib, sha, { variant, date }) {
 
 function apply(ws, variant, lib, { date } = {}) {
   const source = variant === 'aria-only' ? ARIA_ONLY : variant === 'no-error' ? NO_SUMMARY : variant === 'unescaped' ? UNESCAPED : CORRECT;
-  lib.write(ws, 'src/form.js', source);
+  const hidden = { 'hidden-empty': 'empty', 'hidden-error': 'error', 'hidden-loading': 'submitting', 'transparent-parent': 'empty' }[variant];
+  const target = variant === 'transparent-parent' ? 'form' : hidden === 'error' ? '[role=alert]' : 'button';
+  const css = variant === 'transparent-parent' ? 'opacity:0' : 'display:none';
+  const behavior = hidden ? source.replace("return '<form'", `return (mode === '${hidden}' ? '<style>${target}{${css}}</style>' : '') + '<form'`) : source;
+  lib.write(ws, 'src/form.js', behavior);
   lib.write(ws, 'test/form.test.js', TESTS);
   const sha = lib.commitAll(ws, 'Add the three form states', date);
   if (variant === 'evaluated' || variant === 'stale-evidence') return evidenceCommit(ws, lib, sha, { variant, date });
   return sha;
 }
 module.exports = {
-  variants: ['control', 'evaluated', 'aria-only', 'no-error', 'unescaped', 'stale-evidence'],
+  variants: ['control', 'evaluated', 'aria-only', 'no-error', 'unescaped', 'stale-evidence', 'hidden-empty', 'hidden-error', 'hidden-loading', 'transparent-parent'],
   accepted: ['control', 'evaluated'],
-  faults: { 'aria-only': 'submitting-observed', 'no-error': 'error-state', unescaped: 'escaping', 'stale-evidence': 'evidence-binding' },
+  faults: { 'transparent-parent': 'empty-observed', 'hidden-empty': 'empty-observed', 'hidden-error': 'error-observed', 'hidden-loading': 'submitting-observed', 'aria-only': 'submitting-observed', 'no-error': 'error-state', unescaped: 'escaping', 'stale-evidence': 'evidence-binding' },
   apply,
 };

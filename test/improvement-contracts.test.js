@@ -198,7 +198,7 @@ const freeze = require(path.join(repo, 'scripts/delivery-benchmark-v7/freeze.cjs
     assert.ok(table.includes(sha), `the reconciliation names ${sha}`);
     assert.ok(ancestor(sha), `${sha} really is an ancestor of HEAD, as the reconciliation says`);
   }
-  assert.equal(JSON.parse(read('package.json')).version, '0.6.0', 'package.json says 0.6.0, as the reconciliation says');
+  assert.equal(JSON.parse(git('show', '694241c:package.json')).version, '0.6.0', 'historical release metadata says 0.6.0; later preparation may change the current version');
   assert.match(read('NOTES.md'), /^prd: \.prd\/prd-v6\.md$/m, 'NOTES.md carries the v6 evaluation, not PRD v4\'s');
   assert.ok(fs.existsSync(path.join(repo, '.prd/evidence/prd-v6/ce98abdbc6edd4e8d4f5736fee35dd765b930452/manifest.json')), 'the v6 evidence manifest is present');
   assert.ok(git('tag', '-l', 'v0.6.0').includes('v0.6.0'), 'the v0.6.0 tag exists locally');

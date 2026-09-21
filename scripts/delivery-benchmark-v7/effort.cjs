@@ -22,8 +22,10 @@
 // Nothing here runs a model, opens a socket or executes a candidate. Report
 // regeneration is a pure function of the stored events.
 const crypto = require('node:crypto');
+const usage = require('./usage.cjs');
 
-const SCHEMA = 7;
+const SCHEMA = 7; // Historical and unlaunched records retain their original reader.
+const ATTEMPT_SCHEMA = 8;
 const ARMS = ['plain', 'pincer', 'strict'];
 const STATUSES = ['pending', 'valid', 'invalid', 'unavailable', 'outstanding'];
 const OUTCOMES = ['accepted', 'rejected', 'unverified', 'error'];
@@ -114,8 +116,9 @@ function problems(r, { frozen = null } = {}) {
   const out = [];
   const bad = (code, detail) => out.push({ code, detail });
   if (!r || typeof r !== 'object' || Array.isArray(r)) return [{ code: 'RECORD_INVALID', detail: 'record must be an object' }];
-  if (r.schema !== SCHEMA) bad('SCHEMA_UNKNOWN', `schema must be ${SCHEMA}`);
-  const known = ['schema', 'run', 'cohort', 'brief', 'arm', 'repetition', 'order', 'status', 'reason', 'provenance', 'environment', 'adoption', 'workspace', 'events', 'reported', 'unavailable', 'evaluation'];
+  if (![SCHEMA, ATTEMPT_SCHEMA].includes(r.schema)) bad('SCHEMA_UNKNOWN', `schema must be ${SCHEMA} or ${ATTEMPT_SCHEMA}`);
+  const known = ['schema', 'run', 'cohort', 'brief', 'arm', 'repetition', 'order', 'status', 'reason', 'provenance', 'environment', 'adoption', 'workspace', 'events', 'reported', 'unavailable', 'evaluation', 'measurement'];
+  if (r.schema === ATTEMPT_SCHEMA) known.push('attempts');
   for (const k of Object.keys(r)) if (!known.includes(k)) bad('RECORD_INVALID', `unknown key "${k}"`);
   if (!ARMS.includes(r.arm)) bad('RECORD_INVALID', `arm must be one of ${ARMS.join(', ')}`);
   if (!STATUSES.includes(r.status)) bad('RECORD_INVALID', `status must be one of ${STATUSES.join(', ')}`);
@@ -126,6 +129,8 @@ function problems(r, { frozen = null } = {}) {
   // A status that admits something went wrong must say what.
   if (['invalid', 'unavailable', 'outstanding'].includes(r.status) && !isStr(r.reason, LIMITS.reason)) bad('REASON_REQUIRED', `status ${r.status} needs a reason`);
   if (['pending', 'valid'].includes(r.status) && r.reason !== null) bad('RECORD_INVALID', 'reason is only for invalid, unavailable or outstanding runs');
+
+  if (r.schema === ATTEMPT_SCHEMA) out.push(...attemptProblems(r));
 
   // Provenance: a run that is going to be reported must say what produced it.
   const p = r.provenance;
@@ -178,10 +183,14 @@ function problems(r, { frozen = null } = {}) {
     for (const [i, e] of r.events.entries()) out.push(...eventProblems(e, i, ids));
   }
 
+  out.push(...usage.problems(r));
+
   // Reported metrics: null needs a reason, and a number needs not to be a fake zero.
   // A `pending` run has not run yet, so nothing is expected of it; from the moment a
   // record is reportable, every null must say why it is null rather than zero.
-  for (const key of ['tokens', 'cost_usd', 'provider_minutes']) {
+  // Native-login records (T-121) add `estimate_usd`: the tool's list-price estimate, reported
+  // as an estimate and, when unknown, as unavailable with its reason, never as zero.
+  for (const key of ['tokens', 'cost_usd', 'provider_minutes', ...(Object.hasOwn(r.reported || {}, 'estimate_usd') ? ['estimate_usd'] : [])]) {
     const v = r.reported[key];
     if (v === null) {
       if (r.status !== 'pending' && !isStr(r.unavailable[key], LIMITS.reason)) bad('REASON_REQUIRED', `reported.${key} is null and needs unavailable.${key} to say why`);
@@ -189,7 +198,7 @@ function problems(r, { frozen = null } = {}) {
     else if (key in r.unavailable) bad('RECORD_INVALID', `reported.${key} is measured; unavailable.${key} must not be set`);
   }
   for (const key of Object.keys(r.unavailable)) {
-    if (!['tokens', 'cost_usd', 'provider_minutes', ...STAGES].includes(key)) bad('RECORD_INVALID', `unavailable.${key} names no metric`);
+    if (!['tokens', 'cost_usd', 'provider_minutes', 'estimate_usd', ...STAGES].includes(key)) bad('RECORD_INVALID', `unavailable.${key} names no metric`);
   }
 
   // Evaluation: the verdict must follow from the checks.
@@ -216,6 +225,65 @@ function problems(r, { frozen = null } = {}) {
     }
   } else if (r.status === 'valid') {
     bad('EVALUATION_MISSING', 'a valid run has an evaluation; without one it is outstanding, not accepted');
+  }
+  return out;
+}
+
+// Schema 8 extends the measurement envelope only. Schema 7 is read without adding
+// inferred attempts or silently reclassifying historical observations.
+function attemptProblems(record) {
+  const out=[]; const bad=detail=>out.push({code:'ATTEMPT_INVALID',detail});
+  if(!Array.isArray(record.attempts)||!record.attempts.length||record.attempts.length>1000) {bad('schema 8 requires 1..1000 attempt records');return out;}
+  const ids=new Set(), sessions=new Set(); let ordinal=0;
+  for(const attempt of record.attempts) {
+    if(!attempt || typeof attempt!=='object') {bad('attempt must be an object');continue;}
+    const legacy=attempt.origin==='legacy';
+    const allowed=['id','origin','directory','status','started','ended','reason','base','configuration_digest','unrelated_inputs','sessions','evaluation'];
+    if(Object.keys(attempt).some(k=>!allowed.includes(k)))bad('unknown attempt field');
+    if(!['legacy','v8'].includes(attempt.origin))bad('unknown attempt origin');
+    const expected=legacy?'legacy-000001':`attempt-${String(++ordinal).padStart(6,'0')}`;
+    if(attempt.id!==expected||ids.has(attempt.id))bad('attempt identity must be unique and sequential');ids.add(attempt.id);
+    if(legacy&&record.attempts.indexOf(attempt)!==0)bad('legacy attempt must precede new attempts');
+    if(attempt.directory!==(legacy?'.':`attempts/${attempt.id}`))bad('attempt path is not contained in its identity');
+    if(!['running','interrupted','completed'].includes(attempt.status))bad('unknown attempt status');
+    if(!(isIso(attempt.started)||(legacy&&attempt.started===null)))bad('attempt start must be observed or explicitly legacy-unknown');
+    if(attempt.ended!==null&&!isIso(attempt.ended))bad('attempt end must be ISO or null');
+    if(attempt.status==='running'&&(attempt.ended!==null||attempt.reason!==null))bad('running attempt must remain open');
+    if(attempt.status!=='running'&&!isIso(attempt.ended))bad('closed attempt needs an end');
+    if(attempt!==record.attempts.at(-1)&&attempt.status!=='interrupted')bad('only the current attempt may run or complete');
+    if(record.status!=='pending'&&attempt.status==='running')bad('terminal cell cannot contain a running attempt');
+    if(record.status==='pending'&&attempt.status==='completed')bad('pending cell cannot contain a completed attempt');
+    if(attempt.status==='completed'&&attempt.reason!==null)bad('completed attempt cannot claim an interruption reason');
+    if(isIso(attempt.started)&&isIso(attempt.ended)&&ms(attempt.ended)<ms(attempt.started))bad('attempt end precedes start');
+    if(attempt.status==='interrupted'&&!isStr(attempt.reason,500))bad('interrupted attempt needs a reason');
+    if(attempt.unrelated_inputs!==null&&(!attempt.unrelated_inputs||attempt.unrelated_inputs.path!==`${attempt.directory}/unrelated-inputs.json`||!isHex64(attempt.unrelated_inputs.sha256)))bad('unrelated input snapshot must be contained and hashed');
+    if(attempt.configuration_digest!==null&&!isHex64(attempt.configuration_digest))bad('attempt configuration digest must be SHA256 or null');
+    if(attempt.base!==null&&!isSha(attempt.base))bad('attempt base must be a commit or null');
+    if(!['not-started','started','completed'].includes(attempt.evaluation))bad('unknown evaluation checkpoint');
+    if(!Array.isArray(attempt.sessions)) {bad('attempt sessions must be an array');continue;}
+    if(!legacy&&attempt.sessions.length&&!isSha(attempt.base))bad('launched attempt requires its recorded original base');
+    for(const session of attempt.sessions) {
+      if(!session||typeof session!=='object') {bad('session must be an object');continue;}
+      if(Object.keys(session).some(k=>!['id','name','status','intent_at','ended','payload','stderr','unavailable'].includes(k)))bad('unknown session field');
+      if(!/^S[1-9][0-9]*$/.test(session.name)||session.id!==`${attempt.id}:${session.name}`||sessions.has(session.id))bad('session identity must be unique');sessions.add(session.id);
+      const prefix=legacy?'logs':`${attempt.directory}/logs`;
+      if(session.payload!==`${prefix}/${session.name}.json`||session.stderr!==`${prefix}/${session.name}.err`)bad('session payload path escapes its attempt');
+      if(!['intent','completed','unavailable'].includes(session.status))bad('unknown session status');
+      if(!(isIso(session.intent_at)||(legacy&&session.intent_at===null)))bad('session intent timestamp missing');
+      if(session.ended!==null&&!isIso(session.ended))bad('session end must be ISO or null');
+      if(session.status==='completed'&&(!isIso(session.ended)||session.unavailable!==null))bad('completed session needs an end and cannot claim unavailable completion');
+      if(isIso(session.intent_at)&&isIso(session.ended)&&ms(session.ended)<ms(session.intent_at))bad('session end precedes intent');
+      if(session.status==='intent'&&(session.ended!==null||session.unavailable!==null||attempt.status!=='running'))bad('intent must be open under running attempt');
+      if(session.status==='unavailable'&&!isStr(session.unavailable,500))bad('unavailable session needs a reason');
+      if(!legacy) {
+        const event=Array.isArray(record.events)&&record.events.find(e=>e.id===`${record.run}:${session.id}`);
+        if(!event||event.kind!=='session'||event.started!==session.intent_at||event.ended!==session.ended)bad('session must match its unique durable event');
+      }
+    }
+  }
+  if(Array.isArray(record.events)) for(const event of record.events.filter(e=>e.kind==='session')) {
+    const linked=record.attempts.some(attempt=>Array.isArray(attempt?.sessions)&&attempt.sessions.some(session=>session&&typeof session==='object'&&event.id===(attempt.origin==='legacy'?`${record.run}:${session.name}`:`${record.run}:${session.id}`)));
+    if(!linked)bad('every paid session event requires an attempt/session entry');
   }
   return out;
 }
@@ -270,9 +338,15 @@ function report(r) {
     active_minutes: active,
     session_minutes_summed: sessions.length ? round(intervalsOf(sessions).reduce((t, i) => t + (i.end - i.start), 0) / 60000) : null,
     elapsed_minutes: elapsed,
+    measurement: r.measurement || null,
+    usage_limitation: r.measurement ? (r.measurement.coverage === 'attempt-ledger' ? null : 'Only explicitly listed legacy sessions are covered; historical attempt coverage is unknown.') : 'Legacy usage semantics and attempt coverage are unverified.',
     provider_minutes: r.reported.provider_minutes,
     tokens: r.reported.tokens,
     cost_usd: r.reported.cost_usd,
+    // Native-login records (T-121): the tool's list-price estimate, labelled as such, and the
+    // declared billing block. Under a subscription no charge is attributable; that is not zero.
+    estimate_usd: r.reported.estimate_usd ?? null,
+    billing: r.measurement?.billing ?? null,
     unavailable: { ...r.unavailable },
     sessions: sessions.length,
     commands: r.events.filter(e => e.kind === 'command').length,
@@ -286,6 +360,33 @@ const round = n => Math.round(n * 100) / 100;
 
 // Aggregate a set of reports per arm. Denominators are explicit: a rate is always
 // reported with the number of runs it was computed over and the number excluded.
+// One measurement profile per aggregate: legacy API-key records (`cost_usd`) and native-login
+// records (`estimate_usd`) are never pooled, and a dollar column is only ever the profile's
+// own labelled figure. Comparison admissibility beyond that is the report's rule, not this one.
+function aggregateUsage(reports, key) {
+  const profiles = new Set(reports.map(r => r.measurement?.profile));
+  const profile = profiles.size === 1 ? [...profiles][0] : null;
+  const compatible = profile === usage.PROFILE ? key !== 'estimate_usd' : profile === usage.NATIVE_PROFILE ? key !== 'cost_usd' : false;
+  const supported = reports.length > 0 && compatible && reports.every(r => r.measurement.coverage === 'attempt-ledger');
+  const measured = reports.filter(r => r[key] !== null && typeof r[key] === 'number');
+  const values = reports.map(r => r.measurement?.metrics?.[key] ? r.measurement.metrics[key].measured_subtotal : r[key]).filter(v => typeof v === 'number');
+  const subtotal = values.reduce((a, b) => a + b, 0);
+  const safe = Number.isFinite(subtotal) && (key !== 'tokens' || Number.isSafeInteger(subtotal));
+  const complete = supported && measured.length === reports.length && safe;
+  return {
+    total: complete ? subtotal : null,
+    measured_subtotal: values.length && safe ? subtotal : null,
+    of: measured.length,
+    unmeasured: reports.length - measured.length,
+    complete,
+    limitation: !supported
+      ? (profiles.size > 1 ? 'Mixed measurement profiles (legacy API-key and native-login) are never pooled; no comparable total.'
+        : profile === usage.NATIVE_PROFILE && key === 'cost_usd' ? 'Native-login records carry no attributable cost; see estimate_usd (list-price estimate) and the billing block.'
+          : 'Legacy, unknown or mixed accounting coverage; no comparable total.')
+      : complete ? null : 'One or more sessions have unavailable usage or the sum exceeds the numeric range.',
+  };
+}
+
 function aggregate(reports) {
   const arms = {};
   for (const arm of ARMS) {
@@ -302,7 +403,10 @@ function aggregate(reports) {
       accepted: valid.filter(r => r.outcome === 'accepted').length,
       // Every rate carries the denominator it was computed over.
       acceptance: valid.length ? { accepted: valid.filter(r => r.outcome === 'accepted').length, of: valid.length } : null,
-      cost_usd: { total: sum(measured('cost_usd')), of: measured('cost_usd').length, unmeasured: valid.length - measured('cost_usd').length },
+      cost_usd: aggregateUsage(all, 'cost_usd'),
+      estimate_usd: aggregateUsage(all, 'estimate_usd'),
+      tokens: aggregateUsage(all, 'tokens'),
+      provider_minutes: aggregateUsage(all, 'provider_minutes'),
       active_minutes: { total: sum(measured('active_minutes')), of: measured('active_minutes').length, unmeasured: valid.length - measured('active_minutes').length },
       review_minutes: { total: sum(valid.map(r => r.stages.review).filter(v => v !== null)), of: valid.filter(r => r.stages.review !== null).length, unmeasured: valid.filter(r => r.stages.review === null).length },
       interventions: INTERVENTIONS.reduce((acc, k) => ({ ...acc, [k]: valid.reduce((t, r) => t + r.interventions[k], 0) }), {}),
@@ -312,6 +416,6 @@ function aggregate(reports) {
 }
 
 module.exports = {
-  SCHEMA, ARMS, STATUSES, OUTCOMES, RESULTS, STAGES, EVENT_KINDS, INTERVENTIONS, LIMITS,
+  SCHEMA, ATTEMPT_SCHEMA, attemptProblems, ARMS, STATUSES, OUTCOMES, RESULTS, STAGES, EVENT_KINDS, INTERVENTIONS, LIMITS,
   sha256, mergeIntervals, minutesOf, empty, outcomeOf, problems, eventProblems, runId, report, aggregate, round,
 };

@@ -1,0 +1,58 @@
+flowchart TD
+    startHere(["Idea, bug, or feature"])
+    setup["Install Pincer in the project"]
+    status["Read status and saved work"]
+    existing{"Continue an existing change?"}
+    resumeWork[["Follow recovery chart 3"]]
+    plan["PLAN: write what success means"]
+    investigate["INVESTIGATE: read code, test risks"]
+    scope["Write the plan, limits, and exclusions"]
+    approved{"Scope and design already allowed?"}
+    ask["Show the proposal and ask the user"]
+    narrow["NARROW: split into ordered tickets"]
+    checks["Give each ticket a test and success checks"]
+    register["Register and select this change"]
+    strict{"Use strict coverage?"}
+    map["Draft links: each goal to tickets and checks"]
+    reviewMap["Review gaps and author the real map"]
+    mapGate{"Map valid and complete?"}
+    adopt["Preview and adopt the map"]
+    ordinary["Use normal checks; strict coverage unverified"]
+    record["Record permission for this exact plan"]
+    activate["Activate the change"]
+    build[["CODE: ticket loop in chart 2"]]
+    complete["Complete the change and commit built state"]
+    candidate["Choose a clean, saved code version"]
+    evaluate["EVALUATE: tests, code, goals, UI, security"]
+    evidence["Save test logs and review results for this version"]
+    good{"Required proof passes and matches this code?"}
+    repair["Reopen work and create a fix ticket"]
+    release["RELEASE: read-only audit and project checks"]
+    releaseGate{"Audit passes and files stay unchanged?"}
+    route["Report failure and return to the responsible stage"]
+    ready(["Ready for a release decision"])
+    publish["Merge or publish only under separate authorization"]
+
+    startHere --> setup --> status --> existing
+    existing -->|"Yes"| resumeWork
+    existing -->|"No"| plan --> investigate --> scope --> approved
+    approved -->|"No"| ask
+    ask -->|"Approved or revised"| scope
+    approved -->|"Yes"| narrow --> checks --> register --> strict
+    strict -->|"Yes"| map --> reviewMap --> mapGate
+    mapGate -->|"No"| reviewMap
+    mapGate -->|"Yes"| adopt --> record
+    strict -->|"No"| ordinary --> record
+    record --> activate --> build --> complete --> candidate --> evaluate --> evidence --> good
+    good -->|"No"| repair --> build
+    good -->|"Yes"| release --> releaseGate
+    releaseGate -->|"No"| route
+    releaseGate -->|"Yes"| ready --> publish
+    resumeWork -->|"When work is ready"| build
+
+    classDef gate fill:#FFF3CD,stroke:#997000,color:#222
+    classDef blocked fill:#FCE8E6,stroke:#B3261E,color:#222
+    classDef success fill:#E6F4EA,stroke:#137333,color:#222
+    class approved,mapGate,good,releaseGate gate
+    class repair,route blocked
+    class ready success

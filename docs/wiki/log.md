@@ -337,3 +337,41 @@ the user's.
 - Outcome: T-99 done, receipt `a05a552f47b9`. No session ran and nothing was spent. What
   remains before run #1 is decisions, not code: cap, projects, reviewers, and a browser
   adapter ([[v7-execution-gaps]]).
+
+## [2026-09-19] end | T-109 smoke execution package prepared; smoke launch path added
+What: packaged the first operational smoke (identities, prompts, schedule, caps, checks,
+auth prerequisites, stop/resume, blockers, protocol corrections) without any paid session;
+fixed the orchestrator so the smoke can run through the frozen loop (`--study-purpose`,
+`--repetitions`), regenerated `frozen.json`, staged a study root at
+`/Users/Shared/pincer-v8-study`, dry-resolved the proposed effective manifest and ran the
+inspector on an honest draft. Files: `scripts/delivery-benchmark-v7/{orchestrator,effective}.cjs`,
+`test/benchmark-study-launch.test.js`, `docs/prd-v8-artifacts/execution/*`,
+`docs/prd-v8-progress.md`, `docs/wiki/systems/study-readiness-gate.md`.
+Outcome: readiness still pending on user decisions and reviewed evidence, by design.
+
+## [2026-09-19] end | T-109 smoke package corrected after review
+Three review findings fixed: the CLI planned all eight briefs (added `--briefs`, required for the smoke purpose, CLI-level regression that spawns the documented command); the proposed inspector command failed `PATH_INVALID` (manifest must be inside the input root; now the study checkout's copy, exercised); `cleanup_complete` was never retained (now in `record.environment`; evidence table split into configured vs observed, hook firing unobservable under `json`).
+Files: `scripts/delivery-benchmark-v7/{effective,orchestrator,isolated-launch}.cjs`, `test/benchmark-{study-launch,environment}.test.js`, frozen cohort `f09e4312…` → `d1e57a17…`, package §2/§4/§5/§8/§9/§10/§11/§12, progress journal, wiki gate page/threads/briefing.
+Study root: worktree moved to `bffcfc8`; drafts regenerated (effective cohort `64325207…`); `runs/smoke` untouched. No paid launch, push, merge or publication.
+
+## [2026-09-19] end | T-109 native-observation preparation
+Replaced the withdrawn real-config hashing with a synthetic isolation canary (planted user settings + CLAUDE.md in the per-session HOME/config; `isolation_canary` recorded, tripped = unreportable) and captured kit hooks via the CLI's `--debug hooks --debug-file` log, retained redacted as `logs/S1.debug.log` (`hook_capture` recorded). Stdout/result parsing unchanged.
+Ticket T-109's Verification block now reads the study checkout's manifest with `--input-root` and keeps the measured gate (14 pending today).
+Files: `isolated-launch.cjs`, `test/benchmark-environment.test.js`, `docs/prd-v8-agent-isolation.md`, frozen cohort `d1e57a17…` → `b0299e7e…`, observation target `8af4d99d…` → `d53ff6f0…`, package §1/§2/§5/§8/§9/§10/§11/§12, progress, wiki. Worktree at `f504c80`; drafts regenerated (`141a70da…`). No paid launch, push or publication.
+
+## [2026-09-19] end | T-109 observation gate: graded hook evidence, canary ≠ demonstration
+`isolation_canary` now {leak_detected, user_hook_ran, user_settings_loaded, user_instructions_loaded} with `unknown` where evidence is insufficient; `hook_evidence.status` (missing/unreadable/unretained/insufficient/sufficient) feeds one `reportability()` gate with named reasons written to `record.reason`; retention failure preserves the log in scratch and stops the allocation (`ALLOCATION_EVIDENCE_UNRETAINED`). Corrected the false "phrase is never retained" claim.
+Tested at the gate, fixture tool, allocator and orchestration path. Files: `isolated-launch.cjs`, `allocation.cjs`, `orchestrator.cjs`, three suites, `docs/prd-v8-agent-isolation.md`, cohort `b0299e7e…` → `fef7ffdc…`, package §1/§2/§4/§5/§9/§11/§12, progress, wiki. Worktree at `499fb6b`, drafts `12535053…`. No paid launch, push or publication.
+
+- 2026-09-19: Direct review fix rejects registration-only hook evidence and preserves
+  unreadable/uncopyable raw evidence in its original protected directory. Eight focused
+  suites pass; full-suite verification is limited by sandbox socket/process restrictions.
+  T-109's pinned verifier records failure honestly. External study drafts need refreshing.
+  See `docs/prd-v8-progress.md` and [[study-readiness-gate]].
+
+## [2026-09-20] end | T-120 native-tool study contracts authored
+Authored docs/prd-v8-native-tool-contracts.md (host-tool boundary per surface with versions checked, native-login isolation profile, billing-mode-aware usage/allocation/readiness/comparison rules, migration and rollback, replacement package design); new suite test/native-tool-contracts.test.js (77 suites); amendment sections in protocol/isolation/usage docs and nine tickets; contract appended to SPEC.harness, cohort 1027f120… → a6a6d474…. Copilot unobserved; login preservation on 2.1.273 is the first T-109 observation. No live session.
+
+## [2026-09-20] end | T-121 native-login study path implemented
+
+Implemented the T-120 contract in scripts/delivery-benchmark-v7/: native-login launcher profile with pre-workspace status probe, override refusal by name and billing block; new login-custody.cjs (exclusive journaled lock on host/claude-config, exclusive-creation canaries, custody-safe cleanup, explicit recovery); native usage reader (estimate_usd + billing, cost_usd never filled); schema-2 allocation grants with max_sessions and custody/limit/capture stops; readiness schema 2; orchestrator --i-agreed-the-usage-envelope, credential refusal before planning, held custody. New suite test/native-login-study.test.js (78 suites); environment, study-readiness, restart and allocation suites updated. Replacement package T-121-native-smoke-execution-package.md; study.json schema 2; proposed inputs name the native profile. Frozen cohort re-minted (`99368435…`). Pinned-kit T-121 start/verify/done (receipt 826a1616422f, 10:39Z); full npm test passed twice (exit 0, second run 10:39Z–10:54Z on the final tree). Not pushed. No account login, live session or spending; native login preservation remains unobserved.
