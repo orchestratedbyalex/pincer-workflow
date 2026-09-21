@@ -535,3 +535,42 @@ The new race tests and custody filesystem tests passed during pinned-kit verific
 User reports Claude Pro and no reviewers. Revised schema-2 operational-smoke readiness to permit one explicitly non-independent operator with a user-decided, purpose- and candidate-bound participation decision. All evidence reviews and execution authorization remain required; measured studies retain two independent human reviewers. Added positive and negative boundary cases; no reviewer decisions, evidence reviews, login or execution approval were manufactured. This changes frozen inputs and requires a new candidate, CI and study refresh before launch.
 
 Validation: study-readiness (including solo-smoke boundary cases), native-tool contracts, readiness contracts, execution-freeze and whitespace checks passed. Allocation regression was attempted but blocked at `CUSTODY_INVALID: Session supervisor identity is unavailable` in the restricted environment; the chained study-launch suite did not run. Host verification and exact-candidate CI remain pending. Frozen cohort `a03b8e89a3b9d2cb06860569d5d2caec6bac29147c62fc7057b1c027a770b464`.
+
+
+### 21 September — current-account login correction (local, host verification pending)
+
+The user's retained status diagnostic succeeds only for the tested construction with
+OS-account HOME plus USER and LOGNAME. The user confirmed the study account reporting
+Max. No model session ran. `claude-project-current-account-login-v1` now uses that
+construction for native pre-workspace status, pre-session status and supervised launch.
+The previous native profile remains readable with its original observation identity and
+is refused for launch. Effective native usage metadata recognizes both identities.
+
+Supervisor scratch is derived from TMPDIR instead of HOME. No native home canary is
+planted; personal-configuration absence stays unknown and only the owned login-directory
+canary is used. Fixtures keep synthetic HOME and cannot supply native evidence. Contracts,
+proposed inputs and the frozen cohort were updated. The new environment suite checks
+status propagation through the actual pre-workspace gate and scratch/home separation.
+
+Local passes: current-account-environment, native-tool-contracts, execution-freeze,
+benchmark-effective-inputs, study-readiness, benchmark-study-launch, readiness-contracts.
+The native-login and environment suites stop at CUSTODY_REGISTRATION_FAILED; allocation
+stops at unavailable supervisor identity. `ps` is denied by this execution sandbox.
+These are not passing session-suite receipts. Host verification and full npm test remain
+pending, followed by commit and exact-candidate CI. No ticket closure, push, study refresh,
+publication or session authorization is recorded by this correction.
+
+
+Host verification follow-up: `/tmp/pincer-current-account-verification.RXA3iA`
+passed current-account-environment, benchmark-environment, native-login-study and
+benchmark-allocation. The full chain stopped at change-review-packet because its
+current suite inventory still listed 78 suites. The inventory now lists all 79
+package.json suites, including current-account-environment; historical verification
+results in the same table remain unchanged. Full-chain completion and CI are pending.
+
+
+Host full-chain follow-up: the user supplied the complete `npm test` output with all
+79 suites passing, ending with native-login-study and current-account-environment.
+This supersedes the earlier host-verification pending status for this local change.
+The output is user-supplied evidence, not an independently retained CI receipt.
+Commit and exact-candidate CI remain pending; no native model session has run.

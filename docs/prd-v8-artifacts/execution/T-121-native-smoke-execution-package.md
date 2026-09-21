@@ -18,7 +18,7 @@ establish.
 
 | Item | Behavior |
 | --- | --- |
-| Profile | `claude-project-native-login-v1` (`isolated-launch.cjs`): `authentication: host-login-config-dir`, login directory `host/claude-config` under the study root, sanitized status record `claude-auth-status-json-v1`, `billing_mode` declared in the study manifest; canary, hook capture, project-only settings, manual permissions, empty MCP and the explicit environment are unchanged from the historical profile. `claude-project-isolated-v1` is refused with `PROFILE_HISTORICAL`. |
+| Profile | `claude-project-current-account-login-v1` (`isolated-launch.cjs`): `authentication: host-login-config-dir`, login directory `host/claude-config` under the study root, sanitized status record `claude-auth-status-json-v1`, `billing_mode` declared in the study manifest; OS-derived HOME, USER and LOGNAME preserve current-account login; TMPDIR owns scratch. Native launches plant only the study login-directory canary; personal-configuration absence remains unknown. Hook capture, project-only settings, manual permissions and empty MCP remain. Both earlier profiles are historical for launch. `claude-project-isolated-v1` is refused with `PROFILE_HISTORICAL`. |
 | Environment | Constructed from nothing: `PATH`, `HOME` (per-session), `CLAUDE_CONFIG_DIR` (the study login directory), `TMPDIR`, `LANG`, `LC_ALL`, `CLAUDE_PROJECT_DIR`, `GIT_CONFIG_NOSYSTEM`, `GIT_CONFIG_GLOBAL`. No credential variable of any kind is constructed; the supervisor refuses an environment that carries one. |
 | Override refusal | Before planning (`orchestrator.cjs main`), before the first cell and before each cell's workspace, the launching environment is checked for `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_PROFILE`, `ANTHROPIC_FEDERATION_RULE_ID`, `ANTHROPIC_BASE_URL`, `CLAUDE_CODE_USE_BEDROCK`, `CLAUDE_CODE_USE_VERTEX`, `CLAUDE_CODE_USE_FOUNDRY`; a project settings source that sets `apiKeyHelper`, `env`, `awsAuthRefresh` or `awsCredentialExport` is refused too. Code `BILLING_OVERRIDE_PRESENT`; the message names the variable or key, never a value; the shell is not edited. |
 | Custody | One exclusive lock per canonical login directory (`login-custody.cjs`), stored with a durable journal in `host/.login-custody/` (outside the credential directory), acquired before the directory inspection and the status probe and held through the session, capture retention and canary cleanup. A live owner is `LOGIN_DIR_BUSY`; a dead or unknown owner is `LOGIN_DIR_RECOVERY_REQUIRED` and is never stolen. |
@@ -82,7 +82,7 @@ is not reused.
 
 1. Refresh the study checkout to the commit that carries this package, regenerate the
    effective manifest and schedule from the [proposed inputs](smoke-execution-inputs.proposed.json)
-   (now `isolation_profile: claude-project-native-login-v1`), and write the schema-2
+   (now `isolation_profile: claude-project-current-account-login-v1`), and write the schema-2
    manifest. Inspect from the repository root:
 
    ```sh
@@ -158,3 +158,13 @@ The user reports Claude Pro and no available independent reviewers. Record subsc
 For schema-2 operational smoke only, one operator may review technical captures with `independent: false`. A referenced `operational-smoke-reviewer-decision` must have the usual decision envelope and bind `decided_by: user`, the operator's `reviewer` ID, `independent: false`, `purpose: operational-smoke`, and the exact `candidate`. Per-kind evidence reviews, retained artifacts, project access, numeric limits and separate execution authorization are still required. No participation or evidence-review decision is inferred from this amendment.
 
 Measured and comparative studies still require two independent non-implementing human reviewers. Solo smoke establishes technical observations only; it cannot establish workflow superiority or independent review effort. The gate rejects the solo arrangement for measured use. This gate change creates a new candidate and cohort: the earlier green commit and draft are historical and must be refreshed after candidate CI.
+
+
+## Current-account execution amendment — 21 September 2026
+
+The user confirmed the study account reporting Max. Do not carry forward the earlier
+Pro declaration. Authentication status succeeded with normal HOME plus USER and LOGNAME;
+this is not a native session observation. The current-account profile and new cohort
+require renewed exact-candidate CI and regenerated draft inputs. All earlier prepared
+drafts, CI receipts, authorizations and external checkouts retain their original identities.
+No session has run under this amendment. Bounded execution authorization remains pending.

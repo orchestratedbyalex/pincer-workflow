@@ -282,3 +282,19 @@ and whether its hook log matches the grammar remain T-109 observations.
 ### Custody correction — 20 September 2026
 
 Native login cleanup retires canaries to journaled private holding paths and retains their bytes; it never unlinks a mutable login-directory pathname after checking it. Replacements and uncertain files remain preserved for explicit recovery. Recovery holds its guard through cleanup and receipts. Both login and run claims record the detached supervisor group before task startup, so surviving children prevent recovery after owner death. See the native-tool contract's custody correction.
+
+
+## Current-account native profile — 21 September 2026
+
+`claude-project-current-account-login-v1` supersedes the earlier native profile for
+launch. It keeps the dedicated study login directory, but preserves OS-derived HOME,
+USER and LOGNAME consistently through status probes and the supervisor. The earlier
+native profile remains readable and is refused for launch. See the current-account
+amendment in [native-tool contracts](prd-v8-native-tool-contracts.md).
+
+The user's retained status diagnostic succeeded for this construction; no model
+session has run. The user confirmed the account whose sanitized status reports Max.
+The supervisor derives session paths from TMPDIR, never HOME. Pincer plants no
+canary in personal configuration. Native records mark the home canary not installed
+and personal-configuration absence unknown. The login-directory canary remains under
+custody. Fixture-only synthetic HOME checks do not demonstrate native isolation.

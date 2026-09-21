@@ -181,6 +181,39 @@ is excluded; the user signs in through `copilot login` inside a study `COPILOT_H
 
 ## 2. Authenticated isolation without credential copying (S-62)
 
+### Current-account amendment — 21 September 2026
+
+The active launch profile is now `claude-project-current-account-login-v1`. The
+`claude-project-native-login-v1` profile below remains historical and readable with
+its original observation target, but is refused for new launches. The current-account
+profile supersedes §2.2's dedicated-account alternative for the user's operational smoke.
+
+The user requires their existing macOS account and confirmed use of the study login
+whose sanitized status reports `subscription_type: max`. The retained
+[T-109 diagnostic](prd-v8-artifacts/execution/T-109-native-login-blocker.md) succeeds
+with OS-account HOME plus OS-derived USER and LOGNAME; neither fresh HOME plus those
+names nor real HOME alone succeeded. This observes authentication status only, not
+model execution or configuration isolation.
+
+Native pre-workspace probes, pre-session probes and supervised tool launches use the
+same minimal environment, adding only OS-derived HOME, USER and LOGNAME. They keep
+the dedicated study CLAUDE_CONFIG_DIR. No shell environment is inherited and the
+credential/provider override refusal remains unchanged. Pincer does not access the
+contents of personal configuration or credential storage. The CLI handles its own login.
+
+Scratch is derived from the owned session TMPDIR, never HOME. Scratch containing the
+real account HOME is refused after canonicalizing paths. Cleanup continues to target
+only allocated study scratch. No home canary is installed for native launches: only
+the owned login-directory canary is planted. Records state `home_canary: not-installed`
+and `personal_configuration_absent: unknown`; a quiet canary cannot establish absence.
+Fixtures retain their synthetic HOME and are explicitly fixture evidence.
+
+All native usage semantics, custody, allocation, evidence retention, settings sources,
+permission gates and measured-observation requirements remain in force. A current-account
+status success does not satisfy measured isolation requirements. New frozen inputs and
+exact-candidate CI are required before preparing execution evidence. The earlier JSON
+examples below describe the original T-121 contract, not current launch inputs.
+
 ### 2.1 Profile `claude-project-native-login-v1` (design; T-121 implements)
 
 | Field | v1 (historical, API key) | native-login v1 (this contract) |

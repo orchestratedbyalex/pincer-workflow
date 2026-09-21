@@ -95,3 +95,20 @@ Next action: [candidate validation procedure](../../prd-v8-artifacts/execution/T
 macOS CI follow-up: control-area creation now tolerates concurrent mkdir while rejecting symlinks/non-directories; exclusive claims still decide ownership. Deterministic race tests pass. Pinned-kit re-verification was blocked at process registration in the sandbox and revoked the old receipt; rerun on the host before pushing. See the progress journal for candidate and cohort identities.
 
 Solo smoke amendment: user has Claude Pro and no independent reviewers. Schema-2 operational smoke may use one explicitly non-independent operator with a candidate-bound user decision; measured studies still require two independent reviewers. Evidence reviews and execution authorization remain separate. The previous green candidate must be replaced after CI on this amendment.
+
+
+## Current-account correction — 21 September 2026
+
+The active local implementation uses `claude-project-current-account-login-v1` with
+OS-derived HOME, USER and LOGNAME; the user confirmed the account reporting Max.
+The prior native profile remains readable and is historical for launch. See
+[the status diagnostic and boundaries](../../prd-v8-artifacts/execution/T-109-native-login-blocker.md).
+Scratch derives from TMPDIR, never HOME. Native home canaries are not installed;
+personal configuration absence remains unknown. Synthetic fixtures are not native
+observations. Host session-suite verification and renewed exact-candidate CI are pending;
+no model session has run. See the current-account entry in the progress journal.
+
+
+Host verification follow-up: the user supplied passing output for all 79 npm suites,
+including the process-custody suites that the assistant sandbox could not complete.
+Local host tests are now passed; commit and exact-candidate CI remain pending.

@@ -76,7 +76,7 @@ try {
     // "Canary not triggered" is not "isolation demonstrated": a hook that did not run and
     // a phrase that was not echoed leave the loading question unknown, never answered.
     const canary = result.environment.isolation_canary;
-    assert.deepEqual(canary, { leak_detected: false, user_hook_ran: false, login_dir_hook_ran: false, user_settings_loaded: 'unknown', user_instructions_loaded: 'unknown' }, JSON.stringify(canary));
+    assert.deepEqual(canary, { home_canary: 'installed-fixture-only', personal_configuration_absent: 'unknown', leak_detected: false, user_hook_ran: false, login_dir_hook_ran: false, user_settings_loaded: 'unknown', user_instructions_loaded: 'unknown' }, JSON.stringify(canary));
     assert.ok(!JSON.stringify(result).includes('PINCER-CANARY-'), 'a clean session leaves no phrase anywhere');
     assert.equal(result.environment.hook_capture.present, true, 'the fixture wrote a hook debug log');
     assert.equal(result.environment.hook_evidence.status, 'unretained', 'without a log directory nothing durable holds it');
@@ -282,7 +282,7 @@ try {
     const leaked = await isolation.observeFixture({ ...fixture(), mode: 'leak-canary' });
     assert.equal(leaked.status, 0, leaked.stderr);
     const canary = leaked.environment.isolation_canary;
-    assert.deepEqual(canary, { leak_detected: true, user_hook_ran: true, login_dir_hook_ran: true, user_settings_loaded: true, user_instructions_loaded: true }, 'the leaking tool read the login-directory canary');
+    assert.deepEqual(canary, { home_canary: 'installed-fixture-only', personal_configuration_absent: 'unknown', leak_detected: true, user_hook_ran: true, login_dir_hook_ran: true, user_settings_loaded: true, user_instructions_loaded: true }, 'the leaking tool read the login-directory canary');
     assert.equal(leaked.reportable, false);
     assert.ok(leaked.unreportable.includes('isolation canary tripped'));
     assert.match(leaked.stdout, /PINCER-CANARY-[a-f0-9]{16}/, 'captures keep what the tool printed, phrase included');
@@ -394,6 +394,8 @@ try {
   // The historical API-key profile is refused by name; the legacy readiness vocabulary too.
   const historical = gate(gateOptions, { ...manifest, effective: { ...manifest.effective, configuration: { ...manifest.effective.configuration, isolation_profile: isolation.PROFILE.name } } });
   assert.equal(historical.code, 'PROFILE_HISTORICAL'); assert.match(historical.detail, /not the execution path/);
+  const oldNative = gate(gateOptions, { ...manifest, effective: { ...manifest.effective, configuration: { ...manifest.effective.configuration, isolation_profile: isolation.LEGACY_NATIVE_PROFILE.name } } });
+  assert.equal(oldNative.code, 'PROFILE_HISTORICAL');
   assert.equal(gate({ ...gateOptions, readiness: { ...gateOptions.readiness, spendingAuthorized: true } }, manifest).code, 'READINESS_REQUIRED');
   assert.equal(gate({ ...gateOptions, readiness: { ...gateOptions.readiness, billingMode: 'api' } }, manifest).code, 'BILLING_MODE_MISMATCH', 'a subscription login cannot be declared api-billed');
   assert.equal(gate({ ...gateOptions, apiKey: SECRET }, manifest).code, 'BILLING_OVERRIDE_PRESENT');

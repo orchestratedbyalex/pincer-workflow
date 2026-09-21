@@ -20,9 +20,9 @@ const PROFILE = Object.freeze({
   hook_capture: 'debug-hooks-file',
   host_policy: 'managed-policy-preserved-observation-required',
 });
-// Current: the user's own `claude auth login` inside the study login directory. The runner
+// Historical native profile: retained verbatim for old observation identities. The runner
 // never creates, reads, copies or hashes a credential, and never injects a provider key.
-const NATIVE_PROFILE = Object.freeze({
+const LEGACY_NATIVE_PROFILE = Object.freeze({
   name: 'claude-project-native-login-v1', tool_version: '2.1.273',
   authentication: 'host-login-config-dir', config_dir: 'study-login-directory',
   login_dir: custody.LOGIN_DIR, status_record: 'claude-auth-status-json-v1',
@@ -32,7 +32,13 @@ const NATIVE_PROFILE = Object.freeze({
   hook_capture: 'debug-hooks-file',
   host_policy: 'managed-policy-preserved-observation-required',
 });
-const PROFILES = Object.freeze({ [PROFILE.name]: PROFILE, [NATIVE_PROFILE.name]: NATIVE_PROFILE });
+const NATIVE_PROFILE = Object.freeze({
+  ...LEGACY_NATIVE_PROFILE,
+  name: 'claude-project-current-account-login-v1',
+  home: 'current-os-account', account_names: 'os-user-and-logname',
+  home_canary: 'not-installed', personal_configuration_absent: 'unknown',
+});
+const PROFILES = Object.freeze({ [PROFILE.name]: PROFILE, [LEGACY_NATIVE_PROFILE.name]: LEGACY_NATIVE_PROFILE, [NATIVE_PROFILE.name]: NATIVE_PROFILE });
 const MEASUREMENT_PROFILE = 'claude-code-result-native-usage-v1';
 const TOOL_SURFACE = 'claude-code';
 const BILLING_MODES = ['subscription', 'api'];
@@ -156,18 +162,18 @@ function nativeStatusCommand(bundle) {
   return [fs.realpathSync(executable), 'auth', 'status', '--json'];
 }
 const fixtureStatusCommand = mode => [process.execPath, __filename, '--fixture-auth-status', mode || 'subscription'];
-// A throwaway HOME for the pre-workspace probe: the same construction as a session, minus
-// the project directory that does not exist yet.
-function probeEnvironment(probeRoot, loginDir) {
-  const env = buildEnvironment(probeRoot, null, loginDir);
+// Pre-workspace status uses the same account construction as the eventual native
+// session, with separate disposable scratch and no project directory.
+function probeEnvironment(probeRoot, loginDir, currentAccount) {
+  const env = currentAccount ? buildCurrentAccountEnvironment(probeRoot, null, loginDir) : buildEnvironment(probeRoot, null, loginDir);
   delete env.CLAUDE_PROJECT_DIR;
   return env;
 }
-function probeUnderCustody(command, loginDir, billingMode) {
+function probeUnderCustody(command, loginDir, billingMode, currentAccount = false) {
   const probeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pincer-login-probe-'));
   try {
     for (const name of ['home', 'tmp']) fs.mkdirSync(path.join(probeRoot, name), { mode: 0o700 });
-    const record = probeLogin(command, probeEnvironment(probeRoot, loginDir), probeRoot, loginDir);
+    const record = probeLogin(command, probeEnvironment(probeRoot, loginDir, currentAccount), probeRoot, loginDir);
     checkBillingMode(record, billingMode);
     return record;
   } finally { fs.rmSync(probeRoot, { recursive: true, force: true }); }
@@ -188,7 +194,7 @@ function establishLogin(options, { statusCommand, ids = {} }) {
     // other unexpected name is still dirt.
     custody.requireClean(handle.loginDir, handle.journal.canaries.filter(c => ['intended', 'created'].includes(c.state)).map(c => c.name));
     let authentication = null;
-    if (acquired) authentication = probeUnderCustody(statusCommand, handle.loginDir, options.billingMode);
+    if (acquired) authentication = probeUnderCustody(statusCommand, handle.loginDir, options.billingMode, options.currentAccount);
     return { custody: handle, acquired, authentication, loginDir: handle.loginDir };
   } catch (error) {
     if (acquired) { try { custody.release(handle, { recovery_required: error.code === 'LOGIN_DIR_RECOVERY_REQUIRED', detail: error.code }); } catch {} }
@@ -208,7 +214,7 @@ function checkExecutionReadiness(options, manifest) {
     if (options.observationFile !== undefined && options.observationFile !== null) rejectProtectedObservationPath(options.observationFile);
     if (e.tool.kind !== 'native') fail('FIXTURE_NOT_LIVE', 'a fixture tool cannot launch a native session');
     const profileName = e.configuration.isolation_profile;
-    if (profileName === PROFILE.name) fail('PROFILE_HISTORICAL', `${PROFILE.name} is the historical API-key profile; it is not the execution path of any session. Plan a cohort under ${NATIVE_PROFILE.name}`);
+    if ([PROFILE.name, LEGACY_NATIVE_PROFILE.name].includes(profileName)) fail('PROFILE_HISTORICAL', `${profileName} is a historical profile; it is not the execution path of any session. Plan a cohort under ${NATIVE_PROFILE.name}`);
     if (profileName !== NATIVE_PROFILE.name) fail('PROFILE_UNBOUND', 'the named isolation profile must be included in the effective manifest');
     if (!readiness || Object.keys(readiness).some(k => !['purpose', 'usageEnvelopeAgreed', 'projectAccessAuthorized', 'hostPolicyPreserved', 'decisionRef', 'observationReviewed', 'billingMode'].includes(k)) ||
       !['operational-smoke', 'measured'].includes(readiness.purpose) || readiness.usageEnvelopeAgreed !== true || readiness.projectAccessAuthorized !== true || readiness.hostPolicyPreserved !== true ||
@@ -217,7 +223,7 @@ function checkExecutionReadiness(options, manifest) {
     if (typeof options.onGroup !== 'function') fail('CUSTODY_REQUIRED', 'durable process-group registration is required before launch');
     const inputRoot = bundle?.inputRoot || bundle?.root;
     validateExecutionParameters({ model: e.model, toolVersion: e.tool.version, permissionMode: e.configuration.permission_mode, caps: manifest.caps, billingMode: readiness.billingMode, inputRoot, ...(Object.hasOwn(options, 'apiKey') ? { apiKey: options.apiKey } : {}) });
-    login = establishLogin({ inputRoot, billingMode: readiness.billingMode, custody: options.custody }, { statusCommand: nativeStatusCommand(bundle), ids: { purpose: readiness.purpose, decision: readiness.decisionRef, arm: arm || null, ...(options.ids || {}) } });
+    login = establishLogin({ inputRoot, billingMode: readiness.billingMode, custody: options.custody, currentAccount: true }, { statusCommand: nativeStatusCommand(bundle), ids: { purpose: readiness.purpose, decision: readiness.decisionRef, arm: arm || null, ...(options.ids || {}) } });
     return { ok: true, manifest, reportable: readiness.purpose === 'measured', profile: NATIVE_PROFILE.name, custody: login.custody, acquired: login.acquired, authentication: login.authentication, billing: billingBlock(readiness.billingMode), loginDir: login.loginDir };
   } catch (error) { return { ok: false, code: error.code || 'EFFECTIVE_INPUTS_INVALID', detail: error.message, profile: NATIVE_PROFILE.name }; }
 }
@@ -335,6 +341,23 @@ function buildEnvironment(sessionRoot, workspace, loginDir) {
     GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null',
   };
 }
+// Only native launches use the account identity. Fixtures retain disposable HOME and
+// never inspect personal configuration. HOME is never a source of scratch/cleanup paths.
+function buildCurrentAccountEnvironment(sessionRoot, workspace, loginDir, account = os.userInfo()) {
+  if (!account || typeof account.homedir !== 'string' || !path.isAbsolute(account.homedir) || account.homedir === '/' ||
+      typeof account.username !== 'string' || !account.username || /[\0\r\n]/.test(account.username)) fail('ACCOUNT_IDENTITY_INVALID', 'OS account identity is unavailable');
+  const home = fs.realpathSync(account.homedir), scratch = fs.realpathSync(sessionRoot);
+  const relative = path.relative(scratch, home);
+  if (!relative || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative)))
+    fail('SCRATCH_OVERLAPS_HOME', 'scratch must not contain the account HOME');
+  return { ...buildEnvironment(scratch, workspace, loginDir), HOME: home, USER: account.username, LOGNAME: account.username };
+}
+function supervisorSessionRoot(env) {
+  // TMPDIR is always owned scratch, even when HOME is the real account directory.
+  if (typeof env.TMPDIR !== 'string' || !path.isAbsolute(env.TMPDIR) || path.basename(env.TMPDIR) !== 'tmp')
+    fail('ENVIRONMENT_CHANGED', 'session scratch TMPDIR is invalid');
+  return path.dirname(env.TMPDIR);
+}
 // The CLI's hook debug log lives beside the permission override, inside the session root
 // that is removed after the run; only a redacted copy is retained (`retainHookDebug`).
 const debugFileFor = settingsPath => path.join(path.dirname(settingsPath), 'debug.log');
@@ -364,13 +387,15 @@ function canaryFiles(phrase, marker) {
     'CLAUDE.md': `${phrase}\n`,
   };
 }
-function plantHomeCanary(sessionRoot) {
+function plantHomeCanary(sessionRoot, installHome = true) {
   const phrase = `PINCER-CANARY-${crypto.randomBytes(8).toString('hex')}`;
   const marker = path.join(sessionRoot, 'canary-user-hook-ran');
   const dir = path.join(sessionRoot, 'home', '.claude');
-  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-  for (const [name, content] of Object.entries(canaryFiles(phrase, marker))) fs.writeFileSync(path.join(dir, name), content, { mode: 0o600 });
-  return { phrase, marker, loginMarker: path.join(sessionRoot, 'canary-login-hook-ran') };
+  if (installHome) {
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    for (const [name, content] of Object.entries(canaryFiles(phrase, marker))) fs.writeFileSync(path.join(dir, name), content, { mode: 0o600 });
+  }
+  return { phrase, marker, homeInstalled: installHome, loginMarker: path.join(sessionRoot, 'canary-login-hook-ran') };
 }
 // "Canary not triggered" is not "isolation demonstrated". A hook that ran or a phrase that
 // was echoed is positive evidence the user-level file was loaded. The converse is not
@@ -382,7 +407,7 @@ function checkCanary(canary, texts) {
   const login_dir_hook_ran = fs.existsSync(canary.loginMarker);
   const user_hook_ran = home_hook_ran || login_dir_hook_ran;
   const echoed = texts.some(text => typeof text === 'string' && text.includes(canary.phrase));
-  return { leak_detected: user_hook_ran || echoed, user_hook_ran, login_dir_hook_ran,
+  return { home_canary: canary.homeInstalled ? 'installed-fixture-only' : 'not-installed', personal_configuration_absent: 'unknown', leak_detected: user_hook_ran || echoed, user_hook_ran, login_dir_hook_ran,
     user_settings_loaded: user_hook_ran ? true : 'unknown', user_instructions_loaded: echoed ? true : 'unknown' };
 }
 // Retain the CLI's hook debug log as a redacted copy beside the captures. The raw file is
@@ -568,8 +593,8 @@ async function runSession(options, nativePreflight = null) {
   // Project settings provide the hooks once. Repeating them in --settings risks
   // merging duplicate hook entries; the override only specifies the approval mode.
   fs.writeFileSync(settingsPath, JSON.stringify({ permissions: { defaultMode: 'manual' } }), { mode: 0o600 });
-  const canary = plantHomeCanary(sessionRoot);
-  const env = buildEnvironment(sessionRoot, options.workspace, handle.loginDir);
+  const canary = plantHomeCanary(sessionRoot, !native);
+  const env = native ? buildCurrentAccountEnvironment(sessionRoot, options.workspace, handle.loginDir) : buildEnvironment(sessionRoot, options.workspace, handle.loginDir);
   const args = argumentsFor(options, settingsPath);
   const clean = redactor();
   const started = new Date().toISOString();
@@ -690,8 +715,8 @@ if (require.main === module && process.argv[2] === '--session-supervisor') {
           readiness: payload.readiness, expectedAssets: payload.expectedAssets, observationFile: payload.observationFile, onGroup: () => {}, allocation: payload.allocation, prompt: payload.prompt,
           custody: { ...payload.custody, ownerPid: process.ppid } });
         if (!gate.ok) fail(gate.code, gate.detail);
-        const sessionRoot = path.dirname(process.env.HOME);
-        const expectedEnv = buildEnvironment(sessionRoot, process.cwd(), gate.loginDir);
+        const sessionRoot = supervisorSessionRoot(process.env);
+        const expectedEnv = buildCurrentAccountEnvironment(sessionRoot, process.cwd(), gate.loginDir);
         if (effective.canonical(process.env) !== effective.canonical(expectedEnv)) fail('ENVIRONMENT_CHANGED', 'supervisor environment differs from the isolated profile');
         const settingsPath = path.join(sessionRoot, 'settings.json');
         if (effective.canonical(JSON.parse(fs.readFileSync(settingsPath, 'utf8'))) !== effective.canonical({ permissions: { defaultMode: 'manual' } })) fail('SETTINGS_CHANGED', 'isolated permission override changed');
@@ -784,4 +809,4 @@ if (require.main === module && process.argv[2] === '--session-supervisor') {
       modelUsage: { [input.model]: { inputTokens: 100, outputTokens: 20, cacheReadInputTokens: 0, cacheCreationInputTokens: 0, costUSD: 0.42 } }, fixture: observed, ...observed }));
   }
 } else if (require.main === module) { process.stderr.write('isolated-launch: direct native launch is unavailable until the T-109 isolation observation gate\n'); process.exitCode = 3; }
-module.exports = { PROFILE, NATIVE_PROFILE, PROFILES, MEASUREMENT_PROFILE, TOOL_SURFACE, BILLING_MODES, CREDENTIAL_ENV, KIT_HOOK_SCRIPTS, profileFor, overridePresent, assetsFor, settingsFor, observationTarget, probeLogin, checkNativeReadiness, preflightExecution, preflightNative, releaseCustody, buildEnvironment, argumentsFor, hookEvidence, accountLimit, reportability, observeFixture, launchNative };
+module.exports = { PROFILE, LEGACY_NATIVE_PROFILE, NATIVE_PROFILE, buildCurrentAccountEnvironment, supervisorSessionRoot, PROFILES, MEASUREMENT_PROFILE, TOOL_SURFACE, BILLING_MODES, CREDENTIAL_ENV, KIT_HOOK_SCRIPTS, profileFor, overridePresent, assetsFor, settingsFor, observationTarget, probeLogin, checkNativeReadiness, preflightExecution, preflightNative, releaseCustody, buildEnvironment, argumentsFor, hookEvidence, accountLimit, reportability, observeFixture, launchNative };

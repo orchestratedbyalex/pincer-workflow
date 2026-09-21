@@ -141,12 +141,14 @@ console.log('native-login custody filesystem regressions: ok');
 // --- Identities ------------------------------------------------------------------------------
 {
   const p = isolation.NATIVE_PROFILE;
-  assert.equal(p.name, 'claude-project-native-login-v1');
+  assert.equal(p.name, 'claude-project-current-account-login-v1');
+  assert.equal(isolation.LEGACY_NATIVE_PROFILE.name, 'claude-project-native-login-v1');
+  assert.equal(p.home, 'current-os-account');
   assert.equal(p.authentication, 'host-login-config-dir');
   assert.equal(p.login_dir, 'host/claude-config');
   assert.equal(p.status_record, 'claude-auth-status-json-v1');
   assert.equal(p.tool_version, isolation.PROFILE.tool_version, 'the pinned CLI copy is unchanged');
-  for (const key of ['setting_sources', 'permission_mode', 'permission_prompts', 'mcp', 'home', 'hook_capture', 'host_policy']) assert.equal(p[key], isolation.PROFILE[key], `${key} unchanged from the historical profile`);
+  for (const key of ['setting_sources', 'permission_mode', 'permission_prompts', 'mcp', 'hook_capture', 'host_policy']) assert.equal(p[key], isolation.PROFILE[key], `${key} unchanged from the historical profile`);
   assert.equal(isolation.PROFILE.authentication, 'anthropic-api-key', 'the historical profile stays readable under its own identity');
   assert.equal(isolation.MEASUREMENT_PROFILE, usage.NATIVE_PROFILE);
   const base = { effective: { tool: { name: 'claude-code', kind: 'native', version: '2.1.273', digest: 'a'.repeat(64) }, model: 'claude-x-1', kit: { digest: 'b'.repeat(64), commit: 'c'.repeat(40) }, platform: { os: 'darwin' }, configuration: {} } };

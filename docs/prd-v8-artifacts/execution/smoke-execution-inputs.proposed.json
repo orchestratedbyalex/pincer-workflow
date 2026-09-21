@@ -13,5 +13,5 @@
       "executable": "inputs/browser/chrome-mac-arm64-148.0.7778.97/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
     }
   },
-  "configuration": { "permission_mode": "manual", "cwd_kind": "scratch", "isolation_profile": "claude-project-native-login-v1" }
+  "configuration": { "permission_mode": "manual", "cwd_kind": "scratch", "isolation_profile": "claude-project-current-account-login-v1" }
 }

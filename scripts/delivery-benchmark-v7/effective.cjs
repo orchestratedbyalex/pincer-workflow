@@ -195,7 +195,7 @@ function recordInputs(manifest) {
       ...(e.configuration.isolation_profile ? { isolation_profile: e.configuration.isolation_profile } : {}),
       // A native-login cohort is measured under the native usage profile from the plan on, so
       // its records never read as legacy API-key accounting (T-121).
-      ...(e.configuration.isolation_profile === 'claude-project-native-login-v1' ? { measurement_profile: 'claude-code-result-native-usage-v1', tool_surface: 'claude-code' } : {}),
+      ...(['claude-project-native-login-v1', 'claude-project-current-account-login-v1'].includes(e.configuration.isolation_profile) ? { measurement_profile: 'claude-code-result-native-usage-v1', tool_surface: 'claude-code' } : {}),
       ...(e.configuration.isolation_observation_digest ? { isolation_observation_digest: e.configuration.isolation_observation_digest } : {}),
       fixture: e.tool.kind === 'version-probe-fixture' },
   };
