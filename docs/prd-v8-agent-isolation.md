@@ -298,3 +298,13 @@ The supervisor derives session paths from TMPDIR, never HOME. Pincer plants no
 canary in personal configuration. Native records mark the home canary not installed
 and personal-configuration absence unknown. The login-directory canary remains under
 custody. Fixture-only synthetic HOME checks do not demonstrate native isolation.
+
+### macOS supervisor environment (21 September 2026)
+
+The current-account profile constructs `__CF_USER_TEXT_ENCODING` on macOS as
+`0x<uppercase hexadecimal OS uid>:0x0:0x0`, matching the startup value observed in
+a fresh Node child. The value is never copied from the launching shell. The
+supervisor compares its initial environment snapshot exactly against the rebuilt
+profile and passes only the rebuilt environment to the tool. Unexpected variables
+and changed identity values remain errors. This accounts for a macOS runtime
+addition; it does not demonstrate absence of personal configuration.

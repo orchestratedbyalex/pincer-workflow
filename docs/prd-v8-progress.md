@@ -600,3 +600,29 @@ session was launched. The stopped attempt is preserved without repair or replay.
 The revised runner has a new frozen cohort; host focused verification, commit, CI
 and a separately recorded recovery disposition are pending. Existing authorization
 is not silently transferred to a changed execution identity.
+
+### 2026-09-21 — macOS supervisor startup environment refusal
+
+The operator-approved smoke on `4d3af5ca09f87aad49e55c176290ac206ea90dab`
+passed readiness and reserved its first session, then the supervisor refused with
+`ENVIRONMENT_CHANGED: supervisor environment differs from the isolated profile`.
+Retained evidence is under `runs/smoke-4d3af5c`: S1 stdout is empty, stderr contains
+the refusal, and the allocation is stopped with `ALLOCATION_UNCONSUMED`, with its
+reservation still reserved. The refusal occurs before consumption and tool spawn;
+this is not a Claude model response. Strict and plain did not run. No evidence or
+allocation state was edited during diagnosis.
+
+A fresh inert Node child reproduced macOS adding `__CF_USER_TEXT_ENCODING` before
+JavaScript begins. The runner now constructs the observed uid-derived value on
+macOS, compares an initial environment snapshot exactly, and passes the reconstructed
+environment to the tool. The existing current-account suite now crosses a real
+Node process boundary and checks both clean propagation and rejection of unexpected
+variables or changed account identity. It also checks that post-snapshot runtime
+additions do not reach an inert child. No model or authentication command is used
+by that regression. The focused current-account test passes locally; full host
+verification and exact-candidate CI remain required. The sandbox cannot register
+process-group custody, so session/custody suites require host execution.
+
+Both stopped smoke roots remain historical evidence. The unconsumed reservation
+requires an explicit recorded recovery decision before any subsequent launch;
+there is no automatic cancellation, retry, or extra usage authorization.

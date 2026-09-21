@@ -350,7 +350,20 @@ function buildCurrentAccountEnvironment(sessionRoot, workspace, loginDir, accoun
   const relative = path.relative(scratch, home);
   if (!relative || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative)))
     fail('SCRATCH_OVERLAPS_HOME', 'scratch must not contain the account HOME');
-  return { ...buildEnvironment(scratch, workspace, loginDir), HOME: home, USER: account.username, LOGNAME: account.username };
+  // CoreFoundation adds this variable at Node startup on macOS when it is absent.
+  // Construct the observed default from the OS uid, never from the launching shell.
+  const coreFoundation = process.platform === 'darwin'
+    ? { __CF_USER_TEXT_ENCODING: `0x${process.getuid().toString(16).toUpperCase()}:0x0:0x0` } : {};
+  return { ...buildEnvironment(scratch, workspace, loginDir), HOME: home, USER: account.username, LOGNAME: account.username, ...coreFoundation };
+}
+function validateSupervisorEnvironment(received, workspace, loginDir) {
+  // Compare the inherited snapshot, not live process.env after preflight.
+  // Runtime side effects must not change the input to the environment check.
+  // Return only the constructed environment for the tool; no extra key is allowed.
+  const expected = buildCurrentAccountEnvironment(supervisorSessionRoot(received), workspace, loginDir);
+  if (effective.canonical(received) !== effective.canonical(expected))
+    fail('ENVIRONMENT_CHANGED', 'supervisor environment differs from the isolated profile');
+  return expected;
 }
 function supervisorSessionRoot(env) {
   // TMPDIR is always owned scratch, even when HOME is the real account directory.
@@ -701,23 +714,23 @@ async function launchNative(options) {
 // the effective identity, the explicit readiness decision and its parent's login-directory
 // custody supplied by the owned caller. It never acquires custody or probes the login.
 if (require.main === module && process.argv[2] === '--session-supervisor') {
+  const inheritedEnvironment = { ...process.env };
   let input = '';
   process.stdin.on('data', data => { input += data; });
   process.stdin.on('end', () => {
     try {
       const payload = JSON.parse(input);
       if (typeof payload.prompt !== 'string' || !payload.prompt.length) fail('PROMPT_INVALID', 'a nonempty task prompt is required on stdin');
-      let executable, args;
+      let executable, args, toolEnvironment = inheritedEnvironment;
       if (payload.kind === 'native') {
-        const override = overridePresent(process.env);
+        const override = overridePresent(inheritedEnvironment);
         if (override) fail('BILLING_OVERRIDE_PRESENT', `the session environment carries ${override}`);
         const gate = preflightNative({ effective: payload.bundle, arm: payload.arm, workspace: process.cwd(),
           readiness: payload.readiness, expectedAssets: payload.expectedAssets, observationFile: payload.observationFile, onGroup: () => {}, allocation: payload.allocation, prompt: payload.prompt,
           custody: { ...payload.custody, ownerPid: process.ppid } });
         if (!gate.ok) fail(gate.code, gate.detail);
-        const sessionRoot = supervisorSessionRoot(process.env);
-        const expectedEnv = buildCurrentAccountEnvironment(sessionRoot, process.cwd(), gate.loginDir);
-        if (effective.canonical(process.env) !== effective.canonical(expectedEnv)) fail('ENVIRONMENT_CHANGED', 'supervisor environment differs from the isolated profile');
+        const sessionRoot = supervisorSessionRoot(inheritedEnvironment);
+        toolEnvironment = validateSupervisorEnvironment(inheritedEnvironment, process.cwd(), gate.loginDir);
         const settingsPath = path.join(sessionRoot, 'settings.json');
         if (effective.canonical(JSON.parse(fs.readFileSync(settingsPath, 'utf8'))) !== effective.canonical({ permissions: { defaultMode: 'manual' } })) fail('SETTINGS_CHANGED', 'isolated permission override changed');
         const expectedArgs = argumentsFor({ model: gate.manifest.effective.model, caps: gate.manifest.caps }, settingsPath);
@@ -729,7 +742,7 @@ if (require.main === module && process.argv[2] === '--session-supervisor') {
         executable = process.execPath; args = [__filename, '--fixture-tool', JSON.stringify(metadata)];
       }
       else fail('LAUNCH_INVALID', 'unknown launch mode');
-      const child = spawn(executable, args, { cwd: process.cwd(), env: process.env, stdio: ['pipe', 'inherit', 'inherit'] });
+      const child = spawn(executable, args, { cwd: process.cwd(), env: toolEnvironment, stdio: ['pipe', 'inherit', 'inherit'] });
       let inputFailed = false;
       child.stdin.on('error', () => {
         inputFailed = true;
@@ -809,4 +822,4 @@ if (require.main === module && process.argv[2] === '--session-supervisor') {
       modelUsage: { [input.model]: { inputTokens: 100, outputTokens: 20, cacheReadInputTokens: 0, cacheCreationInputTokens: 0, costUSD: 0.42 } }, fixture: observed, ...observed }));
   }
 } else if (require.main === module) { process.stderr.write('isolated-launch: direct native launch is unavailable until the T-109 isolation observation gate\n'); process.exitCode = 3; }
-module.exports = { PROFILE, LEGACY_NATIVE_PROFILE, NATIVE_PROFILE, buildCurrentAccountEnvironment, supervisorSessionRoot, PROFILES, MEASUREMENT_PROFILE, TOOL_SURFACE, BILLING_MODES, CREDENTIAL_ENV, KIT_HOOK_SCRIPTS, profileFor, overridePresent, assetsFor, settingsFor, observationTarget, probeLogin, checkNativeReadiness, preflightExecution, preflightNative, releaseCustody, buildEnvironment, argumentsFor, hookEvidence, accountLimit, reportability, observeFixture, launchNative };
+module.exports = { PROFILE, LEGACY_NATIVE_PROFILE, NATIVE_PROFILE, buildCurrentAccountEnvironment, validateSupervisorEnvironment, supervisorSessionRoot, PROFILES, MEASUREMENT_PROFILE, TOOL_SURFACE, BILLING_MODES, CREDENTIAL_ENV, KIT_HOOK_SCRIPTS, profileFor, overridePresent, assetsFor, settingsFor, observationTarget, probeLogin, checkNativeReadiness, preflightExecution, preflightNative, releaseCustody, buildEnvironment, argumentsFor, hookEvidence, accountLimit, reportability, observeFixture, launchNative };

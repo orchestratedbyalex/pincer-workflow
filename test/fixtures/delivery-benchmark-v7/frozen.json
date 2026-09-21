@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "cohort": "0b006faa7c0f627ba76cb13c73247ca9aa36eca107ce30c2b0ed1a2e3cc482ff",
+  "cohort": "7f5b9ab2cb3158ab622e8537c41e565ca693df6d110dbe893c770b3abbc151c0",
   "inputs": {
     "protocol": "64eca303caec150c8ceb79942e041322a01e350c62c585364bc38fb5f22cec81",
-    "harness": "a78693e8c1a0f7608eec5ad1d676df5cf7e981a4eb83e07e36f5d04ec67d9cb9",
+    "harness": "b8f6ec5ba511a20a51c71ff677a74788ca1b23fa16c76106ab739a5898291af8",
     "collector": "9b552e9404ca728a83f784bb150df103a1a9e7c4063be23f34ff0d61bbf73937",
     "driver": "1f5a73208c00abf180e5a255113c3f8f63d93739ba4b1b5dae043190b7aa2e18",
     "briefs": "ab2fb221f922a0e59e62b1d092b0272cc3633e35c10f425402402df0cc1db540",
