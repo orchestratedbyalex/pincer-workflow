@@ -10,6 +10,31 @@ import { createRequire } from 'node:module';
 import { repo, tempDir, write } from './helpers.js';
 const require = createRequire(import.meta.url);
 const isolation = require('../scripts/delivery-benchmark-v7/isolated-launch.cjs');
+// Sanitized 2026-09-22 native result; no session IDs, tool inputs or host paths.
+{
+  const payload = JSON.parse(fs.readFileSync(path.join(repo, 'test/fixtures/native-mixed-model-result.json'), 'utf8'));
+  const before = JSON.stringify(payload);
+  const evidence = isolation.modelEvidence(payload, 'claude-sonnet-5');
+  assert.deepEqual(evidence, { status: 'mixed-primary-unknown', primary_model: null,
+    observed_models: ['claude-haiku-4-5-20251001', 'claude-sonnet-5'], requested_model_observed: true });
+  assert.equal(isolation.modelEvidence({ ...payload, model: 'claude-sonnet-5' }, 'claude-sonnet-5').status, 'matched');
+  assert.equal(isolation.modelEvidence({ ...payload, model: 'claude-haiku-4-5-20251001' }, 'claude-sonnet-5').status, 'mismatched');
+  assert.equal(isolation.modelEvidence({ ...payload, model: 'absent-model' }, 'claude-sonnet-5').status, 'inconsistent');
+  assert.equal(isolation.modelEvidence({}, 'claude-sonnet-5').status, 'missing');
+  assert.equal(isolation.modelEvidence({ modelUsage: { 'claude-sonnet-5': {} } }, 'claude-sonnet-5').status, 'inconsistent');
+  const single = { modelUsage: { 'claude-sonnet-5': payload.modelUsage['claude-sonnet-5'] } };
+  assert.equal(isolation.modelEvidence(single, 'claude-sonnet-5').status, 'matched');
+  const usage = require('../scripts/delivery-benchmark-v7/usage.cjs');
+  const metrics = usage.parse(payload, usage.NATIVE_PROFILE);
+  assert.equal(metrics.tokens.value, 97609, 'both models remain in token accounting');
+  assert.equal(metrics.estimate_usd.value, payload.total_cost_usd);
+  assert.equal(JSON.stringify(payload), before, 'evidence extraction never rewrites accounting');
+  const gate = isolation.reportability({ nativePreflight: { reportable: true }, attestedModel: evidence.primary_model,
+    model: 'claude-sonnet-5', modelEvidence: evidence, result: { cleanup_complete: true },
+    canary: { leak_detected: false }, hookEvidence: { status: 'sufficient' } });
+  assert.equal(gate.reportable, false);
+  assert.deepEqual(gate.unreportable, ['requested model observed in mixed usage; primary model attestation unresolved']);
+}
 const SECRET = 'sk-ant-synthetic-secret-canary-1234567890123456';
 const PRIVATE_TEXT = 'PRIVATE_INSTRUCTION_CANARY';
 function fixture(arm = 'plain') {

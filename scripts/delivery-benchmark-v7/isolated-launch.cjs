@@ -479,10 +479,29 @@ function accountLimit(texts, result, at) {
   else if (/usage limit|rate limit|rate_limit|quota/i.test(haystack)) kind = 'unknown';
   return kind ? { kind, at } : null;
 }
+// Model usage proves participation, not which model performed the primary task.
+// Never select the requested entry or largest token count from a mixed result.
+function modelEvidence(payload, requested) {
+  const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+  const validName = value => typeof value === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$/.test(value);
+  const usage = object(payload?.modelUsage) ? payload.modelUsage : {};
+  const models = Object.keys(usage).filter(name => validName(name) && object(usage[name]) &&
+    ['inputTokens', 'outputTokens', 'cacheReadInputTokens', 'cacheCreationInputTokens'].every(key =>
+      Number.isSafeInteger(usage[name][key]) && usage[name][key] >= 0) &&
+    ['inputTokens', 'outputTokens', 'cacheReadInputTokens', 'cacheCreationInputTokens'].some(key => usage[name][key] > 0)).sort();
+  const explicit = validName(payload?.model) ? payload.model : null;
+  const consistent = models.length === Object.keys(usage).length;
+  const primary = consistent && explicit && models.includes(explicit) ? explicit
+    : consistent && !Object.hasOwn(payload || {}, 'model') && models.length === 1 ? models[0] : null;
+  const status = !consistent || (Object.hasOwn(payload || {}, 'model') && (!explicit || !models.includes(explicit)))
+    ? 'inconsistent' : primary ? (primary === requested ? 'matched' : 'mismatched')
+    : models.includes(requested) ? 'mixed-primary-unknown' : models.length ? 'mismatched' : 'missing';
+  return { status, primary_model: primary, observed_models: models, requested_model_observed: models.includes(requested) };
+}
 // Every deficiency is a named reason; a measured session is reportable only with none.
-function reportability({ nativePreflight, attestedModel, model, result, canary, hookEvidence: evidence, loginDirectory = null, authentication = null }) {
+function reportability({ nativePreflight, attestedModel, model, result, canary, hookEvidence: evidence, loginDirectory = null, authentication = null, modelEvidence: models = null }) {
   const unreportable = [];
-  if (attestedModel !== model) unreportable.push('model attestation missing or different from the requested model');
+  if (attestedModel !== model) unreportable.push(models?.status === 'mixed-primary-unknown' ? 'requested model observed in mixed usage; primary model attestation unresolved' : 'model attestation missing or different from the requested model');
   if (result.cleanup_complete !== true) unreportable.push('process cleanup unresolved');
   if (result.capture_failure) unreportable.push('capture failure');
   if (canary.leak_detected) unreportable.push('isolation canary tripped');
@@ -654,14 +673,14 @@ async function runSession(options, nativePreflight = null) {
     const evidenceRetentionFailed = Boolean(logFiles) && hookDebug.capture.present === true && hookDebug.capture.retained !== true;
     let attestedModel = null, parsed = null;
     try { parsed = JSON.parse(result.stdout); } catch {}
-    if (native && parsed && typeof parsed === 'object') {
-      if (typeof parsed.model === 'string') attestedModel = parsed.model; else if (parsed.modelUsage && Object.keys(parsed.modelUsage).length === 1) attestedModel = Object.keys(parsed.modelUsage)[0];
-    }
+    const models = native ? modelEvidence(parsed, options.model) : null;
+    attestedModel = models?.primary_model || null;
     const ended = new Date().toISOString();
     const limit = accountLimit([result.stdout, result.stderr], parsed, ended);
     const environment = {
       fixture: !native, tool: native ? TOOL_SURFACE : 'synthetic-session', tool_surface: TOOL_SURFACE, tool_version: NATIVE_PROFILE.tool_version,
       model: native ? attestedModel : options.model, requested_model: options.model,
+      ...(native ? { model_evidence: models } : {}),
       node: process.version, os: os.platform(), platform_release: os.release(), arch: os.arch(),
       permission_mode: 'manual', permission_prompts: 'none', isolation_profile: NATIVE_PROFILE.name, measurement_profile: MEASUREMENT_PROFILE,
       host_policy_observed: nativePreflight?.reportable || false, authentication, billing: billingBlock(billingMode), account_limit: limit, caps: options.caps,
@@ -674,7 +693,7 @@ async function runSession(options, nativePreflight = null) {
       isolation_canary: isolationCanary, hook_capture: hookDebug.capture, hook_evidence: evidence, login_directory: loginDirectory,
       configuration: NATIVE_PROFILE, env_names: Object.keys(env).sort(),
     };
-    const { reportable, unreportable } = reportability({ nativePreflight, attestedModel: native ? attestedModel : options.model, model: options.model, result, canary: isolationCanary, hookEvidence: evidence, loginDirectory, authentication });
+    const { reportable, unreportable } = reportability({ nativePreflight, attestedModel: native ? attestedModel : options.model, model: options.model, result, canary: isolationCanary, hookEvidence: evidence, loginDirectory, authentication, modelEvidence: models });
     preserveSession = hookDebug.preserveSession === true;
     return { ...result, started, ended, environment, assets: assets.files, logFiles,
       reportable, unreportable, evidence_retention_failed: evidenceRetentionFailed, review_required: evidenceRetentionFailed || outcome.recovery_required,
@@ -822,4 +841,4 @@ if (require.main === module && process.argv[2] === '--session-supervisor') {
       modelUsage: { [input.model]: { inputTokens: 100, outputTokens: 20, cacheReadInputTokens: 0, cacheCreationInputTokens: 0, costUSD: 0.42 } }, fixture: observed, ...observed }));
   }
 } else if (require.main === module) { process.stderr.write('isolated-launch: direct native launch is unavailable until the T-109 isolation observation gate\n'); process.exitCode = 3; }
-module.exports = { PROFILE, LEGACY_NATIVE_PROFILE, NATIVE_PROFILE, buildCurrentAccountEnvironment, validateSupervisorEnvironment, supervisorSessionRoot, PROFILES, MEASUREMENT_PROFILE, TOOL_SURFACE, BILLING_MODES, CREDENTIAL_ENV, KIT_HOOK_SCRIPTS, profileFor, overridePresent, assetsFor, settingsFor, observationTarget, probeLogin, checkNativeReadiness, preflightExecution, preflightNative, releaseCustody, buildEnvironment, argumentsFor, hookEvidence, accountLimit, reportability, observeFixture, launchNative };
+module.exports = { modelEvidence, PROFILE, LEGACY_NATIVE_PROFILE, NATIVE_PROFILE, buildCurrentAccountEnvironment, validateSupervisorEnvironment, supervisorSessionRoot, PROFILES, MEASUREMENT_PROFILE, TOOL_SURFACE, BILLING_MODES, CREDENTIAL_ENV, KIT_HOOK_SCRIPTS, profileFor, overridePresent, assetsFor, settingsFor, observationTarget, probeLogin, checkNativeReadiness, preflightExecution, preflightNative, releaseCustody, buildEnvironment, argumentsFor, hookEvidence, accountLimit, reportability, observeFixture, launchNative };

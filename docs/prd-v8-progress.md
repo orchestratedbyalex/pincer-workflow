@@ -626,3 +626,27 @@ process-group custody, so session/custody suites require host execution.
 Both stopped smoke roots remain historical evidence. The unconsumed reservation
 requires an explicit recorded recovery decision before any subsequent launch;
 there is no automatic cancellation, retry, or extra usage authorization.
+
+## 2026-09-22 — T-109 mixed-model result evidence
+
+The retained operational attempt at candidate `86e47c8` returned both
+`claude-sonnet-5` and `claude-haiku-4-5-20251001` usage. The result does not
+identify the roles of those models. Calling Haiku auxiliary is an inference,
+not native evidence. The launcher now retains `model_evidence` with observed
+models, requested-model participation, primary identity (when supported), and
+a named status. Mixed usage without explicit primary identity stays unreportable,
+with an ambiguity reason instead of a missing-model claim. No largest-usage or
+requested-entry heuristic is used. Explicit identity must agree with valid usage.
+
+A whitelisted capture fixture keeps only result envelope and accounting/model
+fields, without session IDs, host paths or tool inputs. Regression coverage checks
+mixed, single, mismatched, inconsistent and absent evidence, preserves all-model
+accounting, and confirms the ambiguity gate remains closed. These assertions,
+usage-completeness and execution-freeze tests passed locally. The environment
+suite cannot complete in the agent sandbox: process custody registration is
+blocked (`CUSTODY_REGISTRATION_FAILED`). Host environment/full-suite verification
+and CI remain outstanding. Frozen inputs were re-minted; prior study records and
+authorizations are unchanged. No live session was launched and T-109 stays open.
+
+Hook execution evidence, unattended permissions, shell snapshot isolation and
+the task/turn envelope still require review before another native launch.

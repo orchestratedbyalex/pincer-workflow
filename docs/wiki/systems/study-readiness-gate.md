@@ -131,3 +131,11 @@ in-process must release it (`releaseCustody`) or the next acquisition is `LOGIN_
 Review correction: unreadable or uncopyable hook evidence now preserves the original
 protected session directory. Registration-only logs cannot pass. Historical external
 study drafts must be refreshed for the corrected execution code before launch.
+
+### Mixed-model native evidence (2026-09-22)
+
+T-109 now retains observed model identities separately from primary-model
+attestation. Sonnet and Haiku usage proves participation, not their roles;
+unknown primary identity remains a named reportability blocker. The sanitized
+regression preserves both models in accounting. See the dated entry in the
+[progress journal](../../prd-v8-progress.md). No smoke retry is implied.
