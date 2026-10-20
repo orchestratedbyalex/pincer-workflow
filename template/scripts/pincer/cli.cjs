@@ -9,10 +9,15 @@ const util = require('./util.cjs');
 const harness = require('./harness.cjs');
 const ticket = require('./ticket.cjs');
 const status = require('./status.cjs');
+const evidence = require('./evidence.cjs');
 
 const USAGE = `usage: node scripts/pincer/cli.cjs [--root <dir>] <command> ...
   ticket <start|verify|done|accept> <T-NN> [--by "<name>" --words "<what they said>"]
   status [--json] [--stage <name>]
+  evidence validate <manifest> [--candidate <sha>] | digest <file>...
+`;
+const EVIDENCE_USAGE = `usage: scripts/pincer-evidence.cjs validate <manifest> [--candidate <sha>]
+       scripts/pincer-evidence.cjs digest <file>...
 `;
 const STATUS_USAGE = `usage: scripts/pincer-status.sh [--json] [--stage <name>]
 `;
@@ -90,6 +95,32 @@ function statusCommand(root, args, io) {
   return 0;
 }
 
+// Paths typed on the command line resolve against the working directory.
+const fromCwd = (file) => (path.isAbsolute(file) ? file : path.resolve(process.cwd(), file));
+
+function evidenceCommand(root, args, io) {
+  const [verb, ...rest] = args;
+  if (verb === 'validate' && rest.length) {
+    const [file, ...more] = rest;
+    const options = flags(more, ['candidate']);
+    if (options.problem) { io.err(`pincer-evidence: ${options.problem}\n${EVIDENCE_USAGE}`); return 2; }
+    const abs = fromCwd(file);
+    const problems = evidence.validate(root, abs, { candidate: options.candidate });
+    if (problems.length) { for (const p of problems) io.err(`evidence: ${file}: ${p}\n`); return 1; }
+    io.out(`ok ${util.readJson(abs).candidate}\n`);
+    return 0;
+  }
+  if (verb === 'digest' && rest.length) {
+    let failed = false;
+    for (const file of rest) {
+      try { io.out(`${evidence.digestFile(fromCwd(file))}  ${file}\n`); } catch (error) { io.err(`evidence: ${file}: ${error.message}\n`); failed = true; }
+    }
+    return failed ? 1 : 0;
+  }
+  io.err(EVIDENCE_USAGE);
+  return 2;
+}
+
 async function main(argv = process.argv.slice(2), io = { out: util.out, err: util.err }) {
   const resolved = resolveRoot(argv);
   if (resolved.problem) { io.err(`pincer: ${resolved.problem}\n${USAGE}`); return 2; }
@@ -98,6 +129,7 @@ async function main(argv = process.argv.slice(2), io = { out: util.out, err: uti
   try {
     if (command === 'ticket') return await ticketCommand(root, rest, io);
     if (command === 'status') return statusCommand(root, rest, io);
+    if (command === 'evidence') return evidenceCommand(root, rest, io);
     io.err(USAGE);
     return 2;
   } catch (error) {
@@ -110,4 +142,4 @@ async function main(argv = process.argv.slice(2), io = { out: util.out, err: uti
 
 if (require.main === module) main().then((code) => { process.exitCode = code; });
 
-module.exports = { main, resolveRoot, flags, USAGE, TICKET_USAGE, STATUS_USAGE };
+module.exports = { main, resolveRoot, flags, USAGE, TICKET_USAGE, STATUS_USAGE, EVIDENCE_USAGE };
