@@ -159,23 +159,17 @@ function dangerousReason(source, depth = 0) {
   return '';
 }
 
+// A ticket file: T-NN-*.md under any directory named tickets. The hook does
+// not read harness.json; a project that renames its tickets home loses this
+// coverage (docs/engine.md, "Platform notes").
 const TICKET_PATH = /(^|[\\/])tickets[\\/]T-[0-9]+[^\\/]*\.md$/;
-// Runtime-owned state: local attempts under .pincer/, change records under
-// .prd/changes/ (with their agreement snapshots), evaluation locators under
-// .prd/evidence/changes/ and the inventory/map snapshots a strict evaluation writes
-// under .prd/evidence/prd-vN/<candidate>/coverage/ are written only by
-// pincer-runtime.cjs. The coverage map .prd/coverage/<id>.json is authored by hand.
-// The runtime owns .pincer/runtime/ and .pincer/backups/ (and the directory as a
-// whole); .pincer/drafts/ is the agent's own scratch space for evidence drafts.
-const RUNTIME_PATH = /(^|[\\/])\.pincer(?:[\\/](?:runtime|backups)(?:[\\/]|$)|[\\/]?$)/;
-const BINDING_PATH = /(^|[\\/])\.prd[\\/](?:changes|evidence[\\/]changes|evidence[\\/]prd-v[0-9]+[\\/][0-9a-f]{40}[\\/]coverage)([\\/]|$)/;
-const PROTECTED = ['status', 'started', 'last_check', 'verified', 'finished'];
+// The lifecycle fields only scripts/pincer-ticket.sh writes: the state, its
+// timestamps, the receipts, and the acceptance. A copy of LIFECYCLE_FIELDS in
+// scripts/pincer/parse.cjs; the hook must not load the kit.
+const PROTECTED = ['status', 'started', 'last_check', 'verified', 'finished', 'accepted', 'accepted_by', 'accepted_words'];
 
 function ticketPath(value) {
   return typeof value === 'string' && TICKET_PATH.test(value);
-}
-function runtimePath(value) {
-  return typeof value === 'string' && (RUNTIME_PATH.test(value) || BINDING_PATH.test(value));
 }
 
 function stateFields(content) {
@@ -215,7 +209,6 @@ function applyEdit(content, oldText, newText, replaceAll = false) {
 function guardEdits(tool, toolInput) {
   const file = toolInput.file_path;
   if (typeof file !== 'string') block(`${tool} payload must contain a string file_path.`);
-  if (runtimePath(file)) block('runtime state (.pincer/), change records (.prd/changes/), evaluation locators and coverage snapshots (.prd/evidence/…/coverage/) are written only by pincer-runtime.cjs; the coverage map .prd/coverage/<id>.json is yours to edit.');
   if (!ticketPath(file)) return;
   const before = existingContent(file);
   if (tool === 'Write') {
@@ -240,6 +233,9 @@ function guardEdits(tool, toolInput) {
   if (!sameState(before ?? '', after)) block('ticket lifecycle fields may only be changed by pincer-ticket.sh.');
 }
 
+// The one shell writer of lifecycle fields: `pincer-ticket.sh <start|verify|done> T-NN`
+// (three words) or `pincer-ticket.sh accept T-NN ...`, directly or through
+// `node scripts/pincer/cli.cjs ticket ...`, alone on its line.
 function isExactPincerCall(source) {
   const commands = shellCommands(source).filter(command => command.words.length);
   if (commands.length !== 1 || commands[0].separator) return false;
@@ -247,16 +243,17 @@ function isExactPincerCall(source) {
   // ticketShellMutation so its target is tested like any other path. Without this,
   // adding a verb to the list below silently opened a new carrier for it.
   if (commands[0].operators.some(op => op === '>' || op === '>>')) return false;
-  const { executable, args } = commandParts(commands[0]);
-  let words = [executable, ...args];
-  if (['bash', 'sh', 'node'].includes(words[0])) words = words.slice(1);
-  if (/pincer-runtime\.cjs$/.test(words[0] || '')) {
-    return ['start', 'verify', 'done', 'bind', 'register', 'migrate', 'recover', 'check', 'evidence', 'change', 'resume'].includes(words[1]);
-  }
-  if (!/pincer-ticket\.sh$/.test(words[0] || '')) return false;
+  const { executable, args, words: raw } = commandParts(commands[0]);
+  let words = [raw[raw.length - args.length - 1], ...args];
+  if (['bash', 'sh', 'node'].includes(executable)) words = words.slice(1);
+  if (/(^|[\\/])pincer[\\/]cli\.cjs$/.test(words[0] || '')) {
+    words = words.slice(1);
+    while (words[0] === '--root' || /^--root=/.test(words[0] || '')) words = words.slice(words[0] === '--root' ? 2 : 1);
+    if (words[0] !== 'ticket') return false;
+  } else if (!/(^|[\\/])pincer-ticket\.sh$/.test(words[0] || '')) return false;
   const action = words[1];
-  if (!['start', 'verify', 'done', 'bind'].includes(action)) return false;
-  return action === 'bind' ? words.length === 4 : words.length === 3;
+  if (['start', 'verify', 'done'].includes(action)) return words.length === 3;
+  return action === 'accept' && words.length >= 3;
 }
 
 // A pathspec is "wide" when, after normalisation, it cannot be shown to stay
@@ -341,8 +338,7 @@ function ticketShellMutation(source, depth = 0) {
       const stdinPathspec = !sub.args.some(arg => !arg.startsWith('-')) || sub.args[sub.args.length - 1] === '--';
       if (viaXargs && ['checkout', 'restore', 'clean'].includes(sub.name) && stdinPathspec) return true;
     }
-    const hasTicket = words.some(ticketPath) || /(^|[\s'"`])tickets[\\/]T-[0-9]+[^\s'"`]*/.test(source) ||
-      words.some(runtimePath) || /(^|[\s'"`=])\.pincer(?:[\\/](?:runtime|backups)(?:[\\/]|[\s'"`]|$)|[\\/]?(?:[\s'"`]|$))/.test(source) || /(^|[\s'"`=])\.prd[\\/](?:changes|evidence[\\/]changes|evidence[\\/]prd-v[0-9]+[\\/][0-9a-f]{40}[\\/]coverage)([\\/]|[\s'"`]|$)/.test(source);
+    const hasTicket = words.some(ticketPath) || /(^|[\s'"`])tickets[\\/]T-[0-9]+[^\s'"`]*/.test(source);
     if (!hasTicket) continue;
     if (command.operators.some(op => op === '>' || op === '>>')) return true;
     if (['rm', 'mv', 'cp', 'install', 'truncate', 'touch', 'tee', 'ed', 'ex'].includes(executable)) return true;
@@ -365,7 +361,7 @@ if (mode === 'dangerous') {
   if (['Edit', 'Write', 'MultiEdit'].includes(payload.tool_name)) guardEdits(payload.tool_name, payload.tool_input);
   else if (payload.tool_name === 'Bash') {
     if (typeof payload.tool_input.command !== 'string') block('Bash payload must contain a string command.');
-    if (ticketShellMutation(payload.tool_input.command)) block('shell commands may not write, reset, or restore ticket files or runtime state (.pincer/, .prd/changes/), including whole-tree checkout/restore, reset --hard, stash, clean -f; use pincer-ticket.sh or pincer-runtime.cjs for lifecycle state.');
+    if (ticketShellMutation(payload.tool_input.command)) block('shell commands may not write, reset, or restore ticket files, including whole-tree checkout/restore, reset --hard, stash, clean -f; ticket lifecycle fields are written only by pincer-ticket.sh.');
   }
 } else {
   block('hook policy mode is invalid.');
