@@ -10,6 +10,7 @@ last_check: 2026-09-19T21:07:00Z failed c936a9b60fc5
 ---
 
 ## Objective
+Superseded on 2026-10-20 by docs/superpowers/specs/2026-10-20-harness-builder-design.md; not continued.
 Provide a single auditable readiness decision before the study incurs cost.
 
 ## Context

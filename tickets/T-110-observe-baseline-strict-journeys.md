@@ -8,6 +8,7 @@ timeout: 900
 ---
 
 ## Objective
+Superseded on 2026-10-20 by docs/superpowers/specs/2026-10-20-harness-builder-design.md; not continued.
 Complete genuine strict-coverage pilots and measure the friction that should drive the next product design.
 
 ## Context

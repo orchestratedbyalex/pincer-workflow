@@ -8,6 +8,7 @@ timeout: 900
 ---
 
 ## Objective
+Superseded on 2026-10-20 by docs/superpowers/specs/2026-10-20-harness-builder-design.md; not continued.
 Establish whether Pincer helps people make accurate review decisions with less effort.
 
 ## Context

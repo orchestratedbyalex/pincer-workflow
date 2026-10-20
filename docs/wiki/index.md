@@ -1,5 +1,7 @@
 # Wiki index
 
+> Frozen on 2026-10-20. PINCER 1.0 is designed in docs/superpowers/specs/2026-10-20-harness-builder-design.md; this wiki describes 0.7.
+
 Current state: [v8 obligation overlay](../prd-v8-obligation-map.md) and
 [v8 contracts](../prd-v8-contracts.md). Historical pages retain their dated evidence.
 

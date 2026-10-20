@@ -8,6 +8,7 @@ timeout: 900
 ---
 
 ## Objective
+Superseded on 2026-10-20 by docs/superpowers/specs/2026-10-20-harness-builder-design.md; not continued.
 Reduce mapping effort by showing one unresolved decision and validating an authored proposal without taking over approval.
 
 ## Context

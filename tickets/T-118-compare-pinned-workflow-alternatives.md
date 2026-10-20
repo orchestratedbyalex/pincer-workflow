@@ -8,6 +8,7 @@ timeout: 900
 ---
 
 ## Objective
+Superseded on 2026-10-20 by docs/superpowers/specs/2026-10-20-harness-builder-design.md; not continued.
 Test competitive value against relevant specification workflows before making a class-leading claim.
 
 ## Context

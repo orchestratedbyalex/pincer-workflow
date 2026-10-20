@@ -1,7 +1,0 @@
-$ test "$(cat value.txt)" = good
-
---- stdout ---
-
---- stderr ---
-
---- outcome passed (exit 0) ---

@@ -1,19 +1,20 @@
 # pincer-workflow — dev instructions
 
 This is the distribution repo for PINCER. `template/` is the single source of
-truth. After ANY edit inside `template/`, regenerate both derived outputs and
-commit them along with the edit:
+truth: the kit that `npx pincer-workflow init` copies into a project. The
+design for the current version is `docs/superpowers/specs/2026-10-20-harness-builder-design.md`
+and its plan `docs/superpowers/plans/2026-10-20-harness-builder.md`.
+
+After ANY edit inside `template/`, run the tests and commit the result:
 
 ```bash
-bash template/scripts/sync-prompts.sh   # regenerates template/.codex + template/.github adapters
-bash scripts/build-plugin.sh            # regenerates plugin/ (Claude Code plugin)
-npm test                                # smoke-tests the installer lifecycle
+npm test
 ```
 
-Never hand-edit `template/.agents/skills/`, `template/.github/prompts/`, or
-`plugin/` — they are generated. Release flow: `npm version patch` →
-`npm publish` (needs 2FA) → `git push --follow-tags`.
+The shipped copies of the always-on stages (`template/.claude/skills/`,
+`template/.claude/commands/`, `template/.agents/`, `template/.github/prompts/`)
+are generated from `template/.claude/pincer/library/` and a test fails when they
+are stale; regenerate them with the generator named in `template/docs/engine.md`.
 
-This project has an LLM-maintained wiki at `docs/wiki/`. Run `/llm-wiki start`
-at session start to get oriented, and `/llm-wiki end` when finishing a task,
-before clearing context.
+Release flow: `npm version <level>` → `npm publish` (needs 2FA) → `git push --follow-tags`.
+The Claude Code plugin channel is paused; the wiki under `docs/wiki/` is frozen.

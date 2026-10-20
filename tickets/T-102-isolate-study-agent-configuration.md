@@ -11,6 +11,7 @@ verified: 2026-09-19T13:44:42Z 42cb37f26796
 ---
 
 ## Objective
+Superseded on 2026-10-20 by docs/superpowers/specs/2026-10-20-harness-builder-design.md; not continued.
 Make the plain baseline and kit arms reproducible under an explicit, observed host configuration.
 
 ## Context

@@ -8,6 +8,7 @@ timeout: 1800
 ---
 
 ## Objective
+Superseded on 2026-10-20 by docs/superpowers/specs/2026-10-20-harness-builder-design.md; not continued.
 Give reviewers a reproducible, candidate-bound account of every requirement and the evidence for the next product decision.
 
 ## Context

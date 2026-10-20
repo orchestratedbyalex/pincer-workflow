@@ -8,6 +8,7 @@ timeout: 900
 ---
 
 ## Objective
+Superseded on 2026-10-20 by docs/superpowers/specs/2026-10-20-harness-builder-design.md; not continued.
 Observe Pincer maintaining Pincer through a supported strict/multi-change journey without trusting the runtime under modification.
 
 ## Context

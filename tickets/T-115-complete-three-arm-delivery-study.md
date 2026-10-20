@@ -8,6 +8,7 @@ timeout: 900
 ---
 
 ## Objective
+Superseded on 2026-10-20 by docs/superpowers/specs/2026-10-20-harness-builder-design.md; not continued.
 Complete the already planned three-arm experiment with honest accounting of acceptance, preservation and total effort.
 
 ## Context

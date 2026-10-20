@@ -8,6 +8,7 @@ timeout: 900
 ---
 
 ## Objective
+Superseded on 2026-10-20 by docs/superpowers/specs/2026-10-20-harness-builder-design.md; not continued.
 Prove that a real strict change can move between Claude Code and Codex using the shipped artifacts.
 
 ## Context
