@@ -370,15 +370,19 @@ The interview itself is agent behaviour and is tested the course's way: the owne
 runs it on a real project (wordAnalyzer is the candidate, since its agreement is
 already half written by hand and can be compared) and brings the result back.
 
-## 11. Open questions for the owner
+## 11. Decided by the owner, 20 October 2026
 
-1. PRD v8's open tickets: mark them superseded in the repo, or leave them untouched
-   as history and say so only in the README?
-2. The wiki under `docs/wiki/`: keep maintaining it for the rewrite, or freeze it?
-3. The Claude Code plugin channel (`plugin/`, the marketplace entry): a plugin runs
-   from its own root and cannot write the project copies or the Codex and Copilot
-   files, so it needs a second runtime model. Recommendation: pause the plugin for
-   1.0, ship the npx installer only, and bring the plugin back after the local trial.
+1. PRD v8's open tickets are marked superseded in the repo: each open ticket gets a
+   line under its Objective pointing at this design, its status is left as the
+   script wrote it, and the README says the v8 programme stopped here. **(owner)**
+2. The wiki under `docs/wiki/` is frozen: no further edits, and the repo's
+   `CLAUDE.md` drops the wiki instruction. **(owner)**
+3. The Claude Code plugin channel is paused for 1.0: `plugin/` and the marketplace
+   entry are removed from the tree, `scripts/build-plugin.sh` with them, and the
+   README says the plugin returns after the local trial. The npx installer is the
+   only channel. **(owner)**
+
+Design approved by the owner on 20 October 2026.
 
 ## 11a. Source material
 
