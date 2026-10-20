@@ -8,9 +8,13 @@ const path = require('node:path');
 const util = require('./util.cjs');
 const harness = require('./harness.cjs');
 const ticket = require('./ticket.cjs');
+const status = require('./status.cjs');
 
 const USAGE = `usage: node scripts/pincer/cli.cjs [--root <dir>] <command> ...
   ticket <start|verify|done|accept> <T-NN> [--by "<name>" --words "<what they said>"]
+  status [--json] [--stage <name>]
+`;
+const STATUS_USAGE = `usage: scripts/pincer-status.sh [--json] [--stage <name>]
 `;
 const TICKET_USAGE = `usage: scripts/pincer-ticket.sh <verb> <T-NN>
   start  T-NN                                     open -> in_progress
@@ -66,6 +70,26 @@ async function ticketCommand(root, args, io) {
   return (await ticket[verb](root, id, io)).exit;
 }
 
+function statusCommand(root, args, io) {
+  let json = false, stage = null;
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--json') json = true;
+    else if (arg === '--stage') { stage = args[++i]; if (stage === undefined) { io.err(STATUS_USAGE); return 2; } }
+    else if (arg.startsWith('--stage=')) stage = arg.slice('--stage='.length);
+    else { io.err(`pincer-status: unexpected argument ${arg}\n${STATUS_USAGE}`); return 2; }
+  }
+  if (stage !== null) {
+    const gate = status.stageGate(root, stage);
+    (gate.exit === 0 ? io.out : io.err)(`${gate.message}\n`);
+    return gate.exit;
+  }
+  const report = status.gather(root);
+  io.out(json ? `${JSON.stringify(report, null, 2)}\n` : status.render(report));
+  if (report.harnessProblem) { io.err(`${harness.HARNESS_FILE}: ${report.harnessProblem}\n`); return 3; }
+  return 0;
+}
+
 async function main(argv = process.argv.slice(2), io = { out: util.out, err: util.err }) {
   const resolved = resolveRoot(argv);
   if (resolved.problem) { io.err(`pincer: ${resolved.problem}\n${USAGE}`); return 2; }
@@ -73,6 +97,7 @@ async function main(argv = process.argv.slice(2), io = { out: util.out, err: uti
   const [command, ...rest] = args;
   try {
     if (command === 'ticket') return await ticketCommand(root, rest, io);
+    if (command === 'status') return statusCommand(root, rest, io);
     io.err(USAGE);
     return 2;
   } catch (error) {
@@ -85,4 +110,4 @@ async function main(argv = process.argv.slice(2), io = { out: util.out, err: uti
 
 if (require.main === module) main().then((code) => { process.exitCode = code; });
 
-module.exports = { main, resolveRoot, flags, USAGE, TICKET_USAGE };
+module.exports = { main, resolveRoot, flags, USAGE, TICKET_USAGE, STATUS_USAGE };

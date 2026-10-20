@@ -1,17 +1,15 @@
 #!/bin/bash
-# PINCER status — where the workflow stands, read from the artifacts on disk.
-# Read-only. Every playbook runs this first; /pincer-status wraps it.
+# PINCER status — where the work stands, read from harness.json and the
+# artifacts on disk (docs/engine.md, "Stage gate"). Read-only. Every stage
+# skill runs the gate first; /pincer-status wraps the report.
 #
-#   scripts/pincer-status.sh [--json]
+#   scripts/pincer-status.sh                  stages, specs, every ticket, warnings, and the next command
+#   scripts/pincer-status.sh --json           the same report as JSON
+#   scripts/pincer-status.sh --stage <name>   the gate: prints "on" and exits 0, or the reason and exits 3
 #
-# Compatibility wrapper: the report is computed by scripts/pincer-runtime.cjs
-# (`status`), which prints the PRD state and profile, every ticket with its
-# state and clock-based elapsed time, the wall-clock elapsed build line while a
-# ticket is in progress or PINCER_BUILD_BUDGET_MIN is set, the evidence verdict,
-# readiness warnings, and the next command. Exit codes follow
-# docs/runtime-contracts.md (0 inspected, 4 invalid input).
+# Exit codes: 0 ok, 2 usage, 3 no agreement, invalid harness.json or stage off.
 command -v node >/dev/null 2>&1 || {
-  echo 'pincer-status: Node.js 22+ is required — the runtime is scripts/pincer-runtime.cjs' >&2
-  exit 4
+  echo 'pincer-status: Node.js 22+ is required — the engine is scripts/pincer/cli.cjs' >&2
+  exit 1
 }
-exec node "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/pincer-runtime.cjs" status "$@"
+exec node "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/pincer/cli.cjs" status "$@"
