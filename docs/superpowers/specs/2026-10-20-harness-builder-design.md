@@ -144,9 +144,19 @@ Step three writes the outputs:
   the people who accept. Written by the blueprint skill, read by every other skill
   and by status. **(call)**
 - The project's own copies of the stage skills it switched on, under
-  `.pincer/skills/` for Codex-visible platforms and `.claude/skills/` for Claude
-  Code, generated from the kit's library (section 6), so a developer can edit their
-  project's steps without touching the library.
+  `.claude/skills/pincer-<stage>/`, generated from the kit's library (section 6), so
+  a developer can edit their project's steps without touching the library. The
+  Codex and Copilot files are generated from those copies.
+
+Script versus agent **(call)**: recon and the writer are scripts, so they can be
+tested offline. `scripts/pincer-blueprint.cjs recon` prints JSON: the classification
+with its reasons and every answer it could pre-fill. The agent runs the interview and
+collects the answers into an answer file of the same shape (the builder defines the
+schema). `scripts/pincer-blueprint.cjs write --answers <file>` validates it, writes
+`harness.json`, renders the agreement into `AGENTS.md` from a template with the
+answers filled in, and generates the project copies. The agent may polish the
+agreement's wording afterwards; the tests check the six headings and the facts, not
+the prose.
 
 Step four names the first real job. On brownfield the skill proposes a small real
 change and says the first run through the new pipeline doubles as the trace the
@@ -183,7 +193,23 @@ skills/<stage>/
 ```
 
 `SKILL.md` is short and reads `harness.json` first: if the stage is off it says so and
-stops; otherwise it takes its gate, artifacts and roster from there. Rules that several
+stops; otherwise it takes its gate, artifacts and roster from there. "Off" is
+enforced, not only written **(call)**: the first step of every stage runs
+`scripts/pincer-status.sh --stage <name>`, which exits non-zero with the reason when
+`harness.json` is missing or the stage is off, and the ticket hook refuses
+`pincer-ticket.sh start` in the same two cases.
+
+Forge-hosted artifacts **(call)**: a local ticket file is always the engine's home,
+because the floor runs the ticket's check and stamps its receipt there, and the hook
+can only protect a file. When the agreement puts tickets or the spec in the forge, the
+issue holds the discussion and the local file points at it (`forge:` in the
+frontmatter) and is kept in step by the narrow and code skills with `gh`. The
+engine never talks to the forge.
+
+Default homes, all overridable in `harness.json` **(call)**: `specs/` for specs (the
+old `.prd/`), `tickets/` for tickets, `evidence/` for evidence, `harness.json` at the
+root. With the runtime gone there is no untracked local state left, so the
+`.pincer/` directory, its `.gitignore` line and its hook rule go. Rules that several
 stages share (the secrets rule, the untrusted-content rule, "never run destructive
 commands") live once in `AGENTS.md` and are referred to, not pasted. Recovery and
 mechanics live in `docs/engine.md`, linked from the step that needs them.
@@ -199,16 +225,27 @@ Kept, trimmed to the floor and what a fresh session needs. **(owner: this small)
   frontmatter; the agent runs it only after the person said so, quoting them, the way
   the old authorize command did. These fields are written only by the script; the
   hook blocks hand edits on Claude Code, and on other platforms status flags them.
+- Acceptance semantics **(call)**: acceptance is per ticket, as a separate
+  `accepted` field on a done ticket, not a new status. It gates nothing in the
+  lifecycle (the next ticket may start), but status reports every done ticket
+  without it, and release passes only when every done ticket of the change carries
+  it. When plan is off and a change is one ticket, per ticket is per change.
 - `scripts/pincer-status.sh`: which stages are on, every ticket's state, what is
-  blocked, elapsed time, next command. `--json` for tooling. Replaces today's
-  status, resume and resume --brief with one report.
+  blocked, missing acceptances, elapsed time, next command. `--json` for tooling,
+  `--stage <name>` as the gate above. Replaces today's status, resume and
+  resume --brief with one report.
 - `scripts/pincer-evidence.cjs`: writes and validates an evidence manifest under
-  `.pincer/evidence/<candidate>/` when the agreement keeps evidence on. Schema kept
-  as today's schema 1 (authored checks with digests); the runtime-attempt schemas go.
+  `evidence/<candidate>/` when the agreement keeps evidence on. Schema kept as
+  today's schema 1 (authored checks with digests); the runtime-attempt schemas go.
 - Hooks: `block-dangerous.sh` and `ticket-guard.sh` as today, the guard extended to
-  the acceptance fields.
+  the acceptance fields and to the stage gate.
 
-Removed from the kit: `pincer-runtime.cjs` and its modules, change records, coverage,
+What "removed" means **(call)**: prune, not rewrite. The Node modules under
+`template/scripts/pincer-runtime/` that the floor needs (the parser, the receipt
+lifecycle, status, the evidence validator, io and sanitize) are kept under
+`scripts/pincer/`; the change, coverage, attempt, transaction, migration, resume and
+routing modules are deleted. `pincer-runtime.cjs` as an entry point goes; the two
+shell wrappers call the trimmed core. Removed with it: change records, coverage,
 migration, `runtime-contracts.md`, the dry-run checklist. `docs/engine.md` replaces
 the contract document at a tenth of the size.
 
@@ -242,15 +279,19 @@ the scenario grammar that fed strict coverage goes.
 
 ## 6. The library and the project's copies
 
-The kit ships a library under `template/library/`: the six stage skills, the agent
-definitions, the formats. The blueprint generates the project's copies of what it
-switched on:
+The kit ships a library that is installed into the project at
+`.claude/pincer/library/` **(call)**: the six stage skills, the agent definitions,
+the formats, the prompts. Like `.claude/commands/` today, the `.claude/` tree ships
+on every platform; it is the canonical, editable project copy, and the other
+platforms' files are generated from it. The blueprint generates the project's copies
+of what it switched on:
 
-- Claude Code: `.claude/skills/pincer-<stage>/SKILL.md` plus a thin
+- Claude Code: `.claude/skills/pincer-<stage>/` (the whole stage folder) plus a thin
   `.claude/commands/pincer-<stage>.md` that invokes it, and `.claude/agents/` for the
   active roster.
 - Codex: `.agents/skills/pincer-<stage>/SKILL.md` (Codex's native skill format, so
-  no conversion step, only a path rewrite for cross-references).
+  no conversion step, only a path rewrite for cross-references), generated from the
+  project copy.
 - Copilot: `.github/prompts/pincer-<stage>.prompt.md` generated as today.
 
 `scripts/sync-prompts.sh` keeps doing the generation; it now reads `harness.json` to
@@ -334,6 +375,19 @@ already half written by hand and can be compared) and brings the result back.
 1. PRD v8's open tickets: mark them superseded in the repo, or leave them untouched
    as history and say so only in the README?
 2. The wiki under `docs/wiki/`: keep maintaining it for the rewrite, or freeze it?
+3. The Claude Code plugin channel (`plugin/`, the marketplace entry): a plugin runs
+   from its own root and cannot write the project copies or the Codex and Copilot
+   files, so it needs a second runtime model. Recommendation: pause the plugin for
+   1.0, ship the npx installer only, and bring the plugin back after the local trial.
+
+## 11a. Source material
+
+The course's six questions, the agreement headings, the four-question front matter
+and the finding format come from the harness masterclass held in
+`/Users/alex/Documents/harness-masterclass/harness-playbook/course/` (verbatim text
+and both slide decks) and its guide pages. That is the reference for the builder.
+The kit paraphrases; it does not reproduce the course text, which is third-party
+material. Short labels such as the six heading names are used as is. **(call)**
 
 ## 12. Left to the builder
 
