@@ -75,4 +75,27 @@ function sanitizeText(text) {
   return String(text).split('\n').map((line) => sanitizeLine(line, state)).join('\n');
 }
 
-module.exports = { nowIso, atomicWrite, readJson, git, tryGit, sanitizeLine, sanitizeText };
+// Complete output on every exit path. process.stdout is asynchronous when it
+// is a pipe, so a report larger than the pipe buffer is cut short by an early
+// exit; writing the descriptor synchronously puts the bytes in the pipe before
+// the call returns. A reader that went away (EPIPE) or a closed descriptor
+// (EBADF) stays silent and keeps the command's own exit code.
+const IDLE = new Int32Array(new SharedArrayBuffer(4));
+function writeFd(fd, text) {
+  if (!text) return;
+  const buffer = Buffer.from(String(text), 'utf8');
+  let offset = 0;
+  while (offset < buffer.length) {
+    try {
+      offset += fs.writeSync(fd, buffer, offset, buffer.length - offset);
+    } catch (error) {
+      if (error.code === 'EAGAIN' || error.code === 'EINTR') { Atomics.wait(IDLE, 0, 0, 1); continue; }
+      if (error.code === 'EPIPE' || error.code === 'EBADF') return;
+      throw error;
+    }
+  }
+}
+const out = (text) => writeFd(1, text);
+const err = (text) => writeFd(2, text);
+
+module.exports = { nowIso, atomicWrite, readJson, git, tryGit, sanitizeLine, sanitizeText, writeFd, out, err };
