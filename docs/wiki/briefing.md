@@ -8,7 +8,7 @@ plugin marketplace, and the raw kit files ([[template-kit]],
 
 ## Current state
 
-PRD v8 on `feat/prd-v8` (draft PR #6). T-100, T-101, T-103–T-108 are done through the
+PRD v8 merged to `main` on 2026-10-20 (PR #6 fast-forwarded; GitHub main, the v0.7.0 tag and npm 0.7.0 all point at `cacc07d`). T-100, T-101, T-103–T-108 are done through the
 pinned v0.6.0 management kit; T-102 has a verified implementation with its native
 acceptance unchecked; T-109's offline gate is implemented and deliberately fails
 `--require-ready`. Checkout/package metadata is 0.7.0; live registry availability was not confirmed in the latest network-blocked check. Packaged artifacts establish
