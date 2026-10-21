@@ -1,0 +1,194 @@
+# The PINCER engine
+
+The contract between the stage skills and the scripts under `scripts/pincer/`. The
+skills are prose for an agent and bend to the agreement; the engine is the part that
+does not bend. It stamps the receipts, records the acceptance, validates the evidence
+and generates the project's copies. Read this when you want to know exactly what a
+script does, or when a session has to recover from a mistake.
+
+## What the engine is
+
+Four entry points over one dependency-free Node core (`scripts/pincer/`, Node 22 or
+newer, CommonJS, `node:` modules only). `scripts/pincer-ticket.sh` moves a ticket
+through its lifecycle and is the only writer of its lifecycle fields.
+`scripts/pincer-status.sh` reports where the work stands and gates the stages.
+`scripts/pincer-evidence.cjs` validates and digests evidence.
+`scripts/pincer-blueprint.cjs` reads the repository (recon), writes the agreement
+(write) and generates the project copies (generate); `scripts/sync-prompts.sh` is
+`generate` under its old name. Every entry point resolves the project root from
+`--root <dir>`, else the nearest directory up from the working directory that holds
+`harness.json`, else the working directory. The engine never talks to the forge; the
+skills do, with `gh`.
+
+## harness.json
+
+The machine-readable agreement at the repository root, written by the blueprint stage
+through `write` and read by every other stage. Schema 1. Unknown keys are kept and
+ignored. `blueprint` and `status` never appear under `stages`: they are always on and
+the validator rejects an entry for them.
+
+| Field | Values | Default |
+|---|---|---|
+| `schema` | `1` | required |
+| `project.kind` | `greenfield`, `brownfield` | required |
+| `project.name`, `project.reason` | text | `""` |
+| `people[]` | `{name, role, accepts}`, at least one with `accepts: true` | required |
+| `systems.forge` | `github`, `none`, `other` | `none` |
+| `systems.remote` | URL without credentials | `""` |
+| `systems.ci` | true, false | `false` |
+| `systems.deploy`, `systems.secrets` | text | `""` |
+| `repo.branches` | `per-ticket`, `main` | `main` |
+| `repo.pr` | true, false | `false` |
+| `repo.merge` | `merge`, `squash`, `rebase` | `merge` |
+| `repo.protection` | text | `""` |
+| `repo.checks` | list of commands | `[]` |
+| `homes.specs`, `homes.tickets`, `homes.evidence` | relative paths inside the repository, no leading `/` or `..` | `specs`, `tickets`, `evidence` |
+| `stages.plan` | `{on, spec: file or forge, gate, reason}` | `on: true, spec: file, gate: ""` |
+| `stages.narrow` | `{on, tickets: file or forge, reason}` | `on: true, tickets: file` |
+| `stages.code` | `{on, implementer, reason}` | `on: true, implementer: false` |
+| `stages.evaluate` | `{on, where: local or pr, evidence, reason}` | `on: true, where: local, evidence: true` |
+| `stages.release` | `{on, audit: tree or pr, reason}` | `on: true, audit: tree` |
+| `roster.plan`, `roster.narrow`, `roster.code`, `roster.evaluate` | lists of agent names from the library | `[]` |
+| `open` | list of text | `[]` |
+| `firstJob` | text | `""` |
+
+A file that fails validation makes every entry point print `harness.json: <problem>`
+and exit 3. A missing file prints `harness.json: no agreement yet: run /pincer-blueprint`
+and exits 3, except for `status`, which reports it and exits 0, and the always-on gates.
+
+## Ticket fields and receipts
+
+A ticket is `<homes.tickets>/T-NN-<slug>.md` with a closed `---` frontmatter of
+unique, unindented `key: value` lines; `#` starts a comment, except in
+`accepted_words`, which is read verbatim. Required keys: `ticket`, `status`, `size`
+(`S`, `M`, `L`), `depends_on` (an inline list such as `[T-01]`). Optional: `spec` (a
+relative `.md` path that must exist), `forge` (free text), `timeout` (seconds, default
+600). The body needs one `## Acceptance Criteria` section with checkboxes and one
+`## Verification` section with one fenced `bash` block.
+
+The eight lifecycle fields are written only by `scripts/pincer-ticket.sh`:
+
+| Field | Written by | Format |
+|---|---|---|
+| `status` | start, done | `open`, `in_progress`, `done` |
+| `started` | start | ISO UTC timestamp, `YYYY-MM-DDTHH:MM:SSZ` |
+| `last_check` | verify | `<timestamp> running|passed|failed|interrupted <hash>` |
+| `verified` | verify, on a pass | `<timestamp> <hash>` |
+| `finished` | done | timestamp |
+| `accepted` | accept | timestamp |
+| `accepted_by` | accept | a name from `people` with `accepts: true` |
+| `accepted_words` | accept | what the person said, verbatim, on one line |
+
+The hash is the first 12 hex characters of sha256 over the Verification block: the
+lines inside the fence joined with newlines plus one trailing newline. Change the
+block and the receipt no longer matches it. `verify` writes `running` first, runs the
+block with `bash -eo pipefail` under the ticket's timeout, then writes `passed`
+(together with `verified`), `failed`, or `interrupted` for a signal or a timeout. A
+ticket is ready when `verified` carries the current hash and the `last_check` for that
+hash is not a failure.
+
+## Commands and exit codes
+
+Exit codes everywhere: 0 ok, 1 refused (the reason on stderr), 2 usage, 3 no
+agreement, stage off or invalid `harness.json`, 130 interrupted.
+
+`scripts/pincer-ticket.sh` runs `node scripts/pincer/cli.cjs ticket <verb> <T-NN>`:
+- `start T-NN`: `open` to `in_progress`, stamps `started`. Refuses when a `depends_on` ticket is not done and ready, when the ticket is already done, and with exit 3 when `harness.json` is missing or `stages.code.on` is false.
+- `verify T-NN`: starts an open ticket, runs the block, stamps the receipt only on exit 0. A failed check exits 1 and prints `FAILED (exit N)`; a block with no runnable command is refused.
+- `done T-NN`: `in_progress` to `done` when the receipt matches the current block, no newer check failed, and every criterion is ticked; stamps `finished`.
+- `accept T-NN --by "<name>" --words "<their words>"`: on a done ticket writes the three acceptance fields together; refuses a name that is not an acceptor and empty words.
+
+`scripts/pincer-status.sh` runs `node scripts/pincer/cli.cjs status`: the report, or
+`--json` for data. `--stage <name>` prints `on` and exits 0, or the reason and exits 3;
+a name that is not a stage exits 2. An invalid `harness.json` still renders the report
+and then exits 3.
+
+`scripts/pincer-evidence.cjs` runs `node scripts/pincer/cli.cjs evidence`:
+`validate <manifest> [--candidate <sha>]` prints `ok <candidate>` or one
+`evidence: <manifest>: <problem>` line each and exits 1; `digest <file>...` prints
+`<sha256>  <file>` per file.
+
+`scripts/pincer-blueprint.cjs` has three verbs:
+- `recon [--json] [--network]` runs `node scripts/pincer/cli.cjs recon`: the kind, the reasons, the facts, the prefill and what it could not see. Offline unless `--network`, which lets it ask `gh`.
+- `write [--answers <file>]` runs `node scripts/pincer/cli.cjs write`: validates the answers (default: `harness.json` itself), writes `harness.json`, renders the agreement between the markers in `AGENTS.md`, runs the generator. Validation problems: one per line, exit 3, nothing written. One agreement marker without the other: exit 1, nothing written.
+- `generate [--harness <file>] [--platform <claude,codex,copilot|all>] [--overwrite]` runs `node scripts/pincer/cli.cjs generate`, also reachable as `scripts/sync-prompts.sh`. See Generation below.
+
+## Stage gate
+
+Every stage skill's first step runs `scripts/pincer-status.sh --stage <name>`.
+`blueprint` and `status` are always on and print `on` even without `harness.json`. The
+other five (`plan`, `narrow`, `code`, `evaluate`, `release`) print `on` when the
+agreement has them on, else the reason (`no agreement yet: run /pincer-blueprint`,
+`stage <name> is off in harness.json`, or the validation problem) with exit 3.
+`scripts/pincer-ticket.sh start` and `verify` apply the same gate for `code`. The hook
+on Claude Code does not read `harness.json`; the gate lives in the scripts, so it holds
+on every platform.
+
+## Acceptance
+
+The floor has two halves: a ticket is `done` only on a receipt, and accepted only when
+a named person said so. `accept` writes `accepted`, `accepted_by` and `accepted_words`
+together, and the validator refuses a ticket carrying one or two of the three. The name
+must be in `people` with `accepts: true`; the words are the person's, quoted as they
+said them, never a paraphrase. Acceptance gates nothing in the lifecycle (the next
+ticket may start), but status warns about every done ticket without it and names the
+next step: `/pincer-release` when that stage is on, else the `accept` command itself.
+Release passes only when every done ticket of the change carries it. The agent runs
+`accept` only after the person said so.
+
+## Evidence manifest schema 1
+
+`<homes.evidence>/<candidate>/manifest.json`, where the directory's basename is the
+candidate's full commit id. Top-level keys, all required and no others: `schema` (1),
+`candidate` and `base` (40 hex characters), `created` (UTC timestamp), `spec` (a path
+that exists), `environment` (`tools`, `limitations`), `checks`, `visual_review`,
+`artifacts`. Each check has `id` (`C-NN`), `kind` (`command`, `review`, `visual`),
+`required`, `result` (`passed`, `failed`, `unverified`), `command` (required for a
+command check), `log` (an artifact path) and an optional `note`; a required check
+must be `passed`. `visual_review` has `applicable` and, when false, `reason`.
+`artifacts` maps paths inside the manifest's directory to their sha256, and the
+digests must match the files. The validator checks that the record is consistent, not
+that the commands ran. Status reports `Evidence:` per manifest and release reads the
+same validator.
+
+## Generation and .new sidecars
+
+`generate` reads the library (`.claude/pincer/library/`, the project's own copy) and
+the agreement. For every stage that is on it copies `library/stages/<stage>/` to
+`.claude/skills/pincer-<stage>/` (the project copy: edit this one), writes the thin
+`.claude/commands/pincer-<stage>.md`, and per installed platform the Codex skill
+`.agents/skills/pincer-<stage>/SKILL.md` (`/pincer-x` mentions become `$pincer-x`,
+`$ARGUMENTS` becomes a sentence) and the Copilot prompt
+`.github/prompts/pincer-<stage>.prompt.md`, both derived from the project copy as it
+stands. Agents named by the rosters of the stages that are on are copied to
+`.claude/agents/<name>.md`.
+
+Baselines live in `.pincer.json` under `generated` when the installer wrote it. A
+target whose hash matches its baseline or the fresh content is overwritten; one that
+matches neither was edited by hand and is kept, with the fresh content beside it as
+`<file>.new`. Derived files carry the comment
+`<!-- Generated by scripts/pincer/cli.cjs generate from <source> ... -->`; a file that
+still carries it is the generator's to overwrite or remove. The files of a stage
+switched off, or of an agent dropped from every active roster, are removed when
+unedited and reported when not. `--overwrite` treats every target as unedited.
+Platforms come from `.pincer.json`, all three without one; `--platform` overrides them
+for one run. Kit maintainers regenerate the shipped copies the same way, with
+`--root template`, `--platform all` and a `--harness` file in which every optional
+stage is off; a test fails when the shipped copies are stale.
+
+## Recovery
+
+- A failed check: fix the cause and run `verify` again. The failed `last_check` stays until a pass replaces it; it is information, not damage.
+- An interrupted check (a signal, the timeout, exit 130): run `verify` again.
+- A ticket that status reports as `invalid`, or whose lifecycle fields were edited by hand: the person repairs the file in their own terminal, then `verify` runs again (and `done` again if it was done). The session reports the problem and never edits those fields itself.
+- A check that changed after it passed: `done` refuses with both hashes; run `verify` again.
+- The rule under all of these: you never restore a ticket file from git (`checkout`, `restore`, `reset --hard`, `stash`) to clear a warning, because that revives an old receipt as if it were new evidence. On Claude Code the hook blocks it; elsewhere it is the standing rule in `AGENTS.md`.
+- `write` refused: fix the answers file and run it again; nothing was written. One agreement marker without the other in `AGENTS.md`: put the missing marker back by hand, then `write`.
+- A `.new` sidecar: compare it with the project copy, take what you want, delete the sidecar. `generate` writes a new one only when the fresh content differs again.
+
+## Platform notes
+
+- Claude Code: `.claude/settings.json` wires two PreToolUse hooks. `block-dangerous.sh` refuses destructive commands. `ticket-guard.sh` refuses edits to the eight lifecycle fields and any shell command that writes, resets or restores a ticket file, allowing only exact `scripts/pincer-ticket.sh start|verify|done|accept` calls and the `cli.cjs ticket` form. The guard matches `T-NN-*.md` under any directory named `tickets`; a `homes.tickets` that does not end in `tickets` loses hook coverage, and the rule in `AGENTS.md` carries the weight alone. The hook does not read `harness.json`.
+- Codex: reads `AGENTS.md` natively; the stages are skills under `.agents/skills/`, invoked as `$pincer-<stage>`. No hook. Posture in `~/.codex/config.toml`: `approval_policy = "on-request"` and `sandbox_mode = "workspace-write"`; never run with approvals disabled. Status warns about missing, failed or stale receipts and about hand-edited fields.
+- Copilot: `.github/copilot-instructions.md` points at `AGENTS.md`; the stages are prompt files under `.github/prompts/`, invoked as `/pincer-<stage>` with prompt files enabled. No hook; the same rule.
+- Everywhere: Node 22 or newer, git and bash. `gh` only for the forge-facing steps the skills name. The engine runs offline.

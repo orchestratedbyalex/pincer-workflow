@@ -168,6 +168,28 @@ for (const stage of harness.OPTIONAL_STAGES) {
   assert.ok(off.includes('--stage') || off.includes('exits 3') || off.includes('exit 3'), `${stage}: when off names the gate`);
 }
 
+// Task 13: docs/engine.md, the engine contract, under 250 lines
+const ENGINE_HEADINGS = ['## What the engine is', '## harness.json', '## Ticket fields and receipts', '## Commands and exit codes', '## Stage gate', '## Acceptance', '## Evidence manifest schema 1', '## Generation and .new sidecars', '## Recovery', '## Platform notes'];
+const enginePath = path.join(repo, 'template/docs/engine.md');
+assert.ok(fs.existsSync(enginePath), 'template/docs/engine.md exists');
+const engine = fs.readFileSync(enginePath, 'utf8');
+const engineLevel2 = engine.split('\n').filter((l) => l.startsWith('## '));
+assert.deepEqual(engineLevel2, ENGINE_HEADINGS, 'engine.md: the ten sections in order');
+assert.ok(engine.split('\n').length <= 250, `engine.md under 250 lines (${engine.split('\n').length})`);
+// every cli verb the document names exists, and every verb the cli dispatches is documented
+const cliSource = fs.readFileSync(path.join(repo, 'template/scripts/pincer/cli.cjs'), 'utf8');
+const cliVerbs = [...cliSource.matchAll(/if \(command === '([a-z]+)'\)/g)].map((m) => m[1]);
+assert.ok(cliVerbs.length >= 6, cliVerbs.join(', '));
+const documentedVerbs = [...engine.matchAll(/cli\.cjs(?: \[--root <dir>\])? ([a-z]+)/g)].map((m) => m[1]);
+for (const verb of new Set(documentedVerbs)) assert.ok(cliVerbs.includes(verb), `engine.md names cli verb ${verb}, which cli.cjs does not dispatch`);
+for (const verb of cliVerbs) assert.ok(documentedVerbs.includes(verb), `cli.cjs verb ${verb} is not documented in engine.md`);
+// the facts the document states agree with the engine
+for (const field of harness.STAGES) assert.ok(engine.includes(field), `engine.md: stage ${field}`);
+for (const field of ['status', 'started', 'last_check', 'verified', 'finished', 'accepted', 'accepted_by', 'accepted_words']) assert.ok(engine.includes(`\`${field}\``), `engine.md: lifecycle field ${field}`);
+for (const needle of ['running', 'passed', 'failed', 'interrupted', 'sha256', '12', 'exit 0', ' 3', '130', '--stage', 'no agreement yet', '--by', '--words', 'schema', 'C-NN', '.new', 'never restore', 'Claude Code', 'Codex', 'approval_policy', 'sandbox_mode', 'homes.tickets']) assert.ok(engine.includes(needle), `engine.md: ${needle}`);
+for (const stale of ['pincer-runtime', '.prd/', '.pincer/', 'PRD', 'NOTES.md']) assert.ok(!engine.includes(stale), `engine.md: no ${stale}`);
+assert.ok(!/^@/m.test(engine), 'engine.md: no @ imports');
+
 // Course text is paraphrased, never copied: no eight-word run of a library file
 // appears in the masterclass playbook. Runs only where the playbook is checked out.
 const PLAYBOOK = '/Users/alex/Documents/harness-masterclass/harness-playbook';
