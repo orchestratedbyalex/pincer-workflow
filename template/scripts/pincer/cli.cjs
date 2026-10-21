@@ -10,12 +10,17 @@ const harness = require('./harness.cjs');
 const ticket = require('./ticket.cjs');
 const status = require('./status.cjs');
 const evidence = require('./evidence.cjs');
+const recon = require('./recon.cjs');
 
 const USAGE = `usage: node scripts/pincer/cli.cjs [--root <dir>] <command> ...
   ticket <start|verify|done|accept> <T-NN> [--by "<name>" --words "<what they said>"]
   status [--json] [--stage <name>]
   evidence validate <manifest> [--candidate <sha>] | digest <file>...
+  recon [--json] [--network]
 `;
+const BLUEPRINT_USAGE = `usage: scripts/pincer-blueprint.cjs recon [--json] [--network]
+`;
+const BLUEPRINT_VERBS = ['recon'];
 const EVIDENCE_USAGE = `usage: scripts/pincer-evidence.cjs validate <manifest> [--candidate <sha>]
        scripts/pincer-evidence.cjs digest <file>...
 `;
@@ -121,6 +126,26 @@ function evidenceCommand(root, args, io) {
   return 2;
 }
 
+function reconCommand(root, args, io) {
+  let json = false, network = false;
+  for (const arg of args) {
+    if (arg === '--json') json = true;
+    else if (arg === '--network') network = true;
+    else { io.err(`pincer-blueprint: unexpected argument ${arg}\n${BLUEPRINT_USAGE}`); return 2; }
+  }
+  if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) { io.err(`pincer-blueprint: ${root} is not a directory\n`); return 1; }
+  const result = recon.recon(root, { network });
+  io.out(json ? `${JSON.stringify(result, null, 2)}\n` : recon.render(result));
+  return 0;
+}
+
+// scripts/pincer-blueprint.cjs: the blueprint verbs only, same root rules.
+async function blueprint(argv = process.argv.slice(2), io = { out: util.out, err: util.err }) {
+  const resolved = resolveRoot(argv);
+  if (resolved.problem || !BLUEPRINT_VERBS.includes(resolved.args[0])) { io.err(BLUEPRINT_USAGE); return 2; }
+  return main(argv, io);
+}
+
 async function main(argv = process.argv.slice(2), io = { out: util.out, err: util.err }) {
   const resolved = resolveRoot(argv);
   if (resolved.problem) { io.err(`pincer: ${resolved.problem}\n${USAGE}`); return 2; }
@@ -130,6 +155,7 @@ async function main(argv = process.argv.slice(2), io = { out: util.out, err: uti
     if (command === 'ticket') return await ticketCommand(root, rest, io);
     if (command === 'status') return statusCommand(root, rest, io);
     if (command === 'evidence') return evidenceCommand(root, rest, io);
+    if (command === 'recon') return reconCommand(root, rest, io);
     io.err(USAGE);
     return 2;
   } catch (error) {
@@ -142,4 +168,4 @@ async function main(argv = process.argv.slice(2), io = { out: util.out, err: uti
 
 if (require.main === module) main().then((code) => { process.exitCode = code; });
 
-module.exports = { main, resolveRoot, flags, USAGE, TICKET_USAGE, STATUS_USAGE, EVIDENCE_USAGE };
+module.exports = { main, blueprint, resolveRoot, flags, USAGE, TICKET_USAGE, STATUS_USAGE, EVIDENCE_USAGE, BLUEPRINT_USAGE };
