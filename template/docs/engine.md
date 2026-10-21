@@ -49,6 +49,9 @@ the validator rejects an entry for them.
 | `stages.evaluate` | `{on, where: local or pr, evidence, reason}` | `on: true, where: local, evidence: true` |
 | `stages.release` | `{on, audit: tree or pr, reason}` | `on: true, audit: tree` |
 | `roster.plan`, `roster.narrow`, `roster.code`, `roster.evaluate` | lists of agent names from the library | `[]` |
+| `models.stages.<stage>` | a tier or `{tier, effort}`; `plan`, `narrow`, `code`, `evaluate`, `release` | not set |
+| `models.agents.<name>` | a tier or `{tier, effort}`, for a library agent name | not set |
+| `models.map.<platform>.<tier>` | a model name, for `claude`, `codex`, `copilot` and `strong`, `standard`, `fast` | none |
 | `open` | list of text | `[]` |
 | `firstJob` | text | `""` |
 
@@ -160,8 +163,13 @@ the agreement. For every stage that is on it copies `library/stages/<stage>/` to
 `.agents/skills/pincer-<stage>/SKILL.md` (`/pincer-x` mentions become `$pincer-x`,
 `$ARGUMENTS` becomes a sentence) and the Copilot prompt
 `.github/prompts/pincer-<stage>.prompt.md`, both derived from the project copy as it
-stands. Agents named by the rosters of the stages that are on are copied to
-`.claude/agents/<name>.md`.
+stands. Agents named by the rosters of the stages that are on are rendered to
+`.claude/agents/<name>.md`: the library copy with its `tier:` line dropped and the
+model and effort of its tier appended; with Codex installed each also gets
+`.codex/agents/<name>.toml` (see Models). The model and effort lines of an agent file
+and of a project copy belong to the generator and the tier belongs in the agreement: a
+file that differs from the library copy only in those lines is the generator's to
+overwrite or remove.
 
 Baselines live in `.pincer.json` under `generated` when the installer wrote it. A
 target whose hash matches its baseline or the fresh content is overwritten; one that
@@ -176,6 +184,39 @@ for one run. Kit maintainers regenerate the shipped copies the same way, with
 `--root template`, `--platform all` and a `--harness` file in which every optional
 stage is off; a test fails when the shipped copies are stale.
 
+## Models
+
+The agreement names a tier per role under `models.stages.<stage>` (the five optional
+stages) and `models.agents.<name>`: `strong`, `standard`, `fast`, `inherit` for the
+session's model, or `""` for not set, each with an optional effort `low`, `medium` or
+`high`. The library's `models.json` maps a tier to each platform's model name: the
+Claude row holds the aliases `opus`, `sonnet`, `haiku`; the Codex and Copilot rows name
+the vendors' current models and change when a vendor ships. `models.map.<platform>.<tier>`
+in the agreement overrides one entry. A library agent file may carry `tier:` as the
+kit's default for that role (`codebase-explorer`: `standard`). Resolution, in
+`scripts/pincer/models.cjs`: the agreement's tier, else the library's, else not set.
+`inherit` and not set write no model field, so the host's own order stands; an effort
+is written whenever set, with or without a model. The always-on stages take no tier:
+their copies are installer-owned and the validator rejects an entry for them.
+
+What the generator writes. Claude Code: `model:` and `effort:` in the agent files and,
+for a stage with a tier, in its project copy and thin command; the model applies to the
+stage's first turn and the session's model resumes on the next prompt. Codex:
+`.codex/agents/<name>.toml` per roster agent, with `model` and
+`model_reasoning_effort`, and one hint line at the top of the stage skill, which has no
+model field. Copilot: `model:` in the prompt file; the agents are the Claude files,
+which VS Code reads and maps itself. A tier the table cannot translate, or a missing
+table, is reported once and the field is left out; doctor prints the resolved mapping
+per installed platform. The host decides last: Claude Code's model allowlist and
+subagent env vars, Copilot org policy and Codex project trust override any file.
+
+| Role | Claude Code | Codex | Copilot (VS Code) |
+|---|---|---|---|
+| agent model | frontmatter, under the host's resolution order | agent file | the Claude file, mapped by VS Code |
+| agent effort | frontmatter | agent file | not available |
+| stage model | first turn of the stage | a hint in the skill | the prompt file |
+| stage effort | frontmatter | the same hint | not available |
+
 ## Recovery
 
 - A failed check: fix the cause and run `verify` again. The failed `last_check` stays until a pass replaces it; it is information, not damage.
@@ -189,6 +230,6 @@ stage is off; a test fails when the shipped copies are stale.
 ## Platform notes
 
 - Claude Code: `.claude/settings.json` wires two PreToolUse hooks. `block-dangerous.sh` refuses destructive commands. `ticket-guard.sh` refuses edits to the eight lifecycle fields and any shell command that writes, resets or restores a ticket file, allowing only exact calls of the project's own `scripts/pincer-ticket.sh start|verify|done|accept` and the `cli.cjs ticket` form at the same path; a lookalike script elsewhere is refused. It also refuses edits and shell writes to the engine (`scripts/pincer-*`, `scripts/pincer/`) and to the hooks (`.claude/hooks/`, `.claude/settings.json`), which `npx pincer-workflow update` refreshes. The guard matches `T-NN-*.md` under any directory named `tickets`; a `homes.tickets` that does not end in `tickets` loses hook coverage, and the rule in `AGENTS.md` carries the weight alone. The hook does not read `harness.json`. It is a guardrail against documented mistake forms, not a security boundary: the sandbox and the approval controls remain that boundary.
-- Codex: reads `AGENTS.md` natively; the stages are skills under `.agents/skills/`, invoked as `$pincer-<stage>`. No hook. Posture in `~/.codex/config.toml`: `approval_policy = "on-request"` and `sandbox_mode = "workspace-write"`; never run with approvals disabled. Status warns about missing, failed or stale receipts and about hand-edited fields.
-- Copilot: `.github/copilot-instructions.md` points at `AGENTS.md`; the stages are prompt files under `.github/prompts/`, invoked as `/pincer-<stage>` with prompt files enabled. No hook; the same rule.
+- Codex: reads `AGENTS.md` natively; the stages are skills under `.agents/skills/`, invoked as `$pincer-<stage>`; the roster agents are `.codex/agents/<name>.toml`, generated from the library, and Codex loads `.codex/` only in a project marked trusted. No hook. Posture in `~/.codex/config.toml`: `approval_policy = "on-request"` and `sandbox_mode = "workspace-write"`; never run with approvals disabled. Status warns about missing, failed or stale receipts and about hand-edited fields.
+- Copilot: `.github/copilot-instructions.md` points at `AGENTS.md`; the stages are prompt files under `.github/prompts/`, invoked as `/pincer-<stage>` with prompt files enabled; the roster agents are the files under `.claude/agents/`, which VS Code reads in the Claude format. No hook; the same rule.
 - Everywhere: Node 22 or newer, git and bash. `gh` only for the forge-facing steps the skills name. The engine runs offline.

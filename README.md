@@ -88,7 +88,9 @@ codes, the gate, the manifest, generation, recovery.
 | `.claude/pincer/library/` | the library: every stage skill, prompt, format and agent |
 | `.claude/skills/pincer-<stage>/` | the project's editable copy of each stage that is on |
 | `.claude/commands/`, `.agents/skills/`, `.github/prompts/` | the thin commands, the Codex skills, the Copilot prompts, generated |
-| `.claude/agents/` | the review agents the roster names |
+| `.claude/agents/` | the review agents the roster names, with the model of their tier |
+| `.codex/agents/` | the same agents as Codex agent files, generated when Codex is installed |
+| `.claude/pincer/library/models.json` | the tier table: the model each platform runs a tier on |
 | `docs/engine.md`, `docs/release-checklist.md` | the engine contract and the fifteen-item release audit |
 | `specs/`, `tickets/`, `evidence/` | the default homes, all overridable in `harness.json` |
 
@@ -101,13 +103,28 @@ Secrets never enter the kit: `init` adds `.env`, `.env.*` and `!.env.example` to
 |---|---|---|---|
 | Agreement | `AGENTS.md` via the `CLAUDE.md` import | `AGENTS.md` natively | pointed at by `.github/copilot-instructions.md` |
 | Stages | `.claude/skills/` plus `/pincer-*` commands | `.agents/skills/`, invoked as `$pincer-*` | `.github/prompts/`, invoked as `/pincer-*` with prompt files enabled |
-| Agents | subagents | inline: the skill applies the agent file as a rubric | same fallback |
+| Agents | subagents | subagents from `.codex/agents/` | the Claude agent files, read by VS Code |
 | Floor | script plus hook | script plus status warning | script plus status warning |
 
 The hook exists only on Claude Code. On the other platforms the rule in `AGENTS.md`
 carries the weight, `scripts/pincer-status.sh` reports what the rule would have
 stopped, and the posture notes in `.codex/README.md` apply. Node 22 or newer, git and
 bash are needed everywhere; `gh` only for the forge-facing steps the agreement chose.
+
+## Model tiers
+
+The agreement says which tier each stage and each roster agent runs on: `strong`,
+`standard`, `fast`, or `inherit` for the session's model, with an optional effort
+(`low`, `medium`, `high`). The blueprint proposes the tiers right after the roster
+(reviewers strong, the implementer and the explorer standard, every stage as run) and
+writes what you confirm under `models` in `harness.json`; nothing moves to a stronger
+tier unless you said so. One table in the library, `.claude/pincer/library/models.json`,
+maps a tier to each platform's model name, and the generator writes the platform's own
+field: Claude Code agent and skill frontmatter, Codex agent files, the Copilot prompt
+files. `harness.json` never names a vendor's model; a project that must pin one sets
+`models.map.<platform>.<tier>`. When a vendor ships a new model the table changes by one
+row and `npx pincer-workflow update` carries it into every project; `doctor` shows what
+each installed platform will run.
 
 ## Update
 

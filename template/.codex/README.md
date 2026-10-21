@@ -20,6 +20,17 @@ every platform. Edit the project copy and run `scripts/sync-prompts.sh`; never e
 the generated file, as the comment on its first line says. `/skills` lists what
 Codex has loaded.
 
+## Agents
+
+Codex has subagents, and the roster the agreement names ships as one TOML file per agent
+under `.codex/agents/`, generated from the library (`.claude/pincer/library/agents/`) with
+the model and reasoning effort of the agent's tier (`models` in `harness.json`);
+`scripts/sync-prompts.sh` regenerates them with the skills. Codex loads `.codex/` only in
+a project you have marked trusted; until then, and whenever you switch agents off, the
+stages' "Without subagents" sections apply. The kit generates no `config.toml`: a stage's
+tier appears as one line at the top of its skill, saying what was agreed and how to
+restart with `codex -m`.
+
 ## Recommended posture (`~/.codex/config.toml`)
 
 This kit installs no Codex hook. Codex's sandbox, approval policy and the rules in
