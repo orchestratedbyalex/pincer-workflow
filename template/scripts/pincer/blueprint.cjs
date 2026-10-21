@@ -8,6 +8,7 @@ const path = require('node:path');
 const util = require('./util.cjs');
 const harness = require('./harness.cjs');
 const generate = require('./generate.cjs');
+const models = require('./models.cjs');
 
 const AGREEMENT_START = '<!-- pincer:agreement:start -->';
 const AGREEMENT_END = '<!-- pincer:agreement:end -->';
@@ -52,8 +53,9 @@ function pipeline(h) {
     .join(' → ');
 }
 
-// The slots of library/agreement.md from a normalized agreement.
-function view(h) {
+// The slots of library/agreement.md from a normalized agreement; the library
+// supplies the agents' default tiers for the Models line.
+function view(h, lib) {
   const homes = harness.homes(h);
   const simplify = harness.OPTIONAL_STAGES.filter((name) => !harness.stageOn(h, name))
     .map((name) => `${name} is off${or(h.stages[name].reason, '') ? ` — ${h.stages[name].reason.trim()}` : ''}.`);
@@ -81,13 +83,15 @@ function view(h) {
     checks: h.repo.checks.length ? h.repo.checks.join(', ') : 'none',
     open: h.open.length ? h.open : ['none'],
     firstJob: or(h.firstJob, 'not named yet'),
+    models: models.agreementLine(models.effective(h, lib)),
   };
 }
 
 // The agreement text, without the markers; ends with one newline.
 function renderAgreement(h, { library } = {}) {
-  const template = fs.readFileSync(path.join(library || libraryDir(process.cwd()), TEMPLATE_FILE), 'utf8');
-  return `${fill(template, view(harness.normalize(h))).trimEnd()}\n`;
+  const lib = library || libraryDir(process.cwd());
+  const template = fs.readFileSync(path.join(lib, TEMPLATE_FILE), 'utf8');
+  return `${fill(template, view(harness.normalize(h), lib)).trimEnd()}\n`;
 }
 
 // AGENTS.md with the agreement between the markers. Markers present: the text

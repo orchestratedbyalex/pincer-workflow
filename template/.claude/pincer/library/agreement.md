@@ -25,6 +25,7 @@
 {{#each people}}
 - {{.}}
 {{/each}}
+- Models: {{models}}
 - A person owns scope, direction, pushing, merging, acceptance and the rules in this file.
 - The agent reads this agreement first, then proposes, builds, checks, records receipts and evidence, and reports. It never accepts its own work.
 

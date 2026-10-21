@@ -109,6 +109,23 @@ assert.match(section(agreement, 4), /plan is off — changes are small; the tick
 assert.match(section(agreement, 5), /Alex \(owner\) — accepts results/);
 assert.match(section(agreement, 5), /Sam \(reviewer\)/);
 assert.doesNotMatch(section(agreement, 5), /Sam \(reviewer\)[^\n]*accepts/);
+assert.match(section(agreement, 5), /^- Models: the session's model everywhere\.$/m);
+// with tiers agreed: the Models line sits between the people and the fixed lines
+write(dir, 'answers.json', JSON.stringify({ ...answers, models: { stages: { evaluate: 'strong' }, agents: { 'code-quality-reviewer': { tier: 'strong', effort: 'high' } } } }));
+r = cli(dir, 'write', '--answers', 'answers.json');
+assert.equal(r.status, 0, both(r));
+{
+  const five = section(between(read(dir, 'AGENTS.md')), 5);
+  assert.match(five, /^- Models: evaluate on strong; code-quality-reviewer \(high effort\) on strong; everything else on the session's model\.$/m);
+  assert.ok(five.indexOf('Sam (reviewer)') < five.indexOf('- Models:') && five.indexOf('- Models:') < five.indexOf('- A person owns'), five);
+  assert.deepEqual(JSON.parse(read(dir, 'harness.json')).models.stages.evaluate, { tier: 'strong', effort: '' });
+}
+// back to the plain answers so the checks below see the original agreement
+write(dir, 'answers.json', JSON.stringify(answers));
+r = cli(dir, 'write', '--answers', 'answers.json');
+assert.equal(r.status, 0, both(r));
+agents = read(dir, 'AGENTS.md');
+agreement = between(agents);
 assert.match(section(agreement, 6), /one branch per ticket/);
 assert.match(section(agreement, 6), /PR: yes/);
 assert.match(section(agreement, 6), /Merge: squash/);
