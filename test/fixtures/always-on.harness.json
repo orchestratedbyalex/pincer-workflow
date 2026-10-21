@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "project": { "name": "pincer-workflow kit", "kind": "greenfield", "reason": "the shipped copies carry only the always-on stages" },
+  "people": [{ "name": "Alex", "role": "owner", "accepts": true }],
+  "stages": {
+    "plan": { "on": false, "reason": "shipped copies: the project's blueprint switches stages on" },
+    "narrow": { "on": false, "reason": "shipped copies" },
+    "code": { "on": false, "reason": "shipped copies" },
+    "evaluate": { "on": false, "reason": "shipped copies" },
+    "release": { "on": false, "reason": "shipped copies" }
+  }
+}

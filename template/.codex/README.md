@@ -1,49 +1,42 @@
 # PINCER on Codex CLI
 
-Codex reads `AGENTS.md` at the repo root natively — the project rules apply
-with no setup. The workflow commands ship as **skills** in `.agents/skills/`,
-which Codex discovers from the repo on its own (Codex removed custom prompts
-and `~/.codex/prompts/` in early 2026 — openai/codex#16115 — so there is
-nothing to copy into your home directory).
+Codex reads `AGENTS.md` at the repository root natively, so the agreement and the
+standing rules apply with no setup. The stages ship as skills under `.agents/skills/`,
+which Codex discovers from the repository (custom prompts under `~/.codex/prompts/`
+were removed in early 2026, openai/codex#16115; there is nothing to copy home).
 
-Skills are invoked by mention: type `$` and pick from the list, or write the
-name directly:
+Skills are invoked by mention: type `$` and pick from the list, or write the name:
 
 ```
-$pincer-plan <brief>
-$pincer-narrow   →   $pincer-code   →   $pincer-evaluate   →   $pincer-release
-$pincer-status
+$pincer-blueprint     first: recon, the interview, the agreement
+$pincer-status        any time: where the work stands, the next command
 ```
 
-The skills point at the canonical playbooks, the two subagent rubrics and the
-PRD/ticket templates under `.claude/` — those ship on every platform, so the
-directory is expected here even without Claude Code.
-
-`/skills` lists what Codex has loaded — the six `pincer-*` entries should be
-there whenever you start `codex` inside this repo. The skills are generated
-from `.claude/commands/` by `scripts/sync-prompts.sh` (cross-references are
-rewritten from `/pincer-*` to `$pincer-*`, and the argument placeholder becomes
-"the text after the mention") — edit the source playbooks, re-run the script,
-commit the result.
+Until the blueprint has run, only these two exist. The agreement switches the other
+stages on, and `scripts/pincer-blueprint.cjs write` generates their skills here
+(`$pincer-plan`, `$pincer-narrow`, `$pincer-code`, `$pincer-evaluate`,
+`$pincer-release`) from the project copies under `.claude/skills/`, which ship on
+every platform. Edit the project copy and run `scripts/sync-prompts.sh`; never edit
+the generated file, as the comment on its first line says. `/skills` lists what
+Codex has loaded.
 
 ## Recommended posture (`~/.codex/config.toml`)
 
-This kit does not currently install a Codex hook adapter. Use Codex's sandbox,
-approval policy, and project instructions as the guardrail posture:
+This kit installs no Codex hook. Codex's sandbox, approval policy and the rules in
+`AGENTS.md` are the guardrail posture:
 
 ```toml
-approval_policy = "on-request"     # agent asks before escalating
-sandbox_mode   = "workspace-write" # writes confined to the repo; no network by default
+approval_policy = "on-request"     # the agent asks before escalating
+sandbox_mode   = "workspace-write" # writes confined to the repository; no network by default
 ```
 
-The ticket scripts work here unchanged (`scripts/pincer-ticket.sh
-start|verify|done T-NN` and `scripts/pincer-status.sh`); they are thin wrappers
-around `scripts/pincer-runtime.cjs`, so Node.js 22+ is required.
-Without a Pincer Codex hook adapter, the rule in `AGENTS.md` carries the weight
-of stopping hand-edited ticket state; `$pincer-status` warns about any ticket
-marked done without a receipt.
+The scripts work here unchanged: `scripts/pincer-ticket.sh start|verify|done|accept T-NN`,
+`scripts/pincer-status.sh` and `scripts/pincer-blueprint.cjs`; Node.js 22 or newer is
+required. Without a hook, the rule in `AGENTS.md` carries the weight of stopping
+hand-edited ticket fields; `$pincer-status` warns about a ticket marked done without a
+receipt and about acceptance missing where the agreement expects it.
 
-Never run with approvals disabled. The destructive-command rule in `AGENTS.md`
-(no force-pushes, absolute-path deletes, or `curl | sh` by an agent) applies as
-a standing instruction here; `$pincer-release` audits the git artifacts
-afterwards, which is platform-independent by design.
+Never run with approvals disabled. The destructive-command rule in `AGENTS.md` (no
+force-pushes, absolute-path deletes or `curl | sh` by an agent) is a standing
+instruction here; `$pincer-release` audits the artifacts afterwards, the same on
+every platform.

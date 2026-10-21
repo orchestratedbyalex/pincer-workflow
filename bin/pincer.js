@@ -1,13 +1,15 @@
 #!/usr/bin/env node
-// pincer — installer for the PINCER workflow (Plan · Investigate · Narrow · Code · Evaluate · Release)
+// pincer — installer for PINCER, the harness builder
+// (blueprint · plan · narrow · code · evaluate · release · status)
 //
-//   npx pincer-workflow init      install into the current repo (asks which platform)
-//   npx pincer-workflow update    refresh an existing install, preserving local edits
+//   npx pincer-workflow init      install the kit into the current repo (asks which platforms)
+//   npx pincer-workflow update    refresh an install, preserving local edits; regenerate the project copies
 //   npx pincer-workflow doctor    check the health of an install
 //
-// No dependencies by design. The kit is markdown files; this tool only copies
-// them carefully: it never overwrites a file you edited — you get a *.new file
-// and a warning instead.
+// No dependencies by design. The kit is markdown plus a small Node core; this tool
+// copies it carefully and never overwrites a file you edited: you get a *.new file
+// and a warning instead. The install ends with one next step: run the blueprint,
+// which interviews you and writes the agreement the other stages read.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -16,67 +18,80 @@ import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
-const TEMPLATE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'template');
+const HERE = fileURLToPath(import.meta.url);
+const TEMPLATE = path.join(path.dirname(HERE), '..', 'template');
 const VERSION = createRequire(import.meta.url)('../package.json').version;
-const MANIFEST = '.pincer.json';
-const MANIFEST_SCHEMA = 2;
+const requireAbsolute = createRequire(import.meta.url);
+export const MANIFEST = '.pincer.json';
+export const MANIFEST_SCHEMA = 3;
+// Baselines recorded under these schemas were written by this installer and can be trusted.
+const TRUSTED_SCHEMAS = [2, MANIFEST_SCHEMA];
+export const PLATFORMS = ['claude', 'codex', 'copilot'];
 
-// The playbooks, subagent rubrics and PRD/ticket templates under .claude/ are
-// the canonical kit and are read by every platform's adapter (the Codex skills
-// and Copilot prompts point at them), so they ship everywhere; only Claude
-// Code's own wiring (CLAUDE.md, settings.json, hooks) is platform-specific.
-const PLATFORM_ROOTS = {
-  common: ['AGENTS.md', 'docs/release-checklist.md', 'docs/dry-run-checklist.md', 'docs/runtime-contracts.md', 'scripts/sync-prompts.sh', 'scripts/pincer-ticket.sh', 'scripts/pincer-status.sh', 'scripts/pincer-evidence.cjs', 'scripts/pincer-runtime.cjs', 'scripts/pincer-runtime', '.claude/commands', '.claude/agents', '.claude/references'],
+// The .claude tree is the canonical, editable project copy and every platform's
+// adapter points at it, so it ships everywhere; only Claude Code's own wiring
+// (CLAUDE.md, settings.json, hooks) is platform-specific. Only the two always-on
+// stages ship generated; the blueprint generates the stages it switches on.
+export const PLATFORM_ROOTS = {
+  common: [
+    'AGENTS.md', 'docs/engine.md', 'docs/release-checklist.md',
+    'scripts/pincer-ticket.sh', 'scripts/pincer-status.sh', 'scripts/pincer-evidence.cjs', 'scripts/pincer-blueprint.cjs', 'scripts/sync-prompts.sh', 'scripts/pincer',
+    '.claude/pincer/library', '.claude/skills/pincer-blueprint', '.claude/skills/pincer-status', '.claude/commands/pincer-blueprint.md', '.claude/commands/pincer-status.md',
+  ],
   claude: ['CLAUDE.md', '.claude/settings.json', '.claude/hooks'],
-  codex: ['.codex', '.agents'],
-  copilot: ['.github'],
+  codex: ['.codex/README.md', '.agents/skills/pincer-blueprint', '.agents/skills/pincer-status'],
+  copilot: ['.github/copilot-instructions.md', '.github/prompts/pincer-blueprint.prompt.md', '.github/prompts/pincer-status.prompt.md'],
 };
-const EXECUTABLES = ['scripts/sync-prompts.sh', 'scripts/pincer-ticket.sh', 'scripts/pincer-status.sh', '.claude/hooks/block-dangerous.sh', '.claude/hooks/ticket-guard.sh'];
-const GITIGNORE_LINES = ['.env', '.env.*', '!.env.example'];
-// The runtime's local state (attempts, locks, backups) is never tracked.
-const RUNTIME_IGNORE = '.pincer/';
+export const EXECUTABLES = ['scripts/sync-prompts.sh', 'scripts/pincer-ticket.sh', 'scripts/pincer-status.sh', '.claude/hooks/block-dangerous.sh', '.claude/hooks/ticket-guard.sh'];
+export const GITIGNORE_LINES = ['.env', '.env.*', '!.env.example'];
+// Files an earlier kit installed that this version no longer ships. Never deleted
+// here; doctor names them when neither the manifest nor the generator claims them.
+const OBSOLETE = [
+  'scripts/pincer-runtime.cjs', 'scripts/pincer-runtime', 'scripts/pincer-ticket-lib.sh', 'docs/runtime-contracts.md', 'docs/dry-run-checklist.md', '.claude/references',
+  '.claude/commands/pincer-plan.md', '.claude/commands/pincer-narrow.md', '.claude/commands/pincer-code.md', '.claude/commands/pincer-evaluate.md', '.claude/commands/pincer-release.md',
+];
 
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 
 function walk(root, rel = '') {
   const abs = path.join(root, rel);
   if (!fs.statSync(abs).isDirectory()) return [rel];
-  return fs
-    .readdirSync(abs)
-    .filter((n) => n !== '.DS_Store')
-    .flatMap((n) => walk(root, rel ? path.join(rel, n) : n));
+  return fs.readdirSync(abs).filter((n) => n !== '.DS_Store').flatMap((n) => walk(root, rel ? path.join(rel, n) : n));
 }
 
-function filesFor(platforms) {
+export function filesFor(platforms) {
   const roots = [...PLATFORM_ROOTS.common, ...platforms.flatMap((p) => PLATFORM_ROOTS[p])];
   return roots.flatMap((r) => walk(TEMPLATE, r)).sort();
+}
+
+function fail(msg) {
+  console.error(`pincer: ${msg}`);
+  process.exit(1);
 }
 
 function readManifest(dir) {
   const p = path.join(dir, MANIFEST);
   if (!fs.existsSync(p)) return null;
-  try {
-    const data = JSON.parse(fs.readFileSync(p, 'utf8'));
-    if (!data || !Array.isArray(data.platforms) || !data.platforms.length ||
-        !data.platforms.every(p => ['claude', 'codex', 'copilot'].includes(p)) ||
-        !data.files || typeof data.files !== 'object' || Array.isArray(data.files) ||
-        Object.keys(data.files).some(p => path.isAbsolute(p) || p.split(/[\\/]/).includes('..')) ||
-        (data.schema !== undefined && data.schema !== MANIFEST_SCHEMA)) {
-      fail(`${MANIFEST} has an unsupported or invalid schema — restore a valid manifest before updating.`);
-    }
-    return data;
-  } catch {
-    fail(`${MANIFEST} exists but is not valid JSON — fix or remove it first.`);
-  }
+  let data;
+  try { data = JSON.parse(fs.readFileSync(p, 'utf8')); } catch { fail(`${MANIFEST} exists but is not valid JSON — fix or remove it first.`); }
+  const invalid = !data || typeof data !== 'object' || Array.isArray(data)
+    || !Array.isArray(data.platforms) || !data.platforms.length || !data.platforms.every((x) => PLATFORMS.includes(x))
+    || !data.files || typeof data.files !== 'object' || Array.isArray(data.files)
+    || Object.keys(data.files).some((f) => path.isAbsolute(f) || f.split(/[\\/]/).includes('..'))
+    || (data.schema !== undefined && !TRUSTED_SCHEMAS.includes(data.schema));
+  if (invalid) fail(`${MANIFEST} has an unsupported or invalid schema — restore a valid manifest before updating.`);
+  return data;
 }
 
-function writeManifest(dir, platforms, hashes) {
-  const data = { schema: MANIFEST_SCHEMA, version: VERSION, platforms, files: hashes };
+const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+function writeManifest(dir, platforms, hashes, generated) {
+  const data = { schema: MANIFEST_SCHEMA, version: VERSION, platforms, files: hashes, generated: isPlainObject(generated) ? generated : {} };
   fs.writeFileSync(path.join(dir, MANIFEST), JSON.stringify(data, null, 2) + '\n');
 }
 
-// Preserve in-progress merges too. Reuse an identical proposal, never replace
-// a different existing sidecar (including one left by an earlier release).
+// Preserve in-progress merges too. Reuse an identical proposal, never replace a
+// different existing sidecar (including one left by an earlier release).
 function writeProposal(dest, content) {
   const base = dest + '.new';
   let proposal = base;
@@ -90,91 +105,95 @@ function writeProposal(dest, content) {
   return proposal;
 }
 
-// Copies template files into dir. `baseline` (manifest hashes) tells an update
-// which existing files are unmodified and therefore safe to refresh.
-function install(dir, platforms, baseline) {
+// Copies the template files into dir. `baseline` (the manifest's hashes) tells an
+// update which existing files are unmodified and therefore safe to refresh.
+function install(dir, platforms, baseline, generated) {
   const results = { written: [], skipped: [], conflicted: [] };
   const hashes = {};
-
   for (const rel of filesFor(platforms)) {
     const src = fs.readFileSync(path.join(TEMPLATE, rel));
     const dest = path.join(dir, rel);
     hashes[rel] = sha(src);
-
     if (!fs.existsSync(dest)) {
       fs.mkdirSync(path.dirname(dest), { recursive: true });
       fs.writeFileSync(dest, src);
       results.written.push(rel);
       continue;
     }
-
     const current = fs.readFileSync(dest);
     if (sha(current) === sha(src)) {
       results.skipped.push(rel);
     } else if (baseline && baseline[rel] === sha(current)) {
-      // untouched since install — safe to refresh with the new template version
-      fs.writeFileSync(dest, src);
+      fs.writeFileSync(dest, src); // untouched since install: safe to refresh
       results.written.push(rel);
     } else {
       const proposal = writeProposal(dest, src);
-      // Only a version actually installed by us grants overwrite permission.
-      // null means we have never established a trusted upstream baseline.
+      // Only a version this installer wrote grants overwrite permission later;
+      // null means no trusted upstream baseline was ever established.
       hashes[rel] = baseline?.[rel] ?? null;
       results.conflicted.push({ rel, proposal: path.relative(dir, proposal) });
     }
   }
-
   for (const rel of EXECUTABLES) {
     const p = path.join(dir, rel);
     if (fs.existsSync(p)) fs.chmodSync(p, 0o755);
   }
-
   ensureGitignore(dir);
-  writeManifest(dir, platforms, hashes);
+  writeManifest(dir, platforms, hashes, generated);
   return results;
 }
 
 function ensureGitignore(dir) {
   const p = path.join(dir, '.gitignore');
-  let existing = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
+  const existing = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
   const have = new Set(existing.split('\n').map((l) => l.trim()));
   const missing = GITIGNORE_LINES.filter((l) => !have.has(l));
-  if (missing.length) {
-    const lead = existing && !existing.endsWith('\n') ? '\n' : '';
-    fs.appendFileSync(p, `${lead}${existing ? '\n' : ''}# secrets (added by pincer init)\n${missing.join('\n')}\n`);
-    existing = fs.readFileSync(p, 'utf8');
-  }
-  if (![RUNTIME_IGNORE, '/.pincer/', '.pincer'].some((l) => have.has(l))) {
-    const lead = existing && !existing.endsWith('\n') ? '\n' : '';
-    fs.appendFileSync(p, `${lead}${existing ? '\n' : ''}# pincer runtime state (added by pincer init)\n${RUNTIME_IGNORE}\n`);
-  }
+  if (!missing.length) return;
+  const lead = existing && !existing.endsWith('\n') ? '\n' : '';
+  fs.appendFileSync(p, `${lead}${existing ? '\n' : ''}# secrets (added by pincer init)\n${missing.join('\n')}\n`);
 }
 
 function report({ written, skipped, conflicted }) {
   if (written.length) console.log(`  wrote    ${written.length} file(s)`);
   if (skipped.length) console.log(`  skipped  ${skipped.length} file(s) already up to date`);
-  for (const { rel, proposal } of conflicted) {
-    console.log(`  CONFLICT ${rel} — local content preserved; the new version is at ${proposal}`);
+  for (const { rel, proposal } of conflicted) console.log(`  CONFLICT ${rel} — local content preserved; the new version is at ${proposal}`);
+  if (conflicted.length) console.log('\n  Review and merge each reported proposal, then remove the resolved sidecars.');
+}
+
+// The installed engine, loaded from the project so an update uses the version it just wrote.
+function installedEngine(dir) {
+  return {
+    harness: requireAbsolute(path.join(dir, 'scripts/pincer/harness.cjs')),
+    generate: requireAbsolute(path.join(dir, 'scripts/pincer/generate.cjs')),
+  };
+}
+
+// With an agreement in place the project's stage copies come from the library just
+// installed; the generator keeps edited copies and leaves .new sidecars beside them.
+function regenerate(dir) {
+  let engine;
+  try { engine = installedEngine(dir); } catch (error) { console.log(`  note  could not load the installed engine (${error.message}); run scripts/sync-prompts.sh yourself`); return; }
+  const loaded = engine.harness.load(dir);
+  if (!loaded.ok) {
+    console.log(loaded.missing
+      ? '  note  no harness.json yet — run /pincer-blueprint; it generates the project copies of the stages it switches on'
+      : `  note  harness.json: ${loaded.message} — fix it, then run scripts/sync-prompts.sh to regenerate the project copies`);
+    return;
   }
-  if (conflicted.length) {
-    console.log('\n  Review and merge each reported proposal, then remove the resolved sidecars.');
-  }
+  const result = engine.generate.generate(dir, { harness: loaded.harness });
+  for (const rel of result.written) console.log(`  generated ${rel}`);
+  for (const rel of result.conflicted) console.log(`  kept ${rel} (edited; fresh copy in ${rel}.new)`);
+  for (const rel of result.removed) console.log(`  removed ${rel}`);
+  for (const name of result.missing) console.log(`  note  the library has no ${name.startsWith('agents/') ? `agent ${name.slice('agents/'.length)}` : `stage ${name}`}`);
+  console.log(`  generated: ${result.written.length} written, ${result.skipped.length} unchanged, ${result.conflicted.length} kept, ${result.removed.length} removed`);
 }
 
 function nextSteps(platforms) {
-  console.log('\nNext steps:');
-  if (platforms.includes('claude')) {
-    console.log('  Claude Code   start `claude` in this repo and run /pincer-plan <brief>');
-  }
-  if (platforms.includes('codex')) {
-    console.log('  Codex CLI     start `codex` in this repo and type $pincer-plan <brief>  (skills load from .agents/skills/; posture notes in .codex/README.md)');
-  }
-  if (platforms.includes('copilot')) {
-    console.log('  Copilot       enable "chat.promptFiles": true in VS Code settings, then /pincer-plan in chat');
-  }
-  console.log('  All rules live in AGENTS.md — fill in its Conventions section once you know the stack.');
-  const statusCmd = platforms.every((p) => p === 'codex') ? '$pincer-status' : platforms.includes('codex') ? '/pincer-status, $pincer-status on Codex' : '/pincer-status';
-  console.log(`  Any session     scripts/pincer-status.sh shows where the workflow stands (also ${statusCmd})`);
+  console.log('\nNext: run the blueprint. It looks at the repository, interviews you, and writes the agreement (harness.json and the top of AGENTS.md).');
+  if (platforms.includes('claude')) console.log('  Claude Code   start `claude` in this repo and run /pincer-blueprint');
+  if (platforms.includes('codex')) console.log('  Codex CLI     start `codex` in this repo and type $pincer-blueprint  (skills load from .agents/skills/; posture notes in .codex/README.md)');
+  if (platforms.includes('copilot')) console.log('  Copilot       enable "chat.promptFiles": true in VS Code settings, then /pincer-blueprint in chat');
+  console.log('  Any session   scripts/pincer-status.sh shows where the work stands and the next command');
 }
 
 async function askPlatforms() {
@@ -183,7 +202,7 @@ async function askPlatforms() {
   console.log('Which platform(s) do you use?\n  1) Claude Code\n  2) Codex CLI\n  3) GitHub Copilot\n  4) all of them');
   const answer = (await q('Choose [1-4, default 4]: ')).trim() || '4';
   rl.close();
-  const map = { 1: ['claude'], 2: ['codex'], 3: ['copilot'], 4: ['claude', 'codex', 'copilot'] };
+  const map = { 1: ['claude'], 2: ['codex'], 3: ['copilot'], 4: [...PLATFORMS] };
   return map[answer] || fail(`invalid choice: ${answer}`);
 }
 
@@ -191,25 +210,18 @@ function parsePlatformFlag(args) {
   const i = args.indexOf('--platform');
   if (i === -1) return null;
   const value = args[i + 1] || '';
-  if (value === 'all') return ['claude', 'codex', 'copilot'];
+  if (value === 'all') return [...PLATFORMS];
   const list = value.split(',').map((s) => s.trim());
-  if (list.every((p) => ['claude', 'codex', 'copilot'].includes(p)) && list.length) return list;
+  if (list.length && list.every((p) => PLATFORMS.includes(p))) return [...new Set(list)];
   fail(`--platform must be claude, codex, copilot (comma-separated) or all — got "${value}"`);
-}
-
-function fail(msg) {
-  console.error(`pincer: ${msg}`);
-  process.exit(1);
 }
 
 async function cmdInit(args) {
   const dir = process.cwd();
-  if (readManifest(dir)) {
-    fail(`this repo already has PINCER installed (${MANIFEST} exists) — use \`pincer update\`.`);
-  }
-  const platforms = parsePlatformFlag(args) || (process.stdin.isTTY ? await askPlatforms() : ['claude', 'codex', 'copilot']);
+  if (readManifest(dir)) fail(`this repo already has PINCER installed (${MANIFEST} exists) — use \`pincer update\`.`);
+  const platforms = parsePlatformFlag(args) || (process.stdin.isTTY ? await askPlatforms() : [...PLATFORMS]);
   console.log(`\nInstalling PINCER v${VERSION} for: ${platforms.join(', ')}\n`);
-  report(install(dir, platforms, null));
+  report(install(dir, platforms, null, {}));
   nextSteps(platforms);
 }
 
@@ -218,17 +230,19 @@ async function cmdUpdate() {
   const manifest = readManifest(dir);
   if (!manifest) fail(`no ${MANIFEST} here — run \`pincer init\` first.`);
   console.log(`\nUpdating PINCER ${manifest.version} -> ${VERSION} for: ${manifest.platforms.join(', ')}\n`);
-  // v1 manifests could adopt a local edit as their baseline. There is no safe
-  // way to distinguish those from upstream files after the fact.
-  const baseline = manifest.schema === MANIFEST_SCHEMA ? manifest.files : null;
+  // A manifest without a schema could have adopted a local edit as its baseline;
+  // there is no safe way to tell those from upstream files after the fact.
+  const baseline = TRUSTED_SCHEMAS.includes(manifest.schema) ? manifest.files : null;
   if (!baseline) console.log('  Legacy baselines are untrusted; differing files will be preserved for review.');
-  report(install(dir, manifest.platforms, baseline));
+  report(install(dir, manifest.platforms, baseline, manifest.generated));
+  regenerate(dir);
 }
 
 function cmdDoctor() {
   const dir = process.cwd();
   const manifest = readManifest(dir);
   if (!manifest) fail(`no ${MANIFEST} here — run \`pincer init\` first.`);
+  const generated = isPlainObject(manifest.generated) ? manifest.generated : {};
   let problems = 0;
   const check = (ok, label, hint) => {
     console.log(`  ${ok ? 'ok  ' : 'FAIL'}  ${label}${ok || !hint ? '' : ` — ${hint}`}`);
@@ -238,78 +252,38 @@ function cmdDoctor() {
   console.log(`\nPINCER doctor (installed ${manifest.version}, this tool ${VERSION})\n`);
   const missing = Object.keys(manifest.files).filter((rel) => !fs.existsSync(path.join(dir, rel)));
   check(missing.length === 0, 'all installed files present', `missing: ${missing.join(', ')}`);
-
   for (const rel of EXECUTABLES) {
     const p = path.join(dir, rel);
-    if (!fs.existsSync(p)) continue;
-    check(!!(fs.statSync(p).mode & 0o100), `${rel} is executable`, `run: chmod +x ${rel}`);
+    if (fs.existsSync(p)) check(!!(fs.statSync(p).mode & 0o100), `${rel} is executable`, `run: chmod +x ${rel}`);
   }
-
-  const gi = fs.existsSync(path.join(dir, '.gitignore')) ? fs.readFileSync(path.join(dir, '.gitignore'), 'utf8') : '';
-  check(GITIGNORE_LINES.every((l) => gi.split('\n').map((s) => s.trim()).includes(l)),
-    '.gitignore covers .env files', 'add: .env / .env.* / !.env.example');
-  if (![RUNTIME_IGNORE, '/.pincer/', '.pincer'].some((l) => gi.split('\n').map((s) => s.trim()).includes(l))) {
-    console.log(`  note  .gitignore does not list ${RUNTIME_IGNORE} (runtime state); \`pincer update\`, \`register\` or \`migrate --apply\` adds it`);
-  }
-
+  const gi = fs.existsSync(path.join(dir, '.gitignore')) ? fs.readFileSync(path.join(dir, '.gitignore'), 'utf8').split('\n').map((s) => s.trim()) : [];
+  check(GITIGNORE_LINES.every((l) => gi.includes(l)), '.gitignore covers .env files', 'add: .env / .env.* / !.env.example');
   const stale = fs.existsSync(TEMPLATE) && manifest.version !== VERSION;
   check(!stale, `install is current (v${manifest.version})`, 'run: pincer update');
 
-  // The runtime ships with every layout; a project with legacy receipts and no
-  // change binding can migrate explicitly (never silently here).
-  const runtimeFiles = Object.keys(manifest.files).filter((rel) => rel === 'scripts/pincer-runtime.cjs' || rel.startsWith('scripts/pincer-runtime/'));
-  if (runtimeFiles.length) {
-    const missingRuntime = runtimeFiles.filter((rel) => !fs.existsSync(path.join(dir, rel)));
-    check(missingRuntime.length === 0, 'runtime files present', `missing: ${missingRuntime.join(', ')} — run: pincer update`);
+  // The agreement, checked with the engine this install carries.
+  if (!fs.existsSync(path.join(dir, 'harness.json'))) {
+    console.log('  note  no harness.json yet — run /pincer-blueprint');
+  } else {
+    try {
+      const loaded = installedEngine(dir).harness.load(dir);
+      check(loaded.ok, loaded.ok ? 'harness.json valid' : `harness.json: ${loaded.message}`);
+    } catch (error) {
+      check(false, 'harness.json checked', `could not load scripts/pincer/harness.cjs (${error.message}) — run: pincer update`);
+    }
   }
-  // Files an earlier kit installed that this version no longer ships stay on disk
-  // (the installer never deletes); name them so they can be removed by hand.
-  const OBSOLETE = ['scripts/pincer-ticket-lib.sh'];
-  const obsolete = OBSOLETE.filter((rel) => fs.existsSync(path.join(dir, rel)) && !(rel in manifest.files));
+
+  const obsolete = OBSOLETE.filter((rel) => fs.existsSync(path.join(dir, rel)) && !(rel in manifest.files) && !(rel in generated));
   if (obsolete.length) console.log(`  note  obsolete kit file(s) from an earlier version, safe to delete: ${obsolete.join(', ')}`);
-
-  const ticketsDir = path.join(dir, 'tickets');
-  const legacyReceipts = fs.existsSync(ticketsDir)
-    ? fs.readdirSync(ticketsDir).filter((n) => /^T-\d+.*\.md$/.test(n)).filter((n) => /^(verified|last_check):/m.test(fs.readFileSync(path.join(ticketsDir, n), 'utf8')))
-    : [];
-  const bindingsDir = path.join(dir, '.prd', 'changes');
-  const bindingFiles = fs.existsSync(bindingsDir) ? fs.readdirSync(bindingsDir).filter((n) => n.endsWith('.json')) : [];
-  const hasBinding = bindingFiles.length > 0;
-  // A v0.5.0 binding (schema 1) converts explicitly into a schema 2 change record; doctor only reports it.
-  const oldBindings = bindingFiles.filter((n) => { try { return JSON.parse(fs.readFileSync(path.join(bindingsDir, n), 'utf8')).schema === 1; } catch { return false; } });
-  for (const n of oldBindings) {
-    let prd = '.prd/prd-vN.md';
-    try { prd = JSON.parse(fs.readFileSync(path.join(bindingsDir, n), 'utf8')).prd || prd; } catch { /* reported above by the runtime */ }
-    console.log(`  note  migration to change records available: .prd/changes/${n} is a v0.5.0 binding (schema 1) — preview with: node scripts/pincer-runtime.cjs migrate --preview --prd ${prd}`);
-  }
-  // A schema 2 change record beside an authored coverage map can adopt strict coverage explicitly; doctor only reports it.
-  for (const n of bindingFiles) {
-    let doc = null;
-    try { doc = JSON.parse(fs.readFileSync(path.join(bindingsDir, n), 'utf8')); } catch { doc = null; }
-    if (!doc || doc.schema !== 2) continue;
-    const id = n.replace(/\.json$/, '');
-    if (fs.existsSync(path.join(dir, '.prd', 'coverage', `${id}.json`))) console.log(`  note  strict coverage adoption available: .prd/coverage/${id}.json exists and .prd/changes/${n} is a schema 2 record — preview with: node scripts/pincer-runtime.cjs coverage adopt --preview --change ${id}`);
-  }
-  if (legacyReceipts.length && !hasBinding) {
-    const prdDir = path.join(dir, '.prd');
-    const prds = fs.existsSync(prdDir) ? fs.readdirSync(prdDir).map((n) => n.match(/^prd-v(\d+)\.md$/)).filter(Boolean).map((m) => Number(m[1])) : [];
-    const latest = prds.length ? `.prd/prd-v${Math.max(...prds)}.md` : '.prd/prd-vN.md';
-    console.log(`  note  migration available: ${legacyReceipts.length} ticket(s) carry legacy receipts and no change binding exists — preview with: node scripts/pincer-runtime.cjs migrate --preview --prd ${latest}`);
-  }
-
   const edited = Object.entries(manifest.files)
     .filter(([rel, h]) => fs.existsSync(path.join(dir, rel)) && sha(fs.readFileSync(path.join(dir, rel))) !== h)
     .map(([rel]) => rel);
-  if (edited.length) {
-    console.log(`  note  locally edited (kept as-is on update): ${edited.join(', ')}`);
-  }
+  if (edited.length) console.log(`  note  locally edited (kept as-is on update): ${edited.join(', ')}`);
 
-  const leftovers = [...new Set([...walk(TEMPLATE), ...Object.keys(manifest.files)])].flatMap(rel => {
+  const leftovers = [...new Set([...walk(TEMPLATE), ...Object.keys(manifest.files), ...Object.keys(generated)])].flatMap((rel) => {
     const parent = path.dirname(path.join(dir, rel));
     const base = path.basename(rel) + '.new';
-    return fs.existsSync(parent) ? fs.readdirSync(parent)
-      .filter(name => name === base || name.startsWith(base + '.'))
-      .map(name => path.join(parent, name)) : [];
+    return fs.existsSync(parent) ? fs.readdirSync(parent).filter((name) => name === base || name.startsWith(base + '.')).map((name) => path.join(parent, name)) : [];
   });
   check(leftovers.length === 0, 'no unmerged *.new files', leftovers.map((p) => path.relative(dir, p)).join(', '));
 
@@ -317,18 +291,24 @@ function cmdDoctor() {
   process.exit(problems ? 1 : 0);
 }
 
-const [cmd, ...rest] = process.argv.slice(2);
-if (cmd === 'init') await cmdInit(rest);
-else if (cmd === 'update') await cmdUpdate();
-else if (cmd === 'doctor') cmdDoctor();
-else {
-  console.log(`pincer-workflow v${VERSION} — PRD-driven agentic delivery workflow
+function usage() {
+  console.log(`pincer-workflow v${VERSION} — a harness builder for AI coding agents
 
 Usage:
   npx pincer-workflow init [--platform claude|codex|copilot|all]
   npx pincer-workflow update
   npx pincer-workflow doctor
 
-Docs: https://github.com/orchestratedbyalex/pincer-workflow`);
-  process.exit(cmd ? 1 : 0);
+After init, run the blueprint (/pincer-blueprint or $pincer-blueprint): it writes the
+agreement the other stages read. Docs: https://github.com/orchestratedbyalex/pincer-workflow`);
+}
+
+// Run the command only when this file is the program, not when a test imports it.
+const invoked = process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]) === fs.realpathSync(HERE); } catch { return false; } })();
+if (invoked) {
+  const [cmd, ...rest] = process.argv.slice(2);
+  if (cmd === 'init') await cmdInit(rest);
+  else if (cmd === 'update') await cmdUpdate();
+  else if (cmd === 'doctor') cmdDoctor();
+  else { usage(); process.exit(cmd ? 1 : 0); }
 }

@@ -1,0 +1,66 @@
+---
+name: pincer-blueprint
+description: "Look at the project, interview the person, write the harness agreement (harness.json and the top of AGENTS.md) and generate the project's stage copies"
+argument-hint: "[notes for the interview] (optional)"
+---
+# Blueprint
+
+The first stage and the only one that writes the agreement. It is always on. It
+reads the repository, decides greenfield or brownfield and says why, interviews
+the person one question at a time through the six sections, writes `harness.json`
+and the agreement at the top of `AGENTS.md`, and generates the project's copies of
+the stages it switched on. Scripts do the reading and the writing so they can be
+tested; the session does the asking.
+
+Rules for the whole interview: one question at a time. Options listed, the
+recommended one first, each explained in a sentence. Every answer recon could
+pre-fill is presented as "I see X; is that right?", never assumed. `open` is always
+an allowed answer and is written as open, never guessed. Record what the person
+says; add no tool, step or role they did not choose.
+
+## Reads
+- `harness.json`, if present: this is a re-run (see the last paragraph of Steps).
+- The recon report from `node scripts/pincer-blueprint.cjs recon --json --network`:
+  `kind`, `reasons`, `facts`, `prefill`, `unavailable`.
+- `AGENTS.md` as it stands: the standing rules and the conventions below the markers stay.
+- The formats under `.claude/skills/pincer-blueprint/formats/`:
+  `.claude/skills/pincer-blueprint/formats/harness.md` (every field of `harness.json`)
+  and `.claude/skills/pincer-blueprint/formats/roster-rules.md` (how the roster follows the answers).
+- The prompts under `.claude/skills/pincer-blueprint/prompts/`, one per question, named in the steps.
+- `$ARGUMENTS`: notes the person gave up front. Treat them as pre-filled answers to confirm, not as answers.
+
+## Steps
+1. [session] Run `scripts/pincer-status.sh --stage blueprint` (always `on`; the plain report also says whether `harness.json` exists), then `node scripts/pincer-blueprint.cjs recon --json --network` and read the whole result: `kind`, `reasons`, `facts`, `prefill`, `unavailable`.
+2. [session] State the kind and the reasons in one paragraph with `.claude/skills/pincer-blueprint/prompts/confirm-kind.md`, naming what recon could not see. Ask the person to confirm or correct. Their word wins over recon.
+3. [session] Interview, one section at a time and one question at a time, in this order, each with its prompt: Systems (`.claude/skills/pincer-blueprint/prompts/q-systems.md`), Current pipeline (`.claude/skills/pincer-blueprint/prompts/q-pipeline.md`), Handoff artifacts (`.claude/skills/pincer-blueprint/prompts/q-handoffs.md`), Simplify (`.claude/skills/pincer-blueprint/prompts/q-simplify.md`), Responsibility (`.claude/skills/pincer-blueprint/prompts/q-responsibility.md`), Repo (`.claude/skills/pincer-blueprint/prompts/q-repo.md`). Fill each prompt's slots from recon and from earlier answers before asking.
+4. [session] Propose the roster from the answers and recon by applying `.claude/skills/pincer-blueprint/formats/roster-rules.md`; ask the person to confirm with `.claude/skills/pincer-blueprint/prompts/q-roster.md`.
+5. [session] Write the answers as `harness.json` in the shape `.claude/skills/pincer-blueprint/formats/harness.md` describes: start from recon's `prefill`, put every unanswered item in `open`, then run `node scripts/pincer-blueprint.cjs write`. On validation problems, fix the file and run it again. Never hand-edit `AGENTS.md` between the markers.
+6. [session] Show the agreement from `AGENTS.md` (the text between the markers) and ask for corrections. Apply them to `harness.json` and run `write` again. One round.
+7. [session] Name the first job with `.claude/skills/pincer-blueprint/prompts/first-job.md`: brownfield, the smallest real change that recon or the open items point at; greenfield, the setup job. Put it in `firstJob`, run `write` again, and say that the first run through the pipeline is the trace to revisit this agreement with.
+8. [session] Print the output of `scripts/pincer-status.sh` and stop. The next command is on its last line.
+
+Re-run: when `harness.json` already exists, run recon, list what differs between the
+file and what recon sees (kind, remote, CI, checks, people, merge style), ask only
+about those and about anything the person wants to change, then continue from step 5.
+
+## Checks
+- `node scripts/pincer-blueprint.cjs write` exits 0 and prints `wrote harness.json` and `wrote AGENTS.md`.
+- The agreement between the markers has the six headings in order and names the project.
+- Every pre-filled answer was confirmed or corrected by the person; no cell was invented to look complete. `open` is the honest cell.
+- `scripts/pincer-status.sh` prints the project's name and a `Stages:` line that matches what was agreed.
+
+## Writes
+- `harness.json` at the repository root, through `write`.
+- The agreement between the markers at the top of `AGENTS.md`, through `write`; nothing below the end marker.
+- The project copies of the stages that are on under `.claude/skills/pincer-<stage>/`, their commands, and the Codex and Copilot files for the installed platforms, through `write`.
+- Nothing else. No CI workflow, no branch protection, no tool configuration: those belong to the first job when the person chose them.
+
+## Without subagents
+This stage dispatches no agents and runs the same everywhere. The scripts need no
+platform feature: `node scripts/pincer-blueprint.cjs` and `scripts/pincer-status.sh`
+run in any shell. On a platform without slash commands, read this file and follow it.
+
+## When this stage is off
+Never. Blueprint is always on; `harness.json` cannot switch it off (the validator
+rejects a `stages.blueprint` entry). Without an agreement every other stage refuses
+with `no agreement yet: run /pincer-blueprint`, and status points here.

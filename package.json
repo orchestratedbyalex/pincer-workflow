@@ -1,7 +1,7 @@
 {
   "name": "pincer-workflow",
   "version": "1.0.0",
-  "description": "PINCER — a harness builder for AI coding agents. It looks at your project, interviews you, writes the project agreement, and runs the pipeline that agreement describes. Claude Code, Codex CLI and GitHub Copilot.",
+  "description": "PINCER \u2014 a harness builder for AI coding agents. It looks at your project, interviews you, writes the project agreement, and runs the pipeline that agreement describes. Claude Code, Codex CLI and GitHub Copilot.",
   "bin": {
     "pincer": "bin/pincer.js"
   },
@@ -14,7 +14,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node test/run.js"
+    "test": "node test/run.js",
+    "generate": "node template/scripts/pincer/cli.cjs --root template generate --harness test/fixtures/always-on.harness.json --platform all --overwrite"
   },
   "keywords": [
     "claude-code",
