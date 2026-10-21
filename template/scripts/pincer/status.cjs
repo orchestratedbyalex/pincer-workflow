@@ -6,6 +6,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const parse = require('./parse.cjs');
 const harnessModule = require('./harness.cjs');
+const models = require('./models.cjs');
+const generate = require('./generate.cjs');
 
 const SCRIPT = 'scripts/pincer-ticket.sh';
 const { STAGES, ALWAYS_ON, HARNESS_FILE } = harnessModule;
@@ -74,13 +76,14 @@ function manifests(root, evidenceDir) {
 // The whole picture, as data. `harness` is null without a valid agreement;
 // `harnessProblem` says why when the file exists but does not validate.
 function gather(root) {
-  const report = { name: path.basename(root), harness: null, harnessProblem: null, stages: {}, specs: [], tickets: [], evidence: [], warnings: [], next: '' };
+  const report = { name: path.basename(root), harness: null, harnessProblem: null, stages: {}, models: null, specs: [], tickets: [], evidence: [], warnings: [], next: '' };
   const loaded = harnessModule.load(root);
   let homes = harnessModule.homes(null);
   if (loaded.ok) {
     report.harness = loaded.harness;
     if (loaded.harness.project.name) report.name = loaded.harness.project.name;
     for (const name of STAGES) report.stages[name] = harnessModule.stageOn(loaded.harness, name) ? 'on' : 'off';
+    report.models = models.effective(loaded.harness, generate.libraryDir(root));
     homes = harnessModule.homes(loaded.harness);
   } else if (!loaded.missing) {
     report.harnessProblem = loaded.message;
@@ -134,6 +137,8 @@ function render(report) {
   const h = report.harness;
   lines.push(h ? `PINCER — ${report.name} (${h.project.kind})` : 'PINCER — no agreement yet');
   if (h) lines.push(`Stages: ${STAGES.map((name) => `${name} ${report.stages[name]}`).join(', ')}`);
+  const tiers = report.models ? models.statusLine(report.models) : '';
+  if (tiers) lines.push(`Models: ${tiers}`);
   if (report.specs.length) lines.push(`Specs: ${report.specs.map((s) => `${s.file} (${s.status || 'no status'})`).join(', ')}`);
   for (const t of report.tickets) lines.push(ticketLine(t));
   if (report.warnings.length) { lines.push('Warnings:'); for (const w of report.warnings) lines.push(`  ${w}`); }

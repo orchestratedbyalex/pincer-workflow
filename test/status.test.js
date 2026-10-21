@@ -151,6 +151,23 @@ assert.equal(json.harnessProblem, null);
 assert.deepEqual(json.warnings, []);
 assert.equal(json.next, 'all tickets done and accepted');
 
+// Models: the agreed tiers appear on their own line after Stages, and in the JSON
+createHarness(dir, { models: { stages: { evaluate: { tier: 'strong', effort: 'high' } }, agents: { 'security-reviewer': 'strong' } }, roster: { evaluate: ['security-reviewer'] } });
+r = status(dir);
+assert.equal(r.status, 0, both(r));
+assert.equal(r.stdout.split('\n')[2], 'Models: evaluate strong/high; security-reviewer strong', r.stdout);
+let modelsJson = JSON.parse(status(dir, '--json').stdout).models;
+assert.deepEqual(modelsJson.stages.evaluate, { tier: 'strong', effort: 'high' });
+assert.equal(modelsJson.agents['security-reviewer'].source, 'agreement');
+createHarness(dir, { roster: { evaluate: ['security-reviewer'] } });
+r = status(dir);
+assert.doesNotMatch(r.stdout, /^Models:/m);
+assert.equal(JSON.parse(status(dir, '--json').stdout).models.agents['security-reviewer'].tier, '');
+createHarness(dir, { models: { stages: { narrow: { effort: 'high' } } } });
+assert.match(status(dir).stdout, /^Models: narrow effort high$/m);
+assert.equal(JSON.parse(status(tempDir(), '--json').stdout).models, null);
+createHarness(dir);
+
 // Dependencies appear in the JSON report
 createTicket(dir, { id: 'T-02', deps: 'T-01' });
 const withDeps = JSON.parse(status(dir, '--json').stdout);
