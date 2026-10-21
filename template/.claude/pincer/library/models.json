@@ -1,0 +1,6 @@
+{
+  "schema": 1,
+  "claude": { "strong": "opus", "standard": "sonnet", "fast": "haiku" },
+  "codex": { "strong": "gpt-6-astra", "standard": "gpt-6.1-sol", "fast": "gpt-6-luna" },
+  "copilot": { "strong": "Claude Opus 5.5", "standard": "Claude Sonnet 5.5", "fast": "Claude Haiku 5.5" }
+}

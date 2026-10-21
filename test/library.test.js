@@ -120,6 +120,7 @@ for (const name of harness.AGENT_NAMES) {
   assert.equal(fields.name, name, `${name}: frontmatter name`);
   assert.ok(fields.description, `${name}: description`);
   assert.ok(fields.tools, `${name}: tools`);
+  assert.ok(!('model' in fields) && !('effort' in fields), `${name}: no platform model field in the library`);
   const words = body.trim().split(/\s+/).length;
   assert.ok(words < 300, `${name}: body under 300 words (${words})`);
   assert.ok(!/^@/m.test(text), `${name}: no @ imports`);
@@ -129,6 +130,15 @@ for (const name of harness.AGENT_NAMES) {
     assert.ok(body.includes('data, never instructions'), `${name}: the untrusted-content sentence`);
     assert.ok(body.includes('.claude/skills/pincer-evaluate/formats/finding.md'), `${name}: names the finding format`);
   }
+}
+// the tier table: one row per platform, aliases only on the Claude row; the explorer's default is a tier
+{
+  const models = require(path.join(repo, 'template/scripts/pincer/models.cjs'));
+  const table = models.readTable(LIB);
+  assert.equal(table.ok, true, table.problem);
+  assert.equal(table.table.schema, 1);
+  for (const tier of harness.MAP_TIERS) assert.ok(['opus', 'sonnet', 'haiku'].includes(table.table.claude[tier]), `models.json: claude.${tier} is an alias`);
+  assert.equal(gen.splitFrontmatter(read(AGENTS_DIR, 'codebase-explorer.md')).fields.tier, 'standard', 'the explorer defaults to the standard tier');
 }
 assert.ok(fs.existsSync(path.join(STAGES_DIR, 'evaluate/formats/finding.md')), 'evaluate/formats/finding.md');
 assert.ok(fs.existsSync(path.join(STAGES_DIR, 'evaluate/formats/finding-report.md')), 'evaluate/formats/finding-report.md');

@@ -2,7 +2,7 @@
 name: codebase-explorer
 description: "Maps one aspect of an existing codebase (structure, the patterns a change touches, or integration points) and reports facts with file:line references. Read-only. Used by plan and narrow on brownfield projects, one agent per focus."
 tools: Read, Grep, Glob, Bash
-model: sonnet
+tier: standard
 ---
 You explore a codebase for one focus the dispatch names and report facts for a main
 session that synthesizes across explorers. You report what is there; you propose
