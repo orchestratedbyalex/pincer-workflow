@@ -27,6 +27,25 @@ Rules: a stage that is off gets an empty list. `code` lists `implementer` only w
 `stages.code.implementer` is true. The person may add or drop any name. A name the
 engine does not know fails validation.
 
+## Model tiers
+
+The tier each role is proposed to run on. A tier (`strong`, `standard`, `fast`) is
+translated to the model each platform knows through the library's `models.json`;
+`inherit` keeps the session's model; a role left unset falls back to the library's
+default for it, else to the session's model. Effort (`low`, `medium`, `high`) is
+proposed for nobody: the platform's default stands unless the person names one.
+
+| Role | Proposed tier | Why |
+|---|---|---|
+| every reviewer: the seven `-reviewer` agents and `silent-failure-hunter` | strong | a judgment task that runs once per change |
+| implementer, fix-agent | standard | they run per ticket; capable enough, cost in check |
+| codebase-explorer | standard | the library's default: read-heavy and runs often |
+| every stage | unset | the session's model, chosen by the person |
+| effort, for every role | unset | the platform's default; named only when the person wants more or less reasoning |
+
+The person may change any line. Nothing is written that the person did not confirm;
+`open` leaves a role unset and is recorded under `open`.
+
 ## Example
 
 A brownfield web application with a login form, a `.env.example`, thin tests and no

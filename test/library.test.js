@@ -14,7 +14,7 @@ const gen = require(path.join(repo, 'template/scripts/pincer/generate.cjs'));
 const LIB = path.join(repo, 'template/.claude/pincer/library');
 const STAGES_DIR = path.join(LIB, 'stages');
 const SECTIONS = ['## Reads', '## Steps', '## Checks', '## Writes', '## Without subagents', '## When this stage is off'];
-const BLUEPRINT_PROMPTS = ['confirm-kind.md', 'q-systems.md', 'q-pipeline.md', 'q-handoffs.md', 'q-simplify.md', 'q-responsibility.md', 'q-repo.md', 'q-roster.md', 'first-job.md'];
+const BLUEPRINT_PROMPTS = ['confirm-kind.md', 'q-systems.md', 'q-pipeline.md', 'q-handoffs.md', 'q-simplify.md', 'q-responsibility.md', 'q-repo.md', 'q-roster.md', 'q-models.md', 'first-job.md'];
 
 const read = (...parts) => fs.readFileSync(path.join(...parts), 'utf8');
 const listDir = (dir) => (fs.existsSync(dir) ? fs.readdirSync(dir).filter((n) => !n.startsWith('.')).sort() : []);
@@ -50,6 +50,7 @@ for (const stage of stages) {
   });
   // first step reaches for the stage gate
   assert.ok(steps[0].includes('--stage'), `${stage}: first step names the stage gate: ${steps[0]}`);
+  if (stage === 'blueprint') assert.equal(steps.length, 9, 'blueprint: nine steps (the models question after the roster)');
   // the skill reads harness.json first and never names the retired runtime
   assert.ok(body.includes('harness.json'), `${stage}: reads harness.json`);
   for (const stale of ['pincer-runtime', '.prd/', '.pincer/', 'PRD']) assert.ok(!text.includes(stale), `${stage}: no ${stale}`);
@@ -86,7 +87,7 @@ for (const stage of stages) {
 assert.deepEqual(files(path.join(STAGES_DIR, 'blueprint/prompts')).sort(), [...BLUEPRINT_PROMPTS].sort());
 for (const name of ['roster-rules.md', 'harness.md']) assert.ok(fs.existsSync(path.join(STAGES_DIR, 'blueprint/formats', name)), name);
 const blueprint = read(STAGES_DIR, 'blueprint/SKILL.md');
-for (const needle of ['recon --json --network', 'scripts/pincer-blueprint.cjs write', 'confirm-kind.md', 'q-roster.md', 'roster-rules.md', 'harness.md', 'firstJob', 'first-job.md', 'scripts/pincer-status.sh']) assert.ok(blueprint.includes(needle), `blueprint: ${needle}`);
+for (const needle of ['recon --json --network', 'scripts/pincer-blueprint.cjs write', 'confirm-kind.md', 'q-roster.md', 'q-models.md', 'models', 'roster-rules.md', 'harness.md', 'firstJob', 'first-job.md', 'scripts/pincer-status.sh']) assert.ok(blueprint.includes(needle), `blueprint: ${needle}`);
 for (const heading of ['Systems', 'Current pipeline', 'Handoff artifacts', 'Simplify', 'Responsibility', 'Repo']) assert.ok(blueprint.includes(heading), `blueprint: ${heading}`);
 assert.match(blueprint, /one question at a time/i);
 assert.match(blueprint, /\bopen\b/);
@@ -95,10 +96,12 @@ assert.match(blueprint, /re-?run/i);
 const rosterRules = read(STAGES_DIR, 'blueprint/formats/roster-rules.md');
 const harness = require(path.join(repo, 'template/scripts/pincer/harness.cjs'));
 for (const name of harness.AGENT_NAMES) assert.ok(rosterRules.includes(name), `roster-rules: ${name}`);
+assert.match(rosterRules, /^## Model tiers$/m, 'roster-rules: the Model tiers section');
+for (const word of ['strong', 'standard', 'fast', 'inherit', 'effort']) assert.ok(rosterRules.includes(word), `roster-rules: ${word}`);
 // harness.md names every top-level field and every stage option
 const harnessFormat = read(STAGES_DIR, 'blueprint/formats/harness.md');
 for (const key of ['schema', 'project', 'people', 'systems', 'repo', 'homes', 'stages', 'roster', 'open', 'firstJob']) assert.ok(harnessFormat.includes(`\`${key}\``) || harnessFormat.includes(`${key}:`) || harnessFormat.includes(`"${key}"`), `harness.md: ${key}`);
-for (const key of ['accepts', 'forge', 'per-ticket', 'squash', 'implementer', 'evidence', 'audit', 'gate', 'reason']) assert.ok(harnessFormat.includes(key), `harness.md: ${key}`);
+for (const key of ['accepts', 'forge', 'per-ticket', 'squash', 'implementer', 'evidence', 'audit', 'gate', 'reason', 'models', 'tier', 'effort', 'map']) assert.ok(harnessFormat.includes(key), `harness.md: ${key}`);
 const exampleStart = harnessFormat.indexOf('\n## Example');
 const json = /```json\n([\s\S]*?)\n```/.exec(harnessFormat.slice(exampleStart));
 assert.ok(json, 'harness.md: the example is a json block');

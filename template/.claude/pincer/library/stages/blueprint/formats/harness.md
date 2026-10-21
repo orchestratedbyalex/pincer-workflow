@@ -33,11 +33,16 @@ shape: `write` validates it, fills the defaults and writes it back. Every field:
 | `stages.evaluate` | `{on, where, evidence, reason}` | `where` is `local` or `pr`; `evidence` keeps the manifest |
 | `stages.release` | `{on, audit, reason}` | `audit` is `tree` (a clean tree) or `pr` (the merged PR) |
 | `roster.<stage>` | lists of agent names | for plan, narrow, code, evaluate |
+| `models.stages.<stage>` | a tier, or `{tier, effort}` | the tier and effort a stage runs on; `plan`, `narrow`, `code`, `evaluate`, `release` only |
+| `models.agents.<name>` | a tier, or `{tier, effort}` | the tier and effort a roster agent runs on; unset falls back to the library's default |
+| `models.map.<platform>.<tier>` | a model name | overrides the library table's entry for `claude`, `codex` or `copilot` |
 | `open` | list of text | what the interview left open, written as open |
 | `firstJob` | text | the first real job agreed on |
 
-`blueprint` and `status` never appear under `stages`: they are always on, and the
-validator rejects an entry for them. A `reason` on a stage that is off appears under
+`blueprint` and `status` never appear under `stages` or `models.stages`: they are
+always on, and the validator rejects an entry for them. Tiers are `strong`,
+`standard`, `fast` or `inherit`; effort is `low`, `medium` or `high`; the empty
+string means not set. A `reason` on a stage that is off appears under
 Simplify in the agreement. Unknown keys are kept but ignored.
 
 ## Example
@@ -65,6 +70,11 @@ Simplify in the agreement. Unknown keys are kept but ignored.
     "narrow": ["codebase-explorer"],
     "code": [],
     "evaluate": ["code-quality-reviewer", "silent-failure-hunter", "security-reviewer", "history-reviewer"]
+  },
+  "models": {
+    "stages": { "evaluate": "strong" },
+    "agents": { "security-reviewer": { "tier": "strong", "effort": "high" }, "codebase-explorer": "standard" },
+    "map": {}
   },
   "open": ["Who rotates the deploy key?"],
   "firstJob": "Fix the flaky checkout test so that npm test is green on main"

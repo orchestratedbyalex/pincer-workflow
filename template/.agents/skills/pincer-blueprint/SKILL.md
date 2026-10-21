@@ -35,14 +35,17 @@ says; add no tool, step or role they did not choose.
 2. [session] State the kind and the reasons in one paragraph with `.claude/skills/pincer-blueprint/prompts/confirm-kind.md`, naming what recon could not see. Ask the person to confirm or correct. Their word wins over recon.
 3. [session] Interview, one section at a time and one question at a time, in this order, each with its prompt: Systems (`.claude/skills/pincer-blueprint/prompts/q-systems.md`), Current pipeline (`.claude/skills/pincer-blueprint/prompts/q-pipeline.md`), Handoff artifacts (`.claude/skills/pincer-blueprint/prompts/q-handoffs.md`), Simplify (`.claude/skills/pincer-blueprint/prompts/q-simplify.md`), Responsibility (`.claude/skills/pincer-blueprint/prompts/q-responsibility.md`), Repo (`.claude/skills/pincer-blueprint/prompts/q-repo.md`). Fill each prompt's slots from recon and from earlier answers before asking.
 4. [session] Propose the roster from the answers and recon by applying `.claude/skills/pincer-blueprint/formats/roster-rules.md`; ask the person to confirm with `.claude/skills/pincer-blueprint/prompts/q-roster.md`.
-5. [session] Write the answers as `harness.json` in the shape `.claude/skills/pincer-blueprint/formats/harness.md` describes: start from recon's `prefill`, put every unanswered item in `open`, then run `node scripts/pincer-blueprint.cjs write`. On validation problems, fix the file and run it again. Never hand-edit `AGENTS.md` between the markers.
-6. [session] Show the agreement from `AGENTS.md` (the text between the markers) and ask for corrections. Apply them to `harness.json` and run `write` again. One round.
-7. [session] Name the first job with `.claude/skills/pincer-blueprint/prompts/first-job.md`: brownfield, the smallest real change that recon or the open items point at; greenfield, the setup job. Put it in `firstJob`, run `write` again, and say that the first run through the pipeline is the trace to revisit this agreement with.
-8. [session] Print the output of `scripts/pincer-status.sh` and stop. The next command is on its last line.
+5. [session] Propose the model tier per role from the "Model tiers" section of `.claude/skills/pincer-blueprint/formats/roster-rules.md` and ask the person to confirm with `.claude/skills/pincer-blueprint/prompts/q-models.md`; record the answers under `models`.
+6. [session] Write the answers as `harness.json` in the shape `.claude/skills/pincer-blueprint/formats/harness.md` describes: start from recon's `prefill`, put every unanswered item in `open`, then run `node scripts/pincer-blueprint.cjs write`. On validation problems, fix the file and run it again. Never hand-edit `AGENTS.md` between the markers.
+7. [session] Show the agreement from `AGENTS.md` (the text between the markers) and ask for corrections. Apply them to `harness.json` and run `write` again. One round.
+8. [session] Name the first job with `.claude/skills/pincer-blueprint/prompts/first-job.md`: brownfield, the smallest real change that recon or the open items point at; greenfield, the setup job. Put it in `firstJob`, run `write` again, and say that the first run through the pipeline is the trace to revisit this agreement with.
+9. [session] Print the output of `scripts/pincer-status.sh` and stop. The next command is on its last line.
 
 Re-run: when `harness.json` already exists, run recon, list what differs between the
 file and what recon sees (kind, remote, CI, checks, people, merge style), ask only
-about those and about anything the person wants to change, then continue from step 5.
+about those and about anything the person wants to change, then continue from step 6.
+When the file has no `models` key, propose the tiers once (step 5); otherwise ask only
+when the person wants to change them.
 
 ## Checks
 - `node scripts/pincer-blueprint.cjs write` exits 0 and prints `wrote harness.json` and `wrote AGENTS.md`.
