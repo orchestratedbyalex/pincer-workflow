@@ -58,6 +58,7 @@ const ALL = ['claude', 'codex', 'copilot'];
 const PLAN_PATHS = ['.claude/skills/pincer-plan/SKILL.md', '.claude/skills/pincer-plan/prompts/ask.md', '.claude/commands/pincer-plan.md', '.agents/skills/pincer-plan/SKILL.md', '.github/prompts/pincer-plan.prompt.md'];
 const STATUS_PATHS = ['.claude/skills/pincer-status/SKILL.md', '.claude/commands/pincer-status.md', '.agents/skills/pincer-status/SKILL.md', '.github/prompts/pincer-status.prompt.md'];
 const AGENT_PATH = '.claude/agents/codebase-explorer.md';
+const CODEX_AGENT_PATH = '.codex/agents/codebase-explorer.toml';
 
 assert.equal(gen.LIBRARY, '.claude/pincer/library');
 
@@ -72,12 +73,12 @@ assert.ok(!paths.some((p) => p.startsWith('.agents/') || p.startsWith('.github/'
 let dir = tempDir();
 let lib = fixtureLibrary(dir);
 let report = gen.generate(dir, { harness: planOn(), platforms: ALL, library: lib });
-assert.deepEqual(report.written.sort(), [...PLAN_PATHS, ...STATUS_PATHS, AGENT_PATH].sort());
+assert.deepEqual(report.written.sort(), [...PLAN_PATHS, ...STATUS_PATHS, AGENT_PATH, CODEX_AGENT_PATH].sort());
 assert.deepEqual(report.skipped, []);
 assert.deepEqual(report.conflicted, []);
 assert.deepEqual(report.removed, []);
 assert.deepEqual(report.missing, ['blueprint']);
-for (const p of [...PLAN_PATHS, ...STATUS_PATHS, AGENT_PATH]) assert.ok(exists(dir, p), p);
+for (const p of [...PLAN_PATHS, ...STATUS_PATHS, AGENT_PATH, CODEX_AGENT_PATH]) assert.ok(exists(dir, p), p);
 assert.ok(!exists(dir, '.pincer.json'), 'no manifest is created');
 // the project copy and the agent copy are byte copies of the library, no comment
 assert.equal(read(dir, '.claude/skills/pincer-plan/SKILL.md'), PLAN_SKILL);
@@ -111,10 +112,10 @@ assert.ok(copilot.includes('Run /pincer-status first'), copilot);
 assert.ok(!copilot.includes('$ARGUMENTS'));
 
 // Second run: nothing changes, everything skipped, files byte-identical
-const snapshot = Object.fromEntries([...PLAN_PATHS, ...STATUS_PATHS, AGENT_PATH].map((p) => [p, read(dir, p)]));
+const snapshot = Object.fromEntries([...PLAN_PATHS, ...STATUS_PATHS, AGENT_PATH, CODEX_AGENT_PATH].map((p) => [p, read(dir, p)]));
 report = gen.generate(dir, { harness: planOn(), platforms: ALL, library: lib });
 assert.deepEqual(report.written, []);
-assert.deepEqual(report.skipped.sort(), [...PLAN_PATHS, ...STATUS_PATHS, AGENT_PATH].sort());
+assert.deepEqual(report.skipped.sort(), [...PLAN_PATHS, ...STATUS_PATHS, AGENT_PATH, CODEX_AGENT_PATH].sort());
 assert.deepEqual(report.conflicted, []);
 for (const [p, text] of Object.entries(snapshot)) assert.equal(read(dir, p), text, p);
 
@@ -144,7 +145,7 @@ write(dir, '.claude/skills/pincer-plan/SKILL.md', edited);
 gen.generate(dir, { harness: planOn(), platforms: ALL, library: lib });
 const planOff = harness.normalize({ ...planOn(), stages: { plan: { on: false, reason: 'tickets are the spec' }, ...OFF } });
 report = gen.generate(dir, { harness: planOff, platforms: ALL, library: lib });
-for (const p of ['.claude/commands/pincer-plan.md', '.agents/skills/pincer-plan/SKILL.md', '.github/prompts/pincer-plan.prompt.md', '.claude/skills/pincer-plan/prompts/ask.md', AGENT_PATH]) {
+for (const p of ['.claude/commands/pincer-plan.md', '.agents/skills/pincer-plan/SKILL.md', '.github/prompts/pincer-plan.prompt.md', '.claude/skills/pincer-plan/prompts/ask.md', AGENT_PATH, CODEX_AGENT_PATH]) {
   assert.ok(!exists(dir, p), `${p} should be removed`);
   assert.ok(report.removed.includes(p), p);
 }
@@ -305,6 +306,12 @@ write(other, 'bad.json', '{"schema":1}');
 r = run(other, process.execPath, [cliFile, '--root', dir, 'generate', '--harness', 'bad.json']);
 assert.equal(r.status, 3, both(r));
 assert.match(r.stderr, /bad\.json: /);
+// a tier the table cannot translate is a warning on stderr, exit 0
+write(dir, '.claude/pincer/library/models.json', JSON.stringify({ schema: 1, claude: { strong: 'opus', standard: 'sonnet', fast: 'haiku' }, codex: { strong: 'cx-s', standard: 'cx-m' }, copilot: { strong: 'Cp S', standard: 'Cp M', fast: 'Cp F' } }));
+createHarness(dir, { stages: { plan: { on: true }, ...OFF }, roster: { plan: ['codebase-explorer'] }, models: { agents: { 'codebase-explorer': 'fast' } } });
+r = run(dir, process.execPath, [cliFile, 'generate']);
+assert.equal(r.status, 0, both(r));
+assert.match(r.stderr, /library table has no codex value for tier fast; set models\.map\.codex\.fast in harness\.json/);
 
 // blueprint write runs the generator with the project's library
 dir = tempDir();
@@ -317,5 +324,99 @@ assert.equal(r.status, 0, both(r));
 assert.match(r.stdout, /^wrote harness\.json$/m);
 assert.match(r.stdout, /^wrote \.claude\/skills\/pincer-plan\/SKILL\.md$/m);
 assert.ok(exists(dir, '.agents/skills/pincer-status/SKILL.md'));
+
+// Models: agents rendered per tier, a Codex agent per roster member, markers, removal, the 1.0 case
+const TABLE = { schema: 1, claude: { strong: 'opus', standard: 'sonnet', fast: 'haiku' }, codex: { strong: 'cx-s', standard: 'cx-m', fast: 'cx-f' }, copilot: { strong: 'Cp S', standard: 'Cp M', fast: 'Cp F' } };
+const REVIEWER = `---\nname: security-reviewer\ndescription: "Reviews a diff for secrets"\ntools: Read, Grep\ntier: standard\n---\nYou review for secrets.\n\nReturn findings in the finding format.\n`;
+const withModels = (patch) => harness.normalize({ ...planOn(), stages: { plan: { on: true }, ...OFF, evaluate: { on: true } }, roster: { plan: ['codebase-explorer'], evaluate: ['security-reviewer'] }, models: patch });
+dir = tempDir();
+lib = fixtureLibrary(dir);
+write(dir, `${lib}/agents/security-reviewer.md`, REVIEWER);
+write(dir, `${lib}/stages/evaluate/SKILL.md`, PLAN_SKILL.replace(/pincer-plan/g, 'pincer-evaluate').replace('# Plan', '# Evaluate'));
+write(dir, `${lib}/models.json`, JSON.stringify(TABLE));
+report = gen.generate(dir, { harness: withModels({ agents: { 'codebase-explorer': { tier: 'strong', effort: 'high' } } }), platforms: ALL, library: lib });
+assert.deepEqual(report.missing, ['blueprint']);
+// the Claude file: tier dropped, model and effort appended, body intact
+let agent = read(dir, AGENT_PATH);
+assert.equal(agent, EXPLORER.replace('---\nRead', 'model: opus\neffort: high\n---\nRead'));
+agent = read(dir, '.claude/agents/security-reviewer.md');
+assert.ok(!agent.includes('tier:'), agent);
+assert.match(agent, /^model: sonnet$/m);
+assert.doesNotMatch(agent, /^effort:/m);
+assert.ok(agent.endsWith('Return findings in the finding format.\n'));
+// the Codex file
+const toml = read(dir, '.codex/agents/security-reviewer.toml');
+assert.equal(toml, `# Generated by scripts/pincer/cli.cjs generate from .claude/pincer/library/agents/security-reviewer.md — edit the agreement and the library, not this file\nname = "security-reviewer"\ndescription = "Reviews a diff for secrets"\nmodel = "cx-m"\ndeveloper_instructions = '''\nYou review for secrets.\n\nReturn findings in the finding format.\n'''\n`);
+assert.match(read(dir, '.codex/agents/codebase-explorer.toml'), /^model = "cx-s"\nmodel_reasoning_effort = "high"$/m);
+assert.ok(gen.generatedPaths(withModels({}), ALL, { library: path.join(dir, lib) }).includes('.codex/agents/security-reviewer.toml'));
+assert.ok(!gen.generatedPaths(withModels({}), ['claude', 'copilot'], { library: path.join(dir, lib) }).some((p) => p.startsWith('.codex/')));
+// inherit and "" write no model field; the library tier is the fallback; the map overrides the table
+report = gen.generate(dir, { harness: withModels({ agents: { 'codebase-explorer': 'inherit', 'security-reviewer': '' }, map: { claude: { standard: 'fable' } } }), platforms: ALL, library: lib });
+assert.equal(read(dir, AGENT_PATH), EXPLORER);
+assert.match(read(dir, '.claude/agents/security-reviewer.md'), /^model: fable$/m);
+assert.doesNotMatch(read(dir, '.codex/agents/codebase-explorer.toml'), /^model/m);
+// effort alone is written
+report = gen.generate(dir, { harness: withModels({ agents: { 'codebase-explorer': { tier: '', effort: 'low' } } }), platforms: ALL, library: lib });
+assert.equal(read(dir, AGENT_PATH), EXPLORER.replace('---\nRead', 'effort: low\n---\nRead'));
+assert.match(read(dir, '.codex/agents/codebase-explorer.toml'), /^model_reasoning_effort = "low"$/m);
+// a tier the table cannot translate is reported, not written
+write(dir, `${lib}/models.json`, JSON.stringify({ ...TABLE, codex: { strong: 'cx-s', standard: 'cx-m' } }));
+report = gen.generate(dir, { harness: withModels({ agents: { 'codebase-explorer': 'fast' } }), platforms: ALL, library: lib });
+assert.deepEqual(report.missing.sort(), ['blueprint', 'models/codex/fast']);
+assert.match(read(dir, AGENT_PATH), /^model: haiku$/m);
+assert.doesNotMatch(read(dir, '.codex/agents/codebase-explorer.toml'), /^model/m);
+// no table at all: reported once, only when a lookup was needed
+fs.unlinkSync(path.join(dir, `${lib}/models.json`));
+report = gen.generate(dir, { harness: withModels({ agents: { 'codebase-explorer': 'fast' } }), platforms: ALL, library: lib });
+assert.deepEqual(report.missing.sort(), ['blueprint', 'models.json']);
+report = gen.generate(dir, { harness: withModels({ agents: { 'codebase-explorer': 'inherit', 'security-reviewer': 'inherit' } }), platforms: ALL, library: lib });
+assert.deepEqual(report.missing, ['blueprint']);
+write(dir, `${lib}/models.json`, JSON.stringify(TABLE));
+// a Codex file edited by hand: kept with a sidecar when a baseline knows it; without a baseline the marker still decides
+write(dir, '.pincer.json', JSON.stringify({ schema: 3, version: '1.0.0', platforms: ALL, files: {}, generated: {} }));
+gen.generate(dir, { harness: withModels({}), platforms: ALL, library: lib });
+const tomlCopy = read(dir, '.codex/agents/security-reviewer.toml');
+assert.match(tomlCopy, /^model = "cx-m"$/m);
+write(dir, '.codex/agents/security-reviewer.toml', tomlCopy + '\n# mine\n');
+report = gen.generate(dir, { harness: withModels({}), platforms: ALL, library: lib });
+assert.ok(read(dir, '.codex/agents/security-reviewer.toml').includes('# mine'));
+assert.equal(read(dir, '.codex/agents/security-reviewer.toml.new'), tomlCopy);
+assert.ok(report.conflicted.includes('.codex/agents/security-reviewer.toml'));
+fs.unlinkSync(path.join(dir, '.pincer.json'));
+write(dir, '.codex/agents/security-reviewer.toml', tomlCopy.replace('cx-m', 'stale'));
+fs.unlinkSync(path.join(dir, '.codex/agents/security-reviewer.toml.new'));
+report = gen.generate(dir, { harness: withModels({}), platforms: ALL, library: lib });
+assert.equal(read(dir, '.codex/agents/security-reviewer.toml'), tomlCopy, 'a marked derived file is the generator\'s');
+// an agent leaves the roster: both files go; a platform dropped leaves its files alone
+report = gen.generate(dir, { harness: withModels({}), platforms: ['claude'], library: lib });
+assert.ok(exists(dir, '.codex/agents/security-reviewer.toml'), 'codex files are out of scope without codex');
+const noReviewer = harness.normalize({ ...withModels({}), roster: { plan: ['codebase-explorer'], evaluate: [] } });
+report = gen.generate(dir, { harness: noReviewer, platforms: ALL, library: lib });
+assert.ok(!exists(dir, '.claude/agents/security-reviewer.md') && !exists(dir, '.codex/agents/security-reviewer.toml'));
+assert.ok(report.removed.includes('.codex/agents/security-reviewer.toml'));
+assert.ok(exists(dir, '.codex'), 'the .codex directory itself stays');
+// the 1.0 case: an agent file equal to the old library copy, no manifest, is overwritten
+dir = tempDir();
+lib = fixtureLibrary(dir);
+write(dir, `${lib}/models.json`, JSON.stringify(TABLE));
+const OLD = EXPLORER.replace('---\nRead', 'model: sonnet\n---\nRead');
+write(dir, AGENT_PATH, OLD);
+write(dir, `${lib}/agents/codebase-explorer.md`, EXPLORER.replace('---\nRead', 'tier: standard\n---\nRead'));
+report = gen.generate(dir, { harness: planOn(), platforms: ALL, library: lib });
+assert.equal(read(dir, AGENT_PATH), EXPLORER.replace('---\nRead', 'model: sonnet\n---\nRead'));
+assert.ok(!exists(dir, `${AGENT_PATH}.new`));
+// a library copy the project edited and that still carries model: and tier: renders one model line
+write(dir, `${lib}/agents/codebase-explorer.md`, EXPLORER.replace('---\nRead', 'model: sonnet\ntier: strong\n---\nRead'));
+report = gen.generate(dir, { harness: planOn(), platforms: ALL, library: lib });
+assert.equal(read(dir, AGENT_PATH), EXPLORER.replace('---\nRead', 'model: opus\n---\nRead'));
+// a body with ''' refuses before anything is written
+write(dir, `${lib}/agents/codebase-explorer.md`, EXPLORER + "'''\n");
+const before = fs.readdirSync(path.join(dir, '.claude/agents'));
+assert.throws(() => gen.generate(dir, { harness: planOn(), platforms: ALL, library: lib }), /agents\/codebase-explorer\.md: the body contains '''/);
+assert.deepEqual(fs.readdirSync(path.join(dir, '.claude/agents')), before);
+// rewriteFrontmatter alone
+assert.equal(gen.rewriteFrontmatter(EXPLORER, {}), EXPLORER);
+assert.equal(gen.rewriteFrontmatter(EXPLORER, { add: { model: 'opus', effort: 'x y' } }), EXPLORER.replace('---\nRead', 'model: opus\neffort: "x y"\n---\nRead'));
+assert.equal(gen.rewriteFrontmatter(REVIEWER, { drop: ['tier'] }), REVIEWER.replace('tier: standard\n', ''));
 
 console.log('ok generate');

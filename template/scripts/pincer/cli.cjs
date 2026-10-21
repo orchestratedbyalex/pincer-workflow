@@ -160,6 +160,13 @@ function writeCommand(root, args, io) {
   return 0;
 }
 
+// What the library or its table could not provide, as one sentence.
+function missingText(name) {
+  if (name === 'models.json') return 'library has no models.json; run npx pincer-workflow update';
+  if (name.startsWith('models/')) { const [platform, tier] = name.slice('models/'.length).split('/'); return `library table has no ${platform} value for tier ${tier}; set models.map.${platform}.${tier} in harness.json`; }
+  if (name.startsWith('agents/')) return `library has no agent ${name.slice('agents/'.length)}`;
+  return `library has no stage ${name}`;
+}
 // The generator's report as lines: what was written, kept (with or without a
 // sidecar), removed, and what the library or the manifest could not provide.
 function reportGenerated(report, io, who) {
@@ -167,7 +174,7 @@ function reportGenerated(report, io, who) {
   for (const file of report.conflicted) io.out(`kept ${file} (edited; fresh copy in ${file}.new)\n`);
   for (const file of report.retained) io.out(`kept ${file} (edited; not removed)\n`);
   for (const file of report.removed) io.out(`removed ${file}\n`);
-  for (const name of report.missing) io.err(`${who}: warning: library has no ${name.startsWith('agents/') ? `agent ${name.slice('agents/'.length)}` : `stage ${name}`}\n`);
+  for (const name of report.missing) io.err(`${who}: warning: ${missingText(name)}\n`);
   for (const rel of report.unsafe) io.err(`${who}: warning: ignored unsafe baseline path ${rel} in ${generate.MANIFEST}\n`);
 }
 
