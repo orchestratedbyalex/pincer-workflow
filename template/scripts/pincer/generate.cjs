@@ -140,29 +140,41 @@ function renderCodexAgent(name, text, { model, effort } = {}) {
 // after a character that cannot be part of a path, so scripts/pincer-status.sh stays.
 const codexMentions = (text) => text.replace(/(^|[^A-Za-z0-9_./])\/pincer-([a-z][a-z-]*)/gm, (_, before, name) => `${before}$pincer-${name}`);
 
-function renderCommand(stage, fields) {
-  const hint = fields['argument-hint'] ? `argument-hint: ${quoted(fields['argument-hint'])}\n` : '';
-  return `---\ndescription: ${quoted(describe(stage, fields))}\n${hint}---\n${generatedComment(skillFile(stage))}\n\nRead ${skillFile(stage)} and follow it. Arguments: $ARGUMENTS\n`;
+// The model and effort lines a stage's tier adds to a frontmatter.
+const modelLines = ({ model, effort } = {}) => `${given(model) ? `model: ${bare(model)}\n` : ''}${given(effort) ? `effort: ${bare(effort)}\n` : ''}`;
+// The Codex skill has no model field: one line tells the session what was agreed.
+function codexHint({ model, effort, tier } = {}) {
+  if (given(model)) return `Model: this stage was agreed to run on the ${tier} tier (${model}${given(effort) ? `, effort ${effort}` : ''}). If this session runs on another model, say so before starting or restart with \`codex -m ${model}\`.\n\n`;
+  if (given(effort)) return `Effort: this stage was agreed to run at ${effort} effort on the session's model; if this session is set lower, restart with \`codex -c model_reasoning_effort=${effort}\`.\n\n`;
+  return '';
 }
-function renderCodex(stage, fields, body) {
+
+function renderCommand(stage, fields, claude) {
+  const hint = fields['argument-hint'] ? `argument-hint: ${quoted(fields['argument-hint'])}\n` : '';
+  return `---\ndescription: ${quoted(describe(stage, fields))}\n${hint}${modelLines(claude)}---\n${generatedComment(skillFile(stage))}\n\nRead ${skillFile(stage)} and follow it. Arguments: $ARGUMENTS\n`;
+}
+function renderCodex(stage, fields, body, codex) {
   const optional = !fields['argument-hint'] || /optional/i.test(fields['argument-hint']);
   const sentence = optional
     ? `the text that follows the \`$pincer-${stage}\` mention, if any (when omitted, use the skill's documented default)`
     : `the text that follows the \`$pincer-${stage}\` mention in the user's message (ask only if the required input is missing)`;
   const text = codexMentions(body.split('$ARGUMENTS').join(sentence));
-  return `---\nname: pincer-${stage}\ndescription: ${quoted(describe(stage, fields))}\n---\n${generatedComment(skillFile(stage))}\n\n${bodyText(text)}`;
+  return `---\nname: pincer-${stage}\ndescription: ${quoted(describe(stage, fields))}\n---\n${generatedComment(skillFile(stage))}\n\n${codexHint(codex)}${bodyText(text)}`;
 }
-function renderCopilot(stage, fields, body) {
+function renderCopilot(stage, fields, body, copilot) {
   const text = body.split('$ARGUMENTS').join(COPILOT_INPUT);
-  return `---\nmode: agent\ndescription: ${quoted(describe(stage, fields))}\n---\n${generatedComment(skillFile(stage))}\n\n${bodyText(text)}`;
+  const model = copilot && given(copilot.model) ? `model: ${quoted(copilot.model)}\n` : '';
+  return `---\nmode: agent\ndescription: ${quoted(describe(stage, fields))}\n${model}---\n${generatedComment(skillFile(stage))}\n\n${bodyText(text)}`;
 }
 // The files derived from a stage's SKILL.md text, keyed by path (every platform).
-function derived(stage, skillText) {
+// `models` carries the stage's resolved { model, effort, tier } per platform; the
+// derived files take the model from the resolution, never from the copy's frontmatter.
+function derived(stage, skillText, models = {}) {
   const { fields, body } = splitFrontmatter(skillText);
   return {
-    [`.claude/commands/pincer-${stage}.md`]: renderCommand(stage, fields),
-    [`.agents/skills/pincer-${stage}/SKILL.md`]: renderCodex(stage, fields, body),
-    [`.github/prompts/pincer-${stage}.prompt.md`]: renderCopilot(stage, fields, body),
+    [`.claude/commands/pincer-${stage}.md`]: renderCommand(stage, fields, models.claude),
+    [`.agents/skills/pincer-${stage}/SKILL.md`]: renderCodex(stage, fields, body, models.codex),
+    [`.github/prompts/pincer-${stage}.prompt.md`]: renderCopilot(stage, fields, body, models.copilot),
   };
 }
 function derivedPaths(stage, platforms) {
@@ -280,12 +292,18 @@ function generate(root, { harness: doc, platforms = manifestPlatforms(root), lib
     if (!harness.stageOn(h, stage)) continue;
     const src = path.join(lib, 'stages', stage);
     if (!fs.existsSync(path.join(src, 'SKILL.md'))) { report.missing.push(stage); continue; }
+    const entry = eff.stages[stage];
+    const tiers = Object.fromEntries(PLATFORMS.map((platform) => [platform, { ...resolve(platform, entry), tier: given(entry && entry.tier) }]));
     let skillText = '';
     for (const file of listFiles(src)) {
-      const placed = place(`${skillDir(stage)}/${file}`, fs.readFileSync(path.join(src, file)));
-      if (file === 'SKILL.md') skillText = placed.toString('utf8');
+      const raw = fs.readFileSync(path.join(src, file));
+      if (file !== 'SKILL.md') { place(`${skillDir(stage)}/${file}`, raw); continue; }
+      // The project copy: the library's SKILL.md with the stage's Claude model lines.
+      const libraryText = raw.toString('utf8');
+      const fresh = rewriteFrontmatter(libraryText, { drop: ['model', 'effort'], add: { model: tiers.claude.model || '', effort: tiers.claude.effort } });
+      skillText = place(`${skillDir(stage)}/${file}`, fresh, { ours: (current) => equalIgnoringModelFields(current, libraryText) }).toString('utf8');
     }
-    const outputs = derived(stage, skillText);
+    const outputs = derived(stage, skillText, tiers);
     for (const rel of derivedPaths(stage, platforms)) place(rel, outputs[rel]);
   }
   for (const item of rendered) {
@@ -305,7 +323,11 @@ function generate(root, { harness: doc, platforms = manifestPlatforms(root), lib
   for (const stage of harness.STAGES) {
     if (harness.stageOn(h, stage)) continue;
     const src = path.join(lib, 'stages', stage);
-    for (const file of listFiles(src)) pristine[`${skillDir(stage)}/${file}`] = sha(fs.readFileSync(path.join(src, file)));
+    for (const file of listFiles(src)) {
+      const raw = fs.readFileSync(path.join(src, file));
+      pristine[`${skillDir(stage)}/${file}`] = sha(raw);
+      if (file === 'SKILL.md') libraryText[skillFile(stage)] = raw.toString('utf8');
+    }
     for (const file of listFiles(path.join(root, skillDir(stage)))) if (!file.endsWith('.new')) candidates.add(`${skillDir(stage)}/${file}`);
     for (const rel of derivedPaths(stage, platforms)) candidates.add(rel);
   }

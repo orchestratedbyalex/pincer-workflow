@@ -419,4 +419,38 @@ assert.equal(gen.rewriteFrontmatter(EXPLORER, {}), EXPLORER);
 assert.equal(gen.rewriteFrontmatter(EXPLORER, { add: { model: 'opus', effort: 'x y' } }), EXPLORER.replace('---\nRead', 'model: opus\neffort: "x y"\n---\nRead'));
 assert.equal(gen.rewriteFrontmatter(REVIEWER, { drop: ['tier'] }), REVIEWER.replace('tier: standard\n', ''));
 
+// Stages: the project copy, the command, the Copilot prompt and the Codex hint carry the tier
+dir = tempDir();
+lib = fixtureLibrary(dir);
+write(dir, `${lib}/models.json`, JSON.stringify(TABLE));
+const stageTiers = (stages) => harness.normalize({ ...planOn(), models: { stages } });
+report = gen.generate(dir, { harness: stageTiers({ plan: { tier: 'strong', effort: 'high' } }), platforms: ALL, library: lib });
+assert.equal(read(dir, '.claude/skills/pincer-plan/SKILL.md'), PLAN_SKILL.replace('---\n# Plan', 'model: opus\neffort: high\n---\n# Plan'));
+command = read(dir, '.claude/commands/pincer-plan.md');
+assert.ok(command.startsWith('---\ndescription: "Brief to a written spec"\nargument-hint: "<brief>"\nmodel: opus\neffort: high\n---\n'), command);
+copilot = read(dir, '.github/prompts/pincer-plan.prompt.md');
+assert.ok(copilot.startsWith('---\nmode: agent\ndescription: "Brief to a written spec"\nmodel: "Cp S"\n---\n'), copilot);
+codex = read(dir, '.agents/skills/pincer-plan/SKILL.md');
+assert.match(codex, /-->\n\nModel: this stage was agreed to run on the strong tier \(cx-s, effort high\)\. If this session runs on another model, say so before starting or restart with `codex -m cx-s`\.\n\n# Plan/);
+// the status stage is untouched
+assert.equal(read(dir, '.claude/skills/pincer-status/SKILL.md'), STATUS_SKILL);
+assert.doesNotMatch(read(dir, '.github/prompts/pincer-status.prompt.md'), /^model:/m);
+// effort alone
+report = gen.generate(dir, { harness: stageTiers({ plan: { tier: '', effort: 'medium' } }), platforms: ALL, library: lib });
+assert.equal(read(dir, '.claude/skills/pincer-plan/SKILL.md'), PLAN_SKILL.replace('---\n# Plan', 'effort: medium\n---\n# Plan'));
+assert.doesNotMatch(read(dir, '.github/prompts/pincer-plan.prompt.md'), /^model:/m);
+assert.match(read(dir, '.agents/skills/pincer-plan/SKILL.md'), /\n\nEffort: this stage was agreed to run at medium effort on the session's model; if this session is set lower, restart with `codex -c model_reasoning_effort=medium`\.\n\n# Plan/);
+// back to unset: the byte copy returns, the derived files lose the fields
+report = gen.generate(dir, { harness: stageTiers({}), platforms: ALL, library: lib });
+assert.equal(read(dir, '.claude/skills/pincer-plan/SKILL.md'), PLAN_SKILL);
+assert.doesNotMatch(read(dir, '.claude/commands/pincer-plan.md'), /^model:|^effort:/m);
+assert.doesNotMatch(read(dir, '.agents/skills/pincer-plan/SKILL.md'), /^(Model|Effort):/m);
+// an edited project copy keeps its edit; the derived files take the model from the resolution, not from the copy
+write(dir, '.claude/skills/pincer-plan/SKILL.md', PLAN_SKILL.replace('---\n# Plan', 'model: haiku\n---\n# Plan (ours)'));
+report = gen.generate(dir, { harness: stageTiers({ plan: 'strong' }), platforms: ALL, library: lib });
+assert.deepEqual(report.conflicted, ['.claude/skills/pincer-plan/SKILL.md']);
+assert.match(read(dir, '.claude/commands/pincer-plan.md'), /^model: opus$/m);
+assert.match(read(dir, '.github/prompts/pincer-plan.prompt.md'), /^model: "Cp S"$/m);
+assert.ok(read(dir, '.agents/skills/pincer-plan/SKILL.md').includes('# Plan (ours)'));
+
 console.log('ok generate');
