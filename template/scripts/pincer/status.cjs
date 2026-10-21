@@ -112,7 +112,12 @@ function nextCommand(report) {
   const stale = tickets.find((t) => t.status === 'done' && !t.ready);
   if (stale) return `${SCRIPT} verify ${stale.id}`;
   if (report.stages.evaluate === 'on' && report.harness.stages.evaluate.evidence && report.evidence.length === 0) return '/pincer-evaluate';
-  if (tickets.some((t) => t.status === 'done' && !t.accepted)) return '/pincer-release';
+  const unaccepted = tickets.find((t) => t.status === 'done' && !t.accepted);
+  if (unaccepted) {
+    // Acceptance is the floor even with release off: then the next step is the accept call itself.
+    if (harnessModule.stageOn(report.harness, 'release')) return '/pincer-release';
+    return `${SCRIPT} accept ${unaccepted.id} --by "<name>" --words "<their words>"`;
+  }
   return 'all tickets done and accepted';
 }
 

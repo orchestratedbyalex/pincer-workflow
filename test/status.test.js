@@ -179,4 +179,16 @@ r = status(dir);
 assert.match(r.stdout, /^T-01 open$/m);
 assert.equal(JSON.parse(status(dir, '--json').stdout).tickets[0].file, 'work/tickets/T-01-moved.md');
 
+// Release switched off: acceptance is still the floor, so the next command is the accept call itself, not the stage
+dir = tempDir();
+createHarness(dir, { stages: { release: { on: false, reason: 'acceptance happens in the PR' }, evaluate: { on: false } } });
+createTicket(dir, { id: 'T-01' });
+assert.equal(ticket(dir, 'verify', 'T-01').status, 0);
+assert.equal(ticket(dir, 'done', 'T-01').status, 0);
+r = status(dir);
+assert.equal(r.status, 0, both(r));
+assert.match(r.stdout, /^Warnings:\n  T-01 done without acceptance$/m);
+assert.equal(lastLine(r.stdout), 'Next: scripts/pincer-ticket.sh accept T-01 --by "<name>" --words "<their words>"');
+assert.equal(status(dir, '--stage', 'release').status, 3);
+
 console.log('status: ok');

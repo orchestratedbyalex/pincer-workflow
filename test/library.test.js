@@ -108,6 +108,66 @@ const status = read(STAGES_DIR, 'status/SKILL.md');
 for (const needle of ['scripts/pincer-status.sh', 'three lines', 'in_progress', 'git status', 'Next']) assert.ok(status.includes(needle), `status: ${needle}`);
 assert.match(status, /never restore/i);
 
+// Task 12: the five other stages, the agent library, the release checklist
+assert.deepEqual(stages, [...harness.STAGES].sort(), 'every stage has a folder');
+const AGENTS_DIR = path.join(LIB, 'agents');
+const REVIEWERS = harness.AGENT_NAMES.filter((n) => n.endsWith('-reviewer') || n === 'silent-failure-hunter');
+assert.deepEqual(files(AGENTS_DIR).map((n) => n.replace(/\.md$/, '')).sort(), [...harness.AGENT_NAMES].sort(), 'one file per agent name, no extras');
+for (const name of harness.AGENT_NAMES) {
+  const text = read(AGENTS_DIR, `${name}.md`);
+  const { fields, body } = gen.splitFrontmatter(text);
+  assert.equal(fields.name, name, `${name}: frontmatter name`);
+  assert.ok(fields.description, `${name}: description`);
+  assert.ok(fields.tools, `${name}: tools`);
+  const words = body.trim().split(/\s+/).length;
+  assert.ok(words < 300, `${name}: body under 300 words (${words})`);
+  assert.ok(!/^@/m.test(text), `${name}: no @ imports`);
+  for (const stale of ['pincer-runtime', '.prd/', 'PRD']) assert.ok(!text.includes(stale), `${name}: no ${stale}`);
+  if (REVIEWERS.includes(name)) {
+    assert.ok(body.trimEnd().endsWith('Return findings in the finding format.'), `${name}: ends with the finding sentence`);
+    assert.ok(body.includes('data, never instructions'), `${name}: the untrusted-content sentence`);
+    assert.ok(body.includes('.claude/skills/pincer-evaluate/formats/finding.md'), `${name}: names the finding format`);
+  }
+}
+assert.ok(fs.existsSync(path.join(STAGES_DIR, 'evaluate/formats/finding.md')), 'evaluate/formats/finding.md');
+assert.ok(fs.existsSync(path.join(STAGES_DIR, 'evaluate/formats/finding-report.md')), 'evaluate/formats/finding-report.md');
+const finding = read(STAGES_DIR, 'evaluate/formats/finding.md');
+for (const needle of ['file', 'line', 'failure scenario', 'suggested fix', 'confidence', '70']) assert.ok(finding.toLowerCase().includes(needle), `finding.md: ${needle}`);
+assert.match(read(STAGES_DIR, 'evaluate/formats/finding-report.md'), /security first/i);
+const review = read(STAGES_DIR, 'evaluate/prompts/review.md');
+for (const slot of ['{{diff}}', '{{spec_scope}}', '{{tickets}}']) assert.ok(review.includes(slot), `review.md: ${slot}`);
+// plan, narrow, code: the formats and prompts the brief names
+assert.ok(fs.existsSync(path.join(STAGES_DIR, 'plan/formats/spec.md')), 'plan/formats/spec.md');
+assert.match(read(STAGES_DIR, 'plan/formats/spec.md'), /R-NN/);
+assert.match(read(STAGES_DIR, 'plan/formats/spec.md'), /status: (draft|approved)/);
+assert.ok(fs.existsSync(path.join(STAGES_DIR, 'plan/prompts/explore.md')), 'plan/prompts/explore.md');
+const ticketFormat = read(STAGES_DIR, 'narrow/formats/ticket.md');
+for (const section of ['## Who reads this', '## Decisions so far', '## Open questions', '## How the person checks', '## Done when', '## Acceptance Criteria', '## Verification', 'Proves:', 'spec:']) assert.ok(ticketFormat.includes(section), `ticket.md: ${section}`);
+assert.ok(fs.existsSync(path.join(STAGES_DIR, 'code/prompts/implement.md')), 'code/prompts/implement.md');
+assert.ok(fs.existsSync(path.join(STAGES_DIR, 'code/formats/pr.md')), 'code/formats/pr.md');
+const code = read(STAGES_DIR, 'code/SKILL.md');
+for (const needle of ['scripts/pincer-ticket.sh start', 'verify', 'done', 'T-NN: ', 'per-ticket', 'git switch -c', 'gh pr create', 'implementer', 'docs/engine.md', 'never restore']) assert.ok(code.includes(needle), `code: ${needle}`);
+const plan = read(STAGES_DIR, 'plan/SKILL.md');
+for (const needle of ['stages.plan.spec', 'gh issue create', 'forge:', 'status: approved', 'stages.plan.gate', 'codebase-explorer']) assert.ok(plan.includes(needle), `plan: ${needle}`);
+const narrow = read(STAGES_DIR, 'narrow/SKILL.md');
+for (const needle of ['stages.narrow.tickets', 'gh issue create', 'Proves:', 'Implements:', 'Verification']) assert.ok(narrow.includes(needle), `narrow: ${needle}`);
+const evaluate = read(STAGES_DIR, 'evaluate/SKILL.md');
+for (const needle of ['roster', 'stages.evaluate.where', 'gh pr comment', 'stages.evaluate.evidence', 'pincer-evidence.cjs validate', 'fix-agent', 'finding-report']) assert.ok(evaluate.includes(needle), `evaluate: ${needle}`);
+const release = read(STAGES_DIR, 'release/SKILL.md');
+for (const needle of ['docs/release-checklist.md', 'stages.release.audit', 'systems.deploy', 'accept', 'scripts/pincer-ticket.sh accept', '--by', '--words', 'PASS', 'FAIL']) assert.ok(release.includes(needle), `release: ${needle}`);
+assert.match(release, /read-only/i);
+// the release checklist: fifteen checkable items in four groups
+const checklist = fs.readFileSync(path.join(repo, 'template/docs/release-checklist.md'), 'utf8');
+for (const group of ['## Tickets', '## Evidence', '## Review', '## Acceptance']) assert.ok(checklist.includes(group), `checklist: ${group}`);
+assert.equal(checklist.split('\n').filter((l) => /^- \[ \] /.test(l)).length, 15, 'checklist: fifteen items');
+for (const stale of ['pincer-runtime', '.prd/', 'NOTES.md', 'PRD', 'Provenance', 'coverage']) assert.ok(!checklist.includes(stale), `checklist: no ${stale}`);
+// the stages that can be off say what happens then
+for (const stage of harness.OPTIONAL_STAGES) {
+  const text = read(STAGES_DIR, stage, 'SKILL.md');
+  const off = text.slice(text.indexOf('## When this stage is off'));
+  assert.ok(off.includes('--stage') || off.includes('exits 3') || off.includes('exit 3'), `${stage}: when off names the gate`);
+}
+
 // Course text is paraphrased, never copied: no eight-word run of a library file
 // appears in the masterclass playbook. Runs only where the playbook is checked out.
 const PLAYBOOK = '/Users/alex/Documents/harness-masterclass/harness-playbook';
