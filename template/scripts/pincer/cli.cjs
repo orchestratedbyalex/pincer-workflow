@@ -11,16 +11,19 @@ const ticket = require('./ticket.cjs');
 const status = require('./status.cjs');
 const evidence = require('./evidence.cjs');
 const recon = require('./recon.cjs');
+const writer = require('./blueprint.cjs');
 
 const USAGE = `usage: node scripts/pincer/cli.cjs [--root <dir>] <command> ...
   ticket <start|verify|done|accept> <T-NN> [--by "<name>" --words "<what they said>"]
   status [--json] [--stage <name>]
   evidence validate <manifest> [--candidate <sha>] | digest <file>...
   recon [--json] [--network]
+  write [--answers <file>]
 `;
 const BLUEPRINT_USAGE = `usage: scripts/pincer-blueprint.cjs recon [--json] [--network]
+       scripts/pincer-blueprint.cjs write [--answers <file>]
 `;
-const BLUEPRINT_VERBS = ['recon'];
+const BLUEPRINT_VERBS = ['recon', 'write'];
 const EVIDENCE_USAGE = `usage: scripts/pincer-evidence.cjs validate <manifest> [--candidate <sha>]
        scripts/pincer-evidence.cjs digest <file>...
 `;
@@ -139,6 +142,20 @@ function reconCommand(root, args, io) {
   return 0;
 }
 
+// write: answers (default harness.json itself) -> harness.json, the agreement
+// in AGENTS.md, the project copies. Problems go to stderr, one per line.
+function writeCommand(root, args, io) {
+  const options = flags(args, ['answers']);
+  if (options.problem) { io.err(`pincer-blueprint: ${options.problem}\n${BLUEPRINT_USAGE}`); return 2; }
+  const given = options.answers;
+  const result = writer.write(root, given === undefined ? {} : { answers: fromCwd(given), label: given });
+  if (!result.ok) { for (const p of result.problems) io.err(`pincer-blueprint: ${p}\n`); return result.exit; }
+  for (const file of result.written) io.out(`wrote ${file}\n`);
+  for (const file of result.generated.written) io.out(`wrote ${file}\n`);
+  for (const file of result.generated.conflicted) io.out(`kept ${file} (edited; fresh copy in ${file}.new)\n`);
+  return 0;
+}
+
 // scripts/pincer-blueprint.cjs: the blueprint verbs only, same root rules.
 async function blueprint(argv = process.argv.slice(2), io = { out: util.out, err: util.err }) {
   const resolved = resolveRoot(argv);
@@ -156,6 +173,7 @@ async function main(argv = process.argv.slice(2), io = { out: util.out, err: uti
     if (command === 'status') return statusCommand(root, rest, io);
     if (command === 'evidence') return evidenceCommand(root, rest, io);
     if (command === 'recon') return reconCommand(root, rest, io);
+    if (command === 'write') return writeCommand(root, rest, io);
     io.err(USAGE);
     return 2;
   } catch (error) {
