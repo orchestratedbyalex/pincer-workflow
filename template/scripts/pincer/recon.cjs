@@ -63,10 +63,6 @@ function walk(root) {
   return { sourceFiles, languages, testFiles };
 }
 
-// The remote URL without any credentials that may sit before the host.
-function stripUserinfo(url) {
-  return url.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/@]*@/i, '$1');
-}
 
 function gitFacts(root, unavailable) {
   const facts = { git: false, commits: 0, authors: [], branch: '', branches: [], mergeStyle: 'unknown', remote: null, forge: null, tags: 0 };
@@ -84,7 +80,7 @@ function gitFacts(root, unavailable) {
   const remoteName = remotes.includes('origin') ? 'origin' : remotes[0];
   const url = remoteName ? util.tryGit(root, ['remote', 'get-url', remoteName]) : null;
   if (url) {
-    facts.remote = stripUserinfo(url);
+    facts.remote = util.stripUserinfo(url);
     facts.forge = /(^|@|\/\/)github\.com[:/]/i.test(facts.remote) ? 'github' : 'other';
   }
   const tags = util.tryGit(root, ['tag']);
@@ -206,4 +202,4 @@ function render(result) {
   return `${lines.join('\n')}\n`;
 }
 
-module.exports = { recon, classify, prefill, render, stripUserinfo, walk, SKIP_DIRS, LANGUAGES };
+module.exports = { recon, classify, prefill, render, stripUserinfo: util.stripUserinfo, walk, SKIP_DIRS, LANGUAGES };

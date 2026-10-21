@@ -3,6 +3,7 @@
 // reads (docs/engine.md, "harness.json"). Schema 1. Dependency-free.
 const fs = require('node:fs');
 const path = require('node:path');
+const { stripUserinfo } = require('./util.cjs');
 
 const HARNESS_FILE = 'harness.json';
 const STAGES = ['blueprint', 'plan', 'narrow', 'code', 'evaluate', 'release', 'status'];
@@ -127,6 +128,7 @@ function normalize(doc) {
   out.project = { ...DEFAULTS.project, ...obj(src.project) };
   out.people = (Array.isArray(src.people) ? src.people : []).map((person) => ({ ...DEFAULTS.person, ...obj(person) }));
   out.systems = { ...DEFAULTS.systems, ...obj(src.systems) };
+  out.systems.remote = stripUserinfo(out.systems.remote); // never carry credentials into the agreement
   out.repo = { ...DEFAULTS.repo, ...obj(src.repo) };
   out.repo.checks = Array.isArray(out.repo.checks) ? [...out.repo.checks] : [];
   out.homes = Object.fromEntries(Object.entries({ ...DEFAULTS.homes, ...obj(src.homes) }).map(([key, value]) => [key, trimSlash(value)]));

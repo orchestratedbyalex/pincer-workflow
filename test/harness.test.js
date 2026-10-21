@@ -134,4 +134,8 @@ assert.equal(doc.project.name, 'demo');
 assert.equal(doc.project.kind, 'greenfield');
 assert.deepEqual(harness.validate(doc), []);
 
+// a remote URL typed with credentials loses them on normalize (review M6)
+assert.equal(harness.normalize({ systems: { remote: 'https://alice:ghp_secret123@github.com/acme/widgets.git' } }).systems.remote, 'https://github.com/acme/widgets.git');
+assert.equal(harness.normalize({ systems: { remote: 'git@github.com:acme/widgets.git' } }).systems.remote, 'git@github.com:acme/widgets.git');
+
 console.log('harness: ok');

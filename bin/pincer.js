@@ -42,7 +42,7 @@ export const PLATFORM_ROOTS = {
   codex: ['.codex/README.md', '.agents/skills/pincer-blueprint', '.agents/skills/pincer-status'],
   copilot: ['.github/copilot-instructions.md', '.github/prompts/pincer-blueprint.prompt.md', '.github/prompts/pincer-status.prompt.md'],
 };
-export const EXECUTABLES = ['scripts/sync-prompts.sh', 'scripts/pincer-ticket.sh', 'scripts/pincer-status.sh', '.claude/hooks/block-dangerous.sh', '.claude/hooks/ticket-guard.sh'];
+export const EXECUTABLES = ['scripts/sync-prompts.sh', 'scripts/pincer-ticket.sh', 'scripts/pincer-status.sh', 'scripts/pincer-blueprint.cjs', 'scripts/pincer-evidence.cjs', '.claude/hooks/block-dangerous.sh', '.claude/hooks/ticket-guard.sh'];
 export const GITIGNORE_LINES = ['.env', '.env.*', '!.env.example'];
 // Files an earlier kit installed that this version no longer ships. Never deleted
 // here; doctor names them when neither the manifest nor the generator claims them.
@@ -52,6 +52,7 @@ const OBSOLETE = [
 ];
 
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
+const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
 function walk(root, rel = '') {
   const abs = path.join(root, rel);
@@ -74,16 +75,16 @@ function readManifest(dir) {
   if (!fs.existsSync(p)) return null;
   let data;
   try { data = JSON.parse(fs.readFileSync(p, 'utf8')); } catch { fail(`${MANIFEST} exists but is not valid JSON — fix or remove it first.`); }
+  const unsafe = (f) => path.isAbsolute(f) || /^[A-Za-z]:/.test(f) || f.split(/[\\/]/).includes('..');
   const invalid = !data || typeof data !== 'object' || Array.isArray(data)
     || !Array.isArray(data.platforms) || !data.platforms.length || !data.platforms.every((x) => PLATFORMS.includes(x))
     || !data.files || typeof data.files !== 'object' || Array.isArray(data.files)
-    || Object.keys(data.files).some((f) => path.isAbsolute(f) || f.split(/[\\/]/).includes('..'))
+    || Object.keys(data.files).some(unsafe)
+    || (data.generated !== undefined && (!isPlainObject(data.generated) || Object.keys(data.generated).some(unsafe)))
     || (data.schema !== undefined && !TRUSTED_SCHEMAS.includes(data.schema));
   if (invalid) fail(`${MANIFEST} has an unsupported or invalid schema — restore a valid manifest before updating.`);
   return data;
 }
-
-const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
 function writeManifest(dir, platforms, hashes, generated) {
   const data = { schema: MANIFEST_SCHEMA, version: VERSION, platforms, files: hashes, generated: isPlainObject(generated) ? generated : {} };
@@ -183,7 +184,9 @@ function regenerate(dir) {
   const result = engine.generate.generate(dir, { harness: loaded.harness });
   for (const rel of result.written) console.log(`  generated ${rel}`);
   for (const rel of result.conflicted) console.log(`  kept ${rel} (edited; fresh copy in ${rel}.new)`);
+  for (const rel of result.retained) console.log(`  kept ${rel} (edited; not removed)`);
   for (const rel of result.removed) console.log(`  removed ${rel}`);
+  for (const rel of result.unsafe) console.log(`  note  ignored unsafe baseline path ${rel} in ${MANIFEST}`);
   for (const name of result.missing) console.log(`  note  the library has no ${name.startsWith('agents/') ? `agent ${name.slice('agents/'.length)}` : `stage ${name}`}`);
   console.log(`  generated: ${result.written.length} written, ${result.skipped.length} unchanged, ${result.conflicted.length} kept, ${result.removed.length} removed`);
 }

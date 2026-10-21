@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { createRequire } from 'node:module';
 import { repo } from './helpers.js';
 
@@ -136,6 +137,29 @@ for (const needle of ['file', 'line', 'failure scenario', 'suggested fix', 'conf
 assert.match(read(STAGES_DIR, 'evaluate/formats/finding-report.md'), /security first/i);
 const review = read(STAGES_DIR, 'evaluate/prompts/review.md');
 for (const slot of ['{{diff}}', '{{spec_scope}}', '{{tickets}}']) assert.ok(review.includes(slot), `review.md: ${slot}`);
+// the evidence example passes the shipped validator once its artifacts exist (review I2)
+{
+  const evidenceMod = require(path.join(repo, 'template/scripts/pincer/evidence.cjs'));
+  const crypto = await import('node:crypto');
+  const evidenceDoc = read(STAGES_DIR, 'evaluate/formats/evidence.md');
+  const block = /```json\n([\s\S]*?)\n```/.exec(evidenceDoc.slice(evidenceDoc.indexOf('\n## Example')));
+  assert.ok(block, 'evidence.md: the example is a json block');
+  const example = JSON.parse(block[1]);
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pincer-evidence-'));
+  const dir = path.join(root, 'evidence', example.candidate);
+  for (const rel of Object.keys(example.artifacts)) {
+    fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+    fs.writeFileSync(path.join(dir, rel), `artifact ${rel}\n`);
+    example.artifacts[rel] = crypto.createHash('sha256').update(fs.readFileSync(path.join(dir, rel))).digest('hex');
+  }
+  fs.mkdirSync(path.join(root, path.dirname(example.spec)), { recursive: true });
+  fs.writeFileSync(path.join(root, example.spec), '---\nstatus: built\n---\n# spec\n');
+  const manifestPath = path.join(dir, 'manifest.json');
+  fs.writeFileSync(manifestPath, JSON.stringify(example, null, 2));
+  assert.deepEqual(evidenceMod.validate(root, manifestPath, { candidate: example.candidate }), [], 'evidence.md: the example validates');
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
 // plan, narrow, code: the formats and prompts the brief names
 assert.ok(fs.existsSync(path.join(STAGES_DIR, 'plan/formats/spec.md')), 'plan/formats/spec.md');
 assert.match(read(STAGES_DIR, 'plan/formats/spec.md'), /R-NN/);

@@ -131,6 +131,15 @@ assert.deepEqual(harness.validate(result.harness), []);
 // a second write is byte-identical
 assert.equal(read(dir, 'AGENTS.md'), agents);
 
+// A remote typed with a token never reaches harness.json or AGENTS.md
+dir = tempDir();
+write(dir, 'answers.json', JSON.stringify({ ...answers, systems: { ...answers.systems, remote: 'https://alice:ghp_secret123@github.com/acme/widgets.git' } }));
+r = cli(dir, 'write', '--answers', 'answers.json');
+assert.equal(r.status, 0, both(r));
+assert.ok(!read(dir, 'harness.json').includes('ghp_secret123'));
+assert.ok(!read(dir, 'AGENTS.md').includes('ghp_secret123'));
+assert.ok(read(dir, 'AGENTS.md').includes('https://github.com/acme/widgets.git'));
+
 // Text below the end marker survives byte for byte; the old agreement is replaced
 dir = tempDir();
 write(dir, 'answers.json', JSON.stringify(answers));

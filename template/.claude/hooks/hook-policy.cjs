@@ -172,6 +172,34 @@ function ticketPath(value) {
   return typeof value === 'string' && TICKET_PATH.test(value);
 }
 
+// The engine and the hooks are installed by pincer-workflow and refreshed by its
+// update; an agent that could edit them could also forge a receipt or an acceptance.
+const ENGINE_FILES = ['scripts/pincer-ticket.sh', 'scripts/pincer-status.sh', 'scripts/pincer-blueprint.cjs', 'scripts/pincer-evidence.cjs', 'scripts/sync-prompts.sh', '.claude/settings.json'];
+const ENGINE_DIRS = ['scripts/pincer', '.claude/hooks'];
+const ENGINE_WORD = /(^|[\\/\s'"`=(])(\.\/)?(scripts[\\/]pincer([\\/]|$)|scripts[\\/](pincer-ticket\.sh|pincer-status\.sh|pincer-blueprint\.cjs|pincer-evidence\.cjs|sync-prompts\.sh)|\.claude[\\/]hooks([\\/]|$)|\.claude[\\/]settings\.json)/;
+const ENGINE_MESSAGE = 'the engine (scripts/pincer-*.sh, scripts/pincer-*.cjs, scripts/pincer/) and the hooks (.claude/hooks/, .claude/settings.json) are installed by pincer-workflow and never edited by an agent; refresh them with `npx pincer-workflow update`.';
+
+function projectRoot() {
+  return path.resolve(process.env.CLAUDE_PROJECT_DIR || process.cwd());
+}
+function enginePath(file) {
+  if (typeof file !== 'string') return false;
+  const rel = path.relative(projectRoot(), path.resolve(projectRoot(), file)).split(path.sep).join('/');
+  return ENGINE_FILES.includes(rel) || ENGINE_DIRS.some(dir => rel === dir || rel.startsWith(`${dir}/`));
+}
+// The project's own copy of a writer script, by relative, ./-relative, absolute or
+// $CLAUDE_PROJECT_DIR-prefixed path; never a lookalike elsewhere.
+function ownScript(word, rel) {
+  if (typeof word !== 'string') return false;
+  if (word === rel || word === `./${rel}` || word === `$CLAUDE_PROJECT_DIR/${rel}` || word === `\${CLAUDE_PROJECT_DIR}/${rel}`) return true;
+  return path.isAbsolute(word) && path.resolve(word) === path.join(projectRoot(), rel);
+}
+const WRITER_WORD = /(^|[\\/])(pincer-ticket\.sh|pincer[\\/]cli\.cjs)$/;
+function lookalikeWriter(word) {
+  if (!WRITER_WORD.test(word)) return false;
+  return !(ownScript(word, 'scripts/pincer-ticket.sh') || ownScript(word, 'scripts/pincer/cli.cjs'));
+}
+
 function stateFields(content) {
   const result = Object.fromEntries(PROTECTED.map(key => [key, []]));
   let scope = String(content ?? '');
@@ -209,6 +237,7 @@ function applyEdit(content, oldText, newText, replaceAll = false) {
 function guardEdits(tool, toolInput) {
   const file = toolInput.file_path;
   if (typeof file !== 'string') block(`${tool} payload must contain a string file_path.`);
+  if (enginePath(file)) block(ENGINE_MESSAGE);
   if (!ticketPath(file)) return;
   const before = existingContent(file);
   if (tool === 'Write') {
@@ -246,11 +275,11 @@ function isExactPincerCall(source) {
   const { executable, args, words: raw } = commandParts(commands[0]);
   let words = [raw[raw.length - args.length - 1], ...args];
   if (['bash', 'sh', 'node'].includes(executable)) words = words.slice(1);
-  if (/(^|[\\/])pincer[\\/]cli\.cjs$/.test(words[0] || '')) {
+  if (ownScript(words[0], 'scripts/pincer/cli.cjs')) {
     words = words.slice(1);
     while (words[0] === '--root' || /^--root=/.test(words[0] || '')) words = words.slice(words[0] === '--root' ? 2 : 1);
     if (words[0] !== 'ticket') return false;
-  } else if (!/(^|[\\/])pincer-ticket\.sh$/.test(words[0] || '')) return false;
+  } else if (!ownScript(words[0], 'scripts/pincer-ticket.sh')) return false;
   const action = words[1];
   if (['start', 'verify', 'done'].includes(action)) return words.length === 3;
   return action === 'accept' && words.length >= 3;
@@ -338,6 +367,16 @@ function ticketShellMutation(source, depth = 0) {
       const stdinPathspec = !sub.args.some(arg => !arg.startsWith('-')) || sub.args[sub.args.length - 1] === '--';
       if (viaXargs && ['checkout', 'restore', 'clean'].includes(sub.name) && stdinPathspec) return true;
     }
+    // A lookalike of the writer anywhere but the project's own path is refused outright.
+    if (words.some(lookalikeWriter)) return true;
+    // Writes to the engine or the hooks: a redirect, or a file-writing executable, with
+    // an engine path among the arguments (the script a shell or node runs does not count).
+    const scriptArgs = ['node', 'bash', 'sh', 'zsh'].includes(executable) ? 1 : 0;
+    if (args.slice(scriptArgs).some(arg => ENGINE_WORD.test(arg))) {
+      if (command.operators.some(op => op === '>' || op === '>>')) return true;
+      if (['rm', 'mv', 'cp', 'install', 'truncate', 'tee', 'ed', 'ex', 'python', 'python3', 'ruby'].includes(executable)) return true;
+      if (['sed', 'perl'].includes(executable) && args.some(arg => /^-[^-]*i/.test(arg) || arg === '--in-place' || arg.startsWith('--in-place='))) return true;
+    }
     const hasTicket = words.some(ticketPath) || /(^|[\s'"`])tickets[\\/]T-[0-9]+[^\s'"`]*/.test(source);
     if (!hasTicket) continue;
     if (command.operators.some(op => op === '>' || op === '>>')) return true;
@@ -361,7 +400,7 @@ if (mode === 'dangerous') {
   if (['Edit', 'Write', 'MultiEdit'].includes(payload.tool_name)) guardEdits(payload.tool_name, payload.tool_input);
   else if (payload.tool_name === 'Bash') {
     if (typeof payload.tool_input.command !== 'string') block('Bash payload must contain a string command.');
-    if (ticketShellMutation(payload.tool_input.command)) block('shell commands may not write, reset, or restore ticket files, including whole-tree checkout/restore, reset --hard, stash, clean -f; ticket lifecycle fields are written only by pincer-ticket.sh.');
+    if (ticketShellMutation(payload.tool_input.command)) block(`shell commands may not write, reset, or restore ticket files, including whole-tree checkout/restore, reset --hard, stash, clean -f; ticket lifecycle fields are written only by the project's own scripts/pincer-ticket.sh. ${ENGINE_MESSAGE}`);
   }
 } else {
   block('hook policy mode is invalid.');

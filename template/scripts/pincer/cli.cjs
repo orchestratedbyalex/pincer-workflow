@@ -156,10 +156,19 @@ function writeCommand(root, args, io) {
   const result = writer.write(root, given === undefined ? {} : { answers: fromCwd(given), label: given });
   if (!result.ok) { for (const p of result.problems) io.err(`pincer-blueprint: ${p}\n`); return result.exit; }
   for (const file of result.written) io.out(`wrote ${file}\n`);
-  for (const file of result.generated.written) io.out(`wrote ${file}\n`);
-  for (const file of result.generated.conflicted) io.out(`kept ${file} (edited; fresh copy in ${file}.new)\n`);
-  for (const file of result.generated.removed) io.out(`removed ${file}\n`);
+  reportGenerated(result.generated, io, 'pincer-blueprint');
   return 0;
+}
+
+// The generator's report as lines: what was written, kept (with or without a
+// sidecar), removed, and what the library or the manifest could not provide.
+function reportGenerated(report, io, who) {
+  for (const file of report.written) io.out(`wrote ${file}\n`);
+  for (const file of report.conflicted) io.out(`kept ${file} (edited; fresh copy in ${file}.new)\n`);
+  for (const file of report.retained) io.out(`kept ${file} (edited; not removed)\n`);
+  for (const file of report.removed) io.out(`removed ${file}\n`);
+  for (const name of report.missing) io.err(`${who}: warning: library has no ${name.startsWith('agents/') ? `agent ${name.slice('agents/'.length)}` : `stage ${name}`}\n`);
+  for (const rel of report.unsafe) io.err(`${who}: warning: ignored unsafe baseline path ${rel} in ${generate.MANIFEST}\n`);
 }
 
 // generate: the project copies, Codex skills and Copilot prompts from the
@@ -177,11 +186,8 @@ function generateCommand(root, args, io) {
   const loaded = harness.load(root, options.harness === undefined ? undefined : fromCwd(options.harness));
   if (!loaded.ok) { io.err(`${options.harness === undefined ? harness.HARNESS_FILE : options.harness}: ${loaded.message}\n`); return 3; }
   const report = generate.generate(root, { harness: loaded.harness, platforms, overwrite });
-  for (const file of report.written) io.out(`wrote ${file}\n`);
-  for (const file of report.conflicted) io.out(`kept ${file} (edited; fresh copy in ${file}.new)\n`);
-  for (const file of report.removed) io.out(`removed ${file}\n`);
-  for (const name of report.missing) io.err(`pincer-generate: warning: library has no ${name.startsWith('agents/') ? `agent ${name.slice('agents/'.length)}` : `stage ${name}`}\n`);
-  io.out(`generated: ${report.written.length} written, ${report.skipped.length} unchanged, ${report.conflicted.length} kept, ${report.removed.length} removed\n`);
+  reportGenerated(report, io, 'pincer-generate');
+  io.out(`generated: ${report.written.length} written, ${report.skipped.length} unchanged, ${report.conflicted.length + report.retained.length} kept, ${report.removed.length} removed\n`);
   return 0;
 }
 

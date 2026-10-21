@@ -83,6 +83,13 @@ write(seven, '.pincer.json', JSON.stringify({ ...m3, schema: 9 }));
 assert.equal(pincer(seven, 'update').status, 1);
 write(seven, '.pincer.json', JSON.stringify(m3));
 
+// A manifest whose generated baselines point outside the project is refused (review C1)
+write(seven, '.pincer.json', JSON.stringify({ ...m3, generated: { '../victim.txt': 'deadbeef' } }));
+const refused = pincer(seven, 'update');
+assert.equal(refused.status, 1);
+assert.match(refused.stderr, /unsupported or invalid/);
+write(seven, '.pincer.json', JSON.stringify(m3));
+
 // A trusted untouched install still receives genuine upstream changes
 const untouched = tempDir();
 cli(untouched, 'init', '--platform', 'claude');

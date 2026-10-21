@@ -83,21 +83,23 @@ function start(root, input) {
 
 // --- verify ----------------------------------------------------------------
 // The block runs under bash with inherited stdio in its own process group;
-// SIGINT/SIGTERM to the engine terminate it and are reported as interrupted.
-function execute(root, block) {
+// SIGINT/SIGTERM to the engine terminate it and are reported as interrupted, and
+// so is the ticket's timeout (seconds) when the block outlives it.
+function execute(root, block, timeoutSeconds) {
   return new Promise((done) => {
     const child = spawn('bash', ['-eo', 'pipefail', '-c', block], { cwd: root, detached: true, stdio: 'inherit', env: process.env });
-    let interrupted = null;
-    const onSignal = (signal) => {
-      interrupted = signal;
+    let interrupted = null, timedOut = false;
+    const terminate = () => {
       try { process.kill(-child.pid, 'SIGTERM'); } catch { try { child.kill('SIGTERM'); } catch { /* gone */ } }
       setTimeout(() => { try { process.kill(-child.pid, 'SIGKILL'); } catch { /* gone */ } }, GRACE_MS).unref();
     };
-    const release = () => { process.off('SIGINT', onSignal); process.off('SIGTERM', onSignal); };
+    const onSignal = (signal) => { interrupted = signal; terminate(); };
+    const timer = timeoutSeconds > 0 ? setTimeout(() => { timedOut = true; terminate(); }, timeoutSeconds * 1000) : null;
+    const release = () => { process.off('SIGINT', onSignal); process.off('SIGTERM', onSignal); if (timer) clearTimeout(timer); };
     process.on('SIGINT', onSignal);
     process.on('SIGTERM', onSignal);
-    child.on('error', (error) => { release(); done({ code: 127, signal: null, interrupted, error: error.message }); });
-    child.on('exit', (code, signal) => { release(); done({ code, signal, interrupted }); });
+    child.on('error', (error) => { release(); done({ code: 127, signal: null, interrupted, timedOut, error: error.message }); });
+    child.on('exit', (code, signal) => { release(); done({ code, signal, interrupted, timedOut }); });
   });
 }
 
@@ -113,8 +115,14 @@ async function runCheck(root, t, io) {
   if (!commands.some((c) => !/^[ \t]*(#.*)?$/.test(c))) refuse(`no runnable command in the Verification block of ${file}`);
   io.out(`── ${id} verification ──\n`);
   for (const c of commands) io.out(`  $ ${c}\n`);
-  const result = await execute(root, block);
+  const timeout = parse.effectiveTimeout(t.fields);
+  const result = await execute(root, block, timeout);
   const stamp = (outcome) => writeTicket(root, file, parse.fmSet(readTicket(root, file), 'last_check', `${nowIso()} ${outcome} ${hash}`));
+  if (result.timedOut) {
+    stamp('interrupted');
+    io.err(`✗ ${id} verification TIMED OUT after ${timeout}s — recorded as interrupted in last_check of ${file}. Raise timeout: in the frontmatter or fix the check, then re-run verify.\n`);
+    return { exit: EXIT.INTERRUPTED };
+  }
   if (result.interrupted) { stamp('interrupted'); return { exit: EXIT.INTERRUPTED }; }
   const rc = result.code === null ? 1 : result.code;
   if (rc !== 0) {
@@ -177,6 +185,8 @@ function accept(root, input, { by, words } = {}) {
   const { harness, tickets } = agreement(root);
   const t = resolve(root, tickets, input);
   if (t.fields.status !== 'done') refuse(`${t.id} is '${t.fields.status}' — acceptance is recorded on a done ticket; run verify and done first`);
+  const stale = receiptProblem(t.text, t.fields);
+  if (stale) refuse(`${t.id}: ${stale} — run '${SCRIPT} verify ${t.id}' and get a green check before recording acceptance`);
   const people = harnessModule.acceptors(harness);
   const name = String(by || '').trim();
   if (!people.includes(name)) refuse(`${name ? `'${name}'` : 'nobody'} is not an acceptor in ${harnessModule.HARNESS_FILE} — the people who accept are: ${people.join(', ')}`);

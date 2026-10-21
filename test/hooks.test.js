@@ -179,6 +179,50 @@ for (const command of [
   'git checkout -- .prd/changes/', 'git restore .pincer/runtime/index.json',
 ]) check('ticket', `allow non-ticket git ${command}`, bash(command), 0);
 
+// The one writer is the project's own script: anchored paths pass, lookalikes are refused (review I6)
+for (const command of [
+  './scripts/pincer-ticket.sh verify T-01',
+  `${path.join(dir, 'scripts/pincer-ticket.sh')} accept T-01 --by Alex --words ok`,
+  '"$CLAUDE_PROJECT_DIR/scripts/pincer-ticket.sh" verify T-01',
+  `node ${path.join(dir, 'scripts/pincer/cli.cjs')} ticket done T-01`,
+  'node ./scripts/pincer/cli.cjs --root . ticket start T-01',
+  'node scripts/pincer/cli.cjs status --json > /tmp/status.json',
+  'node scripts/pincer/cli.cjs recon --json > recon.json',
+  'bash scripts/pincer-status.sh > /tmp/s.txt',
+  'cat scripts/pincer/ticket.cjs',
+  'chmod +x scripts/pincer-ticket.sh',
+  'git diff scripts/pincer/ticket.cjs',
+]) check('ticket', `allowed: ${command}`, bash(command), 0);
+for (const command of [
+  '/tmp/evil/pincer-ticket.sh accept T-01 --by Alex --words ok',
+  'node /tmp/evil/pincer/cli.cjs ticket accept T-01 --by Alex --words ok',
+  'bash ../other/scripts/pincer-ticket.sh done T-01',
+  'cp /tmp/x scripts/pincer-ticket.sh',
+  'cp /tmp/x scripts/pincer/ticket.cjs',
+  'rm scripts/pincer/ticket.cjs',
+  'rm -rf scripts/pincer',
+  'mv scripts/pincer/cli.cjs scripts/pincer/cli.bak',
+  "sed -i 's/acceptors/x/' scripts/pincer/ticket.cjs",
+  'echo x > .claude/hooks/ticket-guard.sh',
+  'echo "{}" > .claude/settings.json',
+  'tee scripts/pincer/harness.cjs < /tmp/x',
+  'bash -c "echo x > scripts/pincer-ticket.sh"',
+]) check('ticket', `blocked: ${command}`, bash(command), 2, { diagnostic: /pincer-ticket\.sh|engine|hooks|pincer-workflow update/ });
+for (const [label, payload] of [
+  ['Edit of the engine', { tool_name: 'Edit', tool_input: { file_path: path.join(dir, 'scripts/pincer/ticket.cjs'), old_string: 'people.includes(name)', new_string: 'true' } }],
+  ['Write to the engine', { tool_name: 'Write', tool_input: { file_path: 'scripts/pincer/cli.cjs', content: 'x' } }],
+  ['Write to the ticket script', { tool_name: 'Write', tool_input: { file_path: 'scripts/pincer-ticket.sh', content: 'x' } }],
+  ['Edit of a hook', { tool_name: 'Edit', tool_input: { file_path: '.claude/hooks/hook-policy.cjs', old_string: 'a', new_string: 'b' } }],
+  ['Write to settings.json', { tool_name: 'Write', tool_input: { file_path: path.join(dir, '.claude/settings.json'), content: '{}' } }],
+  ['MultiEdit of the engine', { tool_name: 'MultiEdit', tool_input: { file_path: 'scripts/pincer/parse.cjs', edits: [{ old_string: 'a', new_string: 'b' }] } }],
+]) check('ticket', `blocked: ${label}`, payload, 2, { diagnostic: /pincer-workflow update/ });
+for (const [label, payload] of [
+  ['Edit of a project copy', { tool_name: 'Edit', tool_input: { file_path: '.claude/skills/pincer-plan/SKILL.md', old_string: 'a', new_string: 'b' } }],
+  ['Write to the library', { tool_name: 'Write', tool_input: { file_path: '.claude/pincer/library/stages/plan/SKILL.md', content: 'x' } }],
+  ['Write to a project script', { tool_name: 'Write', tool_input: { file_path: 'scripts/deploy.sh', content: 'x' } }],
+  ['Write to AGENTS.md', { tool_name: 'Write', tool_input: { file_path: 'AGENTS.md', content: 'x' } }],
+]) check('ticket', `allowed: ${label}`, payload, 0);
+
 assert.equal(read(dir, file), completed, 'hooks are read-only and never execute tested command strings');
 assert.equal(failures.length, 0, `${failures.length}/${checked} hook regressions failed:\n${failures.join('\n')}`);
 console.log(`hooks: ok (${checked} payloads)`);

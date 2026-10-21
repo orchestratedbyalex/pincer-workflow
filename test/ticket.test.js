@@ -192,4 +192,31 @@ r = ticket(dir, 'start', 'T-01');
 assert.equal(r.status, 0, both(r));
 assert.equal(fm(dir, 'work/tickets/T-01-moved.md', 'status'), 'in_progress');
 
+// The ticket's timeout bounds the check: an expired run is interrupted, exits 130, never passes (review I1)
+dir = tempDir();
+createHarness(dir);
+let slow = createTicket(dir, { id: 'T-20', command: 'sleep 3' });
+write(dir, slow, read(dir, slow).replace('size: S\n', 'size: S\ntimeout: 1\n'));
+const t0 = Date.now();
+r = ticket(dir, 'verify', 'T-20');
+assert.equal(r.status, 130, both(r));
+assert.ok(Date.now() - t0 < 2800, 'the run was cut short');
+assert.match(r.stderr, /TIMED OUT after 1s/);
+assert.match(read(dir, slow), /^last_check: \S+ interrupted [0-9a-f]{12}$/m);
+assert.doesNotMatch(read(dir, slow), /^verified:/m);
+assert.equal(ticket(dir, 'done', 'T-20').status, 1);
+
+// accept refuses a done ticket whose receipt no longer matches its check (review I4)
+dir = tempDir();
+createHarness(dir);
+let stale = createTicket(dir, { id: 'T-21' });
+assert.equal(ticket(dir, 'verify', 'T-21').status, 0);
+assert.equal(ticket(dir, 'done', 'T-21').status, 0);
+write(dir, stale, read(dir, stale).replace('```bash\ntrue\n```', '```bash\nfalse\n```'));
+r = ticket(dir, 'accept', 'T-21', '--by', 'Alex', '--words', 'ship it');
+assert.equal(r.status, 1, both(r));
+assert.match(r.stderr, /receipt hash .* does not match/);
+assert.match(r.stderr, /verify T-21/);
+assert.doesNotMatch(read(dir, stale), /^accepted/m);
+
 console.log('ticket: ok');

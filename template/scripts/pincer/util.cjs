@@ -98,4 +98,7 @@ function writeFd(fd, text) {
 const out = (text) => writeFd(1, text);
 const err = (text) => writeFd(2, text);
 
-module.exports = { nowIso, atomicWrite, readJson, git, tryGit, sanitizeLine, sanitizeText, writeFd, out, err };
+// A URL without the credentials that may sit before its host (https://user:token@host/...).
+const stripUserinfo = (url) => (typeof url === 'string' ? url.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/@]*@/i, '$1') : url);
+
+module.exports = { nowIso, atomicWrite, readJson, git, tryGit, sanitizeLine, sanitizeText, stripUserinfo, writeFd, out, err };

@@ -141,8 +141,8 @@ Release passes only when every done ticket of the change carries it. The agent r
 `<homes.evidence>/<candidate>/manifest.json`, where the directory's basename is the
 candidate's full commit id. Top-level keys, all required and no others: `schema` (1),
 `candidate` and `base` (40 hex characters), `created` (UTC timestamp), `spec` (a path
-that exists), `environment` (`tools`, `limitations`), `checks`, `visual_review`,
-`artifacts`. Each check has `id` (`C-NN`), `kind` (`command`, `review`, `visual`),
+that exists), `environment` (`tools` and `limitations`, each a list of short
+strings), `checks`, `visual_review`, `artifacts`. Each check has `id` (`C-NN`), `kind` (`command`, `review`, `visual`),
 `required`, `result` (`passed`, `failed`, `unverified`), `command` (required for a
 command check), `log` (an artifact path) and an optional `note`; a required check
 must be `passed`. `visual_review` has `applicable` and, when false, `reason`.
@@ -188,7 +188,7 @@ stage is off; a test fails when the shipped copies are stale.
 
 ## Platform notes
 
-- Claude Code: `.claude/settings.json` wires two PreToolUse hooks. `block-dangerous.sh` refuses destructive commands. `ticket-guard.sh` refuses edits to the eight lifecycle fields and any shell command that writes, resets or restores a ticket file, allowing only exact `scripts/pincer-ticket.sh start|verify|done|accept` calls and the `cli.cjs ticket` form. The guard matches `T-NN-*.md` under any directory named `tickets`; a `homes.tickets` that does not end in `tickets` loses hook coverage, and the rule in `AGENTS.md` carries the weight alone. The hook does not read `harness.json`.
+- Claude Code: `.claude/settings.json` wires two PreToolUse hooks. `block-dangerous.sh` refuses destructive commands. `ticket-guard.sh` refuses edits to the eight lifecycle fields and any shell command that writes, resets or restores a ticket file, allowing only exact calls of the project's own `scripts/pincer-ticket.sh start|verify|done|accept` and the `cli.cjs ticket` form at the same path; a lookalike script elsewhere is refused. It also refuses edits and shell writes to the engine (`scripts/pincer-*`, `scripts/pincer/`) and to the hooks (`.claude/hooks/`, `.claude/settings.json`), which `npx pincer-workflow update` refreshes. The guard matches `T-NN-*.md` under any directory named `tickets`; a `homes.tickets` that does not end in `tickets` loses hook coverage, and the rule in `AGENTS.md` carries the weight alone. The hook does not read `harness.json`. It is a guardrail against documented mistake forms, not a security boundary: the sandbox and the approval controls remain that boundary.
 - Codex: reads `AGENTS.md` natively; the stages are skills under `.agents/skills/`, invoked as `$pincer-<stage>`. No hook. Posture in `~/.codex/config.toml`: `approval_policy = "on-request"` and `sandbox_mode = "workspace-write"`; never run with approvals disabled. Status warns about missing, failed or stale receipts and about hand-edited fields.
 - Copilot: `.github/copilot-instructions.md` points at `AGENTS.md`; the stages are prompt files under `.github/prompts/`, invoked as `/pincer-<stage>` with prompt files enabled. No hook; the same rule.
 - Everywhere: Node 22 or newer, git and bash. `gh` only for the forge-facing steps the skills name. The engine runs offline.

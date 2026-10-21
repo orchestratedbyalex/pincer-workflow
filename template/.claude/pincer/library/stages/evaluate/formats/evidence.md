@@ -13,7 +13,7 @@ Top-level keys, all required: `schema`, `candidate`, `base`, `created`, `spec`,
 - `candidate`, `base`: full 40-character commit ids.
 - `created`: UTC timestamp, `YYYY-MM-DDTHH:MM:SSZ`.
 - `spec`: the spec path, which must exist.
-- `environment`: `tools` (what ran) and `limitations` (what could not run), short text.
+- `environment`: `tools` (what ran) and `limitations` (what could not run), each a list of short strings.
 - `checks`: one entry per check, `id` `C-NN`, `kind` `command`, `review` or `visual`, `required`, `result` `passed`, `failed` or `unverified`, `command` for a command check (the line as run), `log` naming an artifact, optional `note`. A required check must be `passed`. A tool that could not run is `unverified` with a note, never a fabricated result.
 - `visual_review`: `applicable` true or false, `reason` required when not applicable.
 - `artifacts`: `{path: sha256}` for every file in the directory the manifest refers to; digests from `node scripts/pincer-evidence.cjs digest <file>...`.
@@ -31,7 +31,7 @@ that the commands ran: say so when asked.
   "base": "8b1d0e4f5a6b7c8d9e0f1a2b3c4d5e6f70819203",
   "created": "2026-10-21T16:02:11Z",
   "spec": "specs/rate-limit-login.md",
-  "environment": { "tools": "node 22.10, npm 10.9", "limitations": "no staging access from this session" },
+  "environment": { "tools": ["node 22.10", "npm 10.9"], "limitations": ["no staging access from this session"] },
   "checks": [
     { "id": "C-01", "kind": "command", "required": true, "result": "passed", "command": "npm test", "log": "checks/C-01.log" },
     { "id": "C-02", "kind": "command", "required": true, "result": "passed", "command": "npm run lint", "log": "checks/C-02.log" },

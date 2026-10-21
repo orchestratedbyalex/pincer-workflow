@@ -19,7 +19,7 @@ status: open
 size: S                      # S | M | L, relative; split when it helps verification
 spec: specs/<name>.md        # omit when plan is off
 depends_on: []               # e.g. [T-01]
-timeout: 600                 # optional, seconds; part of the check identity
+timeout: 600                 # optional, seconds; verify records interrupted when it expires
 forge: https://...           # only when stages.narrow.tickets = forge
 ---
 
