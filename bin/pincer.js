@@ -163,10 +163,39 @@ function report({ written, skipped, conflicted }) {
 
 // The installed engine, loaded from the project so an update uses the version it just wrote.
 function installedEngine(dir) {
+  let models = null;
+  try { models = requireAbsolute(path.join(dir, 'scripts/pincer/models.cjs')); } catch { models = null; } // absent before 1.1
   return {
     harness: requireAbsolute(path.join(dir, 'scripts/pincer/harness.cjs')),
     generate: requireAbsolute(path.join(dir, 'scripts/pincer/generate.cjs')),
+    models,
   };
+}
+// What the library or its table could not provide, as one sentence.
+function missingText(name) {
+  if (name === 'models.json') return 'the library has no models.json; run pincer update';
+  if (name.startsWith('models/')) { const [platform, tier] = name.slice('models/'.length).split('/'); return `the library table has no ${platform} value for tier ${tier}; set models.map.${platform}.${tier} in harness.json`; }
+  if (name.startsWith('agents/')) return `the library has no agent ${name.slice('agents/'.length)}`;
+  return `the library has no stage ${name}`;
+}
+// The tiers in use and what each installed platform will run them on.
+function reportModels(dir, engine, harness, platforms, check) {
+  const { models } = engine;
+  if (!models) { check(false, 'models checked', 'could not load scripts/pincer/models.cjs — run: pincer update'); return; }
+  const library = engine.generate.libraryDir(dir);
+  const read = models.readTable(library);
+  if (!read.ok) { check(false, 'library has models.json', 'run: pincer update'); return; }
+  const table = models.overlay(read.table, harness.models.map);
+  const eff = models.effective(harness, library);
+  const inUse = new Set([...Object.values(eff.stages), ...Object.values(eff.agents)].map((entry) => entry.tier).filter((tier) => tier && tier !== 'inherit'));
+  const tiers = engine.harness.MAP_TIERS.filter((tier) => inUse.has(tier));
+  if (!tiers.length) console.log("  models  no tier in use; the session's model everywhere");
+  for (const platform of tiers.length ? platforms : []) {
+    const pairs = tiers.map((tier) => [tier, models.modelFor(table, platform, tier)]);
+    console.log(`  models  ${platform}: ${pairs.filter(([, value]) => value).map(([tier, value]) => `${tier}=${value}`).join(', ')}`);
+    for (const [tier, value] of pairs) if (!value) check(false, `tier ${tier} has a ${platform} value`, `set models.map.${platform}.${tier} in harness.json or update the kit`);
+  }
+  if (platforms.includes('codex') && fs.existsSync(path.join(dir, '.codex/agents'))) console.log('  note  Codex loads .codex/ only in a trusted project');
 }
 
 // With an agreement in place the project's stage copies come from the library just
@@ -187,7 +216,7 @@ function regenerate(dir) {
   for (const rel of result.retained) console.log(`  kept ${rel} (edited; not removed)`);
   for (const rel of result.removed) console.log(`  removed ${rel}`);
   for (const rel of result.unsafe) console.log(`  note  ignored unsafe baseline path ${rel} in ${MANIFEST}`);
-  for (const name of result.missing) console.log(`  note  the library has no ${name.startsWith('agents/') ? `agent ${name.slice('agents/'.length)}` : `stage ${name}`}`);
+  for (const name of result.missing) console.log(`  note  ${missingText(name)}`);
   console.log(`  generated: ${result.written.length} written, ${result.skipped.length} unchanged, ${result.conflicted.length} kept, ${result.removed.length} removed`);
 }
 
@@ -269,8 +298,10 @@ function cmdDoctor() {
     console.log('  note  no harness.json yet — run /pincer-blueprint');
   } else {
     try {
-      const loaded = installedEngine(dir).harness.load(dir);
+      const engine = installedEngine(dir);
+      const loaded = engine.harness.load(dir);
       check(loaded.ok, loaded.ok ? 'harness.json valid' : `harness.json: ${loaded.message}`);
+      if (loaded.ok) reportModels(dir, engine, loaded.harness, manifest.platforms, check);
     } catch (error) {
       check(false, 'harness.json checked', `could not load scripts/pincer/harness.cjs (${error.message}) — run: pincer update`);
     }

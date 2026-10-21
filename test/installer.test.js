@@ -118,6 +118,27 @@ assert.ok(fs.existsSync(path.join(agreed, '.github/prompts/pincer-code.prompt.md
 assert.match(out, /generated/);
 const generated = JSON.parse(read(agreed, '.pincer.json')).generated;
 assert.ok(generated['.claude/skills/pincer-plan/SKILL.md'], 'baselines recorded in the manifest');
+// the tiers: the library default renders on every platform, doctor reports the mapping
+const table = JSON.parse(read(agreed, '.claude/pincer/library/models.json'));
+assert.match(read(agreed, '.claude/agents/codebase-explorer.md'), /^model: sonnet$/m, 'the library default renders');
+assert.doesNotMatch(read(agreed, '.claude/agents/codebase-explorer.md'), /^tier:/m);
+assert.match(read(agreed, '.codex/agents/codebase-explorer.toml'), new RegExp(`^model = ${JSON.stringify(table.codex.standard)}$`, 'm'));
+let tiersDoctor = pincer(agreed, 'doctor');
+assert.equal(tiersDoctor.status, 0, `${tiersDoctor.stdout}${tiersDoctor.stderr}`);
+assert.match(tiersDoctor.stdout, /^  models  claude: standard=sonnet$/m);
+assert.ok(tiersDoctor.stdout.includes(`  models  codex: standard=${table.codex.standard}\n`), tiersDoctor.stdout);
+assert.match(tiersDoctor.stdout, /Codex loads \.codex\/ only in a trusted project/);
+// a tier the table cannot translate is a doctor problem; an edited table survives update with a sidecar
+write(agreed, 'harness.json', JSON.stringify({ schema: 1, project: { name: 'agreed', kind: 'greenfield' }, people: [{ name: 'Alex', accepts: true }], roster: { plan: ['codebase-explorer'] }, models: { agents: { 'codebase-explorer': 'fast' } } }));
+write(agreed, '.claude/pincer/library/models.json', JSON.stringify({ ...table, codex: { strong: table.codex.strong, standard: table.codex.standard } }));
+tiersDoctor = pincer(agreed, 'doctor');
+assert.equal(tiersDoctor.status, 1);
+assert.match(tiersDoctor.stdout, /FAIL  tier fast has a codex value — set models\.map\.codex\.fast in harness\.json or update the kit/);
+out = cli(agreed, 'update');
+assert.ok(!JSON.parse(read(agreed, '.claude/pincer/library/models.json')).codex.fast, 'the edited table is kept');
+assert.ok(fs.existsSync(path.join(agreed, '.claude/pincer/library/models.json.new')), 'the upstream table waits beside it');
+assert.match(read(agreed, '.claude/agents/codebase-explorer.md'), /^model: haiku$/m);
+fs.renameSync(path.join(agreed, '.claude/pincer/library/models.json.new'), path.join(agreed, '.claude/pincer/library/models.json'));
 // an edited project copy survives the next update and gets a sidecar from the new library
 write(agreed, '.claude/skills/pincer-plan/SKILL.md', read(agreed, '.claude/skills/pincer-plan/SKILL.md') + '\nOURS\n');
 write(kit, 'template/.claude/pincer/library/stages/plan/SKILL.md', read(kit, 'template/.claude/pincer/library/stages/plan/SKILL.md') + '\nUPSTREAM PLAN\n');
