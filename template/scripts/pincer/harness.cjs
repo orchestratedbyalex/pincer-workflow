@@ -16,6 +16,13 @@ const AGENT_NAMES = [
 ];
 const KINDS = ['greenfield', 'brownfield'];
 const MISSING_MESSAGE = 'no agreement yet: run /pincer-blueprint';
+// Model tiers: what the agreement says about which model a role runs on. The
+// empty string is "not set" (the library's default, else inherit).
+const TIERS = ['strong', 'standard', 'fast', 'inherit'];
+const MAP_TIERS = ['strong', 'standard', 'fast'];
+const EFFORTS = ['low', 'medium', 'high'];
+const PLATFORMS = ['claude', 'codex', 'copilot'];
+const MODEL_ENTRY = { tier: '', effort: '' };
 
 const DEFAULT_STAGES = {
   plan: { on: true, spec: 'file', gate: '' },
@@ -30,6 +37,7 @@ const DEFAULTS = {
   systems: { forge: 'none', remote: '', ci: false, deploy: '', secrets: '' },
   repo: { branches: 'main', pr: false, merge: 'merge', protection: '', checks: [] },
   homes: { specs: 'specs', tickets: 'tickets', evidence: 'evidence' },
+  models: { stages: {}, agents: {}, map: {} },
 };
 // Allowed values per field; a field not listed here is a string.
 const RULES = {
@@ -67,6 +75,52 @@ function homeProblem(value) {
   if (typeof value !== 'string' || !value.trim()) return 'must be a relative path';
   if (value.startsWith('/') || /^[A-Za-z]:/.test(value) || value.split(/[\\/]/).includes('..')) return 'must be a relative path inside the repository (no leading / or ..)';
   return null;
+}
+
+// models.stages.<name> and models.agents.<name>: a tier word or { tier, effort }.
+function checkModelEntry(problems, label, value) {
+  const tierProblem = `${label}.tier must be strong, standard, fast or inherit`;
+  if (typeof value === 'string') { if (value !== '' && !TIERS.includes(value)) problems.push(tierProblem); return; }
+  if (!isObject(value)) { problems.push(`${label} must be a tier or an object`); return; }
+  if ('tier' in value && (typeof value.tier !== 'string' || (value.tier !== '' && !TIERS.includes(value.tier)))) problems.push(tierProblem);
+  if ('effort' in value && (typeof value.effort !== 'string' || (value.effort !== '' && !EFFORTS.includes(value.effort)))) problems.push(`${label}.effort must be low, medium or high`);
+}
+function checkModels(problems, doc) {
+  if (doc.models === undefined) return;
+  if (!isObject(doc.models)) { problems.push('models must be an object'); return; }
+  const { stages, agents, map } = doc.models;
+  if (stages !== undefined) {
+    if (!isObject(stages)) problems.push('models.stages must be an object');
+    else {
+      for (const [name, value] of Object.entries(stages)) {
+        if (ALWAYS_ON.includes(name)) { problems.push(`models.stages.${name}: ${name} is always on and runs on the session's model`); continue; }
+        if (!OPTIONAL_STAGES.includes(name)) { problems.push(`models.stages.${name} is not a stage (stages: ${OPTIONAL_STAGES.join(', ')})`); continue; }
+        checkModelEntry(problems, `models.stages.${name}`, value);
+      }
+    }
+  }
+  if (agents !== undefined) {
+    if (!isObject(agents)) problems.push('models.agents must be an object');
+    else {
+      for (const [name, value] of Object.entries(agents)) {
+        if (!AGENT_NAMES.includes(name)) { problems.push(`models.agents.${name}: unknown agent (agents: ${AGENT_NAMES.join(', ')})`); continue; }
+        checkModelEntry(problems, `models.agents.${name}`, value);
+      }
+    }
+  }
+  if (map !== undefined) {
+    if (!isObject(map)) problems.push('models.map must be an object');
+    else {
+      for (const [platform, row] of Object.entries(map)) {
+        if (!PLATFORMS.includes(platform)) { problems.push(`models.map.${platform} is not a platform (${PLATFORMS.join(', ')})`); continue; }
+        if (!isObject(row)) { problems.push(`models.map.${platform} must be an object`); continue; }
+        for (const [tier, value] of Object.entries(row)) {
+          if (!MAP_TIERS.includes(tier)) { problems.push(`models.map.${platform}.${tier} is not a tier (${MAP_TIERS.join(', ')})`); continue; }
+          if (typeof value !== 'string' || !value.trim()) problems.push(`models.map.${platform}.${tier} must be a non-empty string`);
+        }
+      }
+    }
+  }
 }
 
 // Every problem with the document, in reading order; [] when it is valid.
@@ -114,6 +168,7 @@ function validate(doc) {
       }
     }
   }
+  checkModels(problems, doc);
   if (doc.open !== undefined && (!Array.isArray(doc.open) || doc.open.some((item) => typeof item !== 'string'))) problems.push('open must be a list of strings');
   if (doc.firstJob !== undefined) check(problems, 'firstJob', doc.firstJob);
   return problems;
@@ -140,6 +195,15 @@ function normalize(doc) {
   out.roster = {};
   for (const stage of ROSTER_STAGES) out.roster[stage] = Array.isArray(roster[stage]) ? [...roster[stage]] : [];
   for (const [stage, list] of Object.entries(roster)) if (!(stage in out.roster)) out.roster[stage] = list;
+  const models = obj(src.models);
+  const modelEntry = (value) => (typeof value === 'string' ? { tier: value, effort: '' } : { ...MODEL_ENTRY, ...obj(value) });
+  const mStages = obj(models.stages), mAgents = obj(models.agents);
+  out.models = { stages: {}, agents: {}, map: {} };
+  for (const name of OPTIONAL_STAGES) out.models.stages[name] = modelEntry(mStages[name]);
+  for (const [name, value] of Object.entries(mStages)) if (!(name in out.models.stages)) out.models.stages[name] = value;
+  for (const name of AGENT_NAMES) out.models.agents[name] = modelEntry(mAgents[name]);
+  for (const [name, value] of Object.entries(mAgents)) if (!(name in out.models.agents)) out.models.agents[name] = value;
+  for (const [platform, row] of Object.entries(obj(models.map))) out.models.map[platform] = isObject(row) ? { ...row } : row;
   out.open = Array.isArray(src.open) ? [...src.open] : [];
   out.firstJob = typeof src.firstJob === 'string' ? src.firstJob : '';
   return out;
@@ -174,6 +238,17 @@ function stageOn(harness, name) {
 function homes(harness) {
   return Object.fromEntries(Object.entries({ ...DEFAULTS.homes, ...obj(obj(harness).homes) }).map(([key, value]) => [key, trimSlash(value)]));
 }
+// The names in the rosters of the stages that are on, sorted and unique.
+function activeAgents(harness) {
+  const h = obj(harness);
+  const names = new Set();
+  for (const stage of ROSTER_STAGES) {
+    if (!stageOn(h, stage)) continue;
+    const list = obj(h.roster)[stage];
+    if (Array.isArray(list)) for (const name of list) if (typeof name === 'string') names.add(name);
+  }
+  return [...names].sort();
+}
 // The names of the people who accept results.
 function acceptors(harness) {
   const people = obj(harness).people;
@@ -189,5 +264,6 @@ function die(message, exit = 3) {
 
 module.exports = {
   HARNESS_FILE, STAGES, ALWAYS_ON, OPTIONAL_STAGES, ROSTER_STAGES, AGENT_NAMES, KINDS, DEFAULT_STAGES, DEFAULTS, MISSING_MESSAGE,
-  load, validate, normalize, stageOn, homes, acceptors, die,
+  TIERS, MAP_TIERS, EFFORTS, PLATFORMS,
+  load, validate, normalize, stageOn, homes, acceptors, activeAgents, die,
 };

@@ -128,12 +128,8 @@ function derivedPaths(stage, platforms) {
 // A path belongs to the platforms asked about; others are left alone.
 const inScope = (rel, platforms) => (rel.startsWith('.agents/') ? platforms.includes('codex') : rel.startsWith('.github/') ? platforms.includes('copilot') : true);
 
-// The agents named by the rosters of the stages that are on.
-function activeAgents(h) {
-  const names = new Set();
-  for (const stage of harness.ROSTER_STAGES) if (harness.stageOn(h, stage)) for (const name of (h.roster && h.roster[stage]) || []) names.add(name);
-  return [...names].sort();
-}
+// The agents named by the rosters of the stages that are on (harness.cjs owns it).
+const activeAgents = harness.activeAgents;
 
 // Every path the generator owns for this agreement and these platforms. With a
 // library the project copies list the whole stage folder, else SKILL.md alone.

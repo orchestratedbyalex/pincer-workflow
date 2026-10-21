@@ -109,6 +109,37 @@ const input = minimal();
 harness.normalize(input);
 assert.deepEqual(input, minimal(), 'normalize must not mutate its input');
 
+// models: shorthand expands, defaults fill, nothing else changes
+const m = harness.normalize({ ...minimal(), models: { stages: { evaluate: { tier: 'strong', effort: 'high' }, narrow: 'fast' }, agents: { 'security-reviewer': 'strong' }, map: { codex: { strong: 'gpt-x' } } } });
+assert.deepEqual(m.models.stages.evaluate, { tier: 'strong', effort: 'high' });
+assert.deepEqual(m.models.stages.narrow, { tier: 'fast', effort: '' });
+assert.deepEqual(m.models.stages.plan, { tier: '', effort: '' });
+assert.deepEqual(Object.keys(m.models.stages).sort(), [...harness.OPTIONAL_STAGES].sort());
+assert.deepEqual(Object.keys(m.models.agents).sort(), [...harness.AGENT_NAMES].sort());
+assert.deepEqual(m.models.agents['security-reviewer'], { tier: 'strong', effort: '' });
+assert.deepEqual(m.models.map, { codex: { strong: 'gpt-x' } });
+assert.deepEqual(n.models.map, {});
+assert.deepEqual(harness.validate(m), []);
+assert.deepEqual(harness.TIERS, ['strong', 'standard', 'fast', 'inherit']);
+assert.deepEqual(harness.EFFORTS, ['low', 'medium', 'high']);
+assert.deepEqual(harness.PLATFORMS, ['claude', 'codex', 'copilot']);
+// every models problem, in reading order
+assert.deepEqual(problemsOf({ models: 'opus' }), ['models must be an object']);
+assert.deepEqual(problemsOf({ models: { stages: { blueprint: 'strong' } } }), ["models.stages.blueprint: blueprint is always on and runs on the session's model"]);
+assert.deepEqual(problemsOf({ models: { stages: { deploy: 'strong' } } }), ['models.stages.deploy is not a stage (stages: plan, narrow, code, evaluate, release)']);
+assert.deepEqual(problemsOf({ models: { agents: { foo: 'strong' } } }), [`models.agents.foo: unknown agent (agents: ${harness.AGENT_NAMES.join(', ')})`]);
+assert.deepEqual(problemsOf({ models: { stages: { code: 7 } } }), ['models.stages.code must be a tier or an object']);
+assert.deepEqual(problemsOf({ models: { stages: { code: 'opus' } } }), ['models.stages.code.tier must be strong, standard, fast or inherit']);
+assert.deepEqual(problemsOf({ models: { agents: { implementer: { tier: 'fast', effort: 'max' } } } }), ['models.agents.implementer.effort must be low, medium or high']);
+assert.deepEqual(problemsOf({ models: { map: { vim: {} } } }), ['models.map.vim is not a platform (claude, codex, copilot)']);
+assert.deepEqual(problemsOf({ models: { map: { claude: 'opus' } } }), ['models.map.claude must be an object']);
+assert.deepEqual(problemsOf({ models: { map: { claude: { inherit: 'opus' } } } }), ['models.map.claude.inherit is not a tier (strong, standard, fast)']);
+assert.deepEqual(problemsOf({ models: { map: { copilot: { strong: '' } } } }), ['models.map.copilot.strong must be a non-empty string']);
+assert.deepEqual(harness.validate({ ...minimal(), models: { stages: { code: { tier: '', effort: '' } } } }), [], 'empty strings are "not set"');
+// activeAgents: rosters of stages that are on, sorted, unique
+assert.deepEqual(harness.activeAgents(harness.normalize({ ...minimal(), roster: { plan: ['codebase-explorer'], narrow: ['codebase-explorer'], evaluate: ['security-reviewer', 'code-quality-reviewer'] } })), ['code-quality-reviewer', 'codebase-explorer', 'security-reviewer']);
+assert.deepEqual(harness.activeAgents(harness.normalize({ ...minimal(), stages: { evaluate: { on: false } }, roster: { evaluate: ['security-reviewer'] } })), []);
+
 // stageOn, homes, acceptors
 assert.equal(harness.stageOn(n, 'status'), true);
 assert.equal(harness.stageOn(n, 'blueprint'), true);
