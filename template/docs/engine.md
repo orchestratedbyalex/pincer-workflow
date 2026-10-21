@@ -169,7 +169,8 @@ model and effort of its tier appended; with Codex installed each also gets
 `.codex/agents/<name>.toml` (see Models). The model and effort lines of an agent file
 and of a project copy belong to the generator and the tier belongs in the agreement: a
 file that differs from the library copy only in those lines is the generator's to
-overwrite or remove.
+overwrite or remove when no baseline records it; with a baseline in `.pincer.json`, a
+hand-written model line conflicts like any other edit and gets a sidecar.
 
 Baselines live in `.pincer.json` under `generated` when the installer wrote it. A
 target whose hash matches its baseline or the fresh content is overwritten; one that

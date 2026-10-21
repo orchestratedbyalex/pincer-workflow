@@ -174,6 +174,7 @@ function installedEngine(dir) {
 // What the library or its table could not provide, as one sentence.
 function missingText(name) {
   if (name === 'models.json') return 'the library has no models.json; run pincer update';
+  if (name.startsWith('models.json:')) return `${name} — fix the library table; after an update the upstream copy is beside it as models.json.new`;
   if (name.startsWith('models/')) { const [platform, tier] = name.slice('models/'.length).split('/'); return `the library table has no ${platform} value for tier ${tier}; set models.map.${platform}.${tier} in harness.json`; }
   if (name.startsWith('agents/')) return `the library has no agent ${name.slice('agents/'.length)}`;
   return `the library has no stage ${name}`;
@@ -184,7 +185,11 @@ function reportModels(dir, engine, harness, platforms, check) {
   if (!models) { check(false, 'models checked', 'could not load scripts/pincer/models.cjs — run: pincer update'); return; }
   const library = engine.generate.libraryDir(dir);
   const read = models.readTable(library);
-  if (!read.ok) { check(false, 'library has models.json', 'run: pincer update'); return; }
+  if (!read.ok) {
+    if (read.missing) check(false, 'library has models.json', 'run: pincer update');
+    else check(false, 'library table readable', `${read.problem} — fix it; after an update the upstream copy is beside it as models.json.new`);
+    return;
+  }
   const table = models.overlay(read.table, harness.models.map);
   const eff = models.effective(harness, library);
   const inUse = new Set([...Object.values(eff.stages), ...Object.values(eff.agents)].map((entry) => entry.tier).filter((tier) => tier && tier !== 'inherit'));
@@ -210,7 +215,11 @@ function regenerate(dir) {
       : `  note  harness.json: ${loaded.message} — fix it, then run scripts/sync-prompts.sh to regenerate the project copies`);
     return;
   }
-  const result = engine.generate.generate(dir, { harness: loaded.harness });
+  let result;
+  try { result = engine.generate.generate(dir, { harness: loaded.harness }); } catch (error) {
+    console.log(`  note  ${error.message} — fix the library file, then run scripts/sync-prompts.sh to regenerate the project copies`);
+    return;
+  }
   for (const rel of result.written) console.log(`  generated ${rel}`);
   for (const rel of result.conflicted) console.log(`  kept ${rel} (edited; fresh copy in ${rel}.new)`);
   for (const rel of result.retained) console.log(`  kept ${rel} (edited; not removed)`);

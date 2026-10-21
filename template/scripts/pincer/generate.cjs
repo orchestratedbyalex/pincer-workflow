@@ -237,13 +237,15 @@ function generate(root, { harness: doc, platforms = manifestPlatforms(root), lib
   // kind and the model field is left out.
   const tableRead = models.readTable(lib);
   const table = tableRead.ok ? models.overlay(tableRead.table, h.models.map) : null;
+  // A table that is there but broken is reported by its fault, never as missing.
+  const tableProblem = !tableRead.ok && !tableRead.missing ? tableRead.problem : null;
   const eff = models.effective(h, lib);
   const unresolved = new Set();
   const resolve = (platform, entry) => {
     const tier = given(entry && entry.tier), effort = given(entry && entry.effort);
     let model = null;
     if (tier && tier !== 'inherit') {
-      if (!table) unresolved.add(models.TABLE_FILE);
+      if (!table) unresolved.add(tableProblem || models.TABLE_FILE);
       else {
         model = models.modelFor(table, platform, tier);
         if (model === undefined) { unresolved.add(`models/${platform}/${tier}`); model = null; }
@@ -266,7 +268,8 @@ function generate(root, { harness: doc, platforms = manifestPlatforms(root), lib
 
   // Put fresh content at rel unless the file there was edited by hand; returns the
   // content now on disk, which the derived files follow. `ours` may widen what
-  // counts as the generator's own.
+  // counts as the generator's own, but only where no baseline can tell an edit
+  // from a re-render: with a baseline, a hand-written model line conflicts too.
   const place = (rel, fresh, { ours: alsoOurs } = {}) => {
     expected.add(rel);
     const abs = path.join(root, rel);
@@ -274,7 +277,7 @@ function generate(root, { harness: doc, platforms = manifestPlatforms(root), lib
     const freshHash = sha(buf);
     const current = hashOf(abs);
     let ours = overwrite || current === freshHash || current === baseline[rel] || (baseline[rel] === undefined && DERIVED_PATH.test(rel) && carriesMarker(abs));
-    if (!ours && current !== null && typeof alsoOurs === 'function') ours = alsoOurs(fs.readFileSync(abs, 'utf8'));
+    if (!ours && current !== null && baseline[rel] === undefined && typeof alsoOurs === 'function') ours = alsoOurs(fs.readFileSync(abs, 'utf8'));
     if (current !== null && !ours) {
       const sidecar = `${abs}.new`;
       if (hashOf(sidecar) !== freshHash) util.atomicWrite(sidecar, buf);
@@ -345,7 +348,7 @@ function generate(root, { harness: doc, platforms = manifestPlatforms(root), lib
     if (current === null) continue;
     const generated = overwrite || current === baseline[rel] || current === pristine[rel]
       || (baseline[rel] === undefined && DERIVED_PATH.test(rel) && carriesMarker(abs))
-      || (libraryText[rel] !== undefined && equalIgnoringModelFields(fs.readFileSync(abs, 'utf8'), libraryText[rel]));
+      || (baseline[rel] === undefined && libraryText[rel] !== undefined && equalIgnoringModelFields(fs.readFileSync(abs, 'utf8'), libraryText[rel]));
     if (generated) {
       fs.unlinkSync(abs);
       report.removed.push(rel);

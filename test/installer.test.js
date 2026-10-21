@@ -139,6 +139,21 @@ assert.ok(!JSON.parse(read(agreed, '.claude/pincer/library/models.json')).codex.
 assert.ok(fs.existsSync(path.join(agreed, '.claude/pincer/library/models.json.new')), 'the upstream table waits beside it');
 assert.match(read(agreed, '.claude/agents/codebase-explorer.md'), /^model: haiku$/m);
 fs.renameSync(path.join(agreed, '.claude/pincer/library/models.json.new'), path.join(agreed, '.claude/pincer/library/models.json'));
+// a broken table is diagnosed, not called missing (review I2)
+write(agreed, '.claude/pincer/library/models.json', '{');
+tiersDoctor = pincer(agreed, 'doctor');
+assert.equal(tiersDoctor.status, 1);
+assert.match(tiersDoctor.stdout, /FAIL  library table readable — models\.json: invalid JSON/);
+assert.doesNotMatch(tiersDoctor.stdout, /library has models\.json/);
+fs.copyFileSync(path.join(kit, 'template/.claude/pincer/library/models.json'), path.join(agreed, '.claude/pincer/library/models.json'));
+// a library agent that cannot be a Codex agent is a note from update, not a crash (review I3)
+const explorerLib = read(agreed, '.claude/pincer/library/agents/codebase-explorer.md');
+write(agreed, '.claude/pincer/library/agents/codebase-explorer.md', explorerLib + "\n'''\n");
+out = cli(agreed, 'update');
+assert.match(out, /note  agents\/codebase-explorer\.md: the body contains '''/);
+assert.ok(!out.includes('    at '), out);
+write(agreed, '.claude/pincer/library/agents/codebase-explorer.md', explorerLib);
+fs.rmSync(path.join(agreed, '.claude/pincer/library/agents/codebase-explorer.md.new'), { force: true });
 // an edited project copy survives the next update and gets a sidecar from the new library
 write(agreed, '.claude/skills/pincer-plan/SKILL.md', read(agreed, '.claude/skills/pincer-plan/SKILL.md') + '\nOURS\n');
 write(kit, 'template/.claude/pincer/library/stages/plan/SKILL.md', read(kit, 'template/.claude/pincer/library/stages/plan/SKILL.md') + '\nUPSTREAM PLAN\n');

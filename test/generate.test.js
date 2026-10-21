@@ -312,6 +312,13 @@ createHarness(dir, { stages: { plan: { on: true }, ...OFF }, roster: { plan: ['c
 r = run(dir, process.execPath, [cliFile, 'generate']);
 assert.equal(r.status, 0, both(r));
 assert.match(r.stderr, /library table has no codex value for tier fast; set models\.map\.codex\.fast in harness\.json/);
+// a broken table is named by its fault, never called missing (review I2)
+write(dir, '.claude/pincer/library/models.json', '{');
+r = run(dir, process.execPath, [cliFile, 'generate']);
+assert.equal(r.status, 0, both(r));
+assert.match(r.stderr, /models\.json: invalid JSON .* fix the library table/);
+assert.doesNotMatch(r.stderr, /has no models\.json/);
+fs.unlinkSync(path.join(dir, '.claude/pincer/library/models.json'));
 
 // blueprint write runs the generator with the project's library
 dir = tempDir();
@@ -452,5 +459,32 @@ assert.deepEqual(report.conflicted, ['.claude/skills/pincer-plan/SKILL.md']);
 assert.match(read(dir, '.claude/commands/pincer-plan.md'), /^model: opus$/m);
 assert.match(read(dir, '.github/prompts/pincer-plan.prompt.md'), /^model: "Cp S"$/m);
 assert.ok(read(dir, '.agents/skills/pincer-plan/SKILL.md').includes('# Plan (ours)'));
+
+// A baseline knows an edit: a hand-set model line conflicts like any other edit (review I1)
+dir = tempDir();
+lib = fixtureLibrary(dir);
+write(dir, `${lib}/models.json`, JSON.stringify(TABLE));
+write(dir, `${lib}/agents/security-reviewer.md`, REVIEWER);
+write(dir, `${lib}/stages/evaluate/SKILL.md`, PLAN_SKILL.replace(/pincer-plan/g, 'pincer-evaluate').replace('# Plan', '# Evaluate'));
+write(dir, '.pincer.json', JSON.stringify({ schema: 3, version: '1.0.0', platforms: ALL, files: {}, generated: {} }));
+gen.generate(dir, { harness: withModels({}), platforms: ALL, library: lib });
+const byHand = read(dir, '.claude/agents/security-reviewer.md').replace('model: sonnet', 'model: opus');
+write(dir, '.claude/agents/security-reviewer.md', byHand);
+write(dir, '.claude/skills/pincer-plan/SKILL.md', PLAN_SKILL.replace('---\n# Plan', 'model: haiku\n---\n# Plan'));
+report = gen.generate(dir, { harness: withModels({}), platforms: ALL, library: lib });
+assert.deepEqual(report.conflicted.sort(), ['.claude/agents/security-reviewer.md', '.claude/skills/pincer-plan/SKILL.md']);
+assert.equal(read(dir, '.claude/agents/security-reviewer.md'), byHand);
+assert.match(read(dir, '.claude/agents/security-reviewer.md.new'), /^model: sonnet$/m);
+// adopting the sidecars makes the files current again; a tier change then re-renders without a conflict
+fs.renameSync(path.join(dir, '.claude/agents/security-reviewer.md.new'), path.join(dir, '.claude/agents/security-reviewer.md'));
+fs.renameSync(path.join(dir, '.claude/skills/pincer-plan/SKILL.md.new'), path.join(dir, '.claude/skills/pincer-plan/SKILL.md'));
+report = gen.generate(dir, { harness: withModels({ agents: { 'security-reviewer': 'strong' } }), platforms: ALL, library: lib });
+assert.deepEqual(report.conflicted, []);
+assert.match(read(dir, '.claude/agents/security-reviewer.md'), /^model: opus$/m);
+// A broken table is reported as its fault, not as missing (review I2)
+write(dir, `${lib}/models.json`, '{');
+report = gen.generate(dir, { harness: withModels({ agents: { 'security-reviewer': 'strong' } }), platforms: ALL, library: lib });
+assert.ok(report.missing.some((m) => /^models\.json: invalid JSON/.test(m)), report.missing.join('; '));
+assert.ok(!report.missing.includes('models.json'), report.missing.join('; '));
 
 console.log('ok generate');

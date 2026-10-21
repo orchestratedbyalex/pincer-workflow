@@ -163,6 +163,7 @@ function writeCommand(root, args, io) {
 // What the library or its table could not provide, as one sentence.
 function missingText(name) {
   if (name === 'models.json') return 'library has no models.json; run npx pincer-workflow update';
+  if (name.startsWith('models.json:')) return `${name} — fix the library table; after an update the upstream copy is beside it as models.json.new`;
   if (name.startsWith('models/')) { const [platform, tier] = name.slice('models/'.length).split('/'); return `library table has no ${platform} value for tier ${tier}; set models.map.${platform}.${tier} in harness.json`; }
   if (name.startsWith('agents/')) return `library has no agent ${name.slice('agents/'.length)}`;
   return `library has no stage ${name}`;
