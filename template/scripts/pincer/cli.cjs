@@ -12,6 +12,7 @@ const status = require('./status.cjs');
 const evidence = require('./evidence.cjs');
 const recon = require('./recon.cjs');
 const writer = require('./blueprint.cjs');
+const generate = require('./generate.cjs');
 
 const USAGE = `usage: node scripts/pincer/cli.cjs [--root <dir>] <command> ...
   ticket <start|verify|done|accept> <T-NN> [--by "<name>" --words "<what they said>"]
@@ -19,11 +20,15 @@ const USAGE = `usage: node scripts/pincer/cli.cjs [--root <dir>] <command> ...
   evidence validate <manifest> [--candidate <sha>] | digest <file>...
   recon [--json] [--network]
   write [--answers <file>]
+  generate [--harness <file>] [--platform <claude,codex,copilot|all>] [--overwrite]
+`;
+const GENERATE_USAGE = `usage: scripts/sync-prompts.sh [--harness <file>] [--platform <claude,codex,copilot|all>] [--overwrite]
 `;
 const BLUEPRINT_USAGE = `usage: scripts/pincer-blueprint.cjs recon [--json] [--network]
        scripts/pincer-blueprint.cjs write [--answers <file>]
+       scripts/pincer-blueprint.cjs generate [--harness <file>] [--platform <list>] [--overwrite]
 `;
-const BLUEPRINT_VERBS = ['recon', 'write'];
+const BLUEPRINT_VERBS = ['recon', 'write', 'generate'];
 const EVIDENCE_USAGE = `usage: scripts/pincer-evidence.cjs validate <manifest> [--candidate <sha>]
        scripts/pincer-evidence.cjs digest <file>...
 `;
@@ -153,6 +158,30 @@ function writeCommand(root, args, io) {
   for (const file of result.written) io.out(`wrote ${file}\n`);
   for (const file of result.generated.written) io.out(`wrote ${file}\n`);
   for (const file of result.generated.conflicted) io.out(`kept ${file} (edited; fresh copy in ${file}.new)\n`);
+  for (const file of result.generated.removed) io.out(`removed ${file}\n`);
+  return 0;
+}
+
+// generate: the project copies, Codex skills and Copilot prompts from the
+// library and the agreement; edited copies are kept and get a .new sidecar.
+function generateCommand(root, args, io) {
+  let overwrite = false;
+  const rest = args.filter((arg) => { if (arg === '--overwrite') { overwrite = true; return false; } return true; });
+  const options = flags(rest, ['harness', 'platform']);
+  if (options.problem) { io.err(`pincer-generate: ${options.problem}\n${GENERATE_USAGE}`); return 2; }
+  let platforms;
+  if (options.platform !== undefined) {
+    platforms = options.platform === 'all' ? [...generate.PLATFORMS] : options.platform.split(',').map((p) => p.trim()).filter(Boolean);
+    if (!platforms.length || platforms.some((p) => !generate.PLATFORMS.includes(p))) { io.err(`pincer-generate: --platform takes ${generate.PLATFORMS.join(', ')} or all\n${GENERATE_USAGE}`); return 2; }
+  }
+  const loaded = harness.load(root, options.harness === undefined ? undefined : fromCwd(options.harness));
+  if (!loaded.ok) { io.err(`${options.harness === undefined ? harness.HARNESS_FILE : options.harness}: ${loaded.message}\n`); return 3; }
+  const report = generate.generate(root, { harness: loaded.harness, platforms, overwrite });
+  for (const file of report.written) io.out(`wrote ${file}\n`);
+  for (const file of report.conflicted) io.out(`kept ${file} (edited; fresh copy in ${file}.new)\n`);
+  for (const file of report.removed) io.out(`removed ${file}\n`);
+  for (const name of report.missing) io.err(`pincer-generate: warning: library has no ${name.startsWith('agents/') ? `agent ${name.slice('agents/'.length)}` : `stage ${name}`}\n`);
+  io.out(`generated: ${report.written.length} written, ${report.skipped.length} unchanged, ${report.conflicted.length} kept, ${report.removed.length} removed\n`);
   return 0;
 }
 
@@ -174,6 +203,7 @@ async function main(argv = process.argv.slice(2), io = { out: util.out, err: uti
     if (command === 'evidence') return evidenceCommand(root, rest, io);
     if (command === 'recon') return reconCommand(root, rest, io);
     if (command === 'write') return writeCommand(root, rest, io);
+    if (command === 'generate') return generateCommand(root, rest, io);
     io.err(USAGE);
     return 2;
   } catch (error) {
@@ -186,4 +216,4 @@ async function main(argv = process.argv.slice(2), io = { out: util.out, err: uti
 
 if (require.main === module) main().then((code) => { process.exitCode = code; });
 
-module.exports = { main, blueprint, resolveRoot, flags, USAGE, TICKET_USAGE, STATUS_USAGE, EVIDENCE_USAGE, BLUEPRINT_USAGE };
+module.exports = { main, blueprint, resolveRoot, flags, USAGE, TICKET_USAGE, STATUS_USAGE, EVIDENCE_USAGE, BLUEPRINT_USAGE, GENERATE_USAGE };

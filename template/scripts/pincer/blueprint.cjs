@@ -12,17 +12,10 @@ const generate = require('./generate.cjs');
 const AGREEMENT_START = '<!-- pincer:agreement:start -->';
 const AGREEMENT_END = '<!-- pincer:agreement:end -->';
 const AGENTS_FILE = 'AGENTS.md';
-const LIBRARY = '.claude/pincer/library';
+const { LIBRARY, libraryDir } = generate;
 const TEMPLATE_FILE = 'agreement.md';
 const SKELETON_FILE = 'agents-skeleton.md';
 const CODE_GATE = 'passing check per ticket';
-
-// The project's library when it has one, else the kit's own copy next to this file.
-function libraryDir(root, override) {
-  if (override) return path.resolve(root, override);
-  const own = path.join(root, LIBRARY);
-  return fs.existsSync(own) ? own : path.resolve(__dirname, '..', '..', LIBRARY);
-}
 
 // {{slot}} and {{#each list}}…{{/each}} with {{.}} for the item; nothing else.
 function fill(template, view) {
@@ -133,7 +126,7 @@ function write(root, { answers = harness.HARNESS_FILE, label, library } = {}) {
   if (spliced.problem) return { ok: false, exit: 1, problems: [spliced.problem] };
   util.atomicWrite(path.join(root, harness.HARNESS_FILE), `${JSON.stringify(normalized, null, 2)}\n`);
   util.atomicWrite(agentsFile, spliced.text);
-  const generated = generate.generate(root, { harness: normalized });
+  const generated = generate.generate(root, { harness: normalized, library: lib });
   return { ok: true, harness: normalized, agreement, generated, written: [harness.HARNESS_FILE, AGENTS_FILE] };
 }
 

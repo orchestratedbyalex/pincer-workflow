@@ -143,9 +143,8 @@ function normalize(doc) {
   return out;
 }
 
-// Read, parse, validate and normalize <root>/harness.json.
-function load(root) {
-  const file = path.join(root, HARNESS_FILE);
+// Read, parse, validate and normalize <root>/harness.json (or another file).
+function load(root, file = path.join(root, HARNESS_FILE)) {
   let raw;
   try { raw = fs.readFileSync(file, 'utf8'); } catch (error) {
     if (error.code === 'ENOENT') return { ok: false, missing: true, message: MISSING_MESSAGE };

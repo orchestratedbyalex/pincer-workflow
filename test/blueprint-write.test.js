@@ -126,7 +126,7 @@ for (const stale of ['.prd', '.pincer/', 'pincer-runtime', 'PRD']) assert.ok(!ag
 result = bp.write(dir, { answers: 'answers.json' });
 assert.equal(result.ok, true);
 assert.equal(result.agreement, agreement.replace(/^\n/, ''));
-assert.deepEqual(Object.keys(result.generated).sort(), ['conflicted', 'skipped', 'written']);
+for (const key of ['written', 'skipped', 'conflicted']) assert.ok(Array.isArray(result.generated[key]), key);
 assert.deepEqual(harness.validate(result.harness), []);
 // a second write is byte-identical
 assert.equal(read(dir, 'AGENTS.md'), agents);
