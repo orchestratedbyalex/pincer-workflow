@@ -1,22 +1,1002 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PINCER — a harness builder for AI coding agents</title>
-<meta name="description" content="PINCER 1.0 builds a project agreement and configurable coding workflow for Claude Code, Codex CLI and GitHub Copilot. Verified completion. Human acceptance.">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PINCER — the harness builder for AI coding agents</title>
+<meta name="description" content="PINCER reads your project, interviews you and writes the agreement your AI coding agent works under. Done is a check that passed. Accepted is a named person, quoted. Claude Code, Codex CLI and GitHub Copilot.">
 <link rel="canonical" href="https://orchestratedbyalex.github.io/pincer-workflow/">
+<meta property="og:title" content="PINCER — the harness builder for AI coding agents">
+<meta property="og:description" content="Scroll through a project getting its harness: install, blueprint, pipeline, and the floor that never bends.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://orchestratedbyalex.github.io/pincer-workflow/">
+<meta name="theme-color" content="#1a3df2">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231a3df2'/%3E%3Cpath d='M14 6a10 10 0 0 0 0 20' fill='none' stroke='%23ffd60a' stroke-width='5'/%3E%3Cpath d='M18 6a10 10 0 0 1 0 20' fill='none' stroke='%23ff4d3d' stroke-width='5'/%3E%3C/svg%3E">
+<link rel="preload" href="fonts/anybody.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-:root{color-scheme:dark;--bg:#0a2340;--panel:#10315a;--ink:#eaf2fa;--dim:#aecbe8;--line:#486889;--accent:#7fd8a4}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.65 system-ui,sans-serif}main,nav,footer{max-width:1100px;margin:auto;padding:24px}nav{display:flex;justify-content:space-between;gap:24px;border-bottom:1px solid var(--line)}a{color:var(--accent);text-underline-offset:4px}a:focus-visible{outline:3px solid var(--accent);outline-offset:5px}.label,code{font-family:ui-monospace,monospace}.label{color:var(--dim);font-size:14px;letter-spacing:.12em;text-transform:uppercase}header{padding:64px 0 40px}h1{font-size:clamp(42px,7vw,82px);line-height:1.08;letter-spacing:-.04em;max-width:900px;margin:18px 0 26px}h2{font-size:32px;line-height:1.2}h3{margin-top:0}p{max-width:760px}.lead{font-size:23px;color:var(--dim)}section{padding:32px 0;border-top:1px solid var(--line)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}.card{background:var(--panel);border:1px solid var(--line);padding:24px}pre{overflow:auto;padding:22px;background:#061a30;border:1px solid var(--line);font-size:15px;white-space:pre-wrap;overflow-wrap:anywhere}li{margin:10px 0}.muted{color:var(--dim)}footer{border-top:1px solid var(--line);font-size:15px}.button{display:inline-block;padding:12px 20px;border:1px solid var(--accent);margin:8px 14px 8px 0}table{width:100%;border-collapse:collapse}td,th{text-align:left;vertical-align:top;padding:14px;border-bottom:1px solid var(--line)}.table-wrap{overflow:auto}@media(max-width:600px){nav{font-size:15px}header{padding-top:32px}main{padding:18px}td,th{padding:10px;font-size:15px}}
-</style></head>
-<body>
-<nav aria-label="Main"><strong>PINCER / 1.0</strong><span><a href="#install">Install</a> · <a href="https://github.com/orchestratedbyalex/pincer-workflow">GitHub</a></span></nav>
-<main><header><div class="label">Claude Code · Codex CLI · GitHub Copilot</div><h1>Your project.<br>Your agent’s agreement.</h1><p class="lead">PINCER reads your repository, interviews you, and builds the workflow your project needs. Every completed ticket has a passing check. Every acceptance belongs to a person.</p><a class="button" href="#install">Get PINCER 1.0</a><a href="https://github.com/orchestratedbyalex/pincer-workflow/blob/main/README.md">Read the guide →</a></header>
-<section><div class="label">01 / Start with the agreement</div><h2>A blueprint before the work.</h2><p>Run <code>/pincer-blueprint</code> in Claude Code or Copilot, or <code>$pincer-blueprint</code> in Codex. It inspects the project, asks one question at a time, and confirms what it found with you.</p><p>The resulting <code>harness.json</code> and agreement in <code>AGENTS.md</code> define the stages, artifacts, review roster and people who accept the work. Open questions stay open.</p></section>
-<section><div class="label">02 / Keep the stages you need</div><h2>One agreement. A configurable pipeline.</h2><div class="grid"><article class="card"><h3>Plan &amp; narrow</h3><p>Turn a brief into requirements and tickets with runnable checks. Choose local artifacts or a forge-based workflow.</p></article><article class="card"><h3>Code &amp; evaluate</h3><p>Implement tickets, verify them, and review the result with the agreed roster. Retain evidence when the agreement calls for it.</p></article><article class="card"><h3>Release &amp; status</h3><p>Audit the result, record a named person’s acceptance, and retain it in a separate commit. Status reads the files and names the next command, including Codex skill mentions and pending spec approval.</p></article></div><p class="muted">Blueprint and status are always available. Other stages follow the agreement; a disabled stage refuses to run.</p></section>
-<section><div class="label">03 / A floor that stays in place</div><h2>Completion is checked. Acceptance is human.</h2><ul><li><strong>Verify before done:</strong> the ticket script runs the Verification block and stamps a receipt only on success.</li><li><strong>Acceptance in your words:</strong> a person named in the agreement accepts a completed ticket.</li><li><strong>State in files:</strong> a new session can inspect progress without relying on chat history.</li><li><strong>Model tiers:</strong> choose strong, standard, fast or the session’s model for stages and agents. Inspect the platform mapping with <code>doctor</code>.</li></ul><p class="muted">Claude Code has a hook for lifecycle guardrails. Codex and Copilot use standing instructions and status checks alongside their native controls. These mechanisms do not replace a sandbox or human review.</p></section>
-<section id="install"><div class="label">04 / Install the release</div><h2>Try the 1.0 kit in a project.</h2><p>Requires Node.js 22 or newer, git and bash. Use your coding tool’s own authentication; PINCER does not require a provider API key.</p><p>Install the stable release from <a href="https://www.npmjs.com/package/pincer-workflow">npm</a> in your project:</p><pre><code>npx pincer-workflow@latest init --platform all
-bash scripts/pincer-status.sh</code></pre><p>Start your coding tool in that project and run the blueprint:</p><pre><code>/pincer-blueprint     # Claude Code or GitHub Copilot
-$pincer-blueprint     # Codex CLI</code></pre><p class="muted">PINCER 1.0.3 is the current stabilization release. A downloadable package is also available from the <a href="https://github.com/orchestratedbyalex/pincer-workflow/releases/tag/v1.0.3">GitHub release</a>. The Claude Code plugin channel is paused.</p></section>
-<section><div class="label">05 / Upgrading from 0.7</div><h2>A new agreement, not a silent migration.</h2><p>1.0 replaces the old runtime and fixed PRD workflow with the harness builder. Trial it in a separate checkout first. Preserve your old tickets, evidence and edited files; they do not become 1.0 verification or acceptance records automatically.</p><p>The old wiki and PRD-v8 study documents remain historical. See the <a href="https://github.com/orchestratedbyalex/pincer-workflow/blob/main/CHANGELOG.md">release notes and upgrade guidance</a> before updating an existing project.</p></section></main>
-<footer>PINCER · MIT · <a href="https://github.com/orchestratedbyalex/pincer-workflow">Source</a> · <a href="https://github.com/orchestratedbyalex/pincer-workflow/blob/main/template/docs/engine.md">Engine contract</a></footer>
-</body></html>
+@font-face{font-family:Anybody;src:url(fonts/anybody.woff2) format("woff2");font-weight:100 900;font-stretch:50% 150%;font-display:swap}
+@font-face{font-family:"Instrument Sans";src:url(fonts/instrument-sans.woff2) format("woff2");font-weight:400 700;font-display:swap}
+@font-face{font-family:"Martian Mono";src:url(fonts/martian-mono.woff2) format("woff2");font-weight:300 700;font-display:swap}
+
+:root{
+  --blue:#1a3df2; --night:#060b33; --paper:#f3f5ff; --chalk:#f1f4ff; --ink:#0c1f9c;
+  --yellow:#ffd60a; --red:#ff4d3d;
+  --t:1; --o:0; --p:0; --v:0;
+  --bar:54px;
+}
+*{box-sizing:border-box;margin:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--night);color:var(--chalk);font:400 18px/1.5 "Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;overflow-x:clip;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-underline-offset:.2em}
+a:focus-visible,button:focus-visible{outline:3px solid var(--yellow);outline-offset:3px;border-radius:4px}
+code,pre,.mono{font-family:"Martian Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;letter-spacing:-.01em}
+button{font:inherit;color:inherit;cursor:pointer}
+.d{font-family:Anybody,"Arial Black",Impact,sans-serif;font-weight:900;line-height:.94;letter-spacing:-.012em}
+h2.d{font-size:clamp(30px,5.1vw,74px);font-stretch:84%;font-weight:800;text-wrap:balance;max-width:17em}
+h2.d,.mark{transform:skewX(calc(var(--v)*-7deg));transform-origin:left bottom}
+.mark{transform-origin:center}
+.sub{font-size:clamp(16px,1.5vw,21px);max-width:36em;margin-top:.9em;opacity:.86;text-wrap:pretty}
+.js h2 .w{display:inline-block;overflow:hidden;vertical-align:bottom;padding:.08em 0 .16em;margin:-.08em 0 -.16em}
+.js h2 .w>span{display:inline-block;translate:0 118%;rotate:9deg;transform-origin:left bottom;transition:translate .7s cubic-bezier(.2,1.25,.3,1),rotate .7s cubic-bezier(.2,1.25,.3,1);transition-delay:calc(var(--i)*55ms)}
+.js .lit h2 .w>span{translate:0 0;rotate:0deg}
+.js .sub{opacity:0;translate:0 18px;transition:opacity .6s .3s,translate .6s .3s}
+.js .lit .sub{opacity:.86;translate:0 0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+
+/* ── scenes ─────────────────────────────────────────── */
+.scene{position:relative;background:var(--bg);color:var(--fg)}
+.stage{position:relative;min-height:100vh;min-height:100svh;display:grid;place-items:center;padding:calc(var(--bar) + 20px) clamp(18px,5vw,72px) calc(var(--bar) + 26px);overflow:hidden;isolation:isolate}
+.js .scene:not([data-enter]){height:calc(var(--len)*100vh)}
+.js .scene:not([data-enter]) .stage{position:sticky;top:0;height:100vh;height:100svh}
+.stage::before{content:"";position:absolute;inset:-170px 0;z-index:-1;pointer-events:none;
+  background-image:linear-gradient(var(--grid2) 1px,transparent 1px),linear-gradient(90deg,var(--grid2) 1px,transparent 1px),linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:160px 160px,160px 160px,32px 32px,32px 32px;background-position:center top;
+  translate:0 calc(var(--p)*-160px)}
+.t-blue{--bg:var(--blue);--fg:var(--chalk);--grid:rgba(255,255,255,.09);--grid2:rgba(255,255,255,.2);--mach:var(--yellow);--panel:rgba(6,11,51,.34)}
+.t-night{--bg:var(--night);--fg:var(--chalk);--grid:rgba(110,134,255,.08);--grid2:rgba(110,134,255,.17);--mach:var(--yellow);--panel:rgba(26,61,242,.16)}
+.t-paper{--bg:var(--paper);--fg:var(--ink);--grid:rgba(26,61,242,.08);--grid2:rgba(26,61,242,.17);--mach:var(--ink);--panel:#fff}
+.wrap{width:min(100%,1180px)}
+
+/* declarative scroll effects: --t runs 0→1 on enter, --o runs 0→1 on exit */
+[data-at]:not([data-out]){--o:0}
+[data-out]:not([data-at]){--t:1}
+.fx{opacity:calc(min(1,var(--t)*2)*(1 - var(--o)*var(--of,1)));
+  translate:calc((1 - var(--t))*var(--fx,0px) + var(--o)*var(--ox,0px)) calc((1 - var(--t))*var(--fy,0px) + var(--o)*var(--oy,0px));
+  scale:calc(1 + (1 - var(--t))*(var(--fs,1) - 1) + var(--o)*(var(--os,1) - 1));
+  rotate:calc((1 - var(--t))*var(--fr,0deg) + var(--o)*var(--or,0deg) + var(--r,0deg))}
+.js .deck{display:grid}
+.js .deck>*{grid-area:1/1}
+html:not(.js) .deck{display:grid;gap:18px}
+
+.stamp{display:inline-block;font-family:Anybody,sans-serif;font-weight:900;font-stretch:82%;text-transform:uppercase;letter-spacing:.05em;line-height:1;border:3px solid currentColor;border-radius:7px;padding:.24em .5em .16em;rotate:-5deg;color:var(--yellow)}
+.js .stamp{opacity:0}
+.js .stamp.on{opacity:1;animation:slam .44s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes slam{0%{scale:3.4;opacity:0}55%{scale:.9;opacity:1}100%{scale:1;opacity:1}}
+@keyframes shakeA{0%,100%{translate:0 0}15%{translate:-9px 3px}30%{translate:8px -3px}45%{translate:-6px 2px}60%{translate:5px -1px}80%{translate:-2px 0}}
+@keyframes shakeB{0%,100%{translate:0 0}15%{translate:10px 2px}30%{translate:-8px -3px}45%{translate:6px 2px}60%{translate:-4px -1px}80%{translate:2px 0}}
+@keyframes shakeC{0%,100%{translate:0 0}15%{translate:-10px -2px}30%{translate:9px 3px}45%{translate:-6px -2px}60%{translate:4px 1px}80%{translate:-2px 0}}
+@keyframes blink{50%{opacity:0}}
+
+/* ── chrome ─────────────────────────────────────────── */
+.top{position:fixed;inset:0 0 auto 0;height:var(--bar);z-index:50;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(16px,3vw,36px);color:var(--chalk);background:var(--blue)}
+body[data-theme="night"] .top{background:var(--night)}
+body[data-theme="paper"] .top{color:var(--ink);background:var(--paper)}
+html:not(.js) .top{position:absolute}
+.brand{font-family:Anybody,sans-serif;font-weight:900;font-stretch:118%;font-size:19px;letter-spacing:.02em;text-decoration:none;display:flex;align-items:baseline;gap:.6em}
+.brand small{font-family:"Martian Mono",monospace;font-weight:400;font-size:11px;opacity:.75}
+.top nav{display:flex;gap:clamp(14px,2vw,26px);font-size:15px;font-weight:600}
+.top nav a{text-decoration:none;border-bottom:2px solid transparent;padding:4px 0}
+.top nav a:hover{border-bottom-color:currentColor}
+
+.reel{position:fixed;inset:auto 0 0 0;height:var(--bar);z-index:50;background:var(--night);color:var(--chalk);border-top:1px solid rgba(241,244,255,.22);display:none;align-items:center;gap:clamp(10px,1.6vw,22px);padding:0 clamp(12px,2vw,26px)}
+.js .reel{display:flex}
+.play{flex:none;width:34px;height:34px;border-radius:50%;border:2px solid var(--yellow);background:transparent;color:var(--yellow);display:grid;place-items:center;padding:0}
+.play svg{width:14px;height:14px;fill:currentColor}
+.play .pa{display:none}
+.play[aria-pressed="true"]{background:var(--yellow);color:var(--night)}
+.play[aria-pressed="true"] .pl{display:none}
+.play[aria-pressed="true"] .pa{display:block}
+.sheetno{flex:none;font-size:13px;min-width:8.5em;white-space:nowrap}
+.sheetno b{font-family:"Martian Mono",monospace;font-weight:500;color:var(--yellow);margin-right:.5em}
+.ticks{flex:1;display:flex;gap:3px;height:100%;align-items:center;list-style:none;padding:0;position:relative}
+.ticks li{position:relative;height:100%;display:flex;align-items:center}
+.ticks a{display:block;width:100%;height:22px;position:relative}
+.ticks a::before{content:"";position:absolute;inset:9px 0;border-radius:2px;background:rgba(241,244,255,.24);transition:inset .15s,background .15s}
+.ticks a:hover::before,.ticks a:focus-visible::before{inset:6px 0;background:rgba(241,244,255,.5)}
+.ticks li.past a::before{background:var(--yellow)}
+.ticks li.now a::before{background:linear-gradient(90deg,var(--yellow) calc(var(--f)*100%),rgba(241,244,255,.24) 0)}
+.ticks a span{position:absolute;bottom:26px;left:50%;translate:-50% 4px;background:var(--chalk);color:var(--night);font-size:12px;font-weight:600;padding:3px 8px;border-radius:4px;white-space:nowrap;opacity:0;pointer-events:none;transition:.15s}
+.ticks a:hover span,.ticks a:focus-visible span{opacity:1;translate:-50% 0}
+.get{flex:none;font-weight:700;font-size:14px;text-decoration:none;background:var(--yellow);color:var(--night);padding:7px 14px;border-radius:6px}
+@media (max-width:640px){.sheetno{min-width:0}.sheetno span{display:none}.top nav a.opt{display:none}}
+
+/* ── shared parts ───────────────────────────────────── */
+.cmd{display:inline-flex;align-items:center;gap:12px;max-width:100%;background:var(--night);color:var(--chalk);border:2px solid var(--yellow);border-radius:10px;padding:10px 10px 10px 16px;text-align:left}
+.cmd code{font-size:clamp(11.5px,1.25vw,16px);overflow-wrap:anywhere}
+.nb{white-space:nowrap}
+.cmd code::before{content:"$ ";color:var(--yellow)}
+.copy{flex:none;border:0;background:var(--yellow);color:var(--night);font-weight:700;font-size:14px;border-radius:6px;padding:8px 13px}
+.copy:hover{background:#fff}
+
+.term{background:#03061f;color:var(--chalk);border:1px solid rgba(241,244,255,.25);border-radius:12px;overflow:hidden;box-shadow:10px 10px 0 rgba(0,0,0,.28);text-align:left}
+.term-bar{display:flex;align-items:center;gap:7px;padding:10px 14px;border-bottom:1px solid rgba(241,244,255,.16);font-size:12px;color:rgba(241,244,255,.62)}
+.term-bar i{width:10px;height:10px;border-radius:50%;background:rgba(241,244,255,.25)}
+.term-bar span{margin-left:8px;font-family:"Martian Mono",monospace}
+.term pre{padding:14px 16px 16px;font-size:clamp(11px,1.12vw,14.5px);line-height:1.75;white-space:pre-wrap;overflow-wrap:anywhere;min-height:3em}
+.term .ps{color:var(--yellow);font-weight:500}
+.term .ln{display:block}
+.term .dim{opacity:.62}
+.term .hi{color:var(--yellow)}
+.js .term .ln[data-at]{opacity:var(--t)}
+[data-type].typing::after{content:"";display:inline-block;width:.55em;height:1.05em;background:var(--yellow);vertical-align:-.15em;margin-left:2px;animation:blink .7s steps(1) infinite}
+
+/* ── 1 hero ─────────────────────────────────────────── */
+.hero{text-align:center;align-content:center;gap:clamp(8px,1.6vh,18px)}
+.markwrap{position:relative;width:100%}
+.mark{display:flex;justify-content:center;font-size:min(22.5vw,38vh);font-stretch:100%;line-height:.8;white-space:nowrap;scale:calc(1 + var(--p)*.5);opacity:calc(1 - max(0,var(--p) - .55)*2.4)}
+.mark .jl{translate:calc(var(--p)*-34vw) 0}
+.mark .jr{translate:calc(var(--p)*34vw) 0}
+.mark span{display:block}
+.impact{position:absolute;left:50%;top:50%;width:8px;height:150%;background:var(--yellow);translate:-50% -50%;scale:1 0;pointer-events:none}
+.hero .rest{display:grid;justify-items:center;gap:clamp(10px,1.8vh,20px);opacity:calc(1 - var(--p)*2.6);translate:0 calc(var(--p)*-50px)}
+.tag{font-size:clamp(21px,3.7vw,54px);font-stretch:76%;font-weight:800;line-height:1}
+.lede{font-size:clamp(15.5px,1.45vw,20px);max-width:39em;text-wrap:pretty}
+.plat{font-size:clamp(13px,1.1vw,15px);opacity:.82}
+.cue{position:absolute;left:50%;bottom:calc(var(--bar) + 12px);translate:-50% 0;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;opacity:calc(.9 - var(--p)*4)}
+.cue i{width:2px;height:22px;background:currentColor;display:block;transform-origin:top;animation:cue 1.5s ease-in-out infinite}
+@keyframes cue{0%{scale:1 0}50%{scale:1 1}100%{scale:1 0;translate:0 22px}}
+@media (prefers-reduced-motion:no-preference){
+  .mark .jl{animation:slamL .78s cubic-bezier(.5,0,.9,.4) backwards}
+  .mark .jr{animation:slamR .78s cubic-bezier(.5,0,.9,.4) backwards}
+  .markwrap{animation:shakeA .42s .5s both}
+  .impact{animation:flash .5s .5s ease-out both}
+  .hero .tag{animation:wipe .6s .82s cubic-bezier(.2,.8,.2,1) both}
+  .hero .lede{animation:up .55s 1s cubic-bezier(.2,.8,.2,1) both}
+  .hero .cmd{animation:up .55s 1.12s cubic-bezier(.2,1.4,.4,1) both}
+  .hero .plat{animation:up .55s 1.24s cubic-bezier(.2,.8,.2,1) both}
+}
+@keyframes slamL{0%{translate:-75vw 0;font-stretch:150%}64%{translate:0 0;font-stretch:150%;animation-timing-function:cubic-bezier(.2,1.6,.4,1)}74%{font-stretch:60%}100%{translate:0 0;font-stretch:100%}}
+@keyframes slamR{0%{translate:75vw 0;font-stretch:150%}64%{translate:0 0;font-stretch:150%;animation-timing-function:cubic-bezier(.2,1.6,.4,1)}74%{font-stretch:60%}100%{translate:0 0;font-stretch:100%}}
+@keyframes flash{0%{scale:1 0;opacity:1}30%{scale:5 1;opacity:1}100%{scale:.2 1.3;opacity:0}}
+@keyframes wipe{0%{clip-path:inset(0 100% 0 0);translate:-24px 0}100%{clip-path:inset(0 0 0 0);translate:0 0}}
+@keyframes up{0%{opacity:0;translate:0 26px}100%{opacity:1;translate:0 0}}
+
+/* ── 2 claim ────────────────────────────────────────── */
+.claim{place-items:stretch}
+.claim .field{position:relative;width:100%;height:100%}
+.bub{position:absolute;font-weight:600;font-size:clamp(15px,2vw,26px);border:2px solid var(--ink);background:#fff;padding:.5em .85em;border-radius:1.1em 1.1em 1.1em .2em;box-shadow:5px 5px 0 var(--ink);white-space:nowrap;--of:.95;--os:.86}
+.bub.rt{border-radius:1.1em 1.1em .2em 1.1em}
+.says{position:absolute;inset:0;display:grid;place-items:center;text-align:center;pointer-events:none}
+.says .d{font-size:clamp(50px,14vw,215px);font-stretch:100%;color:var(--red);white-space:nowrap}
+.verdicts{position:absolute;inset:0;display:grid;place-content:center;gap:.8em;text-align:center;pointer-events:none;padding-top:20vh}
+.verdicts .d{font-size:clamp(25px,5vw,70px);font-stretch:84%;font-weight:800}
+html:not(.js) .claim .field{display:flex;flex-wrap:wrap;gap:16px;align-content:center;justify-content:center;align-items:center}
+html:not(.js) .bub{position:static}
+html:not(.js) .says,html:not(.js) .verdicts{position:static;width:100%;padding:0}
+html:not(.js) .says .d{font-size:clamp(40px,8vw,110px)}
+.mk{background:var(--yellow);color:var(--night);padding:.06em .28em .02em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.hu{color:var(--red)}
+
+/* ── 3 install ──────────────────────────────────────── */
+.cols{display:grid;gap:clamp(18px,4vw,64px);align-items:center}
+@media (min-width:900px){.cols{grid-template-columns:minmax(0,5fr) minmax(0,6fr)}}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{font-family:"Martian Mono",monospace;font-size:clamp(10.5px,1vw,13px);border:1.5px solid rgba(241,244,255,.55);border-radius:6px;padding:5px 9px;background:var(--panel)}
+@media (max-width:899px){#kit .wide,#kit [data-wide]{display:none!important}}
+.badges{display:flex;flex-wrap:wrap;gap:10px;margin-top:clamp(14px,2.4vh,26px)}
+.badge{font-weight:700;font-size:clamp(14px,1.3vw,18px);padding:.5em .9em;border-radius:999px;border:2px solid var(--chalk);--fs:.4}
+.badge.full{background:var(--chalk);color:var(--night);transition:background .25s,color .25s}
+
+/* ── bands ──────────────────────────────────────────── */
+.band{background:var(--yellow);color:var(--night);overflow:hidden;padding:clamp(14px,2.6vh,28px) 0;border-block:3px solid var(--night)}
+.band .run{display:flex;gap:.5em;white-space:nowrap;font-size:clamp(44px,9vw,130px);font-stretch:125%;translate:calc(var(--d,0)*1px) 0;will-change:translate}
+.band.rev .run{translate:calc(var(--d,0)*-1px - 30%) 0}
+.band .run span{display:block;transform:skewX(calc(var(--v)*-16deg))}
+.band .run .ol{color:transparent;-webkit-text-stroke:2px var(--night)}
+
+/* ── 4 recon ────────────────────────────────────────── */
+.sheets{display:grid;gap:clamp(14px,2.5vw,32px);margin-top:clamp(14px,3vh,34px);--stack:1}
+.js .sheets>*{grid-area:1/1}
+@media (min-width:860px){.sheets{grid-template-columns:1fr 1fr;--stack:0}.js .sheets>*{grid-area:auto}}
+.sheet{position:relative;border:2px solid var(--chalk);border-radius:4px;background:var(--panel);padding:clamp(12px,1.6vw,20px);opacity:calc((1 - var(--o)*var(--stack))*(1 - var(--stack)*(1 - var(--t))))}
+html:not(.js) .sheet{opacity:1}
+.sheet h3{font-family:"Martian Mono",monospace;font-weight:500;font-size:clamp(13px,1.2vw,16px);display:flex;justify-content:space-between;gap:10px;padding-bottom:8px;border-bottom:1px dashed rgba(241,244,255,.5)}
+.sheet h3 small{font-weight:400;opacity:.7}
+.probe{position:relative;list-style:none;padding:0;margin-top:6px}
+.probe li{display:grid;grid-template-columns:8.2em 1fr;gap:10px;padding:clamp(4px,.9vh,8px) 0;border-bottom:1px solid rgba(241,244,255,.16);font-size:clamp(13px,1.2vw,16px)}
+.probe li span{opacity:.72}
+.probe li b{font-weight:600}
+.probe .none{font-weight:400;opacity:.6}
+.fog{position:absolute;inset:0 -4px;background:repeating-linear-gradient(-45deg,var(--bg) 0 7px,rgba(241,244,255,.22) 7px 8px);clip-path:inset(0 0 0 calc(var(--t)*100%))}
+.beam{position:absolute;top:-8px;bottom:-8px;left:calc(var(--t)*100%);width:64px;margin-left:-61px;background:linear-gradient(90deg,rgba(255,214,10,0),rgba(255,214,10,.3) 94%,var(--yellow) 95%);opacity:calc(min(1,var(--t)*40)*min(1,(1 - var(--t))*40))}
+html:not(.js) .fog,html:not(.js) .beam{display:none}
+.verdict{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:clamp(10px,1.8vh,18px);min-height:2.6em}
+.verdict .stamp{font-size:clamp(20px,2.6vw,34px)}
+.ok{font-weight:700;color:#fff;background:var(--red);padding:.2em .6em;border-radius:5px;font-size:14px;rotate:2deg;--fs:2.2}
+.why{font-size:clamp(12.5px,1.05vw,15px);margin-top:14px;max-width:34em}
+.closing{margin-top:clamp(12px,2.4vh,28px);font-size:clamp(17px,1.9vw,26px);font-weight:600;max-width:30em;--fy:30px}
+
+/* ── 5 interview ────────────────────────────────────── */
+.talk{display:grid;gap:clamp(14px,2.4vw,36px);margin-top:clamp(12px,2.6vh,30px);align-items:start}
+@media (min-width:980px){.talk{grid-template-columns:13em minmax(0,1fr) minmax(0,1fr)}}
+.idx{list-style:none;padding:0;counter-reset:s;display:flex;flex-wrap:wrap;gap:6px 14px;font-weight:600;font-size:15px}
+@media (min-width:980px){.idx{display:grid;gap:10px;font-size:17px}}
+.idx li{counter-increment:s;display:flex;align-items:center;gap:.6em;opacity:.42;transition:opacity .2s}
+.idx li::before{content:attr(data-n);font-family:"Martian Mono",monospace;font-size:.72em;width:1.9em;height:1.9em;border:1.5px solid currentColor;border-radius:50%;display:grid;place-items:center;flex:none}
+.idx li.on{opacity:1}
+.idx li.on:not(.gone)::before{background:var(--ink);color:#fff}
+.idx li.gone{opacity:.62}
+.idx li.gone::before{content:"✓";background:var(--red);border-color:var(--red);color:#fff}
+@media (max-width:979px){.js .idx li:not(.on),.js .idx li.gone{display:none}}
+.qa{background:#fff;border:2px solid var(--ink);border-radius:6px;box-shadow:9px 9px 0 var(--ink);padding:clamp(16px,2vw,26px);min-height:clamp(210px,30vh,270px)}
+.qa h3{font-size:clamp(26px,3vw,42px);font-stretch:86%;margin-bottom:.45em}
+.qa .ask{font-size:clamp(15px,1.35vw,18.5px)}
+.qa .ans{margin-top:.8em;font-size:clamp(16px,1.5vw,20px);font-weight:600;color:var(--red);min-height:1.5em}
+.qa .ans::before{content:"You: ";font-weight:400;color:var(--ink);opacity:.6}
+.qa .note{margin-top:.7em;font-size:13.5px;color:#5a66b8}
+.qa ul{padding-left:1.1em;margin-top:.4em;font-size:clamp(14.5px,1.25vw,17px)}
+.qa li{margin:.3em 0}
+.roster{display:flex;flex-wrap:wrap;gap:6px;margin-top:.7em}
+.roster .chip{border-color:var(--ink);background:var(--paper);--fs:.3}
+.json{display:none}
+@media (min-width:980px){.json{display:block}}
+html:not(.js) .json{display:block}
+.json pre{font-size:clamp(10.5px,.92vw,13px);line-height:1.85}
+.json .ln{white-space:pre}
+.json pre{overflow:hidden}
+
+/* ── 6 pipeline ─────────────────────────────────────── */
+.pipe{height:100%;display:grid;grid-template-rows:auto 1fr;align-items:center;gap:clamp(10px,2vh,24px)}
+.railarea{position:relative;height:min(100%,470px);align-self:center}
+.railarea::before{content:"";position:absolute;left:-12vw;right:-12vw;top:19px;height:0;border-top:2px dashed rgba(241,244,255,.6)}
+.token{position:absolute;left:50%;top:0;translate:-50% 0;z-index:3;background:var(--yellow);color:var(--night);font-weight:700;font-size:clamp(12.5px,1.15vw,15.5px);padding:8px 14px;border-radius:6px;white-space:nowrap;box-shadow:4px 4px 0 var(--night)}
+.token::after{content:"";position:absolute;left:50%;top:100%;translate:-50% 0;border:8px solid transparent;border-top-color:var(--yellow)}
+.token.bump{animation:bump .34s cubic-bezier(.2,1.6,.4,1)}
+@keyframes bump{0%{scale:1.35 .7}100%{scale:1}}
+.track{position:absolute;left:0;top:0;display:flex;gap:clamp(22px,4vw,56px);padding-top:66px;will-change:translate}
+.station{position:relative;flex:none;width:min(78vw,430px);border:2px solid var(--chalk);border-radius:6px;background:var(--panel);padding:clamp(14px,1.7vw,22px);opacity:.5;scale:.94;transition:opacity .25s,scale .25s cubic-bezier(.2,1.4,.4,1)}
+.station.here{opacity:1;scale:1}
+.station::before{content:"";position:absolute;left:50%;top:-54px;width:14px;height:14px;translate:-50% 0;border-radius:50%;background:var(--bg);border:3px solid var(--chalk)}
+.station::after{content:"";position:absolute;left:50%;top:-38px;height:36px;border-left:2px solid rgba(241,244,255,.6)}
+.station.here::before{background:var(--yellow);border-color:var(--yellow)}
+.station h3{font-size:clamp(34px,4.4vw,58px);font-stretch:100%;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.station .cm{display:inline-block;margin-top:8px;color:var(--yellow)}
+.station p{margin-top:8px;font-size:clamp(14px,1.2vw,16.5px)}
+.station .bend{margin-top:10px;padding-top:10px;border-top:1px dashed rgba(241,244,255,.45);font-size:clamp(13px,1.1vw,15px)}
+.station .bend b{display:block;font-size:.86em;opacity:.72;font-weight:600;margin-bottom:2px}
+.station .offnote{display:none;margin-top:10px;font-weight:600;color:var(--yellow);font-size:clamp(13.5px,1.15vw,15.5px)}
+.station.is-off{background:repeating-linear-gradient(-45deg,rgba(6,11,51,.5) 0 10px,rgba(6,11,51,.28) 10px 20px)}
+.station.is-off h3 span{text-decoration:line-through;text-decoration-thickness:.09em;opacity:.55}
+.station.is-off p,.station.is-off .bend{opacity:.35}
+.station.is-off .offnote{display:block}
+.station.cap{width:min(64vw,300px);border-style:dashed}
+.station.cap h3{font-size:clamp(24px,2.8vw,36px);font-stretch:88%}
+.switch{flex:none;font-family:"Martian Mono",monospace;font-size:12px;font-weight:500;border:2px solid var(--chalk);background:transparent;border-radius:999px;width:66px;height:30px;position:relative;text-align:left;padding:0 9px;color:var(--night)}
+.switch::before{content:"";position:absolute;inset:0;border-radius:999px;background:var(--yellow)}
+.switch::after{content:"";position:absolute;top:3px;left:39px;width:20px;height:20px;border-radius:50%;background:var(--night);transition:left .18s cubic-bezier(.2,1.6,.4,1)}
+.switch span{position:relative}
+.switch[aria-pressed="false"]{color:var(--chalk);text-align:right}
+.switch[aria-pressed="false"]::before{background:transparent}
+.switch[aria-pressed="false"]::after{left:3px;background:var(--chalk)}
+html:not(.js) .railarea{height:auto}
+html:not(.js) .railarea::before,html:not(.js) .token{display:none}
+html:not(.js) .track{position:static;flex-wrap:wrap;padding-top:0}
+html:not(.js) .station{opacity:1;scale:1}
+html:not(.js) .station::before,html:not(.js) .station::after{display:none}
+
+/* ── 7 floor ────────────────────────────────────────── */
+.floor{text-align:center;align-content:center;gap:clamp(8px,1.8vh,20px)}
+.floor .heads{width:100%;justify-items:center;align-items:center}
+.floor h2{margin-inline:auto}
+.floor .fin{font-size:clamp(24px,4.3vw,60px);font-stretch:84%;font-weight:800;display:grid;gap:.22em}
+.floor .fin .a{color:var(--yellow)}
+.floor .fin .b{color:var(--red)}
+.vise{position:relative;width:min(76vw,540px);margin:clamp(40px,6vh,58px) auto 0}
+.jaw{position:absolute;top:-22px;bottom:-22px;width:clamp(40px,7vw,74px);border:clamp(12px,1.8vw,20px) solid;translate:calc((1 - var(--t))*var(--from)) 0;z-index:2}
+.jaw.l{right:calc(100% - clamp(12px,1.8vw,20px));border-right:0;border-radius:90px 0 0 90px;border-color:var(--yellow);--from:-80vw}
+.jaw.r{left:calc(100% - clamp(12px,1.8vw,20px));border-left:0;border-radius:0 90px 90px 0;border-color:var(--red);--from:80vw}
+.jaw span{position:absolute;bottom:calc(100% + 26px);font-size:13px;font-weight:700;white-space:nowrap}
+.jaw span{transition:opacity .3s}
+.is-accepted .jaw span{opacity:0}
+.jaw.l span{left:0;color:var(--yellow)}
+.jaw.r span{right:0;color:var(--red)}
+html:not(.js) .jaw{display:none}
+.ticket{position:relative;background:var(--paper);color:var(--night);border-radius:6px;text-align:left;padding:clamp(12px,1.8vw,22px);font-size:clamp(12.5px,1.75vh,15.5px);line-height:1.45}
+.ticket header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:8px;border-bottom:1px dashed rgba(6,11,51,.4)}
+.ticket header .d{font-size:1.9em;font-stretch:90%}
+.ticket header strong{flex:1;min-width:8em}
+.pill{font-family:"Martian Mono",monospace;font-size:.78em;padding:.25em .6em;border-radius:999px;border:1.5px solid var(--night)}
+.pill.post{background:var(--night);color:var(--yellow);border-color:var(--night)}
+.ticket ul{list-style:none;padding:0;margin:8px 0}
+.ticket li{padding-left:1.5em;position:relative;margin:.2em 0}
+.ticket li::before{content:"✓";position:absolute;left:0;font-weight:700}
+.ticket .vb{background:var(--night);color:var(--chalk);border-radius:5px;padding:.5em .8em;display:block}
+.ticket .vb::before{content:"$ ";color:var(--yellow)}
+.row{display:grid;grid-template-columns:7.4em 1fr;gap:8px;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid rgba(6,11,51,.16);min-height:3.2em;position:relative}
+.row>span:first-child{font-family:"Martian Mono",monospace;font-size:.78em;opacity:.7}
+.row .pre{opacity:.4}
+.row .rc{font-family:"Martian Mono",monospace;font-size:.8em}
+.row .stamp{position:absolute;right:2px;top:50%;margin-top:-1em;font-size:1.15em;color:#b88a00;background:rgba(255,214,10,.3)}
+.row q{font-weight:700;color:#d92a1b;quotes:"“" "”"}
+.row svg{position:absolute;right:0;top:50%;width:6.5em;height:2.6em;margin-top:-1.3em;overflow:visible}
+.row svg path{fill:none;stroke:#d92a1b;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:calc(1 - var(--t))}
+.says2{margin-top:clamp(18px,3vh,30px)}
+@media (max-width:560px){
+  .ticket li:nth-child(2){display:none}
+  .row{grid-template-columns:1fr;gap:2px;min-height:0}
+  .row .stamp{top:1px;margin-top:0;font-size:.95em}
+  .row svg{top:2px;margin-top:0;width:5.4em;height:2.1em}
+}
+.post{display:none}
+html:not(.js) .pre{display:none}
+html:not(.js) .post{display:revert}
+.is-verified .on-verified .pre,.is-done .on-done .pre,.is-accepted .on-accepted .pre{display:none}
+.is-verified .on-verified .post,.is-done .on-done .post,.is-accepted .on-accepted .post{display:revert}
+.is-refused .ticket{animation:shakeA .42s}
+.is-verified .ticket{animation:shakeB .42s}
+.is-done .ticket{animation:none}
+.is-accepted .ticket{animation:shakeC .42s}
+.ring{position:absolute;inset:-22px calc(-1*clamp(28px,5.2vw,54px));border:3px solid var(--chalk);border-radius:90px;opacity:0;pointer-events:none}
+.is-accepted .ring{animation:ring .7s ease-out}
+@keyframes ring{0%{opacity:.9;scale:1}100%{opacity:0;scale:1.5 1.9}}
+.says2{width:min(92vw,720px);margin-inline:auto;min-height:6.2em;text-align:left}
+.says2 pre{font-size:clamp(10.5px,1.5vh,13.5px);line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;background:#03061f;border:1px solid rgba(241,244,255,.22);border-radius:8px;padding:10px 14px}
+.says2 .ps{color:var(--yellow)}
+.says2 .no{color:var(--yellow)}
+.says2 .ln{display:block}
+.js .says2 .ln[data-at]{opacity:var(--t)}
+.foot{font-size:clamp(12.5px,1.05vw,15px);max-width:44em;margin-inline:auto;color:#c3cbf5}
+html:not(.js) .floor .fin{margin-top:.4em}
+
+/* ── 8 status ───────────────────────────────────────── */
+.chat{display:grid;gap:9px;align-content:start;position:relative;min-height:12em}
+.msg{justify-self:start;max-width:92%;border:2px solid var(--ink);background:#fff;border-radius:1em 1em 1em .2em;padding:.45em .8em;font-size:clamp(13.5px,1.2vw,16px);--ox:34vw;--oy:-26vh;--or:24deg;--os:.6}
+.msg.me{justify-self:end;background:var(--ink);color:#fff;border-radius:1em 1em .2em 1em;--ox:-30vw;--or:-20deg}
+.closed{position:absolute;inset:0;display:grid;place-content:center;text-align:center;font-weight:600;border:2px dashed var(--ink);border-radius:8px;--fs:.8}
+html:not(.js) .closed{position:static;padding:1em}
+.closed b{display:block;font-family:Anybody,sans-serif;font-stretch:88%;font-weight:900;font-size:clamp(22px,2.6vw,34px);line-height:1}
+.status .term pre{font-size:clamp(10.5px,.95vw,13px)}
+.next{display:block;margin-top:4px;padding:3px 8px;margin-left:-8px;border-radius:4px}
+.next.full{background:var(--yellow);color:var(--night);font-weight:700;animation:bump .4s cubic-bezier(.2,1.6,.4,1);transform-origin:left}
+@media (max-width:899px){.status .chat .msg:nth-child(n+4){display:none}.status .chat{min-height:8.5em}}
+
+/* ── 9 platforms ────────────────────────────────────── */
+.plats{display:grid;gap:clamp(10px,1.6vw,22px);margin-top:clamp(12px,2.6vh,30px)}
+@media (min-width:820px){.plats{grid-template-columns:repeat(3,1fr)}}
+.plt{border:2px solid var(--chalk);border-radius:6px;background:var(--panel);padding:clamp(11px,1.5vw,20px);--fy:60vh}
+.plt h3{font-size:clamp(24px,2.8vw,40px);font-stretch:84%}
+.plt dl{margin-top:8px;display:grid;gap:6px;font-size:clamp(13px,1.08vw,15px)}
+.plt dl div{display:grid;grid-template-columns:5.6em 1fr;gap:8px;padding-top:6px;border-top:1px solid rgba(241,244,255,.2)}
+.js .plt dl div{opacity:var(--t)}
+.plt dt{opacity:.66}
+.plt dd b{color:var(--yellow);font-weight:600}
+.plt,.plt dl,.plt dd{min-width:0}
+.plt dd{overflow-wrap:anywhere}
+@media (max-width:819px){.plt dl div.wide{display:none}.plt{padding:10px 12px}.plt h3{font-size:20px}.plt dl{margin-top:4px;gap:3px;font-size:12.5px}.plt dl div{grid-template-columns:3.6em 1fr;padding-top:3px}.plt dl div:nth-child(2){border-top:0}}
+.tiers{margin-top:clamp(12px,2.6vh,28px);display:grid;gap:10px}
+.tiers .rowt{display:flex;flex-wrap:wrap;gap:8px}
+.tier{font-family:Anybody,sans-serif;font-weight:900;font-stretch:120%;font-size:clamp(17px,2.2vw,30px);border:2px solid var(--yellow);color:var(--yellow);border-radius:6px;padding:.22em .55em .14em;--fs:.3}
+.tiers p{font-size:clamp(14px,1.25vw,17px);max-width:46em}
+
+/* ── 10 finale ──────────────────────────────────────── */
+.finale .stage{align-content:center;gap:clamp(14px,2.6vh,30px);padding-bottom:calc(var(--bar) + 40px)}
+.finale h2{font-size:clamp(46px,10.5vw,150px);font-stretch:calc(70% + var(--p)*36%);max-width:none;line-height:.86}
+.steps{list-style:none;padding:0;display:grid;gap:12px;counter-reset:n;margin-top:clamp(10px,2vh,24px)}
+.steps li{counter-increment:n;display:grid;grid-template-columns:2.2em 1fr;gap:12px;align-items:center;font-size:clamp(15.5px,1.4vw,19px)}
+.steps li::before{content:counter(n);font-family:Anybody,sans-serif;font-weight:900;font-size:1.5em;color:var(--yellow)}
+.steps .cmd{justify-self:start}
+.steps li>span code{background:var(--night);padding:.25em .55em;border-radius:5px;white-space:nowrap}
+.fine{font-size:clamp(13.5px,1.1vw,15.5px);opacity:.88;max-width:52em}
+.links{display:flex;flex-wrap:wrap;gap:8px 12px;margin-top:6px}
+.links a{font-weight:700;font-size:15px;text-decoration:none;border:2px solid var(--chalk);border-radius:6px;padding:7px 13px}
+.links a:hover{background:var(--chalk);color:var(--blue)}
+.links a.pri{background:var(--yellow);border-color:var(--yellow);color:var(--night)}
+
+@media (max-height:700px){h2.d{font-size:clamp(26px,4.4vw,56px)}.sub{font-size:15px;margin-top:.5em}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body data-theme="blue">
+
+<header class="top">
+  <a class="brand" href="#top">PINCER <small>1.0.3</small></a>
+  <nav aria-label="Main">
+    <a class="opt" href="https://github.com/orchestratedbyalex/pincer-workflow/blob/main/README.md">Guide</a>
+    <a href="https://www.npmjs.com/package/pincer-workflow">npm</a>
+    <a href="https://github.com/orchestratedbyalex/pincer-workflow">GitHub</a>
+  </nav>
+</header>
+
+<main>
+
+<!-- 1 ─ hero -->
+<section class="scene t-blue" id="top" style="--len:1.9" data-title="PINCER" data-theme="blue">
+  <div class="stage hero">
+    <div class="markwrap">
+      <h1 class="mark d"><span class="sr">PINCER</span><span class="jl" aria-hidden="true">PIN</span><span class="jr" aria-hidden="true">CER</span></h1>
+      <i class="impact" aria-hidden="true"></i>
+    </div>
+    <div class="rest">
+      <p class="tag d">The harness builder for AI coding agents</p>
+      <p class="lede">PINCER reads your repository, interviews you, and writes the agreement your agent works under. Then it runs the pipeline that agreement describes. For the repo you start today, and for the one with ten years of history.</p>
+      <div class="cmd"><code><span class="nb">npx pincer-workflow@latest</span> <span class="nb">init --platform all</span></code><button class="copy" type="button" data-copy="npx pincer-workflow@latest init --platform all">Copy</button></div>
+      <p class="plat">Works in Claude Code, Codex CLI and GitHub Copilot. One kit, no dependencies.</p>
+    </div>
+    <p class="cue" aria-hidden="true"><i></i>Scroll, or press play</p>
+  </div>
+</section>
+
+<!-- 2 ─ the claim -->
+<section class="scene t-paper" id="claim" style="--len:2.6" data-title="The problem" data-theme="paper">
+  <div class="stage claim">
+    <div class="field">
+      <h2 class="sr">An agent can say it is done. Says who?</h2>
+      <p class="bub fx" data-at=".02 .08" data-out=".46 .54" data-ease="back" style="left:6%;top:9%;--fs:.2;--r:-6deg;font-size:clamp(20px,2.8vw,38px)">“Done!”</p>
+      <p class="bub rt fx" data-at=".07 .13" data-out=".46 .54" data-ease="back" style="right:7%;top:15%;--fs:.2;--r:4deg">“All tests pass.”</p>
+      <p class="bub fx" data-at=".12 .18" data-out=".46 .54" data-ease="back" style="left:12%;top:31%;--fs:.2;--r:3deg">“Should work now.”</p>
+      <p class="bub rt fx" data-at=".17 .23" data-out=".46 .54" data-ease="back" style="right:14%;top:37%;--fs:.2;--r:-5deg;font-size:clamp(18px,2.4vw,32px)">“Fixed it.”</p>
+      <p class="bub fx" data-at=".22 .28" data-out=".46 .54" data-ease="back" style="left:5%;top:58%;--fs:.2;--r:-3deg">“Implemented as requested.”</p>
+      <p class="bub rt fx" data-at=".26 .32" data-out=".46 .54" data-ease="back" style="right:6%;top:63%;--fs:.2;--r:6deg">“Everything works.”</p>
+      <p class="bub fx" data-at=".30 .36" data-out=".46 .54" data-ease="back" style="left:36%;top:80%;--fs:.2;--r:-8deg;font-size:clamp(22px,3vw,42px)">“Done ✓”</p>
+      <p class="bub rt fx" data-at=".34 .40" data-out=".46 .54" data-ease="back" style="right:30%;top:3%;--fs:.2;--r:2deg">“Ready to ship.”</p>
+      <div class="says" aria-hidden="true"><p class="d fx" data-at=".47 .57" data-out=".7 .8" data-ease="back" style="--fs:3.6;--fr:-8deg;--of:0;--oy:-21vh;--os:.55">Says who?</p></div>
+      <div class="verdicts">
+        <p class="d fx" data-at=".76 .86" style="--fy:60px"><span class="mk">Done is a check that passed.</span></p>
+        <p class="d hu fx" data-at=".84 .94" style="--fy:60px">Accepted is a named person, quoted.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 ─ install -->
+<section class="scene t-night" id="kit" style="--len:3" data-title="Install" data-theme="night">
+  <div class="stage">
+    <div class="wrap cols">
+      <div>
+        <h2 class="d">One command puts the kit in your project.</h2>
+        <p class="sub">88 files and no dependencies. PINCER uses your coding tool’s own sign-in, so there is no API key to set up. It needs Node.js 22 or newer, git and bash.</p>
+        <div class="badges">
+          <span class="badge fx" data-at=".64 .69" data-ease="back">Claude Code</span>
+          <span class="badge fx" data-at=".68 .73" data-ease="back">Codex CLI</span>
+          <span class="badge fx" data-at=".72 .77" data-ease="back">GitHub Copilot</span>
+        </div>
+      </div>
+      <div>
+        <div class="term">
+          <div class="term-bar"><i></i><i></i><i></i><span>your-project</span></div>
+<pre><span class="ln"><b class="ps">$</b> <span data-type data-at=".04 .25">npx pincer-workflow@latest init --platform all</span></span><span class="ln dim" data-at=".27 .29">Installing PINCER v1.0.3 for: claude, codex, copilot</span><span class="ln" data-at=".31 .33">  wrote    88 file(s)</span><span class="ln dim wide" data-at=".35 .37">Next: run the blueprint. It looks at the repository, interviews you, and writes the agreement.</span><span class="ln"><b class="ps">$</b> <span data-type data-at=".79 .87">scripts/pincer-status.sh</span></span><span class="ln" data-at=".89 .9">PINCER — no agreement yet</span><span class="ln hi" data-at=".92 .93">Next: /pincer-blueprint</span></pre>
+        </div>
+        <div class="chips" aria-label="Some of the files the installer writes">
+          <span class="chip fx" data-at=".39 .45" data-ease="back" style="--fy:-44px">AGENTS.md</span>
+          <span class="chip fx" data-at=".42 .48" data-ease="back" style="--fy:-44px">scripts/pincer-ticket.sh</span>
+          <span class="chip fx" data-at=".45 .51" data-ease="back" style="--fy:-44px">scripts/pincer-status.sh</span>
+          <span class="chip fx" data-at=".48 .54" data-ease="back" style="--fy:-44px">.claude/skills/</span>
+          <span class="chip fx" data-at=".51 .57" data-ease="back" style="--fy:-44px" data-wide>.agents/skills/</span>
+          <span class="chip fx" data-at=".54 .60" data-ease="back" style="--fy:-44px" data-wide>.github/prompts/</span>
+          <span class="chip fx" data-at=".57 .63" data-ease="back" style="--fy:-44px" data-wide>docs/engine.md</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="band" aria-hidden="true"><p class="run d" data-drift=".55"><span>greenfield</span><span class="ol">or</span><span>brownfield</span><span class="ol">or</span><span>greenfield</span><span class="ol">or</span><span>brownfield</span><span class="ol">or</span><span>greenfield</span><span class="ol">or</span><span>brownfield</span></p></div>
+
+<!-- 4 ─ blueprint: recon -->
+<section class="scene t-blue" id="blueprint" style="--len:3.4" data-title="Blueprint: the read" data-theme="blue">
+  <div class="stage">
+    <div class="wrap">
+      <h2 class="d">Blueprint reads the repository before it asks you anything.</h2>
+      <div class="sheets">
+        <div class="sheet" data-out=".45 .5">
+          <h3>shop-api/ <small>five years old</small></h3>
+          <ul class="probe">
+            <li><span>git history</span><b>1,284 commits, 212 source files</b></li>
+            <li><span>CI</span><b>.github/workflows/ci.yml</b></li>
+            <li><span>deploy</span><b>Dockerfile, on merge to main</b></li>
+            <li><span>tests</span><b>npm test, npm run lint</b></li>
+            <li><span>forge</span><b>GitHub: pull requests, squash</b></li>
+            <li class="fog" data-at=".05 .34" data-ease="lin" aria-hidden="true"></li>
+            <li class="beam" data-at=".05 .34" data-ease="lin" aria-hidden="true"></li>
+          </ul>
+          <div class="verdict"><span class="stamp" data-at=".36 .37">Brownfield</span><span class="ok fx" data-at=".41 .44" data-ease="back">you confirm</span></div>
+          <p class="why fx" data-at=".38 .42" style="--fy:14px">1,284 commits and 212 source files: there is history and code to respect. CI is configured. Something deploys: a running system to respect.</p>
+        </div>
+        <div class="sheet" data-at=".45 .5">
+          <h3>new-idea/ <small>started on Monday</small></h3>
+          <ul class="probe">
+            <li><span>git history</span><b>3 commits, 2 source files</b></li>
+            <li><span>CI</span><b class="none">none</b></li>
+            <li><span>deploy</span><b class="none">none</b></li>
+            <li><span>tests</span><b class="none">none yet</b></li>
+            <li><span>forge</span><b class="none">no remote</b></li>
+            <li class="fog" data-at=".5 .76" data-ease="lin" aria-hidden="true"></li>
+            <li class="beam" data-at=".5 .76" data-ease="lin" aria-hidden="true"></li>
+          </ul>
+          <div class="verdict"><span class="stamp" data-at=".78 .79">Greenfield</span><span class="ok fx" data-at=".83 .86" data-ease="back">you confirm</span></div>
+          <p class="why fx" data-at=".8 .84" style="--fy:14px">3 commits and 2 source files: the first real job is also the first trace. No CI or deploy configuration.</p>
+        </div>
+      </div>
+      <p class="closing fx" data-at=".88 .96">It says which one, and why. You confirm, and your word wins over what it saw.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5 ─ blueprint: interview -->
+<section class="scene t-paper" id="interview" style="--len:4.2" data-title="Blueprint: the interview" data-theme="paper">
+  <div class="stage">
+    <div class="wrap">
+      <h2 class="d">Then it interviews you, one question at a time.</h2>
+      <p class="sub">Six sections. What it already saw comes back as “I see X; is that right?”, and <code>open</code> is always an allowed answer.</p>
+      <div class="talk">
+        <ol class="idx">
+          <li data-n="1" data-at=".05 .06" data-out=".165 .175">Systems</li>
+          <li data-n="2" data-at=".175 .185" data-out=".29 .30">Current pipeline</li>
+          <li data-n="3" data-at=".30 .31" data-out=".415 .425">Handoff artifacts</li>
+          <li data-n="4" data-at=".425 .435" data-out=".54 .55">Simplify</li>
+          <li data-n="5" data-at=".55 .56" data-out=".665 .675">Responsibility</li>
+          <li data-n="6" data-at=".675 .685" data-out=".79 .80">Repo</li>
+        </ol>
+        <div class="deck">
+          <article class="qa fx" data-at=".05 .08" data-out=".165 .195" style="--fy:70vh;--fr:8deg;--ox:-70vw;--oy:-12vh;--or:-16deg;--r:-1.2deg">
+            <h3 class="d">Systems</h3>
+            <p class="ask">Test: I see <code>npm test</code> running in GitHub Actions. Where is it done, and where does its record end up?</p>
+            <p class="ans"><span data-type data-at=".09 .145">Locally and in CI. The record is the Actions run on the pull request.</span></p>
+          </article>
+          <article class="qa fx" data-at=".175 .205" data-out=".29 .32" style="--fy:70vh;--fr:-8deg;--ox:70vw;--oy:-12vh;--or:16deg;--r:1deg">
+            <h3 class="d">Current pipeline</h3>
+            <p class="ask">Think of the last real change that shipped. Walk me through it, from the moment it was asked for to the moment it was done.</p>
+            <p class="ans"><span data-type data-at=".215 .27">An issue, a branch, a pull request, one review, squash, deploy on merge.</span></p>
+          </article>
+          <article class="qa fx" data-at=".30 .33" data-out=".415 .445" style="--fy:70vh;--fr:8deg;--ox:-70vw;--oy:-12vh;--or:-16deg;--r:-.8deg">
+            <h3 class="d">Handoff artifacts</h3>
+            <p class="ask">Evidence, the logs and manifest showing the checks ran: kept under <code>evidence/</code>, or skipped because the pull request’s checks are the evidence?</p>
+            <p class="ans"><span data-type data-at=".34 .365">open</span></p>
+            <p class="note fx" data-at=".37 .4" style="--fy:10px">Written as open. Never guessed.</p>
+          </article>
+          <article class="qa fx" data-at=".425 .455" data-out=".54 .57" style="--fy:70vh;--fr:-8deg;--ox:70vw;--oy:-12vh;--or:16deg;--r:1.3deg">
+            <h3 class="d">Simplify</h3>
+            <p class="ask">Plan today: a written spec before any ticket. Keep it as it is, switch it off, or change its gate?</p>
+            <p class="ans"><span data-type data-at=".465 .52">Keep it. The gate is me saying the spec is approved.</span></p>
+          </article>
+          <article class="qa fx" data-at=".55 .58" data-out=".665 .695" style="--fy:70vh;--fr:8deg;--ox:-70vw;--oy:-12vh;--or:-16deg;--r:-1deg">
+            <h3 class="d">Responsibility</h3>
+            <p class="ask">Who works on this project? For each person: name, role, and whether they accept results.</p>
+            <p class="ans"><span data-type data-at=".59 .645">Mira Okafor, owner. I accept.</span></p>
+          </article>
+          <article class="qa fx" data-at=".675 .705" data-out=".79 .82" style="--fy:70vh;--fr:-8deg;--ox:70vw;--oy:-12vh;--or:16deg;--r:.9deg">
+            <h3 class="d">Repo</h3>
+            <p class="ask">One branch per ticket, or commit to the main branch?</p>
+            <p class="ans"><span data-type data-at=".715 .77">A branch per ticket, through a pull request.</span></p>
+          </article>
+          <article class="qa fx" data-at=".80 .84" data-ease="back" style="--fs:.6;--r:0deg">
+            <h3 class="d">The agreement is written.</h3>
+            <ul>
+              <li><code>harness.json</code>, and the agreement at the top of <code>AGENTS.md</code></li>
+              <li>your own copies of the stages you kept</li>
+              <li>the first real job, named</li>
+              <li>the review agents, proposed from your answers:</li>
+            </ul>
+            <div class="roster">
+              <span class="chip fx" data-at=".85 .89" data-ease="back">codebase-explorer</span>
+              <span class="chip fx" data-at=".87 .91" data-ease="back">code-quality-reviewer</span>
+              <span class="chip fx" data-at=".89 .93" data-ease="back">silent-failure-hunter</span>
+              <span class="chip fx" data-at=".91 .95" data-ease="back">security-reviewer</span>
+              <span class="chip fx" data-at=".93 .97" data-ease="back">history-reviewer</span>
+            </div>
+          </article>
+        </div>
+        <div class="term json" aria-label="harness.json filling in as the questions are answered">
+          <div class="term-bar"><i></i><i></i><i></i><span>harness.json</span></div>
+<pre><span class="ln dim">{</span><span class="ln" data-at=".03 .05">  "project": { "name": "shop-api",</span><span class="ln" data-at=".03 .05">               "kind": "brownfield" },</span><span class="ln" data-at=".145 .16">  "systems": { "forge": "github", "ci": true,</span><span class="ln" data-at=".27 .285">               "deploy": "on merge to main" },</span><span class="ln hi" data-at=".365 .38">  "open": ["where evidence is kept"],</span><span class="ln" data-at=".52 .535">  "stages": { "plan": { "on": true, "gate":</span><span class="ln" data-at=".52 .535">      "Mira says the spec is approved" } },</span><span class="ln" data-at=".645 .66">  "people": [{ "name": "Mira Okafor",</span><span class="ln" data-at=".645 .66">      "role": "owner", "accepts": true }],</span><span class="ln" data-at=".77 .785">  "repo": { "branches": "per-ticket", "pr": true }</span><span class="ln dim">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 ─ pipeline -->
+<section class="scene t-blue" id="pipeline" style="--len:4.4" data-title="The pipeline" data-theme="blue">
+  <div class="stage">
+    <div class="pipe wrap">
+      <div>
+        <h2 class="d">The agreement decides which stages run.</h2>
+        <p class="sub">Blueprint and status are always on. The other five follow your answers. Switch one off and it refuses to run.</p>
+      </div>
+      <div class="railarea">
+        <p class="token" aria-hidden="true"><b>a brief</b></p>
+        <div class="track">
+          <article class="station cap" data-token="a brief">
+            <h3 class="d">It starts with a brief</h3>
+            <p>A sentence about what you want. The first real job the blueprint named is a good one.</p>
+          </article>
+          <article class="station" data-token="a spec, R-01 to R-06">
+            <h3 class="d"><span>plan</span><button class="switch" type="button" aria-pressed="true" aria-label="plan stage on"><span>on</span></button></h3>
+            <code class="cm">/pincer-plan</code>
+            <p>Turns the brief into a written spec with stable <code>R-NN</code> IDs.</p>
+            <p class="bend"><b>The interview can bend</b>Off for small changes. The spec can be a forge issue instead of a file.</p>
+            <p class="offnote">Off. /pincer-plan refuses to run, and the agreement keeps the reason.</p>
+          </article>
+          <article class="station" data-token="T-01, T-02, T-03, each with a check">
+            <h3 class="d"><span>narrow</span><button class="switch" type="button" aria-pressed="true" aria-label="narrow stage on"><span>on</span></button></h3>
+            <code class="cm">/pincer-narrow</code>
+            <p>Cuts the spec into tickets, each with a check that can be run.</p>
+            <p class="bend"><b>The interview can bend</b>Tickets as local files or as forge issues. One ticket per change.</p>
+            <p class="offnote">Off. /pincer-narrow refuses to run, and the agreement keeps the reason.</p>
+          </article>
+          <article class="station" data-token="3 commits, 3 receipts">
+            <h3 class="d"><span>code</span><button class="switch" type="button" aria-pressed="true" aria-label="code stage on"><span>on</span></button></h3>
+            <code class="cm">/pincer-code</code>
+            <p>Builds the tickets in order: one commit each, verify, done.</p>
+            <p class="bend"><b>The interview can bend</b>Branch per ticket or commit to main. PR or no PR. An implementer agent or the main session.</p>
+            <p class="offnote">Off. /pincer-code refuses to run, and the agreement keeps the reason.</p>
+          </article>
+          <article class="station" data-token="findings and saved evidence">
+            <h3 class="d"><span>evaluate</span><button class="switch" type="button" aria-pressed="true" aria-label="evaluate stage on"><span>on</span></button></h3>
+            <code class="cm">/pincer-evaluate</code>
+            <p>Reviews the diff with the roster, runs the checks, saves the evidence.</p>
+            <p class="bend"><b>The interview can bend</b>Review in the PR instead of a local report. Evidence on or off. The roster.</p>
+            <p class="offnote">Off. /pincer-evaluate refuses to run, and the agreement keeps the reason.</p>
+          </article>
+          <article class="station" data-token="accepted by Mira Okafor">
+            <h3 class="d"><span>release</span><button class="switch" type="button" aria-pressed="true" aria-label="release stage on"><span>on</span></button></h3>
+            <code class="cm">/pincer-release</code>
+            <p>A read-only audit, then the acceptance recorded and committed.</p>
+            <p class="bend"><b>The interview can bend</b>Audit a merged PR and a deploy instead of a clean tree. Who accepts.</p>
+            <p class="offnote">Off. /pincer-release refuses to run, and the agreement keeps the reason.</p>
+          </article>
+          <article class="station cap" data-token="the next brief">
+            <h3 class="d">Then the next change</h3>
+            <p>At any point, <code>/pincer-status</code> says where the work stands and names the next command.</p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="band rev" aria-hidden="true"><p class="run d" data-drift=".55"><span>verify</span><span class="ol">then</span><span>done</span><span class="ol">then</span><span>accept</span><span class="ol">then</span><span>verify</span><span class="ol">then</span><span>done</span><span class="ol">then</span><span>accept</span><span class="ol">then</span><span>verify</span></p></div>
+
+<!-- 7 ─ the floor -->
+<section class="scene t-night" id="floor" style="--len:5.2" data-title="The floor" data-theme="night">
+  <div class="stage floor">
+    <div class="heads deck">
+      <h2 class="d fx" data-out=".85 .89" style="--oy:-40px">One floor never bends.</h2>
+      <p class="fin d fx" data-at=".88 .96" style="--fy:50px"><span class="a">Done is stamped by a script.</span><span class="b">Accepted is said by a person.</span></p>
+    </div>
+    <div class="vise fx" data-at="0 .05" style="--fy:40vh">
+      <div class="jaw l" data-at=".35 .43" data-ease="in" aria-hidden="true"><span>the script</span></div>
+      <div class="jaw r" data-at=".73 .80" data-ease="in" aria-hidden="true"><span>a person</span></div>
+      <i class="ring" aria-hidden="true"></i>
+      <article class="ticket">
+        <header><span class="d">T-07</span><strong>Lock the account after five failed logins</strong><span class="on-done"><span class="pill pre">in_progress</span><span class="pill post">done</span></span></header>
+        <ul>
+          <li>R-04 Five failed logins lock the account for 15 minutes</li>
+          <li>R-05 A locked login answers 429 with Retry-After</li>
+        </ul>
+        <code class="vb">npm test -- login</code>
+        <div class="row on-verified"><span>verified</span><span><span class="pre">no receipt yet</span><span class="post rc">2026-11-11T14:02:11Z 3f9c2a1b</span></span><span class="stamp" data-at=".43 .44" aria-hidden="true">exit 0</span></div>
+        <div class="row on-accepted"><span>accepted_by</span><span><span class="pre">nobody yet</span><span class="post">Mira Okafor: <q>Ships as is.</q></span></span>
+          <svg viewBox="0 0 130 52" aria-hidden="true"><path pathLength="1" data-at=".80 .87" data-ease="lin" d="M4 38c8-22 14-30 17-26 4 6-6 30-2 30 5 0 9-26 14-26 4 0 0 22 4 22s6-14 10-14 0 14 5 14c6 0 8-20 13-22 5-1-2 24 4 22 7-2 9-18 15-18 5 0-3 18 4 18 9-1 16-10 38-14"/></svg>
+        </div>
+      </article>
+    </div>
+    <div class="says2 deck">
+      <pre class="fx" data-at=".06 .075" data-out=".215 .235"><span class="ln"><b class="ps">$</b> <span data-type data-at=".075 .15">scripts/pincer-ticket.sh done T-07</span></span><span class="ln no" data-at=".16 .17" data-flag="refused">pincer-ticket: no verification receipt on T-07 — run 'scripts/pincer-ticket.sh verify T-07' and get a green check first</span></pre>
+      <pre class="fx" data-at=".235 .25" data-out=".5 .52"><span class="ln"><b class="ps">$</b> <span data-type data-at=".25 .32">scripts/pincer-ticket.sh verify T-07</span></span><span class="ln" data-at=".33 .34">── T-07 verification ──</span><span class="ln" data-at=".355 .365">  $ npm test -- login</span><span class="ln no" data-at=".43 .44" data-flag="verified">✓ T-07 verified — receipt: 2026-11-11T14:02:11Z 3f9c2a1b</span></pre>
+      <pre class="fx" data-at=".52 .535" data-out=".615 .635"><span class="ln"><b class="ps">$</b> <span data-type data-at=".535 .585">scripts/pincer-ticket.sh done T-07</span></span><span class="ln no" data-at=".595 .605" data-flag="done">✓ T-07 done.</span></pre>
+      <pre class="fx" data-at=".635 .65" data-out=".85 .88"><span class="ln"><b class="ps">$</b> <span data-type data-at=".65 .76">scripts/pincer-ticket.sh accept T-07 --by "Mira Okafor" --words "Ships as is."</span></span><span class="ln" data-at=".80 .81" data-flag="accepted">The agent runs this only after she said so.</span></pre>
+      <p class="foot fx" data-at=".91 .98" style="--fy:20px">Only that script writes a ticket’s lifecycle fields. On Claude Code a hook enforces it. On Codex and Copilot it is a standing rule, and status flags what the rule would have stopped. It is a guard rail against mistakes, not a sandbox.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 8 ─ status -->
+<section class="scene t-paper status" id="status" style="--len:2.8" data-title="Status" data-theme="paper">
+  <div class="stage">
+    <div class="wrap">
+      <h2 class="d">State lives in files, not in the conversation.</h2>
+      <p class="sub">Close the session. Open a new one tomorrow. Status reads the files and says where to resume.</p>
+      <div class="cols" style="margin-top:clamp(12px,2.6vh,30px)">
+        <div class="chat">
+          <p class="msg me fx" data-out=".08 .2">Lock accounts after five failed logins.</p>
+          <p class="msg fx" data-out=".12 .24">Spec approved. Three tickets, each with a check.</p>
+          <p class="msg fx" data-out=".16 .28">T-07 verified and done.</p>
+          <p class="msg me fx" data-out=".2 .32">Ships as is.</p>
+          <p class="msg fx" data-out=".24 .36">Recorded. T-08 is next.</p>
+          <p class="closed fx" data-at=".34 .42" data-ease="back"><b>Session closed.</b>The conversation is gone.</p>
+        </div>
+        <div class="term">
+          <div class="term-bar"><i></i><i></i><i></i><span>a new session</span></div>
+<pre><span class="ln"><b class="ps">$</b> <span data-type data-at=".44 .52">scripts/pincer-status.sh</span></span><span class="ln" data-at=".54 .56">PINCER — shop-api (brownfield)</span><span class="ln dim" data-at=".58 .6">Stages: blueprint on, plan on, narrow on, code on, evaluate on, release on, status on</span><span class="ln dim" data-at=".62 .64">Specs: specs/login-lockout.md (approved)</span><span class="ln" data-at=".66 .68">T-06 done verified 2026-11-10T16:41:03Z accepted by Mira Okafor</span><span class="ln" data-at=".7 .72">T-07 done verified 2026-11-11T14:02:11Z accepted by Mira Okafor</span><span class="ln" data-at=".74 .76">T-08 open</span><span class="ln next" data-at=".82 .84">Next: /pincer-code</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 9 ─ platforms -->
+<section class="scene t-night" id="platforms" style="--len:2.8" data-title="Three platforms" data-theme="night">
+  <div class="stage">
+    <div class="wrap">
+      <h2 class="d">One kit, three agents, the same agreement.</h2>
+      <div class="plats">
+        <article class="plt fx" data-at=".03 .15" data-ease="back">
+          <h3 class="d">Claude Code</h3>
+          <dl>
+            <div class="wide" data-at=".2 .24"><dt>Agreement</dt><dd><code>AGENTS.md</code> through the <code>CLAUDE.md</code> import</dd></div>
+            <div data-at=".28 .32"><dt>Stages</dt><dd><code>/pincer-*</code> commands from <code>.claude/skills/</code></dd></div>
+            <div class="wide" data-at=".36 .4"><dt>Agents</dt><dd>subagents</dd></div>
+            <div data-at=".44 .48"><dt>Floor</dt><dd><b>the script plus a hook</b></dd></div>
+          </dl>
+        </article>
+        <article class="plt fx" data-at=".08 .2" data-ease="back">
+          <h3 class="d">Codex CLI</h3>
+          <dl>
+            <div class="wide" data-at=".22 .26"><dt>Agreement</dt><dd><code>AGENTS.md</code>, read natively</dd></div>
+            <div data-at=".3 .34"><dt>Stages</dt><dd><code>$pincer-*</code> skills from <code>.agents/skills/</code></dd></div>
+            <div class="wide" data-at=".38 .42"><dt>Agents</dt><dd>subagents from <code>.codex/agents/</code></dd></div>
+            <div data-at=".46 .5"><dt>Floor</dt><dd><b>the script plus a status warning</b></dd></div>
+          </dl>
+        </article>
+        <article class="plt fx" data-at=".13 .25" data-ease="back">
+          <h3 class="d">GitHub Copilot</h3>
+          <dl>
+            <div class="wide" data-at=".24 .28"><dt>Agreement</dt><dd>pointed at by <code>.github/copilot-instructions.md</code></dd></div>
+            <div data-at=".32 .36"><dt>Stages</dt><dd><code>/pincer-*</code> prompts from <code>.github/prompts/</code></dd></div>
+            <div class="wide" data-at=".4 .44"><dt>Agents</dt><dd>the Claude agent files, read by VS Code</dd></div>
+            <div data-at=".48 .52"><dt>Floor</dt><dd><b>the script plus a status warning</b></dd></div>
+          </dl>
+        </article>
+      </div>
+      <div class="tiers">
+        <div class="rowt">
+          <span class="tier fx" data-at=".6 .66" data-ease="back">strong</span>
+          <span class="tier fx" data-at=".64 .7" data-ease="back">standard</span>
+          <span class="tier fx" data-at=".68 .74" data-ease="back">fast</span>
+          <span class="tier fx" data-at=".72 .78" data-ease="back">inherit</span>
+        </div>
+        <p class="fx" data-at=".78 .88" style="--fy:20px">The agreement names a tier for each stage and review agent, never a vendor’s model. One table maps tiers to each platform’s models, and <code>update</code> carries a new model into every project.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10 ─ finale -->
+<section class="scene t-blue finale" id="install" data-enter data-title="Get PINCER" data-theme="blue">
+  <div class="stage">
+    <div class="wrap">
+      <h2 class="d">Build your harness.</h2>
+      <ol class="steps">
+        <li><div class="cmd"><code><span class="nb">npx pincer-workflow@latest</span> <span class="nb">init --platform all</span></code><button class="copy" type="button" data-copy="npx pincer-workflow@latest init --platform all">Copy</button></div></li>
+        <li><span>Start your agent in the repository.</span></li>
+        <li><span>Run <code>/pincer-blueprint</code> in Claude Code or Copilot, <code>$pincer-blueprint</code> in Codex CLI.</span></li>
+      </ol>
+      <p class="fine" style="margin-top:clamp(12px,2.4vh,26px)">Node.js 22 or newer, git and bash. No provider API key. MIT licence. PINCER 1.0.3 is the current release; the same package is attached to the <a href="https://github.com/orchestratedbyalex/pincer-workflow/releases/tag/v1.0.3">GitHub release</a>. Coming from 0.7? It is a new agreement, not a silent migration: read the <a href="https://github.com/orchestratedbyalex/pincer-workflow/blob/main/CHANGELOG.md">changelog</a> first.</p>
+      <p class="links">
+        <a class="pri" href="https://www.npmjs.com/package/pincer-workflow">pincer-workflow on npm</a>
+        <a href="https://github.com/orchestratedbyalex/pincer-workflow">Source on GitHub</a>
+        <a href="https://github.com/orchestratedbyalex/pincer-workflow/blob/main/README.md">Read the guide</a>
+        <a href="https://github.com/orchestratedbyalex/pincer-workflow/blob/main/template/docs/engine.md">Engine contract</a>
+      </p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<div class="reel">
+  <button class="play" type="button" aria-pressed="false" aria-label="Play: scroll the page automatically"><svg class="pl" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 0l12 7-12 7z"/></svg><svg class="pa" viewBox="0 0 14 14" aria-hidden="true"><path d="M1 0h4v14H1zM9 0h4v14H9z"/></svg></button>
+  <p class="sheetno" aria-live="off"><b>01/10</b><span>PINCER</span></p>
+  <ol class="ticks" aria-label="Chapters"></ol>
+  <a class="get" href="#install">Install</a>
+</div>
+
+<script>
+(() => {
+  const root = document.documentElement;
+  const $ = (sel, from = document) => [...from.querySelectorAll(sel)];
+  const clamp = (n, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, n));
+
+  $('[data-copy]').forEach(button => button.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(button.dataset.copy); button.textContent = 'Copied'; }
+    catch { button.textContent = 'Select and copy'; }
+    setTimeout(() => { button.textContent = 'Copy'; }, 1800);
+  }));
+  $('.switch').forEach(button => button.addEventListener('click', () => {
+    const on = button.getAttribute('aria-pressed') !== 'true';
+    const name = button.previousElementSibling.textContent;
+    button.setAttribute('aria-pressed', String(on));
+    button.setAttribute('aria-label', `${name} stage ${on ? 'on' : 'off'}`);
+    button.firstElementChild.textContent = on ? 'on' : 'off';
+    button.closest('.station').classList.toggle('is-off', !on);
+  }));
+
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  root.classList.add('js');
+
+  const ease = {
+    out: t => 1 - (1 - t) ** 3,
+    in: t => t * t * t,
+    lin: t => t,
+    io: t => (t < .5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2),
+    back: t => 1 + 2.70158 * (t - 1) ** 3 + 1.70158 * (t - 1) ** 2,
+  };
+  const pair = text => { const [a, b] = (text || '').split(' ').map(Number); return Number.isFinite(b) ? [a, b] : null; };
+
+  // headlines come in word by word when their scene arrives
+  $('h2.d').forEach(heading => {
+    const text = heading.textContent.trim();
+    heading.setAttribute('aria-label', text);
+    heading.textContent = '';
+    text.split(/\s+/).forEach((word, index) => {
+      const box = document.createElement('span');
+      const inner = document.createElement('span');
+      box.className = 'w';
+      box.setAttribute('aria-hidden', 'true');
+      inner.style.setProperty('--i', index);
+      inner.textContent = word;
+      box.append(inner);
+      heading.append(box, ' ');
+    });
+  });
+
+  const scenes = $('.scene').map(el => ({
+    el, p: -1, top: 0, height: 0, enter: el.hasAttribute('data-enter'),
+    items: $('[data-at],[data-out]', el).map(node => ({
+      node, at: pair(node.dataset.at), out: pair(node.dataset.out), ease: ease[node.dataset.ease || 'out'],
+      text: node.hasAttribute('data-type') ? node.textContent : null, flag: node.dataset.flag, raw: -1, oraw: -1, count: -1,
+    })),
+  }));
+  for (const scene of scenes) for (const item of scene.items) if (item.text !== null) item.node.setAttribute('aria-label', item.text);
+
+  // bottom reel: one tick per scene, as wide as the scene is long
+  const ticks = document.querySelector('.ticks');
+  const sheet = document.querySelector('.sheetno');
+  const two = n => String(n).padStart(2, '0');
+  scenes.forEach(scene => {
+    const li = document.createElement('li');
+    li.style.flex = scene.enter ? '1' : getComputedStyle(scene.el).getPropertyValue('--len');
+    li.innerHTML = `<a href="#${scene.el.id}"><span>${scene.el.dataset.title}</span></a>`;
+    li.firstChild.setAttribute('aria-label', scene.el.dataset.title);
+    ticks.append(li);
+    scene.tick = li;
+  });
+
+  // pipeline track
+  const pipe = scenes.find(scene => scene.el.id === 'pipeline');
+  const area = pipe.el.querySelector('.railarea');
+  const track = pipe.el.querySelector('.track');
+  const token = pipe.el.querySelector('.token');
+  const stations = $('.station', track);
+  let centers = [], areaWidth = 0, here = -1;
+  const drifts = $('[data-drift]').map(node => ({ node, rate: Number(node.dataset.drift), top: 0 }));
+
+  let vh = innerHeight, total = 1;
+  const measure = () => {
+    vh = innerHeight;
+    total = Math.max(1, root.scrollHeight - vh);
+    for (const scene of scenes) { const box = scene.el.getBoundingClientRect(); scene.top = box.top + scrollY; scene.height = box.height; scene.p = -1; }
+    for (const drift of drifts) drift.top = drift.node.getBoundingClientRect().top + scrollY;
+    areaWidth = area.clientWidth;
+    centers = stations.map(station => station.offsetLeft + station.offsetWidth / 2);
+  };
+
+  const apply = (scene, p) => {
+    scene.el.style.setProperty('--p', p.toFixed(4));
+    for (const item of scene.items) {
+      if (item.at) {
+        const raw = clamp((p - item.at[0]) / (item.at[1] - item.at[0]));
+        if (raw !== item.raw) {
+          item.raw = raw;
+          if (item.text !== null) {
+            const count = Math.round(raw * item.text.length);
+            if (count !== item.count) { item.count = count; item.node.textContent = item.text.slice(0, count); }
+            item.node.classList.toggle('typing', raw > 0 && raw < 1);
+          } else item.node.style.setProperty('--t', item.ease(raw).toFixed(4));
+          item.node.classList.toggle('on', raw > 0);
+          item.node.classList.toggle('full', raw >= 1);
+          if (item.flag) scene.el.classList.toggle(`is-${item.flag}`, raw > 0);
+        }
+      }
+      if (item.out) {
+        const raw = clamp((p - item.out[0]) / (item.out[1] - item.out[0]));
+        if (raw !== item.oraw) {
+          item.oraw = raw;
+          item.node.style.setProperty('--o', ease.io(raw).toFixed(4));
+          item.node.classList.toggle('gone', raw >= 1);
+        }
+      }
+    }
+    if (scene === pipe && centers.length) {
+      const last = centers.length - 1;
+      const along = clamp((p - .05) / .87) * last;
+      const from = Math.min(last - 1, Math.floor(along));
+      const at = centers[from] + (centers[from + 1] - centers[from]) * ease.io(along - from);
+      track.style.translate = `${(areaWidth / 2 - at).toFixed(1)}px 0`;
+      let nearest = 0;
+      centers.forEach((center, index) => { if (Math.abs(center - at) < Math.abs(centers[nearest] - at)) nearest = index; });
+      if (nearest !== here) {
+        here = nearest;
+        stations.forEach((station, index) => station.classList.toggle('here', index === nearest));
+        token.firstElementChild.textContent = stations[nearest].dataset.token;
+        token.classList.remove('bump'); void token.offsetWidth; token.classList.add('bump');
+      }
+    }
+  };
+
+  let smooth = scrollY, speed = 0, current = -1, below = -1, lastFill = -1;
+  const frame = () => {
+    const target = scrollY;
+    const gap = target - smooth;
+    smooth = Math.abs(gap) < .4 ? target : smooth + gap * .17;
+    const nextSpeed = clamp(gap / (vh * .45), -1, 1);
+    if (Math.abs(nextSpeed - speed) > .002) { speed = nextSpeed; root.style.setProperty('--v', speed.toFixed(3)); }
+
+    let active = 0, under = 0;
+    scenes.forEach((scene, index) => {
+      const span = scene.height - vh;
+      const p = clamp(scene.enter ? (smooth + vh - scene.top) / vh : (smooth - scene.top) / Math.max(1, span));
+      if (smooth + vh * .5 >= scene.top) active = index;
+      if (target + 27 >= scene.top) under = index;
+      const lit = smooth + vh * .45 >= scene.top;
+      if (lit !== scene.lit) { scene.lit = lit; scene.el.classList.toggle('lit', lit); }
+      if (p !== scene.p) { scene.p = p; apply(scene, p); }
+    });
+    for (const drift of drifts) drift.node.style.setProperty('--d', ((drift.top - smooth - vh) * drift.rate).toFixed(1));
+
+    if (under !== below) { below = under; document.body.dataset.theme = scenes[under].el.dataset.theme; }
+    const scene = scenes[active];
+    const fill = clamp((smooth + vh * .5 - scene.top) / scene.height);
+    if (active !== current) {
+      current = active;
+      sheet.innerHTML = `<b>${two(active + 1)}/${two(scenes.length)}</b><span>${scene.el.dataset.title}</span>`;
+      scenes.forEach((other, index) => { other.tick.classList.toggle('past', index < active); other.tick.classList.toggle('now', index === active); });
+    }
+    if (Math.abs(fill - lastFill) > .004) { lastFill = fill; scene.tick.style.setProperty('--f', fill.toFixed(3)); }
+    requestAnimationFrame(frame);
+  };
+
+  // play: the page scrolls itself until someone takes over
+  const play = document.querySelector('.play');
+  let playing = false, position = 0, before = 0;
+  const stop = () => { playing = false; play.setAttribute('aria-pressed', 'false'); play.setAttribute('aria-label', 'Play: scroll the page automatically'); };
+  const roll = now => {
+    if (!playing) return;
+    position += Math.min(60, now - before) / 1000 * vh * .4;
+    before = now;
+    scrollTo(0, position);
+    if (position >= total) stop(); else requestAnimationFrame(roll);
+  };
+  play.addEventListener('click', () => {
+    if (playing) return stop();
+    playing = true;
+    position = scrollY >= total - 2 ? 0 : scrollY;
+    before = performance.now();
+    play.setAttribute('aria-pressed', 'true');
+    play.setAttribute('aria-label', 'Pause');
+    requestAnimationFrame(roll);
+  });
+  addEventListener('wheel', stop, { passive: true });
+  addEventListener('touchstart', event => { if (!play.contains(event.target)) stop(); }, { passive: true });
+  addEventListener('keydown', event => { if (event.target !== play && [' ', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', 'Escape'].includes(event.key)) stop(); });
+
+  document.addEventListener('click', event => {
+    const link = event.target.closest('a[href^="#"]');
+    const goal = link && document.querySelector(link.getAttribute('href'));
+    if (!goal) return;
+    event.preventDefault();
+    stop();
+    scrollTo({ top: goal.getBoundingClientRect().top + scrollY, behavior: 'smooth' });
+    history.replaceState(null, '', link.getAttribute('href'));
+  });
+
+  addEventListener('resize', measure);
+  addEventListener('load', measure);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+  measure();
+  frame();
+})();
+</script>
+</body>
+</html>
