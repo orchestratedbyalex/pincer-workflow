@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.0.2 — 2026-11-11
+
+Defects found while running 1.0.1 on Claude Code. The status and installer fixes
+apply to every platform; the hook fix applies to Claude Code, the only platform
+with a hook.
+
+- Status judges the change in hand, not the project's history. An approved spec
+  that no ticket names in its `spec:` field goes to narrow even when every older
+  ticket is accepted. Finished tickets go to evaluate until evidence exists for the
+  candidate commit that holds them; evidence saved for an earlier change no longer
+  sends a new change straight to release. `--json` lists them under `unevaluated`.
+- The Claude Code ticket guard judges a redirect by its target. `2>&1`,
+  `2>/dev/null` and saving a read to another file pass; a redirect onto a ticket,
+  the engine or the hooks is refused, now also as `>|`, as `tickets//T-…` and as a
+  relative path from inside a protected directory. The destructive-command guard no
+  longer reads `2>/dev/null` as a path being deleted.
+- `update --platform <name>` adds a platform to an existing install; `init` on an
+  installed project points to it.
+- `doctor` compares every installed file with the running package and fails on
+  files from another build that carries the same version number; local edits stay
+  a note.
+
 ## 1.0.1 — 2026-11-11
 
 - Codex-only status and missing-agreement hints use `$pincer-*`; draft specs stay

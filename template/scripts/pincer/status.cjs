@@ -8,6 +8,7 @@ const parse = require('./parse.cjs');
 const harnessModule = require('./harness.cjs');
 const models = require('./models.cjs');
 const generate = require('./generate.cjs');
+const util = require('./util.cjs');
 
 const SCRIPT = 'scripts/pincer-ticket.sh';
 const { STAGES, ALWAYS_ON, HARNESS_FILE } = harnessModule;
@@ -54,11 +55,12 @@ function specEntries(root, specsDir) {
 }
 function ticketEntry(root, file) {
   const text = readText(root, file);
-  const entry = { id: idOf(file), file, status: null, started: null, verified: null, lastCheck: null, accepted: null, acceptedBy: null, ready: false, problem: null, depends: [] };
+  const entry = { id: idOf(file), file, status: null, spec: null, started: null, verified: null, lastCheck: null, accepted: null, acceptedBy: null, ready: false, problem: null, depends: [] };
   if (text === null) { entry.problem = 'cannot read the file'; return entry; }
   const v = parse.validateTicket(file, text);
   const fields = v.fields;
   entry.status = fields.status || null;
+  entry.spec = fields.spec || null;
   entry.started = fields.started || null;
   entry.verified = fields.verified || null;
   entry.lastCheck = fields.last_check || null;
@@ -80,10 +82,44 @@ function manifests(root, evidenceDir) {
     .filter((file) => fs.existsSync(path.join(root, file)));
 }
 
+// The done tickets still awaiting acceptance that no saved evidence covers. A
+// manifest covers a ticket when the ticket file at the manifest's candidate
+// commit is done with the receipt the ticket carries now: the candidate holds
+// that finished work, and nothing was verified again after it. The acceptance
+// fields may differ. One manifest has to cover all of them. Outside a git
+// repository this cannot be told, and any manifest counts.
+function unevaluated(root, report) {
+  const pending = report.tickets.filter((t) => !t.problem && t.status === 'done' && !t.accepted);
+  const ids = pending.map((t) => t.id);
+  if (!pending.length || !report.evidence.length) return ids;
+  if (util.tryGit(root, ['rev-parse', '--is-inside-work-tree']) !== 'true') return [];
+  const candidates = report.evidence
+    .map((file) => util.readJson(path.join(root, file)))
+    .filter((doc) => doc && typeof doc === 'object' && typeof doc.candidate === 'string' && /^[0-9a-f]{40}$/.test(doc.candidate))
+    .sort((a, b) => String(b.created || '').localeCompare(String(a.created || '')))
+    .map((doc) => doc.candidate);
+  const covers = (candidate, t) => {
+    const then = util.tryGit(root, ['show', `${candidate}:./${t.file}`]);
+    return then !== null && parse.frontmatterField(then, 'status') === 'done' && parse.frontmatterField(then, 'verified') === (t.verified || '');
+  };
+  return candidates.some((candidate) => pending.every((t) => covers(candidate, t))) ? [] : ids;
+}
+
+// An approved spec that still needs tickets: no ticket names it in its `spec:`
+// field. A ticket without that field may belong to any spec, so while one is
+// still on its way to acceptance nothing is called unnarrowed.
+const specRef = (ref) => path.posix.normalize(String(ref).replace(/\\/g, '/'));
+function unnarrowed(report) {
+  if (report.stages.plan !== 'on') return null;
+  if (report.tickets.some((t) => !t.spec && !(t.status === 'done' && t.accepted))) return null;
+  const named = new Set(report.tickets.filter((t) => t.spec).map((t) => specRef(t.spec)));
+  return report.specs.find((s) => s.status === 'approved' && !named.has(specRef(s.file))) || null;
+}
+
 // The whole picture, as data. `harness` is null without a valid agreement;
 // `harnessProblem` says why when the file exists but does not validate.
 function gather(root) {
-  const report = { name: path.basename(root), harness: null, harnessProblem: null, stages: {}, models: null, specs: [], tickets: [], evidence: [], warnings: [], next: '' };
+  const report = { name: path.basename(root), harness: null, harnessProblem: null, stages: {}, models: null, specs: [], tickets: [], evidence: [], unevaluated: [], warnings: [], next: '' };
   const loaded = harnessModule.load(root);
   let homes = harnessModule.homes(null);
   if (loaded.ok) {
@@ -99,6 +135,7 @@ function gather(root) {
   report.specs = specEntries(root, homes.specs);
   report.tickets = parse.ticketFiles(root, homes.tickets).map((file) => ticketEntry(root, file));
   report.evidence = manifests(root, homes.evidence);
+  if (wantsEvidence(report)) report.unevaluated = unevaluated(root, report);
   for (const t of report.tickets) {
     if (t.problem) { report.warnings.push(`${t.file}: ${t.problem}`); continue; }
     if (t.status === 'done' && !t.ready) report.warnings.push(`${t.id} done: ${t.readiness}`);
@@ -108,7 +145,11 @@ function gather(root) {
   return report;
 }
 
-// The one thing to do next, first rule that matches.
+const wantsEvidence = (report) => Boolean(report.harness) && report.stages.evaluate === 'on' && Boolean(report.harness.stages.evaluate.evidence);
+
+// The one thing to do next, first rule that matches. Every rule looks at the
+// change in hand, never at the project's history: an approved spec no ticket
+// names is narrowed, and finished tickets are evaluated on their own candidate.
 function nextCommand(report) {
   if (!report.harness) return '/pincer-blueprint';
   const tickets = report.tickets;
@@ -126,7 +167,8 @@ function nextCommand(report) {
   const stale = tickets.find((t) => t.status === 'done' && !t.ready);
   if (stale) return `${SCRIPT} verify ${stale.id}`;
   if (draft) return `/pincer-plan ${draft.file} (awaiting approval)`;
-  if (report.stages.evaluate === 'on' && report.harness.stages.evaluate.evidence && report.evidence.length === 0) return '/pincer-evaluate';
+  if (unnarrowed(report)) return report.stages.narrow === 'on' ? '/pincer-narrow' : '/pincer-code';
+  if (wantsEvidence(report) && (report.evidence.length === 0 || (report.unevaluated || []).length)) return '/pincer-evaluate';
   const unaccepted = tickets.find((t) => t.status === 'done' && !t.accepted);
   if (unaccepted) {
     // Acceptance is the floor even with release off: then the next step is the accept call itself.

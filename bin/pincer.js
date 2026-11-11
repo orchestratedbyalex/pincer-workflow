@@ -4,7 +4,8 @@
 //
 //   npx pincer-workflow init      install the kit into the current repo (asks which platforms)
 //   npx pincer-workflow update    refresh an install, preserving local edits; regenerate the project copies
-//   npx pincer-workflow doctor    check the health of an install
+//   npx pincer-workflow update --platform <name>   the same, and add a platform to the install
+//   npx pincer-workflow doctor    check the health of an install, file by file against this package
 //
 // No dependencies by design. The kit is markdown plus a small Node core; this tool
 // copies it carefully and never overwrites a file you edited: you get a *.new file
@@ -229,11 +230,15 @@ function regenerate(dir) {
   console.log(`  generated: ${result.written.length} written, ${result.skipped.length} unchanged, ${result.conflicted.length} kept, ${result.removed.length} removed`);
 }
 
+// How each platform starts a stage; `stage` is blueprint on a new install and status on one that grew.
+function platformSteps(platforms, stage) {
+  if (platforms.includes('claude')) console.log(`  Claude Code   start \`claude\` in this repo and run /pincer-${stage}`);
+  if (platforms.includes('codex')) console.log(`  Codex CLI     start \`codex\` in this repo and type $pincer-${stage}  (skills load from .agents/skills/; posture notes in .codex/README.md)`);
+  if (platforms.includes('copilot')) console.log(`  Copilot       enable "chat.promptFiles": true in VS Code settings, then /pincer-${stage} in chat`);
+}
 function nextSteps(platforms) {
   console.log('\nNext: run the blueprint. It looks at the repository, interviews you, and writes the agreement (harness.json and the top of AGENTS.md).');
-  if (platforms.includes('claude')) console.log('  Claude Code   start `claude` in this repo and run /pincer-blueprint');
-  if (platforms.includes('codex')) console.log('  Codex CLI     start `codex` in this repo and type $pincer-blueprint  (skills load from .agents/skills/; posture notes in .codex/README.md)');
-  if (platforms.includes('copilot')) console.log('  Copilot       enable "chat.promptFiles": true in VS Code settings, then /pincer-blueprint in chat');
+  platformSteps(platforms, 'blueprint');
   console.log('  Any session   scripts/pincer-status.sh shows where the work stands and the next command');
 }
 
@@ -259,24 +264,33 @@ function parsePlatformFlag(args) {
 
 async function cmdInit(args) {
   const dir = process.cwd();
-  if (readManifest(dir)) fail(`this repo already has PINCER installed (${MANIFEST} exists) — use \`pincer update\`.`);
+  if (readManifest(dir)) fail(`this repo already has PINCER installed (${MANIFEST} exists) — use \`pincer update\`, or \`pincer update --platform <name>\` to add a platform.`);
   const platforms = parsePlatformFlag(args) || (process.stdin.isTTY ? await askPlatforms() : [...PLATFORMS]);
   console.log(`\nInstalling PINCER v${VERSION} for: ${platforms.join(', ')}\n`);
   report(install(dir, platforms, null, {}));
   nextSteps(platforms);
 }
 
-async function cmdUpdate() {
+// `--platform` adds to the install: the platforms already there stay, the named ones
+// that are new get their files the way init would write them, and an existing file
+// of theirs (a CLAUDE.md the project already had) is kept with a .new beside it.
+async function cmdUpdate(args = []) {
   const dir = process.cwd();
   const manifest = readManifest(dir);
   if (!manifest) fail(`no ${MANIFEST} here — run \`pincer init\` first.`);
-  console.log(`\nUpdating PINCER ${manifest.version} -> ${VERSION} for: ${manifest.platforms.join(', ')}\n`);
+  const added = (parsePlatformFlag(args) || []).filter((p) => !manifest.platforms.includes(p));
+  const platforms = [...manifest.platforms, ...added];
+  console.log(`\nUpdating PINCER ${manifest.version} -> ${VERSION} for: ${platforms.join(', ')}${added.length ? ` (adding: ${added.join(', ')})` : ''}\n`);
   // A manifest without a schema could have adopted a local edit as its baseline;
   // there is no safe way to tell those from upstream files after the fact.
   const baseline = TRUSTED_SCHEMAS.includes(manifest.schema) ? manifest.files : null;
   if (!baseline) console.log('  Legacy baselines are untrusted; differing files will be preserved for review.');
-  report(install(dir, manifest.platforms, baseline, manifest.generated));
+  report(install(dir, platforms, baseline, manifest.generated));
   regenerate(dir);
+  if (added.length) {
+    console.log(`\nAdded ${added.join(', ')}. The agreement and the tickets are shared; start there with the status stage:`);
+    platformSteps(added, 'status');
+  }
 }
 
 function cmdDoctor() {
@@ -302,6 +316,30 @@ function cmdDoctor() {
   const stale = fs.existsSync(TEMPLATE) && manifest.version !== VERSION;
   check(!stale, `install is current (v${manifest.version})`, 'run: pincer update');
 
+  // The version label is not proof: a pre-release or a local build can carry the same
+  // number. Every installed file is compared with this package's copy. One that differs
+  // and was changed since it was installed is a local edit; one that still is what was
+  // installed came from another build. With an older label the line above says it all.
+  const shipped = fs.existsSync(TEMPLATE) ? new Set(filesFor(manifest.platforms)) : new Set();
+  const edited = [];
+  const foreign = [];
+  for (const [rel, installed] of Object.entries(manifest.files)) {
+    const p = path.join(dir, rel);
+    if (!fs.existsSync(p)) continue;
+    const current = sha(fs.readFileSync(p));
+    if (shipped.has(rel) && current === sha(fs.readFileSync(path.join(TEMPLATE, rel)))) continue;
+    if (current !== installed) edited.push(rel);
+    else foreign.push(rel);
+  }
+  const absent = [...shipped].filter((rel) => !(rel in manifest.files));
+  if (fs.existsSync(TEMPLATE) && !stale) {
+    const differences = [
+      foreign.length ? `from another build labelled v${manifest.version}: ${foreign.join(', ')}` : '',
+      absent.length ? `not installed: ${absent.join(', ')}` : '',
+    ].filter(Boolean).join('; ');
+    check(!differences, `installed files match this package (v${VERSION})`, `${differences} — run: pincer update`);
+  }
+
   // The agreement, checked with the engine this install carries.
   if (!fs.existsSync(path.join(dir, 'harness.json'))) {
     console.log('  note  no harness.json yet — run /pincer-blueprint');
@@ -318,9 +356,6 @@ function cmdDoctor() {
 
   const obsolete = OBSOLETE.filter((rel) => fs.existsSync(path.join(dir, rel)) && !(rel in manifest.files) && !(rel in generated));
   if (obsolete.length) console.log(`  note  obsolete kit file(s) from an earlier version, safe to delete: ${obsolete.join(', ')}`);
-  const edited = Object.entries(manifest.files)
-    .filter(([rel, h]) => fs.existsSync(path.join(dir, rel)) && sha(fs.readFileSync(path.join(dir, rel))) !== h)
-    .map(([rel]) => rel);
   if (edited.length) console.log(`  note  locally edited (kept as-is on update): ${edited.join(', ')}`);
 
   const leftovers = [...new Set([...walk(TEMPLATE), ...Object.keys(manifest.files), ...Object.keys(generated)])].flatMap((rel) => {
@@ -339,7 +374,7 @@ function usage() {
 
 Usage:
   npx pincer-workflow init [--platform claude|codex|copilot|all]
-  npx pincer-workflow update
+  npx pincer-workflow update [--platform claude|codex|copilot|all]   (--platform adds a platform)
   npx pincer-workflow doctor
 
 After init, run the blueprint (/pincer-blueprint or $pincer-blueprint): it writes the
@@ -351,7 +386,7 @@ const invoked = process.argv[1] && (() => { try { return fs.realpathSync(process
 if (invoked) {
   const [cmd, ...rest] = process.argv.slice(2);
   if (cmd === 'init') await cmdInit(rest);
-  else if (cmd === 'update') await cmdUpdate();
+  else if (cmd === 'update') await cmdUpdate(rest);
   else if (cmd === 'doctor') cmdDoctor();
   else { usage(); process.exit(cmd ? 1 : 0); }
 }

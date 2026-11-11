@@ -44,6 +44,10 @@ function lexShell(source) {
       continue;
     }
     if ('|;&><()'.includes(ch)) {
+      // A number glued to a redirect (2>, 1>>, 0<) is its file descriptor, not an argument.
+      // The number after `>&` is that redirect's target, even with another redirect glued on.
+      const dupTarget = tokens.length > 1 && tokens[tokens.length - 1].op === '&' && tokens[tokens.length - 2].op === '>';
+      if ((ch === '>' || ch === '<') && /^[0-9]+$/.test(word) && !dupTarget) word = '';
       push();
       const pair = source.slice(i, i + 2);
       if (['||', '&&', '>>', '<<'].includes(pair)) { tokens.push({ op: pair }); i++; }
@@ -56,18 +60,42 @@ function lexShell(source) {
   return tokens;
 }
 
+// Where an output redirect can never write a file: the sinks every shell has.
+const SINKS = ['/dev/null', '/dev/stdout', '/dev/stderr', '/dev/tty'];
+
+// Each command's words, its operators and the targets of its output redirects.
+// `redirects` holds one entry per `>`, `>>`, `>|`, `&>` or `>&file`: the target
+// word, or null when none follows. Duplicating or closing a file descriptor
+// (`2>&1`, `>&2`, `2>&-`) and writing to a sink open no file, so they are left
+// out of `redirects` and their target is not an argument of the command either.
 function shellCommands(source) {
+  const tokens = lexShell(source);
   const commands = [];
   let words = [];
   let operators = [];
+  let redirects = [];
   const finish = (separator = '') => {
-    if (words.length || operators.length) commands.push({ words, operators, separator });
-    words = []; operators = [];
+    if (words.length || operators.length) commands.push({ words, operators, redirects, separator });
+    words = []; operators = []; redirects = [];
   };
-  for (const token of lexShell(source)) {
-    if (token.value !== undefined) words.push(token.value);
-    else if (['|', ';', '&&', '||', '(', ')'].includes(token.op)) finish(token.op);
-    else operators.push(token.op);
+  const word = (index) => (tokens[index] && tokens[index].value !== undefined ? tokens[index].value : null);
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (token.value !== undefined) { words.push(token.value); continue; }
+    if (token.op !== '>' && token.op !== '>>') {
+      if (['|', ';', '&&', '||', '(', ')'].includes(token.op)) finish(token.op);
+      else operators.push(token.op);
+      continue;
+    }
+    operators.push(token.op);
+    let at = i + 1;
+    const amp = token.op === '>' && tokens[at] && tokens[at].op === '&';
+    const clobber = token.op === '>' && !amp && tokens[at] && tokens[at].op === '|';
+    if (amp || clobber) at++;
+    const target = word(at);
+    if (target !== null && ((amp && /^([0-9]+-?|-)$/.test(target)) || SINKS.includes(target))) { i = at; continue; }
+    redirects.push(target);
+    if (clobber) i++; // `>|` is one operator, not a pipe: its target stays with this command
   }
   finish();
   return commands;
@@ -177,6 +205,8 @@ function ticketPath(value) {
 const ENGINE_FILES = ['scripts/pincer-ticket.sh', 'scripts/pincer-status.sh', 'scripts/pincer-blueprint.cjs', 'scripts/pincer-evidence.cjs', 'scripts/sync-prompts.sh', '.claude/settings.json'];
 const ENGINE_DIRS = ['scripts/pincer', '.claude/hooks'];
 const ENGINE_WORD = /(^|[\\/\s'"`=(])(\.\/)?(scripts[\\/]pincer([\\/]|$)|scripts[\\/](pincer-ticket\.sh|pincer-status\.sh|pincer-blueprint\.cjs|pincer-evidence\.cjs|sync-prompts\.sh)|\.claude[\\/]hooks([\\/]|$)|\.claude[\\/]settings\.json)/;
+// A redirect target that names a ticket, however the path is spelled.
+const TICKET_TARGET = /(^|[\\/])tickets[\\/]+T-[0-9]+/i;
 const ENGINE_MESSAGE = 'the engine (scripts/pincer-*.sh, scripts/pincer-*.cjs, scripts/pincer/) and the hooks (.claude/hooks/, .claude/settings.json) are installed by pincer-workflow and never edited by an agent; refresh them with `npx pincer-workflow update`.';
 
 function projectRoot() {
@@ -262,16 +292,39 @@ function guardEdits(tool, toolInput) {
   if (!sameState(before ?? '', after)) block('ticket lifecycle fields may only be changed by pincer-ticket.sh.');
 }
 
+// What an output redirect can reach: 'protected' (a ticket, the engine or the
+// hooks), 'other' (a literal path that is none of those) or 'unknown'. A target
+// is unknown when it cannot be resolved here: none was written, the shell
+// computes it ($VAR, a substitution, a glob, ~), or the same command line
+// changes directory or links a file first (`moved`), so a relative or aliased
+// path may land anywhere. Unknown targets are judged as every redirect used to be.
+// A relative target is resolved from the project root and from where the shell
+// stands (the payload's cwd, which an earlier `cd` may have moved).
+function redirectReach(target, moved) {
+  if (target === null) return 'unknown';
+  if (ENGINE_WORD.test(target) || TICKET_TARGET.test(target)) return 'protected';
+  if (moved || /[$`*?[\]{}~!]/.test(target)) return 'unknown';
+  const bases = [projectRoot(), process.cwd(), typeof payload.cwd === 'string' && payload.cwd ? payload.cwd : projectRoot()];
+  const spellings = [...new Set(bases.map(base => path.resolve(base, target)))];
+  for (const file of [...spellings]) {
+    try { spellings.push(fs.realpathSync(file)); } catch { /* not there yet: nothing to follow */ }
+  }
+  if (spellings.some(file => enginePath(file) || ENGINE_WORD.test(file) || TICKET_TARGET.test(file))) return 'protected';
+  // A bare T-NN name is a ticket wherever the shell happens to stand.
+  if (!path.isAbsolute(target) && /^T-[0-9]+/i.test(path.basename(target))) return 'unknown';
+  return 'other';
+}
+
 // The one shell writer of lifecycle fields: `pincer-ticket.sh <start|verify|done> T-NN`
 // (three words) or `pincer-ticket.sh accept T-NN ...`, directly or through
 // `node scripts/pincer/cli.cjs ticket ...`, alone on its line.
 function isExactPincerCall(source) {
   const commands = shellCommands(source).filter(command => command.words.length);
   if (commands.length !== 1 || commands[0].separator) return false;
-  // An output redirection is a write, whatever runs in front of it: fall through to
-  // ticketShellMutation so its target is tested like any other path. Without this,
-  // adding a verb to the list below silently opened a new carrier for it.
-  if (commands[0].operators.some(op => op === '>' || op === '>>')) return false;
+  // An output redirection to a file is a write, whatever runs in front of it: fall
+  // through to ticketShellMutation so its target is tested like any other path. Without
+  // this, adding a verb to the list below silently opened a new carrier for it.
+  if (commands[0].redirects.length) return false;
   const { executable, args, words: raw } = commandParts(commands[0]);
   let words = [raw[raw.length - args.length - 1], ...args];
   if (['bash', 'sh', 'node'].includes(executable)) words = words.slice(1);
@@ -353,8 +406,13 @@ function ticketShellMutation(source, depth = 0) {
   if (depth > 2) return false;
   if (isExactPincerCall(source)) return false;
   const commands = shellCommands(source);
+  const moved = commands.some(command => ['cd', 'pushd', 'popd', 'ln'].includes(commandParts(command).executable));
   for (const command of commands) {
     const { executable, args, words } = commandParts(command);
+    // A redirect onto a ticket, the engine or the hooks is a write whatever the command is.
+    const reach = command.redirects.map(target => redirectReach(target, moved));
+    if (reach.includes('protected')) return true;
+    const blindWrite = reach.includes('unknown');
     if (['sh', 'bash', 'zsh'].includes(executable)) {
       const c = shellCommandFlag(args);
       if (c !== -1 && typeof args[c + 1] === 'string' && ticketShellMutation(args[c + 1], depth + 1)) return true;
@@ -369,17 +427,18 @@ function ticketShellMutation(source, depth = 0) {
     }
     // A lookalike of the writer anywhere but the project's own path is refused outright.
     if (words.some(lookalikeWriter)) return true;
-    // Writes to the engine or the hooks: a redirect, or a file-writing executable, with
-    // an engine path among the arguments (the script a shell or node runs does not count).
+    // Writes to the engine or the hooks: a redirect whose target cannot be resolved, or a
+    // file-writing executable, with an engine path among the arguments (the script a shell
+    // or node runs does not count).
     const scriptArgs = ['node', 'bash', 'sh', 'zsh'].includes(executable) ? 1 : 0;
     if (args.slice(scriptArgs).some(arg => ENGINE_WORD.test(arg))) {
-      if (command.operators.some(op => op === '>' || op === '>>')) return true;
+      if (blindWrite) return true;
       if (['rm', 'mv', 'cp', 'install', 'truncate', 'tee', 'ed', 'ex', 'python', 'python3', 'ruby'].includes(executable)) return true;
       if (['sed', 'perl'].includes(executable) && args.some(arg => /^-[^-]*i/.test(arg) || arg === '--in-place' || arg.startsWith('--in-place='))) return true;
     }
     const hasTicket = words.some(ticketPath) || /(^|[\s'"`])tickets[\\/]T-[0-9]+[^\s'"`]*/.test(source);
     if (!hasTicket) continue;
-    if (command.operators.some(op => op === '>' || op === '>>')) return true;
+    if (blindWrite) return true;
     if (['rm', 'mv', 'cp', 'install', 'truncate', 'touch', 'tee', 'ed', 'ex'].includes(executable)) return true;
     if (['python', 'python3', 'node', 'ruby'].includes(executable)) return true;
     if (['sed', 'perl'].includes(executable) && args.some(arg => /^-[^-]*i/.test(arg) || arg === '--in-place' || arg.startsWith('--in-place='))) return true;

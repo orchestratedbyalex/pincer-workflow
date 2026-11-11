@@ -126,6 +126,7 @@ commit('T-01: synthetic greeting', ['src', 'test', ticketFile]);
 write(dir, specFile, read(dir, specFile).replace('status: approved', 'status: built'));
 const candidate = commit('spec: synthetic greeting built', [specFile]);
 clean();
+assert.equal(status().next, '$pincer-evaluate', 'a finished ticket without evidence is evaluated first');
 
 // Evaluate actual command output, bind evidence to its source candidate, retain
 // logs and a clearly labeled synthetic review. No model reviewer ran in CI.
@@ -157,6 +158,8 @@ assert.match(expect(validate(path.join(copy, 'manifest.json')), 1).stderr, /dige
 expect(validate());
 const auditHead = commit('evaluate: synthetic greeting candidate', [evidenceHome]);
 clean();
+assert.deepEqual(status().unevaluated, [], 'the evidence covers the candidate that holds T-01');
+assert.equal(status().next, '$pincer-release');
 expect(run(dir, 'npm', ['test']));
 expect(validate());
 clean();

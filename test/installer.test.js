@@ -168,4 +168,81 @@ write(agreed, 'harness.json', '{"schema": 1}');
 out = cli(agreed, 'update');
 assert.match(out, /harness\.json/);
 
+// A platform is added to an existing install with `update --platform`: the new
+// platform's files arrive, existing files and edits stay, the manifest names both.
+const grow = tempDir();
+write(grow, 'CLAUDE.md', 'OUR CLAUDE NOTES\n');
+cli(grow, 'init', '--platform', 'codex');
+write(grow, 'harness.json', JSON.stringify({ schema: 1, project: { name: 'grow', kind: 'greenfield' }, people: [{ name: 'Alex', accepts: true }] }));
+cli(grow, 'update');
+assert.ok(!fs.existsSync(path.join(grow, '.claude/settings.json')), 'a Codex install has no Claude Code wiring');
+assert.ok(!fs.existsSync(path.join(grow, '.github/prompts/pincer-code.prompt.md')));
+const codexAgents = read(grow, 'AGENTS.md');
+const refusedInit = pincer(grow, 'init', '--platform', 'claude');
+assert.equal(refusedInit.status, 1);
+assert.match(refusedInit.stderr, /already has PINCER installed.*update --platform/);
+const unknownPlatform = pincer(grow, 'update', '--platform', 'cursor');
+assert.equal(unknownPlatform.status, 1);
+assert.match(unknownPlatform.stderr, /--platform must be/);
+assert.equal(pincer(grow, 'update', '--platform').status, 1, 'a missing value is refused');
+assert.deepEqual(JSON.parse(read(grow, '.pincer.json')).platforms, ['codex'], 'a refused update changes nothing');
+out = cli(grow, 'update', '--platform', 'claude');
+assert.match(out, /adding: claude/);
+assert.match(out, /Claude Code +start `claude`/, 'the added platform gets its first step');
+assert.deepEqual(JSON.parse(read(grow, '.pincer.json')).platforms, ['codex', 'claude']);
+for (const rel of ['.claude/settings.json', '.claude/hooks/ticket-guard.sh', '.claude/hooks/block-dangerous.sh', '.claude/hooks/hook-policy.cjs']) assert.ok(fs.existsSync(path.join(grow, rel)), `${rel} installed`);
+assert.ok(fs.statSync(path.join(grow, '.claude/hooks/ticket-guard.sh')).mode & 0o100, 'the hook is executable');
+assert.equal(read(grow, 'CLAUDE.md'), 'OUR CLAUDE NOTES\n', 'an existing file of the new platform is kept');
+assert.equal(read(grow, 'CLAUDE.md.new'), read(kit, 'template/CLAUDE.md'), 'and the kit version waits beside it');
+assert.equal(read(grow, 'AGENTS.md'), codexAgents, 'the agreement file is untouched');
+assert.ok(fs.existsSync(path.join(grow, '.agents/skills/pincer-code/SKILL.md')), 'the first platform keeps its copies');
+fs.renameSync(path.join(grow, 'CLAUDE.md.new'), path.join(grow, 'CLAUDE.md'));
+doctor = pincer(grow, 'doctor');
+assert.equal(doctor.status, 0, `${doctor.stdout}${doctor.stderr}`);
+assert.doesNotMatch(doctor.stdout, /locally edited/, 'a file that equals the package is not called edited');
+// several at once, an installed one named again, and the generated copies of the new platform
+out = cli(grow, 'update', '--platform', 'claude,copilot');
+assert.match(out, /adding: copilot/);
+assert.deepEqual(JSON.parse(read(grow, '.pincer.json')).platforms, ['codex', 'claude', 'copilot']);
+assert.ok(fs.existsSync(path.join(grow, '.github/prompts/pincer-code.prompt.md')), 'the stage copies are generated for the added platform');
+out = cli(grow, 'update', '--platform', 'all');
+assert.doesNotMatch(out, /adding:/);
+assert.equal(pincer(grow, 'doctor').status, 0);
+
+// doctor compares the installed files with this package, not only the version label
+const built = tempDir();
+cli(built, 'init', '--platform', 'claude');
+doctor = pincer(built, 'doctor');
+assert.equal(doctor.status, 0, `${doctor.stdout}${doctor.stderr}`);
+assert.match(doctor.stdout, /ok {4}installed files match this package/);
+// a local edit is a note, not a problem
+const checklist = read(built, 'docs/release-checklist.md');
+write(built, 'docs/release-checklist.md', checklist + '\nOURS\n');
+doctor = pincer(built, 'doctor');
+assert.equal(doctor.status, 0, `${doctor.stdout}${doctor.stderr}`);
+assert.match(doctor.stdout, /note {2}locally edited \(kept as-is on update\): docs\/release-checklist\.md$/m);
+// the package changes under the same version label: the untouched files are another build's
+write(kit, 'template/docs/engine.md', read(kit, 'template/docs/engine.md') + '\nANOTHER BUILD\n');
+write(kit, 'template/scripts/pincer/extra.cjs', "'use strict';\n");
+doctor = pincer(built, 'doctor');
+assert.equal(doctor.status, 1, `${doctor.stdout}${doctor.stderr}`);
+assert.match(doctor.stdout, /ok {4}install is current/, 'the version label alone still looks current');
+const mismatch = doctor.stdout.split('\n').find((line) => line.includes('installed files match this package'));
+assert.match(mismatch, /^ {2}FAIL {2}installed files match this package \(v[0-9.]+\) — from another build labelled v[0-9.]+: docs\/engine\.md; not installed: scripts\/pincer\/extra\.cjs — run: pincer update$/);
+assert.ok(!mismatch.includes('release-checklist'), 'a local edit is not blamed on another build');
+assert.match(doctor.stdout, /locally edited \(kept as-is on update\): docs\/release-checklist\.md$/m);
+// update brings the install to this build
+write(built, 'docs/release-checklist.md', checklist);
+cli(built, 'update');
+assert.match(read(built, 'docs/engine.md'), /ANOTHER BUILD/);
+doctor = pincer(built, 'doctor');
+assert.equal(doctor.status, 0, `${doctor.stdout}${doctor.stderr}`);
+// an older version label is the version check's business alone
+write(built, '.pincer.json', JSON.stringify({ ...JSON.parse(read(built, '.pincer.json')), version: '0.0.1' }));
+write(kit, 'template/docs/engine.md', read(kit, 'template/docs/engine.md') + '\nA LATER RELEASE\n');
+doctor = pincer(built, 'doctor');
+assert.equal(doctor.status, 1);
+assert.match(doctor.stdout, /FAIL {2}install is current \(v0\.0\.1\) — run: pincer update/);
+assert.doesNotMatch(doctor.stdout, /another build/);
+
 console.log('installer: ok');

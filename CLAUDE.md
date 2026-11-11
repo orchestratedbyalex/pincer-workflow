@@ -38,5 +38,6 @@ source in the commit message. The tests pin the table's shape, not its values.
 
 Release flow: `npm version <level>` → `npm publish` (needs 2FA) → `git push --follow-tags`.
 Try it locally first: `npm pack`, copy the tarball into another repository and run
-`npx ./pincer-workflow-<version>.tgz init` there (the `./` matters). The Claude Code plugin channel is paused; the wiki under
+`npx ./pincer-workflow-<version>.tgz init` there (the `./` matters). The other repository
+must sit outside this checkout: a project nested here also loads this file in Claude Code. The Claude Code plugin channel is paused; the wiki under
 `docs/wiki/` is frozen.

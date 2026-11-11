@@ -16,7 +16,7 @@ Install it in your project:
 npx pincer-workflow@latest init --platform all
 ```
 
-The same package is also attached to the [GitHub release](https://github.com/orchestratedbyalex/pincer-workflow/releases/tag/v1.0.1).
+The same package is also attached to the [GitHub release](https://github.com/orchestratedbyalex/pincer-workflow/releases/tag/v1.0.2).
 
 Node.js 22+, git and bash are required. PINCER uses your coding tool's own
 authentication; it does not require a provider API key.
@@ -140,22 +140,40 @@ each installed platform will run.
 ## Update
 
 ```bash
-npx pincer-workflow@latest update   # edited files get a .new sidecar
-npx pincer-workflow@latest doctor   # checks the install and agreement
+npx pincer-workflow@latest update                      # edited files get a .new sidecar
+npx pincer-workflow@latest update --platform claude    # the same, and add a platform to the install
+npx pincer-workflow@latest doctor                      # checks the install and agreement
 ```
 
 With an agreement in place, `update` also refreshes the library and regenerates the
 project copies you did not edit; an edited copy stays and gets the new version beside
 it as `<file>.new`.
 
+`update --platform <claude|codex|copilot|all>` adds a platform to an existing install,
+for example Claude Code to a project that started on Codex. The platforms already
+installed stay, the agreement and the tickets are shared, a file the project already
+had (its own `CLAUDE.md`) is kept with the kit's version beside it as `.new`, and the
+stage copies are generated for the new platform. `init` refuses a second install and
+points here.
+
+`doctor` compares every installed file with the package that runs it, not only the
+version number. A file you changed is listed as locally edited. A file that is still
+what was installed but differs from this package came from another build with the
+same version number (a pre-release, a local `npm pack`); `doctor` fails and names
+it, and `update` brings the install to this build.
+
 ## Trying it locally before release
 
 ```bash
-npm pack                                           # in this repository: pincer-workflow-1.0.1.tgz
-cp pincer-workflow-1.0.1.tgz ../some-project/ && cd ../some-project
-npx ./pincer-workflow-1.0.1.tgz init --platform all   # the ./ matters: npx treats a bare path as a command
+npm pack                                           # in this repository: pincer-workflow-1.0.2.tgz
+cp pincer-workflow-1.0.2.tgz ../some-project/ && cd ../some-project
+npx ./pincer-workflow-1.0.2.tgz init --platform all   # the ./ matters: npx treats a bare path as a command
 scripts/pincer-status.sh                           # prints "no agreement yet" and "Next: /pincer-blueprint"
 ```
+
+Use a project outside this repository. Claude Code loads every `CLAUDE.md` above the
+working directory, so a trial project nested in this checkout also gets the kit's
+developer instructions and does not behave like a real install.
 
 ## Status of the older channels
 

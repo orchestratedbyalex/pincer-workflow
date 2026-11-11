@@ -239,4 +239,90 @@ assert.match(r.stdout, /^Warnings:\n  T-01 done without acceptance$/m);
 assert.equal(lastLine(r.stdout), 'Next: scripts/pincer-ticket.sh accept T-01 --by "<name>" --words "<their words>"');
 assert.equal(status(dir, '--stage', 'release').status, 3);
 
+// --- A second change in a project that already finished one ---------------------
+// An approved spec that no ticket names still needs narrowing, whatever the older
+// tickets say; with narrow off the same spec goes straight to code.
+dir = tempDir();
+createHarness(dir, { stages: { evaluate: { evidence: false } } });
+createTicket(dir, { spec: createSpec(dir, 'first', 'approved') });
+ticket(dir, 'verify', 'T-01');
+ticket(dir, 'done', 'T-01');
+assert.equal(ticket(dir, 'accept', 'T-01', '--by', 'Alex', '--words', 'ship it').status, 0);
+assert.equal(lastLine(status(dir).stdout), 'Next: all tickets done and accepted', 'a spec whose tickets name it is not narrowed again');
+const second = createSpec(dir, 'second', 'approved');
+assert.equal(lastLine(status(dir).stdout), 'Next: /pincer-narrow', 'an approved spec without tickets is narrowed');
+createHarness(dir, { stages: { evaluate: { evidence: false }, narrow: { on: false } } });
+assert.equal(lastLine(status(dir).stdout), 'Next: /pincer-code');
+createHarness(dir, { stages: { evaluate: { evidence: false } } });
+createSpec(dir, 'third', 'draft');
+assert.equal(lastLine(status(dir).stdout), 'Next: /pincer-plan specs/third.md (awaiting approval)', 'a draft is still first');
+createSpec(dir, 'third', 'built');
+createTicket(dir, { id: 'T-02', spec: `./${second}` });
+assert.equal(lastLine(status(dir).stdout), 'Next: /pincer-code', 'a ticket that names the spec covers it');
+assert.equal(JSON.parse(status(dir, '--json').stdout).tickets[1].spec, `./${second}`);
+// a ticket without a spec field that is still in flight may belong to the approved spec
+dir = tempDir();
+createHarness(dir, { stages: { evaluate: { evidence: false } } });
+createSpec(dir, 'only', 'approved');
+createTicket(dir);
+ticket(dir, 'verify', 'T-01');
+ticket(dir, 'done', 'T-01');
+assert.equal(lastLine(status(dir).stdout), 'Next: /pincer-release');
+// with plan off a spec file is not a reason to narrow
+createHarness(dir, { stages: { evaluate: { evidence: false }, plan: { on: false } } });
+assert.equal(ticket(dir, 'accept', 'T-01', '--by', 'Alex', '--words', 'ok').status, 0);
+assert.equal(lastLine(status(dir).stdout), 'Next: all tickets done and accepted');
+
+// Evidence counts only for the candidate that holds the finished ticket: in a git
+// repository, evidence saved for the first change does not release the second.
+const two = tempDir();
+const git = (...args) => {
+  const g = run(two, 'git', ['-c', 'user.name=Pincer Fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', ...args]);
+  assert.equal(g.status, 0, both(g));
+  return g.stdout.trim();
+};
+const commitAll = (message) => { git('add', '-A'); git('commit', '-q', '-m', message); return git('rev-parse', 'HEAD'); };
+const saveEvidence = (candidate) => { write(two, `evidence/${candidate}/manifest.json`, JSON.stringify({ schema: 1, candidate })); return commitAll(`evaluate: ${candidate.slice(0, 7)}`); };
+const next = () => JSON.parse(status(two, '--json').stdout);
+git('init', '-q', '-b', 'main');
+createHarness(two);
+createTicket(two, { spec: createSpec(two, 'first', 'approved') });
+ticket(two, 'verify', 'T-01');
+assert.equal(ticket(two, 'done', 'T-01').status, 0);
+createSpec(two, 'first', 'built');
+assert.equal(next().next, '/pincer-evaluate', 'no evidence at all');
+const firstCandidate = commitAll('T-01: example');
+write(two, 'evidence/not-a-candidate/manifest.json', '{}');
+assert.equal(next().next, '/pincer-evaluate', 'a manifest without a candidate proves nothing');
+assert.deepEqual(next().unevaluated, ['T-01']);
+saveEvidence(firstCandidate);
+assert.equal(next().next, '/pincer-release', 'evidence for the candidate that holds T-01');
+assert.deepEqual(next().unevaluated, []);
+assert.equal(ticket(two, 'accept', 'T-01', '--by', 'Alex', '--words', 'ship it').status, 0);
+commitAll(`accept: ${firstCandidate.slice(0, 7)}`);
+assert.equal(next().next, 'all tickets done and accepted');
+// the second change: narrow, code, then evaluate again before release
+createSpec(two, 'second', 'approved');
+assert.equal(next().next, '/pincer-narrow');
+createTicket(two, { id: 'T-02', spec: 'specs/second.md' });
+assert.equal(next().next, '/pincer-code');
+ticket(two, 'verify', 'T-02');
+assert.equal(ticket(two, 'done', 'T-02').status, 0);
+createSpec(two, 'second', 'built');
+assert.equal(next().next, '/pincer-evaluate', 'a finished ticket that is not committed has no candidate');
+const secondCandidate = commitAll('T-02: example');
+assert.equal(next().next, '/pincer-evaluate', 'the evidence of the first change does not cover T-02');
+assert.deepEqual(next().unevaluated, ['T-02']);
+assert.equal(lastLine(status(two).stdout), 'Next: /pincer-evaluate');
+saveEvidence(secondCandidate);
+assert.equal(next().next, '/pincer-release', 'evidence with no acceptance gives release');
+// a receipt stamped after the evaluation is a new candidate
+const t2 = 'tickets/T-02-example.md';
+const evaluated = read(two, t2);
+write(two, t2, evaluated.replace(/^verified: \S+/m, 'verified: 2020-01-01T00:00:00Z').replace(/^last_check: \S+/m, 'last_check: 2020-01-01T00:00:00Z'));
+assert.equal(next().next, '/pincer-evaluate', 'a receipt newer than the evidence needs a new evaluation');
+write(two, t2, evaluated);
+assert.equal(ticket(two, 'accept', 'T-02', '--by', 'Alex', '--words', 'ship it').status, 0);
+assert.equal(next().next, 'all tickets done and accepted');
+
 console.log('status: ok');

@@ -1,6 +1,6 @@
 {
   "name": "pincer-workflow",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "PINCER — a harness builder for AI coding agents. It looks at your project, interviews you, writes the project agreement, and runs the pipeline that agreement describes. Claude Code, Codex CLI and GitHub Copilot.",
   "bin": {
     "pincer": "bin/pincer.js"
