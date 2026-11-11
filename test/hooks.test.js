@@ -555,7 +555,7 @@ for (const command of [
   'nice --adjustment 5 rm -rf tickets', 'watch rm -rf tickets', '- rm -rf tickets', '{ : } always { rm -rf tickets }', 'r{m,} -rf tickets',
   `cmd="rm ${T}"; \${=cmd}`, `alias rmt='rm ${T}'\nrmt`, "alias z='git stash'\nz", 'cd tickets && tar -xf /tmp/t.tar', 'cd tickets && unzip -o /tmp/t.zip', 'cd x scripts/pincer && rm cli.cjs',
   // found by running generated lines in bash and zsh: a quote, a test or a substitution that never closes
-  `x=(<< ''$"\nrm ${T}`, `echo "abc\nrm ${T}`, `echo 'abc; rm ${T}`, 'echo `rm ' + T, `echo $(rm ${T}`, `echo \${x:-a; rm ${T}`, `v=a( \n2\n [[ << "" exec && : > ${T}\n`, `[[ a && rm ${T}`,
+  `x=(<< ''$"\nrm ${T}`, `echo "abc\nrm ${T}`, `echo 'abc; rm ${T}`, 'echo `rm ' + T, `echo $(rm ${T}`, `echo \${x:-a; rm ${T}`, `v=a( \n2\n [[ << "" exec && : > ${T}\n`, `[[ a && rm ${T}`, `[[ a &&\n rm ${T}`, `[[ a ]]\nrm ${T}`, `[[ -f x\n]] > ${T}`,
   // the default of \${x:-…} is run when it stands where a command does
   `\${x:- rm ${T} }`, `\${x:-rm} ${T}`, `\${x:=rm ${T}}`, '``rm -f ' + T, `$()rm ${T}`,
   // zsh: a paren glued to a word runs to its close, spaces and # included
@@ -584,7 +584,7 @@ for (const command of [
   // prose in a here-document that is saved or is a message: apostrophes, bullets, a ticket's name
   `cat > docs/plan.md <<'EOF'\n- Touch ${T} only through the engine\nEOF`, "cat > notes.md <<EOF\nit's fine, don't worry\nEOF", `cat > notes.md <<'EOF'\nit's about ${T}\nEOF`,
   `git commit -m "$(cat <<'EOF'\nT-01: it's done\n\n- see ${T}\nEOF\n)"`, `git commit -F - <<'EOF'\nT-01: don't lose the receipt in ${T}\nEOF`, 'x=( # the list\n a b ); echo "${x[@]}"',
-  'if [[ -n "$A" && \\\n -n "$B" ]]; then ls tickets; fi', 'echo ${x:-none}; ls tickets', `: \${TMPDIR:=/tmp}; cat ${T}`,
+  'if [[ -n "$A" && \\\n -n "$B" ]]; then ls tickets; fi', 'if [[ -n "$A" &&\n -n "$B" ]]; then ls tickets; fi', 'echo ${x:-none}; ls tickets', `: \${TMPDIR:=/tmp}; cat ${T}`,
   "cat > NOTES.md <<'EOF'\nAt the end run scripts/pincer-ticket.sh done T-01.\nEOF", "cat > NOTES.md <<'EOF'\nInstall the hooks in .claude/hooks first.\nEOF",
   'ls scripts/pincer; npm test 2>&1 | tee ~/test.log', 'cat .claude/settings.json && rm -rf ~/.cache/pincer-demo', // the home directory is known here, so ~/copy.md is a place like /tmp/copy.md (1.0.2 refused it as computed)
   `cat ${T} > ~/copy.md`, `cat ${T} > "$HOME/t.md"`, `cp ${T} ~/backup/`,

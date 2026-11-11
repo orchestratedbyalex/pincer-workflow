@@ -265,7 +265,7 @@ function readShell(source, from = 0, stop = false, arithmetic = false) {
     }
     if (ch === ' ' || ch === '\t' || ch === '\n') {
       push();
-      if (ch === '\n') { tokens.push({ op: ';' }); bodies(); }
+      if (ch === '\n') { tokens.push({ op: ';', newline: true }); bodies(); }
       continue;
     }
     if ('|;&><()'.includes(ch)) {
@@ -361,6 +361,7 @@ function shellCommands(source) {
       if (test && !token.quoted && token.value === ']]') finish(';', true);
       continue;
     }
+    if (test && token.newline) continue; // a test may run over several lines
     if (test && ['&&', '||', '(', ')', '<', '>', '|'].includes(token.op)) { command().tokens.push(plain(token.op)); continue; }
     if (token.op === '(' && token.glued && current && current.tokens.length && /^[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?\+?=$/.test(current.tokens[current.tokens.length - 1].value)) { list = true; continue; }
     if (token.op === ')' && list) { list = false; continue; }
