@@ -644,6 +644,68 @@ for (const tail of ['ls', 'pwd', `cat ${T}`, 'echo x > /tmp/out.txt', 'git statu
   }
 }
 
+// --- 1.0.4: writes 1.0.3 let through, and reads it refused ---------------------------
+for (const command of [
+  // a process substitution is a source like any other; the destination is still judged
+  `cp <(echo x) ${T}`, `cp =(echo x) ${T}`, `tee ${T} < <(echo x)`, `cp <(echo x) <(echo y) ${E}`,
+  // a copy into the directory that holds them, spelled with a variable
+  `cat ${T}; cp /tmp/T-01-example.md "$PWD/tickets"`, 'cp /tmp/T-09-new.md "$PWD/tickets"', 'cp /tmp/pincer-ticket.sh "$ROOT/scripts"', 'cp /tmp/settings.json "$PWD/.claude"',
+  `cp /tmp/x "$PWD/${T}"`, 'cp "$SRC" "$ROOT/tickets"', 'cp /tmp/T-09-new.md "$PWD"/tickets/',
+  // a reader is the system's program: not a path of the line's own, a function, an alias, another PATH
+  `cp /bin/cp ./cat && ./cat /tmp/x ${T}`, `cp /bin/cp ./cat\n./cat /tmp/x ${T}`, `/tmp/e/cat /tmp/x ${T}`, `./git add /tmp/x ${T}`, `~/bin/head /tmp/x ${T}`,
+  `hash cat=/bin/cp; cat /tmp/x ${T}`, `PATH=/tmp/e:$PATH cat /tmp/x ${T}`,
+  `cat() { command cp "$@"; }; cat /tmp/x ${T}`, `function cat { command cp "$@"; }; cat /tmp/x ${T}`, `alias cat=cp; cat /tmp/x ${T}`,
+  `git() { cp "$@"; }; git add /tmp/x ${T}`, `find() { rm "$2"; }; find . ${T}`,
+  // arguments set, then run
+  `set -- cp /tmp/x ${T}; "$@"`, `set -- cp /tmp/x ${T}; $@`, `set -- cp /tmp/x ${T}; "$1" "$2" "$3"`,
+  // git handed a command to run
+  `git config core.fsmonitor "cp /tmp/x ${T}; false"`, `GIT_EXTERNAL_DIFF="cp /tmp/x ${T}" git diff`, `GIT_EDITOR="cp /tmp/x ${T}" git commit --allow-empty`,
+  `export GIT_EDITOR="cp /tmp/x ${T}"; git commit --allow-empty`, `git grep -O"cp /tmp/x" shout -- ${T}`, `git grep --open-files-in-pager="cp /tmp/x" shout -- ${T}`, `git config --fil ${T} a.b c`,
+  // other forms
+  'rg --pre=rm shout tickets', `rg --pre rm shout ${T}`, `awk '/x/{print > "${T}"}' /tmp/x`, `source <(echo 'cp /tmp/x ${T}')`, `. <(echo 'cp /tmp/x ${T}')`,
+  // a variable is followed only when the line gives it one written value, once, first
+  'S=tickets; cp /tmp/x $S/T-01-example.md', 'S=/tmp; S=tickets; cp /tmp/x $S/T-01-example.md', `S=/tmp/out; eval "S=tickets"; cp ${T} $S/y`,
+  'cp /tmp/x $S/T-01-example.md; S=/tmp', 'S=/x/tickets/sub; cp /tmp/x $S:h/T-01-example.md', 'true && S=/tmp; cp /tmp/x $S/T-01-example.md',
+  `S=/tmp/out; read S; cp ${T} $S/y`, `S=/tmp/out; . ./env.sh; cp ${T} $S/y`, `S=$(pwd); cp ${T} $S/tickets/y`, `S=/tmp/a; f() { S=tickets; }; f; cp ${T} $S/T-01-example.md`,
+  'D=tickets; cd $D; echo x > T-01-example.md', `S="/tmp/a b"; cp ${T} $S`, 'S=.claude/hooks; cp /tmp/x $S/hook-policy.cjs', 'cp /tmp/x "$PWD/tickets/T-01-example.md"',
+  `PWD=/tmp; cat ${T} > "$PWD/tickets/T-01-example.md"`,
+  // a program that arrives on standard input, on a line that names a ticket
+  `cat /tmp/x.js | node -; cat ${T}`, `python3 - <<'EOF'\nopen('${T}', 'w')\nEOF`, `node - <<'EOF'\nrequire('fs').writeFileSync('${T}', '')\nEOF\nnode -v`,
+  // a lookalike of the ticket script, also at a path with a space in it
+  'bash "/tmp/my dir/pincer-ticket.sh" accept T-01', '"/tmp/my dir/pincer-ticket.sh" done T-01', 'cd /tmp/other && node ../other/scripts/pincer/cli.cjs ticket done T-01',
+  // options that write or run, also shortened; a reader told to write
+  `git diff --outp=${T}`, `sed '1e cp /tmp/x ${T}' /tmp/x`, `echo | sed 's|.*|cp /tmp/x ${T}|e'`, `cat /tmp/x | less -o ${T}`, `cat /tmp/x | less -O ${T}`,
+  `diff --output=${T} /tmp/a /tmp/b`, `echo 'cp /tmp/x ${T}' | source /dev/stdin`, 'cp /tmp/x tickets/^T-09*', 'cp /tmp/x tickets/(T-01|T-09)-example.md', 'echo x > tick*/T-01*(.)', 'cp /tmp/x **/T-01*(.)',
+  // a variable set where it may not run, or after it is read
+  'if true; then S=/tmp; fi; cp /tmp/x $S/T-01-example.md', '(S=/tmp); cp /tmp/x $S/T-01-example.md', 'f() { S=/tmp; }; cp /tmp/x $S/T-01-example.md',
+  'ls || S=/tmp; cp /tmp/x $S/T-01-example.md', 'ls && S=/tmp; cp /tmp/x $S/T-01-example.md', 'ls; cp /tmp/x $S/T-01-example.md; S=/tmp',
+  `out=$(mktemp -p tickets T-01-XXXX.md); cat ${T} > "$out"`, `out=$(mktemp); out=tickets/T-01-example.md; cat ${E} > "$out"`, `TMPDIR=tickets; out=$(mktemp); cat ${T} > "$out"`,
+  // git in another directory: a pathspec is still judged
+  'git -C /tmp/clone checkout -- .', 'git -C /tmp/clone checkout -f main', 'git -C "$D" checkout -q abc123', 'git -C . checkout -- tickets', 'git -C /tmp/clone restore .',
+]) check('ticket', `1.0.4 blocked: ${command}`, bash(command), 2);
+for (const command of [
+  // a here-document that is saved is text: a pattern in it that no shell can read names nothing
+  "cat > /tmp/p.mjs <<'EOF'\n(a) => {};\nfor (a of [['--format']]) {\nEOF", "cat > /tmp/p.mjs <<'EOF'\n>\n[[--]\nEOF", 'ls [[--] 2>/dev/null; echo done > /tmp/out.txt',
+  // an interpreter in a statement of its own, handed no protected path
+  `node -v\nsed -n '1,5p' ${ES}`, `node --version; cat ${T}`, `python3 -V && cat ${T}`, `python3 - <<'EOF'\nprint(1)\nEOF\ngrep -c done ${ES}`,
+  `node - <<'EOF'\nconsole.log(1)\nEOF\ncat ${T}`, `node --input-type=module - <<'EOF'\nconsole.log(1)\nEOF\nsed -n '1,5p' ${ES}`,
+  // the engine's own entry points, from a directory the line moved to
+  'cd evidence/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa && node ../../scripts/pincer-evidence.cjs digest $(find . -type f | sort)',
+  'cd src && ../scripts/pincer-status.sh --json', 'scripts/pincer-ticket.sh check T-01', 'scripts/pincer-ticket.sh check T-01 2>&1 | tail -20',
+  // a variable the line gives one written value, and $PWD
+  `S=/tmp/out; cp ${T} $S/y`, `S=/tmp/out; mkdir -p $S/v103 && cp ${T} $S/v103/copy.md`, `OUT=/tmp/o.txt; cat ${T} > "$OUT"`, `cat ${T} > "$PWD/copy.md"`,
+  `S=/tmp/out T2=/tmp/other; cp ${T} "\${S}/y"; cp ${E} $T2/z`, 'S=tickets; ls $S; cat $S/T-01-example.md',
+  // a variable set later on a line of plain statements, and a file from mktemp
+  'grep -rn shout tickets; name=Alex; node src/greet.js "$name"', `cat ${T}; S=/tmp/out; cp ${T} $S/y`,
+  `cat ${T}; out=$(mktemp); npm test > "$out" 2>&1; tail -3 "$out"`,
+  `work=$(mktemp -d); sed -n '/^## Verification/,$p' ${T} > "$work/x.sh"; bash "$work/x.sh"; rm -rf "$work"`,
+  // git in another directory, a message that names the ticket script
+  'git -C /tmp/clone checkout -q abc123', 'git -C /tmp/clone switch main', 'git -C /tmp/clone status --short',
+  'gh pr create --title x --body "At the end it runs scripts/pincer-ticket.sh"', 'git commit -m "docs: say when to run scripts/pincer-ticket.sh"', 'echo "then run scripts/pincer-ticket.sh"',
+  // readers by their system paths
+  `/bin/cat ${T}`, `/usr/bin/grep -c status ${T}`, `/usr/bin/env cat ${T}`, `f() { echo hi; }; f; cat ${T}`, `diff <(sort ${T}) <(sort /tmp/other.md)`, `while read -r l; do echo "$l"; done < <(grep status ${T})`,
+]) check('ticket', `1.0.4 allowed: ${command}`, bash(command), 0);
+
 assert.equal(read(dir, file), completed, 'hooks are read-only and never execute tested command strings');
 assert.equal(failures.length, 0, `${failures.length}/${checked} hook regressions failed:\n${failures.join('\n')}`);
 console.log(`hooks: ok (${checked} payloads)`);

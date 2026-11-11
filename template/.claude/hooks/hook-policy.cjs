@@ -254,6 +254,7 @@ function readShell(source, from = 0, stop = false, arithmetic = false) {
       open().value += source.slice(i + 2, end);
       word.quoted = true;
       word.computed = true;
+      word.ansi = true;
       i = end;
       continue;
     }
@@ -272,6 +273,17 @@ function readShell(source, from = 0, stop = false, arithmetic = false) {
       if (ch === '\n') { tokens.push({ op: ';', newline: true }); bodies(); }
       continue;
     }
+    // <(…), >(…) and zsh's =(…) stand for a file the shell makes: a word of its own,
+    // with the commands inside judged as commands
+    if ((ch === '<' || ch === '>' || (ch === '=' && !word)) && source[i + 1] === '(' && !sums() && !(word && /\$\[[^\]]*$/.test(word.value))) {
+      const inner = lexShell(source, i + 2, true, false);
+      const current = open();
+      current.computed = true;
+      current.subs.push(source.slice(i + 2, inner.end));
+      current.value += `${ch}()`;
+      i = inner.end;
+      continue;
+    }
     if ('|;&><()'.includes(ch)) {
       // `<` and `>` inside $[…] or the subscript of an assignment are arithmetic
       if ((ch === '<' || ch === '>') && word && !word.quoted && (/\$\[[^\]]*$/.test(word.value) || (starts() && /^[A-Za-z_][A-Za-z0-9_]*\[[^\]]*$/.test(word.value)))) { word.value += ch; continue; }
@@ -283,6 +295,8 @@ function readShell(source, from = 0, stop = false, arithmetic = false) {
       if (source.startsWith('<<', i) && word && !word.quoted && /^[A-Za-z_][A-Za-z0-9_]*\[[^\]]*$/.test(word.value)) unsure();
       const glued = word !== null;
       const array = word !== null && starts() && /^[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?\+?=$/.test(word.value); // name=( … ) where an assignment may stand // `name=(` opens a list only with nothing between
+      // zsh: tickets/(T-01|T-02)* is a pattern: the word is marked as one that a paren follows
+      if (ch === '(' && glued && !array && source[i + 1] !== ')' && !sums()) { word.glob = true; word.paren = true; }
       push();
       if (ch === ')') {
         if (stop && parens === 0 && cases === 0) return { tokens, end: i };
@@ -401,6 +415,9 @@ const WRAPPERS = {
   npx: ['-p', '--package'], pnpx: ['-p', '--package'], bunx: ['-p', '--package'],
 };
 const SHELLS = ['sh', 'bash', 'zsh', 'dash', 'ksh', 'fish'];
+// Where the system keeps its programs: `/bin/cat` is cat, `./cat` and `/tmp/e/cat` are not.
+const SYSTEM_DIRS = ['/bin', '/sbin', '/usr/bin', '/usr/sbin', '/usr/local/bin', '/usr/local/sbin', '/opt/homebrew/bin', '/opt/homebrew/sbin', '/opt/local/bin',
+  '/home/linuxbrew/.linuxbrew/bin', '/snap/bin', '/run/current-system/sw/bin', '/usr/libexec', '/Library/Developer/CommandLineTools/usr/bin', '/Applications/Xcode.app/Contents/Developer/usr/bin'];
 
 // The command a line of words runs: its executable (lower case, without a
 // directory), its argument tokens, the variable assignments in front of it and
@@ -466,7 +483,9 @@ function commandParts(command) {
     if (/^python[0-9.]*$/.test(executable)) executable = 'python3';
     if (GNU_NAMES.test(executable)) executable = executable.slice(1);
   }
-  return { executable, opaque, head, args: argTokens.map(token => token.value), argTokens, words: command.words || [], assignments, wrappers, splits, chdirs, values };
+  // A program named by a path that is not one of the system's directories may be anything under that name.
+  const foreign = Boolean(head) && !opaque && head.value.includes('/') && (head.computed || !SYSTEM_DIRS.includes(path.posix.normalize(head.value.slice(0, head.value.lastIndexOf('/')) || '/')));
+  return { executable, opaque, foreign, head, args: argTokens.map(token => token.value), argTokens, words: command.words || [], assignments, wrappers, splits, chdirs, values };
 }
 
 // Every command inside the substitutions of a command's words.
@@ -503,6 +522,7 @@ function shellText(args) {
 // A shell, or a program that may be one, that takes its script from standard
 // input: no -c and no script file (`-s` hands the words after it to that script).
 function readsScript(parts) {
+  if (['source', '.'].includes(parts.executable)) return ['/dev/stdin', '/dev/fd/0', '/proc/self/fd/0'].includes(parts.args[0]);
   if (!parts.opaque && !SHELLS.includes(parts.executable)) return false;
   if (shellCommandFlag(parts.args) !== -1) return false;
   return parts.args.includes('-s') || !parts.args.some((arg, i) => !arg.startsWith('-') && !(i > 0 && ['-o', '+o', '-O', '+O'].includes(parts.args[i - 1])));
@@ -611,7 +631,7 @@ const slashed = (file) => file.split(path.sep).join('/');
 // SEP is one separator however it is spelled; a pattern character after tickets/
 // can match a ticket.
 const SEP = '/+(?:\\./+)*';
-const TICKET_MENTION = new RegExp(`(?<![a-z0-9_-])tickets${SEP}(?:t-(?:[0-9]|$)|[*?\\[{])`, 'i');
+const TICKET_MENTION = new RegExp(`(?<![a-z0-9_-])tickets${SEP}(?:t-(?:[0-9]|$)|[*?\\[{^(])`, 'i');
 const ENGINE_MENTION = new RegExp(`(?<![a-z0-9_-])(?:scripts${SEP}(?:pincer(?![a-z0-9_.-])|pincer-[^/\\s'"]*\\.(?:sh|cjs)|sync-prompts\\.sh)|\\.claude${SEP}(?:hooks(?![a-z0-9_.-])|settings\\.json))`, 'i');
 // Also with `x/../` folded away, which a path the shell computes may still carry.
 const folded = (text) => (text.includes('..') ? [text, path.posix.normalize(text)] : [text]);
@@ -736,7 +756,13 @@ function globSource(pattern, cross = false) {
     const close = ch === '[' ? text.indexOf(']', i + 2) : -1;
     if (ch === '*') { out += text[i + 1] === '*' || cross ? '.*' : '[^/]*'; while (text[i + 1] === '*') i++; }
     else if (ch === '?') out += '[^/]';
-    else if (ch === '[' && close !== -1) { out += `[${text.slice(i + 1, close).replace(/^!/, '^').replace(/\\/g, '\\\\')}]`; i = close; }
+    else if (ch === '[' && close !== -1) {
+      const set = `[${text.slice(i + 1, close).replace(/^!/, '^').replace(/\\/g, '\\\\')}]`;
+      // a set no shell can read ([z-a]) matches nothing but itself
+      let valid = true;
+      try { new RegExp(set); } catch { valid = false; }
+      if (valid) { out += set; i = close; } else out += '\\[';
+    }
     else out += ch.replace(/[.+^$()|\\[\]{}]/, '\\$&');
   }
   return out;
@@ -768,8 +794,12 @@ function globbed(pattern) {
 // unless the line sets TMPDIR itself.
 function reach(token, scope) {
   const text = token.value.replace(/\\/g, '/');
-  if (!token.computed && !token.glob && path.isAbsolute(text)) return located(text) || 'other';
-  if (mentionsTicket(text)) return 'ticket';
+  if (!token.computed && !token.glob && path.isAbsolute(text)) {
+    const kind = located(text);
+    // an awk or sed program that opens with a slash is code, not a path
+    if (kind || !/[\s'"{(;]/.test(text)) return kind || 'other';
+  }
+  if (mentionsTicket(token.paren ? `${text}(` : text)) return 'ticket';
   if (mentionsEngine(text)) return 'engine';
   if (token.computed) {
     if (/(^|\/)T-[0-9]+[^/]*$/i.test(text)) return 'ticket';
@@ -942,8 +972,12 @@ function inlineCode(executable, args) {
   return ['perl', 'ruby'].includes(executable) && args.some(arg => /^-[A-Za-z0-9]*[eE]$/.test(arg) || /^-[lnpawsWT0-9]*[eE]./.test(arg));
 }
 // The word that names one of the project's own engine scripts being run, or null.
-function ownRun(parts) {
-  const runnable = (token) => RUNNABLE.some(rel => ownScript(token.value, rel));
+function ownRun(parts, scope = null) {
+  // from a directory the line moved to (cd evidence/<sha> && node ../../scripts/pincer-evidence.cjs): the
+  // entry points that write no ticket; the ticket script is its own only by the spellings of ownScript
+  const moved = (token, rel) => Boolean(scope) && !WRITER_WORD.test(rel) && !token.computed && !token.glob && !path.isAbsolute(token.value) &&
+    [...scope.cwds].some(cwd => path.resolve(cwd, token.value) === path.join(projectRoot(), rel));
+  const runnable = (token) => RUNNABLE.some(rel => ownScript(token.value, rel) || moved(token, rel));
   if (!parts.head) return null;
   if (runnable(parts.head)) return parts.head;
   if (!['node', 'bash', 'sh', 'zsh'].includes(parts.executable) || inlineCode(parts.executable, parts.args)) return null;
@@ -1024,7 +1058,8 @@ function wholeTreeRestore(sub) {
   // `git checkout <ref>` / `git switch <ref>`: one positional, no `--`, no force flag is a branch switch,
   // allowed even through a variable; every pathspec form keeps the wide test.
   const branchSwitch = (name === 'checkout' || name === 'switch') && positional.length === 1 && !args.includes('--');
-  const wide = branchSwitch ? widePathspec(positional[0].replace(/[$`]/g, 'x'), cdir) : positional.some(p => widePathspec(p, cdir));
+  // a switch in a directory written out is judged like `cd <dir> && git checkout <ref>`: the ref is no path there
+  const wide = branchSwitch ? widePathspec(positional[0].replace(/[$`]/g, 'x'), /[$`~]/.test(cdir) ? cdir : '') : positional.some(p => widePathspec(p, cdir));
   switch (name) {
     case 'alias': return true;
     case 'checkout': case 'switch': return force || fromFile || wide || (patch && positional.length === 0);
@@ -1089,8 +1124,8 @@ function optionValues(argTokens, short, long) {
   });
   return found;
 }
-// The files a sed script writes with its w command or its s///w flag.
-function sedTargets(parts) {
+// The scripts a sed command is given: each -e, or else its first word.
+function sedScripts(parts) {
   const { args, argTokens } = parts;
   const scripts = [];
   argTokens.forEach((token, i) => {
@@ -1099,7 +1134,13 @@ function sedTargets(parts) {
     else if (/^-e./.test(token.value)) scripts.push(token.value.slice(2));
   });
   if (!scripts.length) scripts.push(...argTokens.filter(token => !token.value.startsWith('-')).slice(0, 1).map(token => token.value));
-  return scripts.flatMap(text => [...text.matchAll(/(?:^|[;{}\n/0-9$,!])[gpIiMm0-9]*\s*[wW]\s+([^;\n}]+)/g)].map(match => ({ ...plain(match[1].trim()), computed: /[$`]/.test(match[1]) })));
+  return scripts;
+}
+// GNU sed's e command and s///e flag run a command.
+const sedRuns = (script) => /(^|[;{}\n])\s*([0-9]+|\$|\/[^/\n]*\/)?(,([0-9]+|\$|\/[^/\n]*\/))?\s*!?\s*e(\s|$)/.test(script) || /s([^A-Za-z0-9\s\\])(?:(?!\1).)*\1(?:(?!\1).)*\1[a-zA-Z0-9]*e/.test(script);
+// The files a sed script writes with its w command or its s///w flag.
+function sedTargets(parts) {
+  return sedScripts(parts).flatMap(text => [...text.matchAll(/(?:^|[;{}\n/0-9$,!])[gpIiMm0-9]*\s*[wW]\s+([^;\n}]+)/g)].map(match => ({ ...plain(match[1].trim()), computed: /[$`]/.test(match[1]) })));
 }
 
 // Whether a command only reads: a reader by name, or one of those that write
@@ -1110,6 +1151,10 @@ function sedTargets(parts) {
 // that only keeps a script executable, gh and rg apart from the forms that write.
 function reads(parts, scope) {
   const { executable, args, argTokens } = parts;
+  if (untrusted(parts, scope)) return false;
+  // a reader told to write: less -o <file>, and any --output <file> that is protected
+  if (executable === 'less' && args.some(arg => /^-[A-Za-z]*[oO]/.test(arg) || /^--log-file/i.test(arg))) return false;
+  if (argTokens.some((token, i) => /^--out/.test(token.value) && [token, argTokens[i + 1]].filter(Boolean).some(one => protectedKind(argReach(one, scope))))) return false;
   if (READERS.has(executable)) return true;
   const positional = argTokens.filter(token => !token.value.startsWith('-') || token.value === '-');
   const elsewhere = (token) => { const kind = reach(token, scope); return kind === 'other' || (kind === 'unknown' && !scope.tainted); };
@@ -1120,7 +1165,9 @@ function reads(parts, scope) {
   if (SHELLS.includes(executable)) { const script = args.findIndex(arg => !/^[-+]/.test(arg)); return shellCommandFlag(args) === -1 && (script === -1 ? args : args.slice(0, script)).includes('-n'); }
   if (executable === 'sort') return optionValues(argTokens, 'o', ['--o', '--ou', '--out', '--outp', '--outpu', '--output']).every(elsewhere);
   if (executable === 'uniq') return positional.length < 2;
-  if (executable === 'sed') return !args.some(arg => /^-[^-]*[iI]/.test(arg) || /^--i(n(-(p(l(a(c(e)?)?)?)?)?)?)?(=|$)/.test(arg));
+  // sed in place, or GNU sed's e command and s///e flag, which run a command
+  if (executable === 'sed') return !args.some(arg => /^-[^-]*[iI]/.test(arg) || /^--i(n(-(p(l(a(c(e)?)?)?)?)?)?)?(=|$)/.test(arg)) &&
+    !sedScripts(parts).some(sedRuns);
   if (['gzip', 'gunzip', 'bzip2', 'xz', 'zstd'].includes(executable)) return args.some(arg => /^-[cdfklqtvz1-9]*[clt][cdfklqtvz1-9]*$/.test(arg) || ['--stdout', '--to-stdout', '--list', '--test'].includes(arg));
   if (executable === 'curl') return !args.some(arg => (!arg.startsWith('--') && /^-[A-Za-z]*[oODcJ]/.test(arg)) || /^--(output|remote-name|dump-header|cookie-jar|trace|stderr|create-dirs)/.test(arg)) && !argTokens.some(token => protectedKind(argReach(token, scope)));
   if (executable === 'tar' || executable === 'bsdtar') {
@@ -1140,6 +1187,15 @@ function reads(parts, scope) {
   return false;
 }
 
+// The names the guard is lenient with: readers, the forms of other commands that only
+// read, git, find and the copies. Under such a name a program is the system's only
+// when it is called by that name or from a system directory, and the line gives the
+// name no other meaning (a function, an alias, `hash name=…`, a PATH set for that one
+// command). A PATH set for the rest of the line is not followed: docs/engine.md.
+const LENIENT = new Set([...READERS, 'gh', 'rg', 'chmod', 'node', 'nodejs', ...SHELLS, 'sort', 'uniq', 'sed', 'gzip', 'gunzip', 'bzip2', 'xz', 'zstd', 'curl', 'tar', 'bsdtar', ...AWKS, 'git', 'find', ...COPIERS]);
+const untrusted = (parts, scope) => LENIENT.has(parts.executable) &&
+  (parts.foreign || Boolean(scope.renamed && scope.renamed.has(parts.executable)) || parts.assignments.some(token => /^PATH\+?=/.test(token.value)));
+
 // An awk program with its strings emptied, so that a bar or an arrow printed between
 // columns is not taken for a pipe or a redirect. A program with a `/` or a `#` outside
 // its strings is left as it is: a quote inside a pattern or a comment would be misread.
@@ -1156,6 +1212,15 @@ function awkBare(program) {
     i = end;
   }
   return bare;
+}
+
+// Whether a file of this name is protected in a holder directory known only by its last part.
+function landsProtected(holder, source) {
+  const name = path.basename(source.replace(/\/+$/, ''));
+  const last = holder.replace(/\/+$/, '').split('/').pop().toLowerCase();
+  if (last === 'tickets') return /^t-[0-9]/i.test(name);
+  if (last === 'scripts') return /^(pincer|pincer-.*\.(sh|cjs)|sync-prompts\.sh)$/i.test(name);
+  return /^(hooks|settings\.json)$/i.test(name);
 }
 
 // A copy writes its last argument (or -t <dir>); what lands in a directory keeps
@@ -1191,7 +1256,11 @@ function copyWrites(parts, scope, fed) {
     if (protectedKind(kind) || (kind === 'unknown' && scope.tainted)) return true;
     if (kind === 'holder' && (whole || scope.adrift || sources.some(token => token.value.endsWith('/')))) return true;
     if (whole && scope.tainted && aboveRoot(destination, scope)) return true;
-    if (destination.computed || destination.glob) continue;
+    if (destination.computed || destination.glob) {
+      // "$ROOT/tickets": what lands there keeps its name, and a name the shell works out may be any
+      if (kind === 'holder' && sources.some(source => source.computed || source.glob || landsProtected(destination.value, source.value))) return true;
+      continue;
+    }
     for (const source of sources) {
       if (source.computed || source.glob) { if (kind === 'holder') return true; continue; }
       if ([...scope.cwds].some(cwd => located(path.resolve(cwd, destination.value, path.basename(source.value))))) return true;
@@ -1318,6 +1387,8 @@ function gitWrites(parts, scope, fed, depth) {
   const leading = parts.argTokens.slice(0, Math.max(0, parts.argTokens.length - sub.args.length - (sub.name && sub.name !== 'alias' ? 1 : 0)));
   if (leading.some(token => protectedKind(argReach(token, scope)))) return true;
   if (wholeTreeRestore(sub)) return true;
+  // a variable set for git that names a protected path (GIT_EXTERNAL_DIFF='cp … <ticket>')
+  if (parts.assignments.some(token => protectedKind(argReach(token, scope)))) return true;
   const stdinPathspec = !sub.args.some(arg => !arg.startsWith('-')) || sub.args[sub.args.length - 1] === '--';
   if (fed && ((['checkout', 'restore', 'clean'].includes(sub.name) && stdinPathspec) || ['', 'reset', 'stash'].includes(sub.name))) return true;
   const tokens = sub.args.length ? parts.argTokens.slice(-sub.args.length) : [];
@@ -1335,8 +1406,11 @@ function gitWrites(parts, scope, fed, depth) {
     const words = tokens.filter(token => !token.value.startsWith('-'));
     if (words[1] && words[1].value.startsWith('!') && code(words[1].value.slice(1))) return true;
     if (words[1] && /^alias\./.test(words[0].value) && !words[1].value.startsWith('!') && code(`git ${words[1].value}`)) return true;
-    if (tokens.some((token, i) => (after(i, ['-f', '--file']) || token.value.startsWith('--file=')) && protectedKind(argReach(token, local)))) return true;
+    // a value that names a protected path: a file to write (--file, also shortened), a command git runs later (core.fsmonitor)
+    if (tokens.some(token => protectedKind(argReach(token, local)))) return true;
   }
+  // git grep -O<pager> runs the pager on the files it finds
+  if (sub.name === 'grep' && (scope.tainted || scope.holds) && tokens.some(token => /^-O/.test(token.value) || (token.value.length >= 4 && '--open-files-in-pager'.startsWith(token.value.split('=')[0])))) return true;
   if (sub.name === 'rm' && (sub.args.includes('--') ? sub.args.slice(0, sub.args.indexOf('--')) : sub.args).includes('--cached')) return false; // the index only
   const safe = GIT_SAFE.has(sub.name);
   // A branch name is not a path: it never makes the command blind.
@@ -1350,7 +1424,8 @@ function gitWrites(parts, scope, fed, depth) {
     const kind = argReach(token, local);
     if (safe) {
       // the few that write a file of their own choosing say so with --output or -o
-      const output = /^--output/.test(token.value) || after(i, ['--output']) || (after(i, ['-o']) && ['format-patch', 'archive'].includes(sub.name));
+      const outputFlag = (value) => /^--output/.test(value) || (value.split('=')[0].length >= 4 && '--output'.startsWith(value.split('=')[0]));
+      const output = outputFlag(token.value) || (i > 0 && outputFlag(tokens[i - 1].value)) || (after(i, ['-o']) && ['format-patch', 'archive'].includes(sub.name));
       if (output && protectedKind(kind)) return true;
       continue;
     }
@@ -1372,13 +1447,14 @@ function otherWrites(parts, command, scope, fed, depth) {
   const { executable, args, argTokens } = parts;
   const shell = SHELLS.includes(executable) || parts.opaque;
   const interpreter = INTERPRETERS.includes(executable);
-  const known = WRITERS.has(executable) || parts.opaque;
+  const pre = executable === 'rg' && args.some(arg => arg.startsWith('--pre'));
+  const known = WRITERS.has(executable) || parts.opaque || pre;
   // inside a here-document that is saved or passed on, only what is known to write counts
   if (scope.lenient && !known) return false;
   const inline = !shell && inlineCode(executable, args);
   const near = scope.tainted || scope.holds;
   // the whole command is a variable: what it holds may be the text this line names
-  if (parts.opaque && scope.tainted && (/^\$\{/.test(parts.head.value) || (/^\$[A-Za-z_]/.test(parts.head.value) && !parts.head.value.includes('/')))) return true;
+  if (parts.opaque && scope.tainted && (/^\$\{/.test(parts.head.value) || (/^\$[A-Za-z_@*0-9]/.test(parts.head.value) && !parts.head.value.includes('/')))) return true;
   // zsh: `- command` runs the command
   if (executable === '-' && argTokens.length) return commandWrites({ tokens: argTokens, words: args, redirects: [], inputs: [], heredocs: [], separator: '' }, scope, false, depth + 1);
   // commands handed down a pipe to parallel; an archive unpacked where the line stands
@@ -1405,13 +1481,15 @@ function otherWrites(parts, command, scope, fed, depth) {
   for (const token of [...parts.assignments, ...tokens]) {
     if (!known && !carries && token.quoted && /\s/.test(token.value)) continue;
     const kind = argReach(token, scope);
-    if (protectedKind(kind) || (kind === 'holder' && (TREE.has(executable) || executable === 'tar' || executable === 'watch' || parts.opaque))) return true;
+    if (protectedKind(kind) || (kind === 'holder' && (TREE.has(executable) || executable === 'tar' || executable === 'watch' || parts.opaque || pre))) return true;
     if (['rm', 'rmdir', 'chmod', 'chown', 'chgrp', 'chflags'].includes(executable) && !token.value.startsWith('-') && aboveRoot(token, scope)) return true;
     if (kind === 'unknown') blind = true;
   }
   if (interpreter || ['ed', 'ex'].includes(executable)) {
     // the paths a program names in quotes, read from where the line stands
-    const programs = [...(inline ? tokens.filter(token => token.quoted).map(token => token.value) : []), ...command.heredocs];
+    // … and a program printed into a substitution: python3 <(echo "…")
+    const printedPrograms = command.tokens.flatMap(token => token.subs || []).flatMap(producedText);
+    const programs = [...(inline ? tokens.filter(token => token.quoted).map(token => token.value) : []), ...command.heredocs, ...printedPrograms];
     let holder = false, named = false;
     for (const program of programs) for (const match of program.matchAll(/['"]([^'"\n]{1,200})['"]/g)) {
       if (protectedKind(reach({ ...plain(match[1]), glob: /[*?[]/.test(match[1]) }, scope))) return true;
@@ -1420,10 +1498,12 @@ function otherWrites(parts, command, scope, fed, depth) {
     }
     // the tickets directory and a ticket's name or pattern, put together by the program
     if (holder && named) return true;
-    if (command.heredocs.some(mentions)) return true;
+    if (command.heredocs.some(mentions) || printedPrograms.some(mentions)) return true;
     // a program written by here-document on this line, or one that arrives on standard input
     if (interpreter && scope.scripted) return true;
-    if (interpreter && !inline && scope.tainted && args.every(arg => arg === '-' || /^-[A-Za-z]$/.test(arg))) return true;
+    // one that arrives on standard input from elsewhere: not a here-document, which was read above, and not `node -v`
+    const version = !args.includes('-') && args.some(arg => ['--version', '--help', '-h', executable === 'python3' ? '-V' : '-v'].includes(arg));
+    if (interpreter && !inline && scope.tainted && !command.heredocs.length && !version && args.every(arg => arg === '-' || /^-[A-Za-z]$/.test(arg))) return true;
   }
   if (near && ((fed && !fedReads) || (known && blind))) return true;
   return known && inline && scope.ticketed;
@@ -1436,7 +1516,7 @@ function marks(command, scope, depth = 0) {
   if (depth > NESTING) return new Set(['ticket', 'engine']);
   const found = new Set();
   const parts = commandParts(command);
-  const own = ownRun(parts);
+  const own = ownRun(parts, scope);
   for (const token of [...command.tokens, ...command.redirects.filter(Boolean), ...command.inputs]) {
     const kind = token === own ? 'other' : argReach(token, scope);
     if (protectedKind(kind) || kind === 'holder') found.add(kind);
@@ -1448,6 +1528,74 @@ function marks(command, scope, depth = 0) {
   if (parts.executable === 'find') { const plan = findPlan(parts); if (findCovers(plan, plan.whole, scope)) found.add('ticket'); }
   for (const sub of substitutions(command)) for (const inner of shellCommands(sub)) for (const kind of marks(inner, scope, depth + 1)) found.add(kind);
   return found;
+}
+
+// What a line says about its own variables, worked out before anything is judged.
+// `consts`: a variable the line gives one written value, in the assignments it opens
+// with, and names nowhere else but to read it (S=/tmp/out; cp <ticket> $S/copy.md).
+// Nothing on the line may be able to set a variable by a name it works out: no eval,
+// source, read, declare, export, printf -v, $'…', and no command that is itself a
+// variable. `repwd`: the line names PWD other than to read it, so $PWD is not followed.
+const SETTERS = ['eval', 'source', '.', 'trap', 'read', 'declare', 'typeset', 'local', 'readonly', 'export', 'let', 'getopts', 'mapfile', 'readarray', 'unset', 'integer', 'float', 'vared', 'nameref'];
+const RESERVED = /^(PWD|OLDPWD|PATH|HOME|TMPDIR|CDPATH|IFS|ENV|BASH_ENV|ZDOTDIR|CLAUDE_PROJECT_DIR|GIT_.*)$/;
+function lineFacts(source, commands, outer) {
+  const repwd = Boolean(outer && outer.repwd) || /(?<![A-Za-z0-9_])PWD(?![A-Za-z0-9_])/.test(source.replace(/\$(\{PWD\}|PWD(?![A-Za-z0-9_]))/g, ''));
+  const consts = new Map();
+  if (outer) return { repwd, consts };
+  const sets = commands.some(command => {
+    const parts = commandParts(command);
+    return parts.opaque || SETTERS.includes(parts.executable) || (['printf', 'print'].includes(parts.executable) && parts.args.some(arg => /^-[A-Za-z]*v/.test(arg))) ||
+      (parts.executable === 'set' && parts.args.some(arg => /^[-+][A-Za-z]*A/.test(arg))) || command.tokens.some(token => token.ansi);
+  });
+  if (sets) return { repwd, consts };
+  // name=$(mktemp) and name=$(mktemp -d): a new file or directory under the temporary directory
+  const fresh = !/TMPDIR/.test(source) && !/mktemp\s*\(\)|(function|alias|hash)\s[^;\n]*mktemp/.test(source);
+  const value = (token) => {
+    if (token.assign || token.glob) return null;
+    const made = fresh && token.computed && !token.ansi && token.subs.length === 1 && /^mktemp(\s+-d)?$/.test(token.subs[0].trim()) && /^([A-Za-z_][A-Za-z0-9_]*)=\$\(\)$/.exec(token.value);
+    if (made) return [made[1], path.join(os.tmpdir(), 'pincer-mktemp', made[1])];
+    const written = !token.computed && /^([A-Za-z_][A-Za-z0-9_]*)=([A-Za-z0-9_@%+,./][A-Za-z0-9_@%+,./-]*)$/.exec(token.value);
+    return written ? [written[1], written[2]] : null;
+  };
+  // An assignment counts where it is sure to run before anything reads it: among the
+  // statements the line opens with, or later as a statement of its own on a line with no
+  // compound command (if, for, { }, a subshell, a function).
+  const compound = commands.some(command => ['(', ')'].includes(command.separator) ||
+    command.tokens.some(token => !token.quoted && (KEYWORDS.includes(token.value) || ['for', 'case', 'esac', 'select', 'function', 'coproc'].includes(token.value))));
+  let leading = true;
+  commands.forEach((command, i) => {
+    const pure = [';', '&&', ''].includes(command.separator) && command.tokens.length > 0 && !command.redirects.length && !command.inputs.length && !command.heredocs.length && command.tokens.every(value);
+    if (!pure) { leading = false; return; }
+    if (leading || (!compound && commands[i - 1].separator === ';')) for (const token of command.tokens) consts.set(...value(token));
+  });
+  for (const name of [...consts.keys()]) {
+    const all = [...source.matchAll(new RegExp(`(?<![A-Za-z0-9_])${name}(?![A-Za-z0-9_])`, 'g'))];
+    const refs = [...source.matchAll(new RegExp(`\\$(?:\\{${name}\\}|${name}(?![A-Za-z0-9_]))`, 'g'))];
+    // named once to set it and otherwise only read, and set before the first read
+    const set = all.find(match => !/[$\{]$/.test(source.slice(0, match.index)));
+    if (RESERVED.test(name) || all.length !== refs.length + 1 || !set || (refs.length && refs[0].index < set.index)) consts.delete(name);
+  }
+  return { repwd, consts };
+}
+// A word made of written text and variables whose value is known here, as the word it
+// is: $S/y with S=/tmp/out, $PWD/x from where the line stands, $CLAUDE_PROJECT_DIR/x.
+// A zsh modifier or subscript after the name ($S:h, $S[1]) leaves the word computed.
+function settle(token, facts) {
+  if (!token || !token.computed || token.ansi || (token.subs && token.subs.length) || /^~|`/.test(token.value)) return token;
+  let failed = false;
+  const value = token.value.replace(/\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}(?![[:])|([A-Za-z_][A-Za-z0-9_]*)(?![A-Za-z0-9_[:]))/g, (whole, braced, bare, offset) => {
+    const name = braced || bare;
+    if (name === 'PWD' && !facts.repwd && offset === 0) return '.';
+    if (name === 'CLAUDE_PROJECT_DIR') return projectRoot();
+    if (facts.consts.has(name)) return facts.consts.get(name);
+    failed = true;
+    return whole;
+  });
+  return failed || /[$`]/.test(value) ? token : { ...token, value, computed: false };
+}
+function settleCommand(command, facts) {
+  const tokens = command.tokens.map(token => settle(token, facts));
+  return { ...command, tokens, words: tokens.map(token => token.value), redirects: command.redirects.map(token => settle(token, facts)), inputs: command.inputs.map(token => settle(token, facts)) };
 }
 
 // Where the commands of a line can stand and what the line names. Every `cd`,
@@ -1465,7 +1613,16 @@ function scopeOf(commands, outer) {
   const start = [typeof payload.cwd === 'string' && payload.cwd ? payload.cwd : projectRoot(), projectRoot(), process.cwd()];
   const scope = outer
     ? { ...outer, cwds: new Set(outer.cwds) }
-    : { cwds: new Set(start.map(dir => path.resolve(dir))), lost: false, adrift: false, tainted: false, ticketed: false, holds: false, scripted: false, retmp: false, rehome: false, lenient: false };
+    : { cwds: new Set(start.map(dir => path.resolve(dir))), renamed: new Set(), repwd: false, lost: false, adrift: false, tainted: false, ticketed: false, holds: false, scripted: false, retmp: false, rehome: false, lenient: false };
+  // a name the line gives another meaning: a function, an alias, hash name=…
+  const rename = (name) => { if (name) scope.renamed.add(path.basename(name).toLowerCase()); };
+  for (const command of commands) {
+    const words = command.tokens;
+    if (words.length === 1 && command.separator === '(' && !words[0].quoted) rename(words[0].value);
+    words.forEach((token, i) => { if (token.value === 'function' && !token.quoted && words[i + 1]) rename(words[i + 1].value.replace(/\(\)$/, '')); });
+    const parts = commandParts(command);
+    if (['alias', 'hash'].includes(parts.executable)) for (const arg of parts.args) if (!arg.startsWith('-')) rename(arg.split('=')[0]);
+  }
   const started = [...scope.cwds];
   const add = (dir) => { if (scope.cwds.size < CWDS) scope.cwds.add(dir); else if (!scope.cwds.has(dir)) scope.adrift = true; };
   const stand = (target) => {
@@ -1510,7 +1667,7 @@ function scopeOf(commands, outer) {
   }
   for (const command of commands) {
     const parts = commandParts(command);
-    const reader = parts.executable !== 'find' && !ownRun(parts) && reads(parts, scope);
+    const reader = parts.executable !== 'find' && !ownRun(parts, scope) && reads(parts, scope);
     scope.scripted ||= !heredocIsData(parts, command, reader) && command.heredocs.some(mentions);
   }
   return scope;
@@ -1534,7 +1691,7 @@ function commandWrites(command, scope, piped, depth, previous = null) {
   if (parts.splits.some(code)) return true;
   if (parts.values.some(token => protectedKind(argReach(token, scope)))) return true;
   if (shell && shellText(args) !== null && code(shellText(args))) return true;
-  if ((shell || executable === 'eval') && command.tokens.flatMap(token => token.subs || []).flatMap(producedText).some(code)) return true;
+  if ((shell || ['eval', 'source', '.'].includes(executable)) && command.tokens.flatMap(token => token.subs || []).flatMap(producedText).some(code)) return true;
   if (readsScript(parts) && previous && previous.separator === '|' && printed(previous).some(code)) return true;
   if (executable === 'eval' && code(args.filter(arg => arg !== '--').join(' '))) return true;
   if (executable === 'trap' && args.some(code)) return true;
@@ -1543,12 +1700,19 @@ function commandWrites(command, scope, piped, depth, previous = null) {
   if (readsScript(parts) && previous && previous.separator === '|' && (scope.tainted || scope.holds) && !printed(previous).length) return true;
   if (TEXT_RUNNERS.includes(executable) && command.tokens.filter(token => token.quoted).some(token => code(token.value))) return true;
   // A lookalike of the writer anywhere but the project's own path is refused outright.
-  if ([...command.words, ...command.redirects.filter(Boolean).map(token => token.value)].some(lookalikeWriter)) return true;
+  // A sentence that ends with the script's name, handed to a command that runs no text, is not one.
+  const runsText = shell || INTERPRETERS.includes(executable) || ['eval', 'source', '.', 'trap', 'alias'].includes(executable) || TEXT_RUNNERS.includes(executable);
+  const sentence = (token) => token.quoted && /\s/.test(token.value) && token !== parts.head && !runsText;
+  if ([...command.tokens, ...command.redirects.filter(Boolean)].some(token => lookalikeWriter(token.value) && !sentence(token))) return true;
   if (!parts.head) return false;
   // in text that is only saved, a line that opens with a capital is prose (At the end …, Install the …)
   if (scope.lenient && /[A-Z]/.test(path.basename(parts.head.value))) return false;
   const fed = parts.wrappers.includes('xargs');
-  const own = ownRun(parts);
+  const own = ownRun(parts, scope);
+  // a variable that makes git run a command, set for a later git on the line
+  if (!own && command.tokens.some(token => /^GIT_[A-Z_]+\+?=/.test(token.value) && protectedKind(argReach(token, scope)))) return true;
+  // under a reader's name, a program that is not the system's: refused with a protected path or a directory that holds them
+  if (!own && untrusted(parts, scope) && [...parts.assignments, ...parts.argTokens].some(token => { const kind = argReach(token, scope); return protectedKind(kind) || kind === 'holder'; })) return true;
   const reader = executable !== 'git' && executable !== 'find' && !own && reads(parts, scope);
   // A here-document that is more than a message: a script for a shell, or text that is
   // saved or passed on, in which only what is known to write counts.
@@ -1569,10 +1733,13 @@ function commandWrites(command, scope, piped, depth, previous = null) {
 function shellWrites(source, outer = null, depth = 0) {
   if (depth > NESTING) return true;
   if (!outer && isExactPincerCall(source)) return false;
-  const commands = shellCommands(source);
+  const written = shellCommands(source);
   // a line that points CLAUDE_PROJECT_DIR elsewhere would make another script the project's own
-  if (commands.some(command => command.tokens.some(token => /^CLAUDE_PROJECT_DIR\+?=/.test(token.value)))) return true;
-  const scope = scopeOf(commands, outer);
+  if (written.some(command => command.tokens.some(token => /^CLAUDE_PROJECT_DIR\+?=/.test(token.value)))) return true;
+  const facts = lineFacts(source, written, outer);
+  const commands = written.map(command => settleCommand(command, facts));
+  const scope = scopeOf(commands, outer ? { ...outer, repwd: facts.repwd } : null);
+  scope.repwd = facts.repwd;
   const piped = commands.some(command => readsScript(commandParts(command)));
   return commands.some((command, i) => commandWrites(command, scope, piped, depth, i ? commands[i - 1] : null));
 }
