@@ -121,8 +121,11 @@ write(dir, 'src/greet.js', working);
 expect(ticket('verify', 'T-01'));
 expect(ticket('done', 'T-01'));
 assert.equal(status().tickets[0].ready, true);
-assert.deepEqual(status().warnings, ['T-01 done without acceptance']);
+// done, with the closing commit still to come: status names it before anything else
+assert.match(status().warnings[0], /^T-01 done but not committed/);
+assert.equal(status().next, '$pincer-code T-01 (done, not committed)');
 commit('T-01: synthetic greeting', ['src', 'test', ticketFile]);
+assert.deepEqual(status().warnings, ['T-01 done without acceptance']);
 write(dir, specFile, read(dir, specFile).replace('status: approved', 'status: built'));
 const candidate = commit('spec: synthetic greeting built', [specFile]);
 clean();

@@ -290,8 +290,17 @@ createTicket(two, { spec: createSpec(two, 'first', 'approved') });
 ticket(two, 'verify', 'T-01');
 assert.equal(ticket(two, 'done', 'T-01').status, 0);
 createSpec(two, 'first', 'built');
-assert.equal(next().next, '/pincer-evaluate', 'no evidence at all');
+// done, but the commit that closes the ticket never happened: status says so and names it first
+assert.equal(next().next, '/pincer-code T-01 (done, not committed)');
+assert.deepEqual(next().uncommitted, ['T-01']);
+r = status(two);
+assert.match(r.stdout, /^T-01 done verified \S+ \(not committed\)$/m);
+assert.match(r.stdout, /^  T-01 done but not committed: its work is only in the working tree — review it, stage its paths and its file, commit as "T-01: <title>"$/m);
+assert.equal(lastLine(r.stdout), 'Next: /pincer-code T-01 (done, not committed)');
 const firstCandidate = commitAll('T-01: example');
+assert.deepEqual(next().uncommitted, []);
+assert.doesNotMatch(status(two).stdout, /not committed/);
+assert.equal(next().next, '/pincer-evaluate', 'no evidence at all');
 write(two, 'evidence/not-a-candidate/manifest.json', '{}');
 assert.equal(next().next, '/pincer-evaluate', 'a manifest without a candidate proves nothing');
 assert.deepEqual(next().unevaluated, ['T-01']);
@@ -309,7 +318,11 @@ assert.equal(next().next, '/pincer-code');
 ticket(two, 'verify', 'T-02');
 assert.equal(ticket(two, 'done', 'T-02').status, 0);
 createSpec(two, 'second', 'built');
-assert.equal(next().next, '/pincer-evaluate', 'a finished ticket that is not committed has no candidate');
+assert.equal(next().next, '/pincer-code T-02 (done, not committed)', 'a finished ticket that is not committed has no candidate yet');
+// the commit comes before the next ticket is started
+createTicket(two, { id: 'T-03', spec: 'specs/second.md' });
+assert.equal(next().next, '/pincer-code T-02 (done, not committed)', 'an open ticket waits for the commit');
+run(two, 'rm', ['tickets/T-03-example.md']);
 const secondCandidate = commitAll('T-02: example');
 assert.equal(next().next, '/pincer-evaluate', 'the evidence of the first change does not cover T-02');
 assert.deepEqual(next().unevaluated, ['T-02']);
@@ -320,9 +333,59 @@ assert.equal(next().next, '/pincer-release', 'evidence with no acceptance gives 
 const t2 = 'tickets/T-02-example.md';
 const evaluated = read(two, t2);
 write(two, t2, evaluated.replace(/^verified: \S+/m, 'verified: 2020-01-01T00:00:00Z').replace(/^last_check: \S+/m, 'last_check: 2020-01-01T00:00:00Z'));
+assert.equal(next().next, '/pincer-code T-02 (done, not committed)', 'a receipt that is not in a commit is committed first');
+commitAll('T-02: verified again');
 assert.equal(next().next, '/pincer-evaluate', 'a receipt newer than the evidence needs a new evaluation');
 write(two, t2, evaluated);
+commitAll('T-02: as evaluated');
+assert.equal(next().next, '/pincer-release');
 assert.equal(ticket(two, 'accept', 'T-02', '--by', 'Alex', '--words', 'ship it').status, 0);
 assert.equal(next().next, 'all tickets done and accepted');
+
+// a ticket file git ignores, and a project that is no git repository, cannot be told: no warning
+write(two, '.gitignore', 'tickets/T-04-*\n');
+commitAll('ignore one ticket');
+createTicket(two, { id: 'T-04', spec: 'specs/second.md' });
+ticket(two, 'verify', 'T-04');
+assert.equal(ticket(two, 'done', 'T-04').status, 0);
+assert.deepEqual(next().uncommitted, []);
+const plain = tempDir();
+createHarness(plain);
+createTicket(plain);
+ticket(plain, 'verify', 'T-01');
+assert.equal(ticket(plain, 'done', 'T-01').status, 0);
+assert.deepEqual(JSON.parse(status(plain, '--json').stdout).uncommitted, []);
+assert.doesNotMatch(status(plain).stdout, /not committed/);
+
+// The first job the agreement names is what to plan: on a new project, and again when
+// the blueprint names another one after everything before it was accepted.
+const job = tempDir();
+const gitAt = (date, ...args) => {
+  const g = run(job, 'git', ['-c', 'user.name=Pincer Fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', ...args],
+    { env: { ...process.env, CLAUDE_PROJECT_DIR: job, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date } });
+  assert.equal(g.status, 0, both(g));
+};
+const nextJob = () => JSON.parse(status(job, '--json').stdout).next;
+gitAt('2020-01-01T00:00:00Z', 'init', '-q', '-b', 'main');
+createHarness(job, { firstJob: 'Greet a person by name', stages: { evaluate: { evidence: false }, plan: { on: true } } });
+assert.equal(nextJob(), '/pincer-plan Greet a person by name', 'a new project starts with the first job');
+createTicket(job, { spec: createSpec(job, 'greet', 'built') });
+ticket(job, 'verify', 'T-01');
+assert.equal(ticket(job, 'done', 'T-01').status, 0);
+gitAt('2020-01-01T00:00:00Z', 'add', '-A');
+gitAt('2020-01-01T00:00:00Z', 'commit', '-q', '-m', 'T-01: example');
+assert.equal(ticket(job, 'accept', 'T-01', '--by', 'Alex', '--words', 'ship it').status, 0);
+assert.equal(nextJob(), 'all tickets done and accepted', 'the first job that was built is not offered again');
+createHarness(job, { firstJob: 'Add a whisper flag', stages: { evaluate: { evidence: false }, plan: { on: true } } });
+assert.equal(nextJob(), '/pincer-plan Add a whisper flag', 'a first job named after the last acceptance');
+assert.equal(lastLine(status(job).stdout), 'Next: /pincer-plan Add a whisper flag');
+gitAt('2099-01-01T00:00:00Z', 'add', '-A');
+gitAt('2099-01-01T00:00:00Z', 'commit', '-q', '-m', 'agreement: a new first job');
+assert.equal(nextJob(), '/pincer-plan Add a whisper flag', 'committed or not');
+createHarness(job, { firstJob: 'Add a whisper flag', stages: { evaluate: { evidence: false }, plan: { on: false } } });
+assert.equal(nextJob(), '/pincer-narrow Add a whisper flag', 'with plan off the job goes to narrow');
+createHarness(job, { firstJob: 'Add a whisper flag', stages: { evaluate: { evidence: false }, plan: { on: true } } });
+createSpec(job, 'whisper', 'draft');
+assert.equal(nextJob(), '/pincer-plan specs/whisper.md (awaiting approval)', 'once a spec exists the spec leads');
 
 console.log('status: ok');

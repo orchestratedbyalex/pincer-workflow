@@ -105,6 +105,41 @@ function unevaluated(root, report) {
   return candidates.some((candidate) => pending.every((t) => covers(candidate, t))) ? [] : ids;
 }
 
+// The done tickets whose `done` is in no commit yet: the ticket file at HEAD is
+// missing, not done, or carries another receipt. The code stage commits a ticket's
+// work together with its file, so until then that work is only in the working
+// tree, which is what a session cut off between `done` and the commit leaves.
+// Accepted tickets are past this. Outside a git repository, and for a ticket file
+// git ignores, it cannot be told.
+function uncommitted(root, report) {
+  const pending = report.tickets.filter((t) => !t.problem && t.status === 'done' && !t.accepted);
+  if (!pending.length || util.tryGit(root, ['rev-parse', '--is-inside-work-tree']) !== 'true') return [];
+  return pending.filter((t) => {
+    const head = util.tryGit(root, ['show', `HEAD:./${t.file}`]);
+    if (head === null) return util.tryGit(root, ['check-ignore', '-q', '--', t.file]) === null;
+    return parse.frontmatterField(head, 'status') !== 'done' || parse.frontmatterField(head, 'verified') !== (t.verified || '');
+  }).map((t) => t.id);
+}
+
+// The first job the agreement names, when it was named after the last acceptance:
+// harness.json in the newest commit up to that moment names another one, or none.
+// Read only once every ticket is done and accepted, when nothing else is left to
+// point at. Outside a git repository the history cannot be asked, and nothing is said.
+function newFirstJob(root, report) {
+  const job = report.harness ? report.harness.firstJob.trim() : '';
+  const tickets = report.tickets;
+  if (!job || !tickets.length || tickets.some((t) => t.problem || t.status !== 'done' || !t.accepted)) return '';
+  const last = tickets.map((t) => t.accepted).sort().pop();
+  const commit = util.tryGit(root, ['rev-list', '-1', `--before=${last}`, 'HEAD']);
+  const then = commit ? util.tryGit(root, ['show', `${commit}:./${HARNESS_FILE}`]) : null;
+  if (then === null) return '';
+  let before;
+  try { before = JSON.parse(then).firstJob; } catch (error) { return ''; }
+  return typeof before === 'string' && before.trim() === job ? '' : job;
+}
+// Where a new piece of work enters the pipeline under this agreement.
+const entryStage = (report) => (report.stages.plan === 'on' ? '/pincer-plan' : report.stages.narrow === 'on' ? '/pincer-narrow' : '/pincer-code');
+
 // An approved spec that still needs tickets: no ticket names it in its `spec:`
 // field. A ticket without that field may belong to any spec, so while one is
 // still on its way to acceptance nothing is called unnarrowed.
@@ -119,7 +154,7 @@ function unnarrowed(report) {
 // The whole picture, as data. `harness` is null without a valid agreement;
 // `harnessProblem` says why when the file exists but does not validate.
 function gather(root) {
-  const report = { name: path.basename(root), harness: null, harnessProblem: null, stages: {}, models: null, specs: [], tickets: [], evidence: [], unevaluated: [], warnings: [], next: '' };
+  const report = { name: path.basename(root), harness: null, harnessProblem: null, stages: {}, models: null, specs: [], tickets: [], evidence: [], unevaluated: [], uncommitted: [], firstJob: '', warnings: [], next: '' };
   const loaded = harnessModule.load(root);
   let homes = harnessModule.homes(null);
   if (loaded.ok) {
@@ -136,9 +171,13 @@ function gather(root) {
   report.tickets = parse.ticketFiles(root, homes.tickets).map((file) => ticketEntry(root, file));
   report.evidence = manifests(root, homes.evidence);
   if (wantsEvidence(report)) report.unevaluated = unevaluated(root, report);
+  report.uncommitted = uncommitted(root, report);
+  report.firstJob = newFirstJob(root, report);
   for (const t of report.tickets) {
     if (t.problem) { report.warnings.push(`${t.file}: ${t.problem}`); continue; }
+    t.uncommitted = report.uncommitted.includes(t.id);
     if (t.status === 'done' && !t.ready) report.warnings.push(`${t.id} done: ${t.readiness}`);
+    if (t.uncommitted) report.warnings.push(`${t.id} done but not committed: its work is only in the working tree — review it, stage its paths and its file, commit as "${t.id}: <title>"`);
     if (t.status === 'done' && !t.accepted) report.warnings.push(`${t.id} done without acceptance`);
   }
   report.next = commandMentions(root, nextCommand(report));
@@ -156,13 +195,16 @@ function nextCommand(report) {
   const broken = tickets.find((t) => t.problem);
   if (broken) return `fix ${broken.file}`;
   const draft = report.stages.plan === 'on' && report.specs.find((s) => !['approved', 'built'].includes(s.status));
-  if (report.stages.plan === 'on' && report.specs.length === 0 && tickets.length === 0) return '/pincer-plan <brief>';
+  if (report.stages.plan === 'on' && report.specs.length === 0 && tickets.length === 0) return `/pincer-plan ${report.harness.firstJob.trim() || '<brief>'}`;
   if (tickets.length === 0) {
     if (draft) return `/pincer-plan ${draft.file} (awaiting approval)`;
     return report.stages.narrow === 'on' ? '/pincer-narrow' : '/pincer-code';
   }
   const inProgress = tickets.find((t) => t.status === 'in_progress');
   if (inProgress) return `${SCRIPT} verify ${inProgress.id}`;
+  // A finished ticket is committed before anything else is started or judged.
+  const loose = tickets.find((t) => t.uncommitted);
+  if (loose) return loose.ready ? `/pincer-code ${loose.id} (done, not committed)` : `${SCRIPT} verify ${loose.id}`;
   if (tickets.some((t) => t.status === 'open')) return '/pincer-code';
   const stale = tickets.find((t) => t.status === 'done' && !t.ready);
   if (stale) return `${SCRIPT} verify ${stale.id}`;
@@ -175,6 +217,8 @@ function nextCommand(report) {
     if (harnessModule.stageOn(report.harness, 'release')) return '/pincer-release';
     return `${SCRIPT} accept ${unaccepted.id} --by "<name>" --words "<their words>"`;
   }
+  // Everything is accepted. A first job the agreement named since then is the next change.
+  if (report.firstJob) return `${entryStage(report)} ${report.firstJob}`;
   return 'all tickets done and accepted';
 }
 
@@ -184,6 +228,7 @@ function ticketLine(t) {
   if (t.status === 'in_progress' && t.started) line += ` started ${t.started}`;
   if (t.verified) line += ` verified ${t.verified.split(/\s+/)[0]}`;
   if (t.acceptedBy) line += ` accepted by ${t.acceptedBy}`;
+  if (t.uncommitted) line += ' (not committed)';
   return line;
 }
 function render(report) {
