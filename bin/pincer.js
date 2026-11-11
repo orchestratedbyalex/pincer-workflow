@@ -71,9 +71,27 @@ function withAgreementOf(text, other) {
   return text.slice(0, mine.start) + other.slice(theirs.start, theirs.end) + text.slice(mine.end);
 }
 const ownsAgreement = (rel) => rel === AGENTS_FILE;
+// The Conventions section of AGENTS.md is kept by hand ("the project's own conventions"),
+// so it is the project's in the same way: from its heading to the next `## ` heading.
+const CONVENTIONS = '## Conventions';
+function sectionSpan(text, heading) {
+  const at = text.search(new RegExp(`^${heading}[ \\t]*$`, 'm'));
+  if (at === -1) return null;
+  const line = text.indexOf('\n', at);
+  const start = line === -1 ? text.length : line + 1;
+  const next = text.slice(start).search(/^## /m);
+  return { start, end: next === -1 ? text.length : start + next };
+}
+function withSectionOf(text, other, heading) {
+  const mine = sectionSpan(text, heading), theirs = sectionSpan(other, heading);
+  if (!mine || !theirs) return text;
+  return text.slice(0, mine.start) + other.slice(theirs.start, theirs.end) + text.slice(mine.end);
+}
+// `text` with the parts of `other` that belong to the project: the agreement and the conventions.
+const withProjectParts = (text, other) => withSectionOf(withAgreementOf(text, other), other, CONVENTIONS);
 // The package's file as it belongs in this project, and the project's file as the installer sees it.
-const forProject = (rel, shipped, project) => (ownsAgreement(rel) ? Buffer.from(withAgreementOf(shipped.toString(), project.toString())) : shipped);
-const installerView = (rel, project, shipped) => (ownsAgreement(rel) ? Buffer.from(withAgreementOf(project.toString(), shipped.toString())) : project);
+const forProject = (rel, shipped, project) => (ownsAgreement(rel) ? Buffer.from(withProjectParts(shipped.toString(), project.toString())) : shipped);
+const installerView = (rel, project, shipped) => (ownsAgreement(rel) ? Buffer.from(withProjectParts(project.toString(), shipped.toString())) : project);
 
 function walk(root, rel = '') {
   const abs = path.join(root, rel);
@@ -130,7 +148,7 @@ function writeProposal(dest, content) {
 // Copies the template files into dir. `baseline` (the manifest's hashes) tells an
 // update which existing files are unmodified and therefore safe to refresh.
 function install(dir, platforms, baseline, generated) {
-  const results = { written: [], skipped: [], conflicted: [], removed: [] };
+  const results = { written: [], skipped: [], conflicted: [], removed: [], kept: [] };
   const hashes = {};
   for (const rel of filesFor(platforms)) {
     const src = fs.readFileSync(path.join(TEMPLATE, rel));
@@ -149,21 +167,25 @@ function install(dir, platforms, baseline, generated) {
     } else if (baseline && baseline[rel] === sha(installerView(rel, current, src))) {
       fs.writeFileSync(dest, wanted); // untouched since install: safe to refresh
       results.written.push(rel);
+    } else if (baseline && baseline[rel] === sha(src)) {
+      // Edited here, and the package's text is what was installed or last offered:
+      // there is nothing new to propose, and a proposal would only ask to undo the edit.
+      results.kept.push(rel);
     } else {
+      // The recorded hash is the package text that was offered. The file is refreshed
+      // in place later only when it is exactly that text; the same text is not offered twice.
       const proposal = writeProposal(dest, wanted);
-      // Only a version this installer wrote grants overwrite permission later;
-      // null means no trusted upstream baseline was ever established.
-      hashes[rel] = baseline?.[rel] ?? null;
       results.conflicted.push({ rel, proposal: path.relative(dir, proposal) });
       continue;
     }
-    // 1.0.2 and earlier proposed the blank agreement beside a filled one on every update.
-    // A proposal whose only difference is that blank agreement is removed; any other is the person's.
+    // 1.0.3 and earlier proposed the package's blank agreement and its empty Conventions
+    // section beside the project's own on every update. A proposal whose only difference is
+    // those parts as the package ships them is removed; any other is the person's.
     const sidecar = dest + '.new';
     if (ownsAgreement(rel) && !wanted.equals(src) && fs.existsSync(sidecar)) {
       const proposed = fs.readFileSync(sidecar).toString();
-      const blank = withAgreementOf(proposed, src.toString()) === proposed; // its agreement is the package's placeholder
-      if (blank && withAgreementOf(proposed, wanted.toString()) === wanted.toString()) { fs.rmSync(sidecar); results.removed.push(`${rel}.new`); }
+      const blank = withProjectParts(proposed, src.toString()) === proposed; // its agreement and conventions are the package's
+      if (blank && withProjectParts(proposed, wanted.toString()) === wanted.toString()) { fs.rmSync(sidecar); results.removed.push(`${rel}.new`); }
     }
   }
   for (const rel of EXECUTABLES) {
@@ -185,10 +207,11 @@ function ensureGitignore(dir) {
   fs.appendFileSync(p, `${lead}${existing ? '\n' : ''}# secrets (added by pincer init)\n${missing.join('\n')}\n`);
 }
 
-function report({ written, skipped, conflicted, removed }) {
+function report({ written, skipped, conflicted, removed, kept }) {
   if (written.length) console.log(`  wrote    ${written.length} file(s)`);
   if (skipped.length) console.log(`  skipped  ${skipped.length} file(s) already up to date`);
-  for (const rel of removed) console.log(`  removed  ${rel} — it proposed only the blank agreement; yours is kept`);
+  for (const rel of kept) console.log(`  kept     ${rel} — edited here; the package's version has not changed, so there is nothing to merge`);
+  for (const rel of removed) console.log(`  removed  ${rel} — it proposed only the package's blank agreement or empty Conventions; yours are kept`);
   for (const { rel, proposal } of conflicted) console.log(`  CONFLICT ${rel} — local content preserved; the new version is at ${proposal}`);
   if (conflicted.length) console.log('\n  Review and merge each reported proposal, then remove the resolved sidecars.');
 }
@@ -206,7 +229,7 @@ function installedEngine(dir) {
 // What the library or its table could not provide, as one sentence.
 function missingText(name) {
   if (name === 'models.json') return 'the library has no models.json; run pincer update';
-  if (name.startsWith('models.json:')) return `${name} — fix the library table; after an update the upstream copy is beside it as models.json.new`;
+  if (name.startsWith('models.json:')) return `${name} — fix the library table, or delete it and run \`npx pincer-workflow update\` to get the package's copy back`;
   if (name.startsWith('models/')) { const [platform, tier] = name.slice('models/'.length).split('/'); return `the library table has no ${platform} value for tier ${tier}; set models.map.${platform}.${tier} in harness.json`; }
   if (name.startsWith('agents/')) return `the library has no agent ${name.slice('agents/'.length)}`;
   return `the library has no stage ${name}`;
@@ -219,7 +242,7 @@ function reportModels(dir, engine, harness, platforms, check) {
   const read = models.readTable(library);
   if (!read.ok) {
     if (read.missing) check(false, 'library has models.json', 'run: pincer update');
-    else check(false, 'library table readable', `${read.problem} — fix it; after an update the upstream copy is beside it as models.json.new`);
+    else check(false, 'library table readable', `${read.problem} — fix the library table, or delete it and run \`npx pincer-workflow update\` to get the package's copy back`);
     return;
   }
   const table = models.overlay(read.table, harness.models.map);
@@ -456,8 +479,8 @@ use update there.`,
   npx pincer-workflow update [--platform <claude|codex|copilot|all>]
 
 Refreshes the install in the current repository to this version. A file you edited is
-kept and the new version is written beside it as <file>.new; the agreement in AGENTS.md
-is never replaced. With an agreement in place the project's stage copies are generated
+kept; when the package's version of it changed, the new one is written beside it as
+<file>.new. The agreement and the Conventions section in AGENTS.md are never replaced. With an agreement in place the project's stage copies are generated
 again. --platform adds the named platforms to the install and keeps the ones it has.`,
   doctor: `Usage:
   npx pincer-workflow doctor

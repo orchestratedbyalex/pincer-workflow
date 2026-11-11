@@ -17,27 +17,82 @@ const cli = (dir, ...args) => { const r = pincer(dir, ...args); assert.equal(r.s
 const sha = (text) => createHash('sha256').update(text).digest('hex');
 const bareInstall = () => { const dir = tempDir(); cli(dir, 'init', '--platform', 'codex'); return dir; };
 
-// Edits survive three updates; the upstream version waits in a sidecar
+// Edits survive three updates. While the package's text is what it was, there is nothing
+// to propose: no sidecar, and doctor calls the file locally edited, not a problem.
 const fresh = tempDir();
 cli(fresh, 'init', '--platform', 'all');
 const original = read(fresh, 'AGENTS.md');
+const sidecars = (dir, name = 'AGENTS.md') => fs.readdirSync(dir).filter((f) => f.startsWith(`${name}.new`));
 write(fresh, 'AGENTS.md', original + '\nLOCAL RULE\n');
-for (let i = 0; i < 3; i++) cli(fresh, 'update');
+for (let i = 0; i < 3; i++) {
+  const updated = cli(fresh, 'update');
+  assert.doesNotMatch(updated, /CONFLICT/, 'an edit alone is no conflict');
+  assert.match(updated, /kept {5}AGENTS\.md/, 'the update says the edited file was kept');
+}
 assert.equal(read(fresh, 'AGENTS.md'), original + '\nLOCAL RULE\n', 'repeated update preserves edits');
-assert.equal(read(fresh, 'AGENTS.md.new'), original);
+assert.deepEqual(sidecars(fresh), [], 'no proposal while the package text is unchanged');
+let doctor = pincer(fresh, 'doctor');
+assert.equal(doctor.status, 0, `${doctor.stdout}${doctor.stderr}`);
+assert.match(doctor.stdout, /locally edited \(kept as-is on update\): AGENTS\.md$/m);
 assert.equal(JSON.parse(read(fresh, '.pincer.json')).schema, MANIFEST_SCHEMA);
+// the package's text changes: the new version waits in a sidecar, once
+const shippedAgents = read(kit, 'template/AGENTS.md');
+write(kit, 'template/AGENTS.md', shippedAgents + '\nUPSTREAM RULE 0\n');
+assert.match(cli(fresh, 'update'), /CONFLICT AGENTS\.md/);
+assert.equal(read(fresh, 'AGENTS.md'), original + '\nLOCAL RULE\n');
+assert.equal(read(fresh, 'AGENTS.md.new'), original + '\nUPSTREAM RULE 0\n');
+// merged by hand and the sidecar removed: the same package text is not proposed again
+fs.rmSync(path.join(fresh, 'AGENTS.md.new'));
+assert.doesNotMatch(cli(fresh, 'update'), /CONFLICT/);
+assert.deepEqual(sidecars(fresh), [], 'a proposal that was resolved does not come back');
 
 // A sidecar may already contain the user's in-progress merge: never replaced, a distinct proposal appears once
 write(fresh, 'AGENTS.md.new', 'MERGE IN PROGRESS\n');
+write(kit, 'template/AGENTS.md', shippedAgents + '\nUPSTREAM RULE 0b\n');
 cli(fresh, 'update');
 assert.equal(read(fresh, 'AGENTS.md.new'), 'MERGE IN PROGRESS\n');
 assert.ok(fs.readdirSync(fresh).some((f) => f.startsWith('AGENTS.md.new.')));
-const afterFirstSidecar = fs.readdirSync(fresh).filter((f) => f.startsWith('AGENTS.md.new'));
+const afterFirstSidecar = sidecars(fresh);
 cli(fresh, 'update');
-assert.deepEqual(fs.readdirSync(fresh).filter((f) => f.startsWith('AGENTS.md.new')), afterFirstSidecar, 'the same update reuses an identical proposal');
-let doctor = pincer(fresh, 'doctor');
+assert.deepEqual(sidecars(fresh), afterFirstSidecar, 'the same update adds no further proposal');
+doctor = pincer(fresh, 'doctor');
 assert.equal(doctor.status, 1);
 assert.match(doctor.stdout, /AGENTS\.md\.new/);
+write(kit, 'template/AGENTS.md', shippedAgents);
+
+// The Conventions section of AGENTS.md is the project's, like the agreement: a line added
+// there is no local edit, gives no sidecar, and stays when the package's text changes.
+const conventions = tempDir();
+cli(conventions, 'init', '--platform', 'claude');
+const marker = 'rewrites only the agreement above its end marker. -->';
+assert.ok(read(conventions, 'AGENTS.md').includes(marker), 'the template invites conventions kept by hand');
+write(conventions, 'AGENTS.md', read(conventions, 'AGENTS.md').replace(marker, `${marker}\n\n- Tabs, not spaces.\n- Tests live beside the code.`));
+const withConventions = read(conventions, 'AGENTS.md');
+for (let i = 0; i < 2; i++) {
+  assert.doesNotMatch(cli(conventions, 'update'), /CONFLICT|kept {5}/);
+  assert.deepEqual(sidecars(conventions), [], 'a Conventions line gives no sidecar');
+  assert.equal(read(conventions, 'AGENTS.md'), withConventions);
+  doctor = pincer(conventions, 'doctor');
+  assert.equal(doctor.status, 0, `${doctor.stdout}${doctor.stderr}`);
+  assert.doesNotMatch(doctor.stdout, /locally edited/, 'the Conventions section is not a local edit');
+}
+// the sidecar 1.0.3 left beside such a file proposes only to delete the project's lines: removed
+write(conventions, 'AGENTS.md.new', shippedAgents);
+assert.equal(pincer(conventions, 'doctor').status, 1);
+assert.match(cli(conventions, 'update'), /removed {2}AGENTS\.md\.new/);
+assert.deepEqual(sidecars(conventions), []);
+assert.equal(pincer(conventions, 'doctor').status, 0);
+// the package changes its text elsewhere: refreshed in place, the project's conventions stay
+write(kit, 'template/AGENTS.md', shippedAgents + '\nUPSTREAM RULE C\n');
+assert.doesNotMatch(cli(conventions, 'update'), /CONFLICT/);
+assert.equal(read(conventions, 'AGENTS.md'), withConventions + '\nUPSTREAM RULE C\n');
+// both changed outside the section: the proposal keeps the project's conventions
+write(conventions, 'AGENTS.md', read(conventions, 'AGENTS.md') + '\nOUR OWN SECTION\n');
+write(kit, 'template/AGENTS.md', shippedAgents + '\nUPSTREAM RULE D\n');
+assert.match(cli(conventions, 'update'), /CONFLICT AGENTS\.md/);
+assert.match(read(conventions, 'AGENTS.md.new'), /- Tabs, not spaces\.\n- Tests live beside the code\./, 'the proposal does not delete the project lines');
+assert.match(read(conventions, 'AGENTS.md.new'), /UPSTREAM RULE D/);
+write(kit, 'template/AGENTS.md', shippedAgents);
 
 // An existing AGENTS.md is kept, on init and on every update
 const existing = tempDir();
@@ -129,7 +184,8 @@ assert.equal(tiersDoctor.status, 0, `${tiersDoctor.stdout}${tiersDoctor.stderr}`
 assert.match(tiersDoctor.stdout, /^  models  claude: standard=sonnet$/m);
 assert.ok(tiersDoctor.stdout.includes(`  models  codex: standard=${table.codex.standard}\n`), tiersDoctor.stdout);
 assert.match(tiersDoctor.stdout, /Codex loads \.codex\/ only in a trusted project/);
-// a tier the table cannot translate is a doctor problem; an edited table survives update with a sidecar
+// a tier the table cannot translate is a doctor problem; an edited table survives update, and
+// deleting it brings the package's table back
 write(agreed, 'harness.json', JSON.stringify({ schema: 1, project: { name: 'agreed', kind: 'greenfield' }, people: [{ name: 'Alex', accepts: true }], roster: { plan: ['codebase-explorer'] }, models: { agents: { 'codebase-explorer': 'fast' } } }));
 write(agreed, '.claude/pincer/library/models.json', JSON.stringify({ ...table, codex: { strong: table.codex.strong, standard: table.codex.standard } }));
 tiersDoctor = pincer(agreed, 'doctor');
@@ -137,14 +193,18 @@ assert.equal(tiersDoctor.status, 1);
 assert.match(tiersDoctor.stdout, /FAIL  tier fast has a codex value — set models\.map\.codex\.fast in harness\.json or update the kit/);
 out = cli(agreed, 'update');
 assert.ok(!JSON.parse(read(agreed, '.claude/pincer/library/models.json')).codex.fast, 'the edited table is kept');
-assert.ok(fs.existsSync(path.join(agreed, '.claude/pincer/library/models.json.new')), 'the upstream table waits beside it');
+assert.ok(!fs.existsSync(path.join(agreed, '.claude/pincer/library/models.json.new')), 'the package table did not change: nothing to merge');
+assert.match(out, /kept {5}\.claude\/pincer\/library\/models\.json/);
 assert.match(read(agreed, '.claude/agents/codebase-explorer.md'), /^model: haiku$/m);
-fs.renameSync(path.join(agreed, '.claude/pincer/library/models.json.new'), path.join(agreed, '.claude/pincer/library/models.json'));
+fs.rmSync(path.join(agreed, '.claude/pincer/library/models.json'));
+cli(agreed, 'update');
+assert.deepEqual(JSON.parse(read(agreed, '.claude/pincer/library/models.json')), table, 'a deleted table comes back from the package');
 // a broken table is diagnosed, not called missing (review I2)
 write(agreed, '.claude/pincer/library/models.json', '{');
 tiersDoctor = pincer(agreed, 'doctor');
 assert.equal(tiersDoctor.status, 1);
 assert.match(tiersDoctor.stdout, /FAIL  library table readable — models\.json: invalid JSON/);
+assert.match(tiersDoctor.stdout, /delete it and run `npx pincer-workflow update`/, 'the hint says how to get the package table back');
 assert.doesNotMatch(tiersDoctor.stdout, /library has models\.json/);
 fs.copyFileSync(path.join(kit, 'template/.claude/pincer/library/models.json'), path.join(agreed, '.claude/pincer/library/models.json'));
 // a library agent that cannot be a Codex agent is a note from update, not a crash (review I3)
@@ -305,6 +365,7 @@ cli(unmarked, 'init', '--platform', 'codex');
 fs.rmSync(path.join(unmarked, 'AGENTS.md.new'));
 write(unmarked, 'harness.json', JSON.stringify({ schema: 1, project: { name: 'unmarked', kind: 'greenfield' }, people: [{ name: 'Alex', accepts: true }] }));
 assert.equal(run(unmarked, process.execPath, ['scripts/pincer-blueprint.cjs', 'write']).status, 0);
+write(kit, 'template/AGENTS.md', kitAgents + '\nUPSTREAM RULE 3\n');
 cli(unmarked, 'update');
 assert.match(read(unmarked, 'AGENTS.md'), /TEAM CONVENTIONS/);
 assert.match(read(unmarked, 'AGENTS.md.new'), /## Harness agreement — unmarked/, 'the proposal keeps the agreement');

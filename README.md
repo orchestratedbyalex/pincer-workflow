@@ -140,10 +140,16 @@ each installed platform will run.
 ## Update
 
 ```bash
-npx pincer-workflow@latest update                      # edited files get a .new sidecar
+npx pincer-workflow@latest update                      # an edited file is kept; a changed kit file waits beside it as .new
 npx pincer-workflow@latest update --platform claude    # the same, and add a platform to the install
 npx pincer-workflow@latest doctor                      # checks the install and agreement
 ```
+
+A file you edited is kept. When the kit's version of that file changed since it was
+installed or last offered, the new one is written beside it as `<file>.new`; when it
+did not, there is nothing to merge and nothing is written. The agreement and the
+`## Conventions` section of `AGENTS.md` are the project's and are never proposed back.
+To get the kit's copy of a file back, delete the file and run `update`.
 
 With an agreement in place, `update` also refreshes the library and regenerates the
 project copies you did not edit; an edited copy stays and gets the new version beside
