@@ -158,7 +158,7 @@ function install(dir, platforms, baseline, generated) {
       continue;
     }
     // 1.0.2 and earlier proposed the blank agreement beside a filled one on every update.
-    // A proposal that would change nothing but that is removed; any other is the person's.
+    // A proposal whose only difference is that blank agreement is removed; any other is the person's.
     const sidecar = dest + '.new';
     if (ownsAgreement(rel) && !wanted.equals(src) && fs.existsSync(sidecar)) {
       const proposed = fs.readFileSync(sidecar).toString();
