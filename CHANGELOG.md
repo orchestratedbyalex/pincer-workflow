@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.3 — unreleased
+## 1.0.3 — 2026-11-11
 
 Defects found while verifying 1.0.2 on Claude Code. The installer, status and skill
 fixes apply to every platform; the guard fixes apply to Claude Code, the only platform
