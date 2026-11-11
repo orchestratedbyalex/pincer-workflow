@@ -329,9 +329,13 @@ async function cmdUpdate(args) {
   const dir = process.cwd();
   const manifest = readManifest(dir);
   if (!manifest) fail(`no ${MANIFEST} here — run \`pincer init\` first.`);
-  const added = (parsePlatformFlag(args.platform) || []).filter((p) => !manifest.platforms.includes(p));
+  const named = parsePlatformFlag(args.platform) || [];
+  const added = named.filter((p) => !manifest.platforms.includes(p));
+  const present = named.filter((p) => manifest.platforms.includes(p));
   const platforms = [...manifest.platforms, ...added];
-  console.log(`\nUpdating PINCER ${manifest.version} -> ${VERSION} for: ${platforms.join(', ')}${added.length ? ` (adding: ${added.join(', ')})` : ''}\n`);
+  const adding = [added.length ? `adding: ${added.join(', ')}` : '', added.length && present.length ? `already installed: ${present.join(', ')}` : ''].filter(Boolean).join('; ');
+  console.log(`\nUpdating PINCER ${manifest.version} -> ${VERSION} for: ${platforms.join(', ')}${adding ? ` (${adding})` : ''}\n`);
+  if (present.length && !added.length) console.log(`  ${present.join(', ')} ${present.length === 1 ? 'is' : 'are'} already installed; nothing to add\n`);
   // A manifest without a schema could have adopted a local edit as its baseline;
   // there is no safe way to tell those from upstream files after the fact.
   const baseline = TRUSTED_SCHEMAS.includes(manifest.schema) ? manifest.files : null;
@@ -339,8 +343,12 @@ async function cmdUpdate(args) {
   report(install(dir, platforms, baseline, manifest.generated));
   regenerate(dir);
   if (added.length) {
-    console.log(`\nAdded ${added.join(', ')}. The agreement and the tickets are shared; start there with the status stage:`);
-    platformSteps(added, 'status');
+    // Without an agreement there is nothing for status to report yet: the blueprint comes first.
+    const agreed = fs.existsSync(path.join(dir, 'harness.json'));
+    console.log(agreed
+      ? `\nAdded ${added.join(', ')}. The agreement and the tickets are shared; start there with the status stage:`
+      : `\nAdded ${added.join(', ')}. There is no agreement yet: start there with the blueprint, which writes it:`);
+    platformSteps(added, agreed ? 'status' : 'blueprint');
   }
 }
 
@@ -406,9 +414,24 @@ function cmdDoctor() {
     }
   }
 
+  // The project's stage copies and roster come from the library through the generator,
+  // which recorded each one's content. A missing copy is a stage that cannot run. An
+  // edited one is kept by every update; one that is itself derived from a copy
+  // under .claude/ (a command, a Codex skill or agent, a Copilot prompt) is the
+  // wrong place for the edit.
+  const copies = Object.entries(generated);
+  const changed = copies.filter(([rel, recorded]) => fs.existsSync(path.join(dir, rel)) && sha(fs.readFileSync(path.join(dir, rel))) !== recorded).map(([rel]) => rel);
+  const source = (rel) => rel.startsWith('.claude/skills/') || rel.startsWith('.claude/agents/');
+  if (copies.length) {
+    const gone = copies.filter(([rel]) => !fs.existsSync(path.join(dir, rel))).map(([rel]) => rel);
+    check(gone.length === 0, 'generated project copies present', `missing: ${gone.join(', ')} — run: scripts/sync-prompts.sh`);
+  }
+
   const obsolete = OBSOLETE.filter((rel) => fs.existsSync(path.join(dir, rel)) && !(rel in manifest.files) && !(rel in generated));
   if (obsolete.length) console.log(`  note  obsolete kit file(s) from an earlier version, safe to delete: ${obsolete.join(', ')}`);
   if (edited.length) console.log(`  note  locally edited (kept as-is on update): ${edited.join(', ')}`);
+  if (changed.some(source)) console.log(`  note  edited project copies (kept on update, the fresh copy beside each as .new): ${changed.filter(source).join(', ')}`);
+  if (changed.some((rel) => !source(rel))) console.log(`  note  edited by hand, but generated from the copy under .claude/ (change it there, then run scripts/sync-prompts.sh): ${changed.filter((rel) => !source(rel)).join(', ')}`);
 
   const leftovers = [...new Set([...walk(TEMPLATE), ...Object.keys(manifest.files), ...Object.keys(generated)])].flatMap((rel) => {
     const parent = path.dirname(path.join(dir, rel));

@@ -15,6 +15,7 @@ for (const file of ['bin', 'template', 'package.json']) fs.cpSync(path.join(repo
 const pincer = (dir, ...args) => run(dir, process.execPath, [path.join(kit, 'bin/pincer.js'), ...args]);
 const cli = (dir, ...args) => { const r = pincer(dir, ...args); assert.equal(r.status, 0, `${r.stdout}${r.stderr}`); return r.stdout; };
 const sha = (text) => createHash('sha256').update(text).digest('hex');
+const bareInstall = () => { const dir = tempDir(); cli(dir, 'init', '--platform', 'codex'); return dir; };
 
 // Edits survive three updates; the upstream version waits in a sidecar
 const fresh = tempDir();
@@ -308,6 +309,42 @@ cli(unmarked, 'update');
 assert.match(read(unmarked, 'AGENTS.md'), /TEAM CONVENTIONS/);
 assert.match(read(unmarked, 'AGENTS.md.new'), /## Harness agreement — unmarked/, 'the proposal keeps the agreement');
 assert.doesNotMatch(read(unmarked, 'AGENTS.md.new'), /Not agreed yet/);
+
+// update --platform says what it found: a platform that is already there, and the step that fits
+const steps = tempDir();
+cli(steps, 'init', '--platform', 'codex');
+out = cli(steps, 'update', '--platform', 'codex');
+assert.match(out, /codex is already installed; nothing to add/);
+assert.doesNotMatch(out, /adding:|Added/);
+out = cli(steps, 'update', '--platform', 'codex,claude');
+assert.match(out, /\(adding: claude; already installed: codex\)/);
+assert.match(out, /Added claude\. There is no agreement yet: start there with the blueprint/);
+assert.match(out, /Claude Code +start `claude` in this repo and run \/pincer-blueprint/);
+assert.doesNotMatch(out, /pincer-status/, 'status is not the first step without an agreement');
+write(steps, 'harness.json', JSON.stringify({ schema: 1, project: { name: 'steps', kind: 'greenfield' }, people: [{ name: 'Alex', accepts: true }] }));
+out = cli(steps, 'update', '--platform', 'copilot');
+assert.match(out, /Added copilot\. The agreement and the tickets are shared; start there with the status stage/);
+assert.match(out, /\/pincer-status in chat/);
+out = cli(steps, 'update', '--platform', 'all');
+assert.match(out, /claude, codex, copilot are already installed; nothing to add/);
+
+// doctor looks at the generated project copies too: a missing one is a problem, an edited one a note
+doctor = pincer(steps, 'doctor');
+assert.equal(doctor.status, 0, `${doctor.stdout}${doctor.stderr}`);
+assert.match(doctor.stdout, /ok {4}generated project copies present/);
+assert.doesNotMatch(doctor.stdout, /edited/);
+write(steps, '.claude/skills/pincer-plan/SKILL.md', read(steps, '.claude/skills/pincer-plan/SKILL.md') + '\nOURS\n');
+write(steps, '.agents/skills/pincer-code/SKILL.md', read(steps, '.agents/skills/pincer-code/SKILL.md') + '\nEDITED BY HAND\n');
+doctor = pincer(steps, 'doctor');
+assert.equal(doctor.status, 0, `${doctor.stdout}${doctor.stderr}`);
+assert.match(doctor.stdout, /^ {2}note {2}edited project copies \(kept on update, the fresh copy beside each as \.new\): \.claude\/skills\/pincer-plan\/SKILL\.md$/m);
+assert.match(doctor.stdout, /^ {2}note {2}edited by hand, but generated from the copy under \.claude\/ \(change it there, then run scripts\/sync-prompts\.sh\): \.agents\/skills\/pincer-code\/SKILL\.md$/m);
+fs.rmSync(path.join(steps, '.claude/skills/pincer-narrow/SKILL.md'));
+doctor = pincer(steps, 'doctor');
+assert.equal(doctor.status, 1);
+assert.match(doctor.stdout, /FAIL {2}generated project copies present — missing: \.claude\/skills\/pincer-narrow\/SKILL\.md — run: scripts\/sync-prompts\.sh/);
+// an install without an agreement has no copies to look at
+assert.doesNotMatch(pincer(bareInstall(), 'doctor').stdout, /generated project copies/);
 
 // --help prints the usage and writes nothing, for the tool and for each command
 const bare = tempDir();
