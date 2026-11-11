@@ -31,6 +31,15 @@ with a hook.
   Edit, Write and MultiEdit paths, and treats every `scripts/pincer-*.sh` and
   `scripts/pincer-*.cjs` as the engine. The destructive-command guard reads lines the
   same way, so `true & git push --force` and `sudo -u root rm -rf /path` are refused.
+- The guard reads a line closer to the way the shell does: quotes, `$'…'`, `${…}`,
+  `$(…)` and backticks, arithmetic, `case … esac`, here-documents (data, unless a
+  shell or an interpreter is handed one), zsh's `>!` and `>|`, and a program reached
+  through `~`, a variable or a substitution. Only space, tab and new line separate
+  words. A line nested more than eight levels deep is refused.
+- `NotebookEdit` is guarded like Edit and Write: it may not reach a ticket, the engine
+  or the hooks. The ticket guard's matcher in `.claude/settings.json` is now
+  `Edit|Write|MultiEdit|NotebookEdit|Bash`; `update` refreshes the file, or leaves the
+  new one beside it as `.claude/settings.json.new` when the project changed its own.
 - The guard lets more reads through: copying a ticket or the engine out
   (`cp tickets/T-02-x.md /tmp/`, `cat … | tee /tmp/copy.md`), a read after `cd` saved
   to another path, quoted text that only mentions a ticket or the ticket script, a
