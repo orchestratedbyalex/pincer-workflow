@@ -7,7 +7,7 @@
 <meta name="description" content="PINCER reads your project, interviews you and writes the agreement your AI coding agent works under. Done is a check that passed. Accepted is a named person, quoted. Claude Code, Codex CLI and GitHub Copilot.">
 <link rel="canonical" href="https://orchestratedbyalex.github.io/pincer-workflow/">
 <meta property="og:title" content="PINCER — the harness builder for AI coding agents">
-<meta property="og:description" content="Scroll through a project getting its harness: install, blueprint, pipeline, and the floor that never bends.">
+<meta property="og:description" content="Scroll through a project getting its harness: install, blueprint, pipeline, and the one rule you cannot switch off.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://orchestratedbyalex.github.io/pincer-workflow/">
 <meta name="theme-color" content="#1a3df2">
@@ -15,7 +15,7 @@
 <link rel="preload" href="fonts/anybody.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face{font-family:Anybody;src:url(fonts/anybody.woff2) format("woff2");font-weight:100 900;font-stretch:50% 150%;font-display:swap}
-@font-face{font-family:"Instrument Sans";src:url(fonts/instrument-sans.woff2) format("woff2");font-weight:400 700;font-display:swap}
+@font-face{font-family:Inter;src:url(fonts/inter.woff2) format("woff2");font-weight:400 700;font-display:swap}
 @font-face{font-family:"Martian Mono";src:url(fonts/martian-mono.woff2) format("woff2");font-weight:300 700;font-display:swap}
 
 :root{
@@ -26,7 +26,7 @@
 }
 *{box-sizing:border-box;margin:0}
 html{-webkit-text-size-adjust:100%}
-body{background:var(--night);color:var(--chalk);font:400 18px/1.5 "Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;overflow-x:clip;-webkit-font-smoothing:antialiased}
+body{background:var(--night);color:var(--chalk);font:400 18px/1.5 -apple-system,BlinkMacSystemFont,Inter,"Segoe UI",Roboto,sans-serif;overflow-x:clip;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-underline-offset:.2em}
 a:focus-visible,button:focus-visible{outline:3px solid var(--yellow);outline-offset:3px;border-radius:4px}
 code,pre,.mono{font-family:"Martian Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;letter-spacing:-.01em}
@@ -148,7 +148,7 @@ html:not(.js) .top{position:absolute}
 .tag{font-size:clamp(21px,3.7vw,54px);font-stretch:76%;font-weight:800;line-height:1}
 .lede{font-size:clamp(15.5px,1.45vw,20px);max-width:39em;text-wrap:pretty}
 .plat{font-size:clamp(13px,1.1vw,15px);opacity:.82}
-.cue{position:absolute;left:50%;bottom:calc(var(--bar) + 12px);translate:-50% 0;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;opacity:calc(.9 - var(--p)*4)}
+.cue{position:absolute;left:50%;bottom:calc(var(--bar) + 12px);translate:-50% 0;font-size:13px;font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:8px;opacity:calc(.9 - var(--p)*4)}
 .cue i{width:2px;height:22px;background:currentColor;display:block;transform-origin:top;animation:cue 1.5s ease-in-out infinite}
 @keyframes cue{0%{scale:1 0}50%{scale:1 1}100%{scale:1 0;translate:0 22px}}
 @media (prefers-reduced-motion:no-preference){
@@ -293,7 +293,8 @@ html:not(.js) .station::before,html:not(.js) .station::after{display:none}
 /* ── 7 floor ────────────────────────────────────────── */
 .floor{text-align:center;align-content:center;gap:clamp(8px,1.8vh,20px)}
 .floor .heads{width:100%;justify-items:center;align-items:center}
-.floor h2{margin-inline:auto}
+.floor h2,.floor .sub{margin-inline:auto}
+.floor .sub{margin-top:.5em}
 .floor .fin{font-size:clamp(24px,4.3vw,60px);font-stretch:84%;font-weight:800;display:grid;gap:.22em}
 .floor .fin .a{color:var(--yellow)}
 .floor .fin .b{color:var(--red)}
@@ -378,7 +379,7 @@ html:not(.js) .closed{position:static;padding:1em}
 .plt dd b{color:var(--yellow);font-weight:600}
 .plt,.plt dl,.plt dd{min-width:0}
 .plt dd{overflow-wrap:anywhere}
-@media (max-width:819px){.plt dl div.wide{display:none}.plt{padding:10px 12px}.plt h3{font-size:20px}.plt dl{margin-top:4px;gap:3px;font-size:12.5px}.plt dl div{grid-template-columns:3.6em 1fr;padding-top:3px}.plt dl div:nth-child(2){border-top:0}}
+@media (max-width:819px){.plt dl div.wide{display:none}.plt{padding:10px 12px}.plt h3{font-size:20px}.plt dl{margin-top:4px;gap:3px;font-size:12.5px}.plt dl div{grid-template-columns:3.6em 1fr;padding-top:3px}.plt dl div:nth-child(2){border-top:0}.plats{margin-top:10px;gap:8px}.tiers{margin-top:10px;gap:6px}.tiers p{font-size:13.5px}}
 .tiers{margin-top:clamp(12px,2.6vh,28px);display:grid;gap:10px}
 .tiers .rowt{display:flex;flex-wrap:wrap;gap:8px}
 .tier{font-family:Anybody,sans-serif;font-weight:900;font-stretch:120%;font-size:clamp(17px,2.2vw,30px);border:2px solid var(--yellow);color:var(--yellow);border-radius:6px;padding:.22em .55em .14em;--fs:.3}
@@ -664,10 +665,13 @@ html:not(.js) .closed{position:static;padding:1em}
 <div class="band rev" aria-hidden="true"><p class="run d" data-drift=".55"><span>verify</span><span class="ol">then</span><span>done</span><span class="ol">then</span><span>accept</span><span class="ol">then</span><span>verify</span><span class="ol">then</span><span>done</span><span class="ol">then</span><span>accept</span><span class="ol">then</span><span>verify</span></p></div>
 
 <!-- 7 ─ the floor -->
-<section class="scene t-night" id="floor" data-beats=".05 .2 .47 .61 .845 .99" style="--len:5.2" data-title="The floor" data-theme="night">
+<section class="scene t-night" id="floor" data-beats=".05 .2 .47 .61 .845 .99" style="--len:5.2" data-title="The fixed rule" data-theme="night">
   <div class="stage floor">
     <div class="heads deck">
-      <h2 class="d fx" data-out=".85 .89" style="--oy:-40px">One floor never bends.</h2>
+      <div class="fx" data-out=".85 .89" style="--oy:-40px">
+        <h2 class="d">One rule you cannot switch off.</h2>
+        <p class="sub">A ticket is done only when its check passes. It is accepted only when a named person says so.</p>
+      </div>
       <p class="fin d fx" data-at=".88 .96" style="--fy:50px"><span class="a">Done is stamped by a script.</span><span class="b">Accepted is said by a person.</span></p>
     </div>
     <div class="vise fx" data-at="0 .05" style="--fy:40vh">
@@ -733,7 +737,7 @@ html:not(.js) .closed{position:static;padding:1em}
             <div class="wide" data-at=".2 .24"><dt>Agreement</dt><dd><code>AGENTS.md</code> through the <code>CLAUDE.md</code> import</dd></div>
             <div data-at=".28 .32"><dt>Stages</dt><dd><code>/pincer-*</code> commands from <code>.claude/skills/</code></dd></div>
             <div class="wide" data-at=".36 .4"><dt>Agents</dt><dd>subagents</dd></div>
-            <div data-at=".44 .48"><dt>Floor</dt><dd><b>the script plus a hook</b></dd></div>
+            <div data-at=".44 .48"><dt>The rule</dt><dd><b>the script plus a hook</b></dd></div>
           </dl>
         </article>
         <article class="plt fx" data-at=".08 .2" data-ease="back">
@@ -742,7 +746,7 @@ html:not(.js) .closed{position:static;padding:1em}
             <div class="wide" data-at=".22 .26"><dt>Agreement</dt><dd><code>AGENTS.md</code>, read natively</dd></div>
             <div data-at=".3 .34"><dt>Stages</dt><dd><code>$pincer-*</code> skills from <code>.agents/skills/</code></dd></div>
             <div class="wide" data-at=".38 .42"><dt>Agents</dt><dd>subagents from <code>.codex/agents/</code></dd></div>
-            <div data-at=".46 .5"><dt>Floor</dt><dd><b>the script plus a status warning</b></dd></div>
+            <div data-at=".46 .5"><dt>The rule</dt><dd><b>the script plus a status warning</b></dd></div>
           </dl>
         </article>
         <article class="plt fx" data-at=".13 .25" data-ease="back">
@@ -751,7 +755,7 @@ html:not(.js) .closed{position:static;padding:1em}
             <div class="wide" data-at=".24 .28"><dt>Agreement</dt><dd>pointed at by <code>.github/copilot-instructions.md</code></dd></div>
             <div data-at=".32 .36"><dt>Stages</dt><dd><code>/pincer-*</code> prompts from <code>.github/prompts/</code></dd></div>
             <div class="wide" data-at=".4 .44"><dt>Agents</dt><dd>the Claude agent files, read by VS Code</dd></div>
-            <div data-at=".48 .52"><dt>Floor</dt><dd><b>the script plus a status warning</b></dd></div>
+            <div data-at=".48 .52"><dt>The rule</dt><dd><b>the script plus a status warning</b></dd></div>
           </dl>
         </article>
       </div>

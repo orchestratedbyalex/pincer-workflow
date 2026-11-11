@@ -2,7 +2,7 @@ The three font files in this folder are used by ../index.html. Each is licensed 
 SIL Open Font License, Version 1.1, reproduced below.
 
 anybody.woff2          Copyright 2020 The Anybody Project Authors (https://github.com/Etcetera-Type-Co/Anybody)
-instrument-sans.woff2  Copyright 2022 The Instrument Sans Project Authors (https://github.com/Instrument/instrument-sans)
+inter.woff2            Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter)
 martian-mono.woff2     Copyright 2021 The Martian Mono Project Authors (https://github.com/evilmartians/mono)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
