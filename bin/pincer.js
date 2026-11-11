@@ -411,6 +411,8 @@ function cmdDoctor() {
     const packaged = shipped.has(rel) ? fs.readFileSync(path.join(TEMPLATE, rel)) : null;
     const current = sha(packaged ? installerView(rel, fs.readFileSync(p), packaged) : fs.readFileSync(p));
     if (packaged && current === sha(packaged)) continue;
+    // a generated copy that differs is judged below with the other copies, once
+    if (current !== installed && rel in generated) continue;
     if (current !== installed) edited.push(rel);
     else foreign.push(rel);
   }

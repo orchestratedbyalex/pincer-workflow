@@ -1,5 +1,66 @@
 # Changelog
 
+## 1.0.4 — not released yet
+
+Defects found while verifying 1.0.3 on Claude Code. The guard fixes apply to Claude
+Code, the only platform with a hook; the installer, ticket, status and skill changes
+apply to every platform.
+
+- A hook that dies refuses. The wrappers handed over to `node` with `exec`, so a
+  `node` that crashed ended the hook with a signal, and Claude Code blocks a call only
+  on status 2: the call ran. A line of 300 `cd` steps made the ticket guard run out
+  of memory that way, and 12 steps took 26 seconds to check. Both wrappers now run
+  `node` and refuse on every status but 0. The guard follows at most 1024
+  directories for the `cd` steps of a line; a line with more is judged as one that
+  names a protected file, a relative word on it by what its last part can name. A
+  check that takes more than ten seconds is refused. 12 steps now take 0.1 seconds.
+- Protected writes 1.0.3 let through are refused: a copy from `<(…)` or zsh's
+  `=(…)` onto a protected file; a copy into `"$PWD/tickets"` and other spellings of
+  a directory that holds protected files; a program under a reader's name that is not
+  the system's (`./cat`, `/tmp/e/cat`, a function, an alias, `hash cat=…`,
+  `PATH=… cat`).
+- Older gaps are closed where the line shows the write: `set -- cp … ; "$@"`; a
+  `git config` value and a `GIT_*` variable that name a protected file; `git grep
+  -O`; `--file` and `--output` in their shortened forms; `rg --pre`; `less -o`;
+  GNU sed's `e`; an awk program that opens with a slash; `source <(…)` and `source
+  /dev/stdin`; zsh patterns after `tickets/`. `docs/engine.md` lists the ones that
+  still pass.
+- Reads and ordinary work the guard refused now pass: a here-document that holds a
+  bracket set no shell can read (`[['--format']]`); `node -v`, and a program in a
+  here-document in a statement of its own, beside a read of a protected file; the
+  evidence digest as the evaluate stage writes it (`cd evidence/<sha> && node
+  ../../scripts/pincer-evidence.cjs digest $(find …)`); a variable the line gives one
+  written value (`S=/tmp/out; cp tickets/T-02-x.md $S/y`), `$PWD` and
+  `name=$(mktemp)`; `git -C <dir> checkout <ref>`; a sentence that ends with the
+  ticket script's name (`gh pr create --body "… scripts/pincer-ticket.sh"`).
+- A refusal says which rule fired, on which word and in which command of the line.
+  It was the same text for every refused line, and sessions tried a line again two
+  or three times.
+- `scripts/pincer-ticket.sh check T-NN` runs a ticket's Verification block as a dry
+  run and records nothing. Narrow uses it to see a new check fail for the reason the
+  ticket names; every way of copying the block out of the ticket was refused by the
+  guard.
+- An edit alone gives no sidecar. A line added under `## Conventions` in
+  `AGENTS.md`, which the template asks to be kept by hand, made every update write
+  `AGENTS.md.new` and `doctor` fail. That section is now the project's like the
+  agreement. For any edited file, `update` writes a `.new` only when the package's
+  version of it changed since it was installed or last offered, and says `kept`
+  otherwise; the sidecar 1.0.3 left behind is removed. A file that was deleted comes
+  back from the package on `update`, which is now the way to restore the library
+  table.
+- `doctor` names an edited copy of an always-on stage once, and does not call the
+  copies `sync-prompts.sh` derives from it edited.
+- `scripts/pincer-status.sh --json`: `firstJob` is the first job the agreement
+  names; `newJob` is that job when it was named since the last acceptance. It was
+  `""` while the report used the job.
+- Skill wording: `done` runs in a call of its own, not chained with the commit, and
+  its reminder agrees with the skill that the self-review comes before `done`; the
+  boxes are ticked with the Edit tool.
+
+Not changed, on purpose: an unknown command and a bad `--platform` value still exit
+1; an inline program (`node -e`) on a line that names a ticket is still refused; a
+copy of the engine run from outside the project is still refused.
+
 ## 1.0.3 — 2026-11-11
 
 Defects found while verifying 1.0.2 on Claude Code. The installer, status and skill

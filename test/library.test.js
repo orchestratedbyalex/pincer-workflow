@@ -241,11 +241,15 @@ assert.match(step(codeSteps, 1), /commit as `T-NN: <title>` before starting anot
 assert.match(step(codeSteps, 1), /implementer is on, but no ticket is M: building inline/, 'code: says when the implementer will not run');
 assert.match(step(codeSteps, 8), /only after step 6 passed on the code as it stands and the step 7 review is finished/, 'code: verify and self-review come before done');
 assert.match(codeSkill.slice(codeSkill.indexOf('## Checks')), /verified \(step 6\) and reviewed \(step 7\) before its `done`/);
+// 1.0.4: done alone in its call, ticks through the Edit tool, and the dry run of a check
+assert.match(step(codeSteps, 8), /Run `done` in a call of its own/, 'code: done is not chained with the commit');
+assert.match(step(codeSteps, 8), /with the Edit tool/, 'code: how the boxes are ticked');
 const narrowSkill = read(STAGES_DIR, 'narrow', 'SKILL.md');
 const narrowSteps = narrowSkill.slice(narrowSkill.indexOf('## Steps'), narrowSkill.indexOf('## Checks')).split('\n');
 assert.match(narrowSkill.slice(narrowSkill.indexOf('## Reads'), narrowSkill.indexOf('## Steps')), /`stages\.code\.implementer`, `roster\.code`/);
 assert.match(step(narrowSteps, 7), /no ticket is size M.*the code stage builds every ticket inline/, 'narrow: says when the implementer will not run');
 assert.match(step(narrowSteps, 5), /never build the feature to watch a check pass/, 'narrow: no throwaway implementation');
+assert.match(step(narrowSteps, 5), /`scripts\/pincer-ticket\.sh check T-NN`.*records nothing/, 'narrow: the dry run of a check');
 assert.match(step(narrowSteps, 5), /`mktemp -d` directory and remove it before the stage ends/, 'narrow: scratch work is cleaned up');
 const evaluateSkill = read(STAGES_DIR, 'evaluate', 'SKILL.md');
 const evaluateSteps = evaluateSkill.slice(evaluateSkill.indexOf('## Steps'), evaluateSkill.indexOf('## Checks')).split('\n');

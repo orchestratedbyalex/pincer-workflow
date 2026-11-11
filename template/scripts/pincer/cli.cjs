@@ -15,7 +15,7 @@ const writer = require('./blueprint.cjs');
 const generate = require('./generate.cjs');
 
 const USAGE = `usage: node scripts/pincer/cli.cjs [--root <dir>] <command> ...
-  ticket <start|verify|done|accept> <T-NN> [--by "<name>" --words "<what they said>"]
+  ticket <start|verify|check|done|accept> <T-NN> [--by "<name>" --words "<what they said>"]
   status [--json] [--stage <name>]
   evidence validate <manifest> [--candidate <sha>] | digest <file>...
   recon [--json] [--network]
@@ -37,10 +37,11 @@ const STATUS_USAGE = `usage: scripts/pincer-status.sh [--json] [--stage <name>]
 const TICKET_USAGE = `usage: scripts/pincer-ticket.sh <verb> <T-NN>
   start  T-NN                                     open -> in_progress
   verify T-NN                                     run the Verification block, stamp the receipt
+  check  T-NN                                     run the Verification block as a dry run, record nothing
   done   T-NN                                     close on a current passing check, all criteria ticked
   accept T-NN --by "<name>" --words "<their words>"   record the person's acceptance
 `;
-const TICKET_VERBS = ['start', 'verify', 'done', 'accept'];
+const TICKET_VERBS = ['start', 'verify', 'check', 'done', 'accept'];
 
 // The project root: --root, else the nearest directory from the working
 // directory up that holds harness.json, else the working directory.

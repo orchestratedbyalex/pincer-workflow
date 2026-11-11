@@ -111,7 +111,7 @@ assert.equal(r.status, 0, both(r));
 assert.equal(fm(dir, file, 'status'), 'done');
 assert.match(fm(dir, file, 'finished'), parse.TIMESTAMP);
 // done runs the check itself, so it cannot tell whether the diff was reviewed: it says so
-assert.match(r.stdout, /✓ T-01 done\. .*commit: T-01: example\n  The self-review of the diff comes before that commit/s);
+assert.match(r.stdout, /✓ T-01 done\. .*commit: T-01: example\n  The self-review of the diff belongs before done/s);
 assert.match(r.stdout, /T-01: example/);
 r = ticket(dir, 'done', 'T-01');
 assert.equal(r.status, 0, both(r));
@@ -220,5 +220,38 @@ assert.equal(r.status, 1, both(r));
 assert.match(r.stderr, /receipt hash .* does not match/);
 assert.match(r.stderr, /verify T-21/);
 assert.doesNotMatch(read(dir, stale), /^accepted/m);
+
+// check is a dry run: the block runs as verify would run it, and the ticket is not touched.
+// Narrow uses it to see a new check fail for the reason the ticket names.
+dir = tempDir();
+createHarness(dir);
+const red = createTicket(dir, { id: 'T-30', command: 'echo checking; test -f built.txt' });
+const untouched = read(dir, red);
+r = ticket(dir, 'check', 'T-30');
+assert.equal(r.status, 1, both(r));
+assert.match(r.stdout, /T-30 check \(dry run: nothing is recorded\)/);
+assert.match(r.stdout, /checking/, 'the output of the block is shown');
+assert.match(r.stderr, /T-30 check failed \(exit 1\).*nothing recorded/);
+assert.equal(read(dir, red), untouched, 'a failed dry run writes nothing: the ticket stays open, no last_check');
+write(dir, 'built.txt', 'x');
+r = ticket(dir, 'check', 'T-30');
+assert.equal(r.status, 0, both(r));
+assert.match(r.stdout, /T-30 check passed.*nothing recorded.*verify/);
+assert.equal(read(dir, red), untouched, 'a passing dry run stamps no receipt');
+r = ticket(dir, 'done', 'T-30');
+assert.equal(r.status, 1, 'a dry run is no receipt: done still refuses');
+// on a done ticket it leaves the receipt alone, and without a ticket number it is a usage error
+const kept = createTicket(dir, { id: 'T-31' });
+assert.equal(ticket(dir, 'verify', 'T-31').status, 0);
+assert.equal(ticket(dir, 'done', 'T-31').status, 0);
+const closed = read(dir, kept);
+assert.equal(ticket(dir, 'check', 'T-31').status, 0);
+assert.equal(read(dir, kept), closed);
+assert.equal(ticket(dir, 'check').status, 2);
+assert.match(ticket(dir, 'bogus', 'T-31').stderr, /check +T-/, 'the usage lists check');
+const empty = createTicket(dir, { id: 'T-32', command: '# nothing to run' });
+r = ticket(dir, 'check', 'T-32');
+assert.equal(r.status, 1, both(r));
+assert.match(r.stderr, /runnable/);
 
 console.log('ticket: ok');

@@ -143,6 +143,27 @@ async function runCheck(root, t, io) {
 
 const defaultIo = () => ({ out: (text) => process.stdout.write(text), err: (text) => process.stderr.write(text) });
 
+// --- check -----------------------------------------------------------------
+// A dry run: the Verification block as verify would run it, with nothing written.
+// It moves no state and leaves no receipt, so it proves nothing about the ticket;
+// narrow uses it to see a new check fail for the reason the ticket names.
+async function check(root, input, io = defaultIo()) {
+  const { tickets } = agreement(root);
+  const { id, file, text, fields } = resolve(root, tickets, input);
+  const commands = parse.verificationCommands(text);
+  if (!commands.some((c) => !/^[ \t]*(#.*)?$/.test(c))) refuse(`no runnable command in the Verification block of ${file}`);
+  io.out(`── ${id} check (dry run: nothing is recorded) ──\n`);
+  for (const c of commands) io.out(`  $ ${c}\n`);
+  const timeout = parse.effectiveTimeout(fields);
+  const result = await execute(root, parse.blockText(text), timeout);
+  if (result.timedOut) { io.err(`✗ ${id} check TIMED OUT after ${timeout}s — a dry run: nothing recorded.\n`); return { exit: EXIT.INTERRUPTED }; }
+  if (result.interrupted) return { exit: EXIT.INTERRUPTED };
+  const rc = result.code === null ? 1 : result.code;
+  if (rc !== 0) { io.err(`✗ ${id} check failed (exit ${rc}) — a dry run: nothing recorded.\n`); return { exit: EXIT.REFUSED }; }
+  io.out(`✓ ${id} check passed — a dry run: nothing recorded; the receipt comes from verify.\n`);
+  return { exit: EXIT.OK };
+}
+
 async function verify(root, input, io = defaultIo()) {
   const { tickets } = agreement(root);
   const t0 = resolve(root, tickets, input);
@@ -176,7 +197,7 @@ async function done(root, input, io = defaultIo()) {
   text = parse.fmSet(text, 'finished', nowIso());
   writeTicket(root, file, text);
   // done runs the check itself, so it cannot know whether the diff was read: the reminder costs one line.
-  io.out(`✓ ${id} done. Inspect staged work, stage only this ticket's paths, review git diff --cached, then commit: ${id}: ${slugWords(file)}\n  The self-review of the diff comes before that commit; if it changes code, run verify again.\n`);
+  io.out(`✓ ${id} done. Inspect staged work, stage only this ticket's paths, review git diff --cached, then commit: ${id}: ${slugWords(file)}\n  The self-review of the diff belongs before done: if it is still open, finish it before this commit, and run verify again when it changes code.\n`);
   return { exit: EXIT.OK };
 }
 
@@ -202,4 +223,4 @@ function accept(root, input, { by, words } = {}) {
   return { exit: EXIT.OK, out: `${previous}✓ ${t.id} accepted by ${name}: ${said}\n` };
 }
 
-module.exports = { EXIT, Refusal, receiptProblem, start, verify, done, accept };
+module.exports = { EXIT, Refusal, receiptProblem, start, verify, check, done, accept };

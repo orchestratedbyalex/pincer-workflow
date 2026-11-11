@@ -404,6 +404,23 @@ fs.rmSync(path.join(steps, '.claude/skills/pincer-narrow/SKILL.md'));
 doctor = pincer(steps, 'doctor');
 assert.equal(doctor.status, 1);
 assert.match(doctor.stdout, /FAIL {2}generated project copies present — missing: \.claude\/skills\/pincer-narrow\/SKILL\.md — run: scripts\/sync-prompts\.sh/);
+// A copy of an always-on stage is an installed file and a generated copy at once: an edit
+// is named once, and the copies sync-prompts derives from it are not called edited.
+const once = tempDir();
+cli(once, 'init', '--platform', 'all');
+write(once, 'harness.json', JSON.stringify({ schema: 1, project: { name: 'once', kind: 'greenfield' }, people: [{ name: 'Alex', accepts: true }] }));
+cli(once, 'update');
+write(once, '.claude/skills/pincer-status/SKILL.md', read(once, '.claude/skills/pincer-status/SKILL.md') + '\nOURS\n');
+doctor = pincer(once, 'doctor');
+assert.equal(doctor.status, 0, `${doctor.stdout}${doctor.stderr}`);
+assert.doesNotMatch(doctor.stdout, /locally edited/, 'an edited stage copy is not listed a second time as an installed file');
+assert.match(doctor.stdout, /edited project copies \(kept on update, the fresh copy beside each as \.new\): \.claude\/skills\/pincer-status\/SKILL\.md$/m);
+assert.equal(run(once, 'bash', ['scripts/sync-prompts.sh']).status, 0);
+assert.match(read(once, '.agents/skills/pincer-status/SKILL.md'), /OURS/, 'the derived copy follows the edited one');
+fs.rmSync(path.join(once, '.claude/skills/pincer-status/SKILL.md.new'), { force: true });
+doctor = pincer(once, 'doctor');
+assert.equal(doctor.status, 0, `${doctor.stdout}${doctor.stderr}`);
+assert.doesNotMatch(doctor.stdout, /locally edited|edited by hand/, 'derived copies that follow an edited source are not edits');
 // an install without an agreement has no copies to look at
 assert.doesNotMatch(pincer(bareInstall(), 'doctor').stdout, /generated project copies/);
 

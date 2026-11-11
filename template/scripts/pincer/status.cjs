@@ -154,7 +154,7 @@ function unnarrowed(report) {
 // The whole picture, as data. `harness` is null without a valid agreement;
 // `harnessProblem` says why when the file exists but does not validate.
 function gather(root) {
-  const report = { name: path.basename(root), harness: null, harnessProblem: null, stages: {}, models: null, specs: [], tickets: [], evidence: [], unevaluated: [], uncommitted: [], firstJob: '', warnings: [], next: '' };
+  const report = { name: path.basename(root), harness: null, harnessProblem: null, stages: {}, models: null, specs: [], tickets: [], evidence: [], unevaluated: [], uncommitted: [], firstJob: '', newJob: '', warnings: [], next: '' };
   const loaded = harnessModule.load(root);
   let homes = harnessModule.homes(null);
   if (loaded.ok) {
@@ -172,7 +172,9 @@ function gather(root) {
   report.evidence = manifests(root, homes.evidence);
   if (wantsEvidence(report)) report.unevaluated = unevaluated(root, report);
   report.uncommitted = uncommitted(root, report);
-  report.firstJob = newFirstJob(root, report);
+  // firstJob is what the agreement names; newJob is that job when it was named since the last acceptance
+  report.firstJob = report.harness ? report.harness.firstJob.trim() : '';
+  report.newJob = newFirstJob(root, report);
   for (const t of report.tickets) {
     if (t.problem) { report.warnings.push(`${t.file}: ${t.problem}`); continue; }
     t.uncommitted = report.uncommitted.includes(t.id);
@@ -218,7 +220,7 @@ function nextCommand(report) {
     return `${SCRIPT} accept ${unaccepted.id} --by "<name>" --words "<their words>"`;
   }
   // Everything is accepted. A first job the agreement named since then is the next change.
-  if (report.firstJob) return `${entryStage(report)} ${report.firstJob}`;
+  if (report.newJob) return `${entryStage(report)} ${report.newJob}`;
   return 'all tickets done and accepted';
 }
 
