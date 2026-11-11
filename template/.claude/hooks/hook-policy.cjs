@@ -12,6 +12,16 @@ function block(message) {
   process.exit(2);
 }
 
+// A hook that ends with any status but 2 lets the call run, so whatever goes wrong
+// in here refuses it: a line this file cannot read to the end is not waved through.
+process.on('uncaughtException', () => block('the hook could not read this call; write the command more plainly.'));
+// Text that is only saved or shown (a here-document for a file or a message) is read
+// as loosely as before: prose is full of apostrophes and (#links).
+let prose = 0;
+const loosely = (read) => { prose++; try { return read(); } finally { prose--; } };
+const unsure = () => { if (!prose) unreadable(); };
+const unreadable = () => block('this shell line cannot be read with certainty (a quote, a test or a substitution that never closes, deep nesting, $[…], a # or << inside ((…)) or straight after a paren); write it more plainly.');
+
 let payload;
 try {
   payload = JSON.parse(input);
@@ -32,12 +42,13 @@ function embedded(text) {
   for (let i = 0; i < text.length; i++) {
     if (text[i] === '\\') i++;
     else if (text[i] === '$' && text[i + 1] === '(') {
-      const inner = lexShell(text, i + 2, true, text[i + 2] === '(');
+      const inner = lexShell(text, i + 2, true, arithmeticAt(text, i + 2));
       subs.push(text.slice(i + 2, inner.end));
       i = inner.end;
     } else if (text[i] === '`') {
       let end = i + 1;
       while (end < text.length && text[end] !== '`') end += text[end] === '\\' ? 2 : 1;
+      if (end >= text.length) unsure();
       subs.push(text.slice(i + 1, end).replace(/\\`/g, '`'));
       i = end;
     }
@@ -49,6 +60,43 @@ function embedded(text) {
 const SEPARATORS = ['|', '|&', ';', ';;', '&&', '||', '&', '(', ')'];
 const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?\+?=/;
 
+// Arithmetic and commands are read differently: in ((…)), $((…)) and $[…] a `<<` is a
+// shift and a `#` is no comment. The shell takes ((…)) for arithmetic when the
+// paren that closes it is doubled, and for two subshells otherwise. That is certain
+// here only for text with nothing in it that could hide a paren (a quote, a
+// backslash, a new line, a substitution); `at` is where the inside starts.
+const ARITHMETIC_TEXT = /^[A-Za-z0-9_ \t+\-*/%<>=!&|^~?:,.$#()[\]]$/;
+function closesDoubled(source, at) {
+  let depth = 0;
+  for (let i = at; i < source.length; i++) {
+    const ch = source[i];
+    if (!ARITHMETIC_TEXT.test(ch) || (ch === '$' && source[i + 1] === '(')) return false;
+    if (ch === '(') depth++;
+    else if (ch === ')') { if (depth === 0) return source[i + 1] === ')'; depth--; }
+  }
+  return false;
+}
+// false for a command substitution; for $(( 'sure' or 'maybe'. `at` is the index after `$(`.
+const arithmeticAt = (source, at) => (source[at] !== '(' ? false : closesDoubled(source, at + 1) ? 'sure' : 'maybe');
+// The index after the ] that closes the $[ whose inside starts at `at`, or -1.
+function squareEnd(source, at) {
+  let depth = 1;
+  for (let i = at; i < source.length; i++) {
+    const ch = source[i];
+    if (!ARITHMETIC_TEXT.test(ch) || (ch === '$' && source[i + 1] === '(')) return -1;
+    if (ch === '[') depth++;
+    else if (ch === ']' && --depth === 0) return i + 1;
+  }
+  return -1;
+}
+const LEX_DEPTH = 64;
+let lexing = 0;
+function lexShell(...args) {
+  if (lexing >= LEX_DEPTH) unreadable();
+  lexing++;
+  try { return readShell(...args); } finally { lexing--; }
+}
+
 // Reads a shell line into words and operators. A word is `computed` when the
 // shell works part of it out ($VAR, ${…}, $(…), `…`, $'…', a leading ~), `glob`
 // when it holds an unquoted pattern character, and carries in `subs` the commands
@@ -56,23 +104,32 @@ const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?\+?=/;
 // a here-document is kept on its `<<` operator. A comment runs to the end of its
 // line. With `stop` the scan ends at the `)` that closes a substitution;
 // `arithmetic` is `$((…))`, where `<<` is a shift and opens no here-document.
+// Where it is not certain that ((…)) is arithmetic, a `<<` or a `#` in it is read
+// neither way: the line is refused. So is a `#` straight after a paren, which zsh
+// reads as part of a pattern and bash as a comment, and `<<` in a subscript that is
+// not an assignment, which bash reads one way or the other by its version. An
+// empty quoted word is a word.
 //
 // The reader must never take for text what the shell takes for a command. Where
 // the two could differ it reads on: a here-document whose end is not found has no
 // body, only space, tab and newline separate words, and `<<` inside `$[…]`, `((…))`
 // or a subscript is arithmetic.
-function lexShell(source, from = 0, stop = false, arithmetic = false) {
+function readShell(source, from = 0, stop = false, arithmetic = false) {
   const tokens = [];
   const waiting = [];
   let word = null;
   let parens = 0;
   let cases = 0; // `case … esac` being read: the `)` of a pattern closes nothing
   let shift = null; // the paren depth outside the ((…)) being read
+  let shiftSure = false;
+  const groups = []; // for each open paren whether it was glued to a word
+  // inside arithmetic: false, 'sure' or 'maybe'
+  const sums = () => (shift !== null ? (shiftSure ? 'sure' : 'maybe') : arithmetic);
   let i = from;
   const open = () => (word ??= { value: '', computed: false, glob: false, quoted: false, subs: [] });
   const starts = () => { const last = tokens[tokens.length - 1]; return !last || (last.op ? SEPARATORS.includes(last.op) : ASSIGNMENT.test(last.value)); };
   const push = () => {
-    if (word && word.value) {
+    if (word && (word.value || word.quoted)) {
       if (!word.quoted && word.value === 'case' && starts()) cases++;
       if (!word.quoted && word.value === 'esac' && cases) cases--;
       tokens.push(word);
@@ -85,23 +142,32 @@ function lexShell(source, from = 0, stop = false, arithmetic = false) {
     for (let at = start; at < source.length; at++) {
       const ch = source[at];
       if (ch === '\\') at++;
-      else if (ch === "'" && !quotedOutside) { const end = source.indexOf("'", at + 1); if (end === -1) return source.length; at = end; }
+      else if (ch === "'" && !quotedOutside) { const end = source.indexOf("'", at + 1); if (end === -1) { unsure(); return source.length; } at = end; }
       else if (ch === '"') { for (at++; at < source.length && source[at] !== '"'; at++) if (source[at] === '\\') at++; }
       else if (ch === '$' && source[at + 1] === '{') { depth++; at++; }
-      else if (ch === '$' && source[at + 1] === '(') at = lexShell(source, at + 2, true, source[at + 2] === '(').end;
+      else if (ch === '$' && source[at + 1] === '(') at = lexShell(source, at + 2, true, arithmeticAt(source, at + 2)).end;
       else if (ch === '`') { for (at++; at < source.length && source[at] !== '`'; at++) if (source[at] === '\\') at++; }
       else if (ch === '}' && --depth === 0) return at + 1;
     }
+    unsure();
     return source.length;
   };
   const dollar = (quotedOutside) => {
     const current = open();
     current.computed = true;
     if (source[i + 1] === '(') {
-      const inner = lexShell(source, i + 2, true, source[i + 2] === '(');
+      const inner = lexShell(source, i + 2, true, arithmeticAt(source, i + 2));
       current.subs.push(source.slice(i + 2, inner.end));
       current.value += '$()';
       i = inner.end;
+    } else if (source[i + 1] === '[') {
+      // $[…] is arithmetic in bash and zsh; a shell without it would read the inside
+      // as words and redirects, so the inside is judged as a command as well
+      const end = squareEnd(source, i + 2);
+      if (end === -1) { unsure(); current.value += '$'; return; }
+      current.subs.push(source.slice(i + 2, end - 1));
+      current.value += source.slice(i, end);
+      i = end - 1;
     } else if (source[i + 1] === '{') {
       const end = closing(i + 2, quotedOutside);
       current.subs.push(...embedded(source.slice(i + 2, end)));
@@ -112,6 +178,7 @@ function lexShell(source, from = 0, stop = false, arithmetic = false) {
   const backtick = () => {
     let end = i + 1;
     while (end < source.length && source[end] !== '`') end += source[end] === '\\' ? 2 : 1;
+    if (end >= source.length) unsure();
     const current = open();
     current.computed = true;
     current.subs.push(source.slice(i + 1, end).replace(/\\`/g, '`'));
@@ -141,7 +208,7 @@ function lexShell(source, from = 0, stop = false, arithmetic = false) {
         next = end + 1;
       }
       // No last line: the lines that follow are read as the commands they may be.
-      if (found === -1) continue;
+      if (found === -1) { if (!(named.quoted || named.escaped)) doc.op.subs = embedded(source.slice(Math.min(i + 1, source.length))); continue; }
       doc.op.body = lines.join('\n');
       // quoting any part of the delimiter turns expansion off for the whole body
       doc.op.subs = named.quoted || named.escaped ? [] : embedded(doc.op.body);
@@ -152,6 +219,7 @@ function lexShell(source, from = 0, stop = false, arithmetic = false) {
     const ch = source[i];
     if (ch === "'") {
       const end = source.indexOf("'", i + 1);
+      if (end === -1) unsure();
       const close = end === -1 ? source.length : end;
       open().value += source.slice(i + 1, close);
       word.quoted = true;
@@ -166,6 +234,7 @@ function lexShell(source, from = 0, stop = false, arithmetic = false) {
         else if (source[i] === '`') backtick();
         else word.value += source[i];
       }
+      if (i >= source.length) unsure();
       continue;
     }
     if (ch === '\\' && i + 1 < source.length) {
@@ -177,6 +246,7 @@ function lexShell(source, from = 0, stop = false, arithmetic = false) {
       // $'…' ends at the first quote that is not escaped; its escapes can spell any name
       let end = i + 2;
       while (end < source.length && source[end] !== "'") end += source[end] === '\\' ? 2 : 1;
+      if (end >= source.length) unsure();
       open().value += source.slice(i + 2, end);
       word.quoted = true;
       word.computed = true;
@@ -186,8 +256,12 @@ function lexShell(source, from = 0, stop = false, arithmetic = false) {
     if (ch === '$') { dollar(false); continue; }
     if (ch === '`') { backtick(); continue; }
     if (ch === '#' && !word) {
-      while (i + 1 < source.length && source[i + 1] !== '\n') i++;
-      continue;
+      const sum = sums();
+      if (sum === 'maybe' || (!sum && (source[i - 1] === '(' || source[i - 1] === ')' || groups.includes(true)))) unsure();
+      if (!sum) {
+        while (i + 1 < source.length && source[i + 1] !== '\n') i++;
+        continue;
+      }
     }
     if (ch === ' ' || ch === '\t' || ch === '\n') {
       push();
@@ -202,16 +276,21 @@ function lexShell(source, from = 0, stop = false, arithmetic = false) {
       const last = tokens[tokens.length - 1];
       const duplicated = last && (last.op === '>&' || last.op === '<&');
       if ((ch === '>' || ch === '<') && word && !word.quoted && /^[0-9]+$/.test(word.value) && !duplicated) word = null;
-      const glued = word !== null; // `name=(` opens a list only with nothing between
+      if (source.startsWith('<<', i) && word && !word.quoted && /^[A-Za-z_][A-Za-z0-9_]*\[[^\]]*$/.test(word.value)) unsure();
+      const glued = word !== null;
+      const array = word !== null && starts() && /^[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?\+?=$/.test(word.value); // name=( … ) where an assignment may stand // `name=(` opens a list only with nothing between
       push();
       if (ch === ')') {
         if (stop && parens === 0 && cases === 0) return { tokens, end: i };
         if (parens > 0) parens--;
         if (shift !== null && parens <= shift) shift = null;
+        groups.pop();
       }
       if (ch === '(') {
-        if (shift === null && source[i + 1] === '(') shift = parens;
+        if (shift === null && source[i + 1] === '(') { shift = parens; shiftSure = closesDoubled(source, i + 2); }
         parens++;
+        // zsh: a paren glued to a word (not name=( … )) belongs to the word up to its close
+        groups.push(glued && !array);
       }
       const three = source.slice(i, i + 3), two = source.slice(i, i + 2);
       const op = ['&>>', '<<<', '<<-', '>>&'].includes(three) ? three
@@ -220,7 +299,11 @@ function lexShell(source, from = 0, stop = false, arithmetic = false) {
       // zsh writes over an existing file with a `!` or `|` after the operator
       if (['>', '>>', '>&', '&>', '&>>', '>>&'].includes(op) && (source[i + 1] === '!' || source[i + 1] === '|')) i++;
       const token = { op, glued };
-      if ((op === '<<' || op === '<<-') && !arithmetic && shift === null) waiting.push({ op: token });
+      if (op === '<<' || op === '<<-') {
+        const sum = sums();
+        if (sum === 'maybe') unsure();
+        if (!sum) waiting.push({ op: token });
+      }
       tokens.push(token);
       continue;
     }
@@ -229,6 +312,7 @@ function lexShell(source, from = 0, stop = false, arithmetic = false) {
     open().value += ch;
   }
   push();
+  if (stop) unsure(); // the substitution never closes
   return { tokens, end: source.length };
 }
 
@@ -250,8 +334,10 @@ function shellCommands(source) {
   let current = null;
   let test = false;
   let list = false;
+  let redirected = false;
   const command = () => (current ??= { tokens: [], words: [], redirects: [], inputs: [], heredocs: [], separator: '' });
-  const finish = (separator = '') => {
+  const finish = (separator = '', closed = false) => {
+    if (test && !closed) unsure(); // a test with no ]] is no test
     if (current) {
       current.words = current.tokens.map(token => token.value);
       current.separator = separator === '|&' ? '|' : separator;
@@ -260,23 +346,28 @@ function shellCommands(source) {
     current = null;
     test = false;
     list = false;
+    redirected = false;
   };
-  const leading = () => !current || current.tokens.every(token => KEYWORDS.includes(token.value) || ASSIGNMENT.test(token.value));
+  // [[ is the test only where the shell reads a reserved word: first in its command,
+  // after other reserved words, never after an assignment, a redirect or a quote
+  const leading = () => !redirected && (!current || current.tokens.every(token => KEYWORDS.includes(token.value) && !token.quoted && !token.escaped));
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
     if (token.value !== undefined) {
       if (list) token.assign = true;
-      if (!token.quoted && token.value === '[[' && leading()) test = true;
+      if (!token.quoted && token.value === 'always' && current && current.tokens.length && current.tokens[current.tokens.length - 1].value === '}') { finish(';'); continue; }
+      if (!token.quoted && !token.escaped && token.value === '[[' && leading()) test = true;
       command().tokens.push(token);
-      if (test && !token.quoted && token.value === ']]') finish(';');
+      if (test && !token.quoted && token.value === ']]') finish(';', true);
       continue;
     }
-    if (test && ['&&', '||', '(', ')', '<', '>'].includes(token.op)) { command().tokens.push(plain(token.op)); continue; }
+    if (test && ['&&', '||', '(', ')', '<', '>', '|'].includes(token.op)) { command().tokens.push(plain(token.op)); continue; }
     if (token.op === '(' && token.glued && current && current.tokens.length && /^[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?\+?=$/.test(current.tokens[current.tokens.length - 1].value)) { list = true; continue; }
     if (token.op === ')' && list) { list = false; continue; }
     if (SEPARATORS.includes(token.op)) { finish(token.op); continue; }
     const next = tokens[i + 1] && tokens[i + 1].value !== undefined ? tokens[i + 1] : null;
     if (next) i++;
+    redirected = true;
     if (token.op === '<<' || token.op === '<<-') {
       command().heredocs.push(token.body || '');
       if (token.subs && token.subs.length) current.inputs.push({ value: '', computed: true, subs: token.subs });
@@ -291,13 +382,15 @@ function shellCommands(source) {
   return commands;
 }
 
+// The GNU tools as Homebrew installs them: gsed is sed.
+const GNU_NAMES = /^g(sed|cp|mv|rm|ln|tar|find|xargs|dd|tee|install|touch|chmod|chown|truncate|sort|shred|unlink|rmdir|cat|head|tail|grep|egrep|fgrep|ls|stat|wc|cut|tr|uniq|split|readlink|realpath|basename|dirname|du|nl|tac|od|comm|join|paste|fold|seq|sha256sum|md5sum|base64|diff|cmp)$/;
 // Words that only introduce the command after them.
 const KEYWORDS = ['if', 'then', 'else', 'elif', 'fi', 'do', 'done', 'while', 'until', '!', '{', '}'];
 // Transparent wrappers: the command they run is the one that matters. Each lists
 // the options of its own that take a separate value.
 const WRAPPERS = {
   env: ['-u', '--unset', '-C', '--chdir', '-P'], sudo: ['-u', '-g', '-h', '-p', '-C', '-D', '-R', '-r', '-t', '-T', '-U'], doas: ['-u', '-C'],
-  command: [], builtin: [], exec: ['-a'], nice: ['-n'], nohup: [], time: ['-f', '-o'], timeout: ['-s', '-k', '--signal', '--kill-after'],
+  command: [], builtin: [], exec: ['-a'], nice: ['-n', '--adjustment'], nohup: [], time: ['-f', '-o'], timeout: ['-s', '-k', '--signal', '--kill-after'],
   xargs: ['-n', '-s', '-I', '-L', '-P', '-d', '-a', '-E', '-J', '-R', '-S'], stdbuf: ['-i', '-o', '-e'], caffeinate: ['-t', '-w'], arch: ['-arch', '-e'],
   ionice: ['-c', '-n', '-p'], setsid: [], chronic: [], unbuffer: [], noglob: [], nocorrect: [], coproc: [], repeat: [], busybox: [], xcrun: [],
   npx: ['-p', '--package'], pnpx: ['-p', '--package'], bunx: ['-p', '--package'],
@@ -356,10 +449,17 @@ function commandParts(command) {
   let opaque = false;
   if (head) {
     const last = head.value.slice(head.value.lastIndexOf('/') + 1);
-    if (!head.computed || (head.value.includes('/') && !/[$`]/.test(last) && last !== '')) executable = path.basename(head.value).toLowerCase();
+    // `r{m,}` spells its command with a brace: it may be anything
+    // and so may ${x:-…}, whose default the shell runs
+    if ((!head.quoted && head.glob && /\{[^{}]*,[^{}]*\}/.test(head.value)) || /^\$\{(?![A-Za-z_][A-Za-z0-9_]*\})/.test(head.value)) opaque = true;
+    else if (!head.computed || (head.value.includes('/') && !/[$`]/.test(last) && last !== '')) executable = path.basename(head.value).toLowerCase();
     else if (/^\$\{?SHELL\b/.test(head.value)) executable = 'sh';
     else opaque = true;
+    // ${x:-rm} file: the default is the command, with the words after it
+    const fallback = /^\$\{[A-Za-z_][A-Za-z0-9_]*:?[-=+]([^]*)\}$/.exec(head.value);
+    if (fallback) splits.push([fallback[1], ...argTokens.map(token => token.value)].join(' '));
     if (/^python[0-9.]*$/.test(executable)) executable = 'python3';
+    if (GNU_NAMES.test(executable)) executable = executable.slice(1);
   }
   return { executable, opaque, head, args: argTokens.map(token => token.value), argTokens, words: command.words || [], assignments, wrappers, splits, chdirs, values };
 }
@@ -387,7 +487,13 @@ function gitSubcommand(args) {
 // The command line a shell's -c runs: the first word after it that is not an option.
 function shellText(args) {
   const c = shellCommandFlag(args);
-  return c === -1 ? null : args.slice(c + 1).find(arg => !arg.startsWith('-')) ?? null;
+  if (c === -1) return null;
+  // options may follow -c; the text is the first word that is not one (nor the value of -o)
+  for (let i = c + 1; i < args.length; i++) {
+    if (/^[-+][oO]$/.test(args[i])) i++;
+    else if (!/^[-+]/.test(args[i]) || args[i] === '-' || args[i] === '--') return args[i] === '--' ? args[i + 1] ?? null : args[i];
+  }
+  return null;
 }
 // A shell, or a program that may be one, that takes its script from standard
 // input: no -c and no script file (`-s` hands the words after it to that script).
@@ -397,7 +503,7 @@ function readsScript(parts) {
   return parts.args.includes('-s') || !parts.args.some((arg, i) => !arg.startsWith('-') && !(i > 0 && ['-o', '+o', '-O', '+O'].includes(parts.args[i - 1])));
 }
 // A git long option, also in the shortened form git accepts.
-const longOption = (arg, name) => arg === name || (arg.length >= 4 && arg.startsWith('--') && name.startsWith(arg));
+const longOption = (arg, name) => arg === name || (arg.length >= 3 && arg.startsWith('--') && name.startsWith(arg));
 // What text a command prints that the next command, or the substitution around it, may
 // run: the words of echo and printf, and a here-document handed to cat.
 function printed(command) {
@@ -426,7 +532,8 @@ function dangerousReason(source, depth = 0) {
     // -c text, a here-document that is more than a message, text printed into a shell.
     const inner = [...substitutions(commands[i]), ...splits];
     const reader = ['cat', 'echo', 'printf', 'grep', 'head', 'tail', 'wc', 'less', 'more'].includes(executable);
-    if (piped || !heredocIsData(parts, commands[i], reader)) inner.push(...commands[i].heredocs);
+    const saved = new Set(); // here-documents that no shell reads
+    if (piped || !heredocIsData(parts, commands[i], reader)) { inner.push(...commands[i].heredocs); if (!shell && !piped) commands[i].heredocs.forEach(body => saved.add(body)); }
     if (shell && shellText(args) !== null) inner.push(shellText(args));
     if (shell || executable === 'eval') inner.push(...commands[i].tokens.flatMap(token => token.subs || []).flatMap(producedText));
     if (executable === 'eval') inner.push(args.filter(arg => arg !== '--').join(' '));
@@ -434,7 +541,7 @@ function dangerousReason(source, depth = 0) {
     if (['su', 'watch', 'flock', 'script', 'parallel'].includes(executable)) inner.push(...commands[i].tokens.filter(token => token.quoted).map(token => token.value));
     if (readsScript(parts) && i > 0 && commands[i - 1].separator === '|') inner.push(...printed(commands[i - 1]));
     for (const nested of inner) {
-      const reason = dangerousReason(nested, depth + 1);
+      const reason = saved.has(nested) ? loosely(() => dangerousReason(nested, depth + 1)) : dangerousReason(nested, depth + 1);
       if (reason) return reason;
     }
     if ((executable === 'claude' || (executable === 'npx' && args.some(arg => arg === 'claude'))) &&
@@ -623,7 +730,11 @@ function globMatcher(pattern, cross = false) {
 function globbed(pattern) {
   const matcher = globMatcher(slashed(pattern));
   if (!matcher) return 'engine';
-  const kinds = knownProtected().filter(entry => matcher.test(slashed(entry.file))).map(entry => entry.kind);
+  // the directory in front of the pattern may be another spelling of the same place (/tmp, a link)
+  const cut = pattern.search(/[*?[{]/);
+  const dir = cut === -1 ? '' : pattern.slice(0, pattern.lastIndexOf('/', cut) + 1);
+  const real = dir ? globMatcher(slashed(path.join(realish(dir), pattern.slice(dir.length)))) : null;
+  const kinds = knownProtected().filter(entry => matcher.test(slashed(entry.file)) || (real && real.test(slashed(entry.file)))).map(entry => entry.kind);
   return ['ticket', 'engine', 'holder'].find(kind => kinds.includes(kind)) || '';
 }
 
@@ -643,6 +754,17 @@ function reach(token, scope) {
   if (mentionsEngine(text)) return 'engine';
   if (token.computed) {
     if (/(^|\/)T-[0-9]+[^/]*$/i.test(text)) return 'ticket';
+    // ~/x and $HOME/x are written out but for the home directory, which is known here
+    const home = !scope.rehome && !token.glob && /^(~|\$HOME|\$\{HOME\})(\/[^$`~]*)?$/.exec(text);
+    if (home && !text.includes('..')) {
+      const file = path.join(os.homedir(), home[2] || '');
+      const above = roots().some(root => `${slashed(root).toLowerCase()}/`.startsWith(`${slashed(file).toLowerCase().replace(/\/$/, '')}/`));
+      return located(file) || (above ? 'unknown' : 'other');
+    }
+    // "$PWD/tickets": the directory that holds them, wherever the variable points
+    if (/\/(tickets|scripts|\.claude)\/*$/i.test(text)) return 'holder';
+    // tickets/$f: a name the shell works out, in the directory that holds the tickets
+    if (/(^|\/)tickets\/[^/]*[$`][^/]*$/i.test(text)) return 'ticket';
     return !scope.retmp && /^\$(TMPDIR|\{TMPDIR\})\/[^$`~]*$/.test(text) && !text.includes('..') ? 'other' : 'unknown';
   }
   const kinds = [...scope.cwds].map(cwd => (token.glob ? globbed(path.resolve(cwd, text)) : located(path.resolve(cwd, text))));
@@ -761,10 +883,10 @@ const NODES = ['node', 'nodejs', 'deno', 'bun', 'tsx', 'ts-node'];
 function inlineCode(executable, args) {
   if (SHELLS.includes(executable)) return shellCommandFlag(args) !== -1;
   if (NODES.includes(executable)) return args.some(arg => /^(-e|-p|-pe|--eval|--print|eval)$/.test(arg) || /^--(eval|print)=/.test(arg));
-  if (executable === 'python3') return args.some(arg => /^-[A-Za-z]*c$/.test(arg));
+  if (executable === 'python3') return args.some(arg => /^-(?!-)[A-Za-z]*c/.test(arg));
   if (executable === 'php') return args.includes('-r');
   if (['osascript', 'lua'].includes(executable)) return args.includes('-e');
-  return ['perl', 'ruby'].includes(executable) && args.some(arg => /^-[A-Za-z0-9]*[eE]$/.test(arg));
+  return ['perl', 'ruby'].includes(executable) && args.some(arg => /^-[A-Za-z0-9]*[eE]$/.test(arg) || /^-[lnpawsWT0-9]*[eE]./.test(arg));
 }
 // The word that names one of the project's own engine scripts being run, or null.
 function ownRun(parts) {
@@ -924,7 +1046,7 @@ function sedTargets(parts) {
     else if (/^-e./.test(token.value)) scripts.push(token.value.slice(2));
   });
   if (!scripts.length) scripts.push(...argTokens.filter(token => !token.value.startsWith('-')).slice(0, 1).map(token => token.value));
-  return scripts.flatMap(text => [...text.matchAll(/(?:^|[;{}\n/0-9$,!])\s*[wW]\s+([^;\n}]+)/g)].map(match => ({ ...plain(match[1].trim()), computed: /[$`]/.test(match[1]) })));
+  return scripts.flatMap(text => [...text.matchAll(/(?:^|[;{}\n/0-9$,!])[gpIiMm0-9]*\s*[wW]\s+([^;\n}]+)/g)].map(match => ({ ...plain(match[1].trim()), computed: /[$`]/.test(match[1]) })));
 }
 
 // Whether a command only reads: a reader by name, or one of those that write
@@ -941,26 +1063,46 @@ function reads(parts, scope) {
   if (executable === 'gh') return !args.some(arg => ['download', 'clone'].includes(arg));
   if (executable === 'rg') return !args.some(arg => arg.startsWith('--pre'));
   if (executable === 'chmod') { const mode = positional[0] ? positional[0].value : ''; return /^[ugoa]*\+x$/.test(mode) || /^0?[57][0-5][0-5]$/.test(mode); }
-  if (['node', 'nodejs'].includes(executable)) return args.some(arg => arg === '--check' || arg === '-c');
-  if (SHELLS.includes(executable)) return shellCommandFlag(args) === -1 && args.includes('-n');
-  if (executable === 'sort') return optionValues(argTokens, 'o', ['--output']).every(elsewhere);
+  if (['node', 'nodejs'].includes(executable)) { const script = args.findIndex(arg => !arg.startsWith('-')); return (script === -1 ? args : args.slice(0, script)).some(arg => arg === '--check' || arg === '-c'); }
+  if (SHELLS.includes(executable)) { const script = args.findIndex(arg => !/^[-+]/.test(arg)); return shellCommandFlag(args) === -1 && (script === -1 ? args : args.slice(0, script)).includes('-n'); }
+  if (executable === 'sort') return optionValues(argTokens, 'o', ['--o', '--ou', '--out', '--outp', '--outpu', '--output']).every(elsewhere);
   if (executable === 'uniq') return positional.length < 2;
-  if (executable === 'sed') return !args.some(arg => /^-[^-]*[iI]/.test(arg) || arg === '--in-place' || arg.startsWith('--in-place='));
-  if (['gzip', 'gunzip', 'bzip2', 'xz', 'zstd'].includes(executable)) return args.some(arg => /^-[A-Za-z]*[clt]/.test(arg) || ['--stdout', '--to-stdout', '--list', '--test'].includes(arg));
-  if (executable === 'curl') return !args.some(arg => (!arg.startsWith('--') && /^-[A-Za-z]*[oODcJ]/.test(arg)) || /^--(output|remote-name|dump-header|cookie-jar|trace|stderr|create-dirs)/.test(arg));
+  if (executable === 'sed') return !args.some(arg => /^-[^-]*[iI]/.test(arg) || /^--i(n(-(p(l(a(c(e)?)?)?)?)?)?)?(=|$)/.test(arg));
+  if (['gzip', 'gunzip', 'bzip2', 'xz', 'zstd'].includes(executable)) return args.some(arg => /^-[cdfklqtvz1-9]*[clt][cdfklqtvz1-9]*$/.test(arg) || ['--stdout', '--to-stdout', '--list', '--test'].includes(arg));
+  if (executable === 'curl') return !args.some(arg => (!arg.startsWith('--') && /^-[A-Za-z]*[oODcJ]/.test(arg)) || /^--(output|remote-name|dump-header|cookie-jar|trace|stderr|create-dirs)/.test(arg)) && !argTokens.some(token => protectedKind(argReach(token, scope)));
   if (executable === 'tar' || executable === 'bsdtar') {
     const mode = args[0] || '';
+    // a program tar is told to run
+    if (args.some(arg => /^(-I|-F)$|^--(use-compress-program|to-command|checkpoint-action|rsh-command|info-script|new-volume-script)/.test(arg))) return false;
     if (/^-?[A-Za-z]*t/.test(mode) && !/[xcru]/.test(mode)) return true;
     if (args.includes('--remove-files') || !(args.includes('--create') || (/^-?[A-Za-z]*c/.test(mode) && !/[xru]/.test(mode)))) return false;
     const archive = optionValues(argTokens, 'f', ['--file'])[0] || (/^[A-Za-z]*f$/.test(mode) ? argTokens[1] : null);
     return Boolean(archive) && (archive.value === '-' || elsewhere(archive));
   }
   if (AWKS.includes(executable)) {
-    if (args.some(arg => ['-i', '--include', '-f', '--file', '-o', '-p', '-d', '-D'].includes(arg) || /inplace|^--(dump-variables|profile|pretty-print|debug)|^-[opdD]./.test(arg))) return false;
+    if (args.some(arg => ['-i', '--include', '-f', '--file', '-o', '-p', '-d', '-D', '-e', '-E', '--exec'].includes(arg) || /inplace|^--(source|dump-variables|profile|pretty-print|debug)|^-[opdD]./.test(arg))) return false;
     const program = argTokens.find((token, i) => !token.value.startsWith('-') && !(i > 0 && ['-v', '-F', '--assign', '--field-separator'].includes(args[i - 1])));
-    return Boolean(program) && !/(>>?|\|&?)\s*"|print[^;}\n]*(>>?|\|)\s*[A-Za-z_($]|system\s*\(|\bgetline\b/.test(program.value);
+    return Boolean(program) && !/(>>?|\|&?)\s*"|print[^;}\n]*(>>?|\|)\s*[A-Za-z_($]|system\s*\(|\bgetline\b/.test(awkBare(program.value.replace(/\\\n/g, ' ')));
   }
   return false;
+}
+
+// An awk program with its strings emptied, so that a bar or an arrow printed between
+// columns is not taken for a pipe or a redirect. A program with a `/` or a `#` outside
+// its strings is left as it is: a quote inside a pattern or a comment would be misread.
+function awkBare(program) {
+  let bare = '';
+  for (let i = 0; i < program.length; i++) {
+    const ch = program[i];
+    if (ch === '/' || ch === '#') return program;
+    if (ch !== '"') { bare += ch; continue; }
+    let end = i + 1;
+    while (end < program.length && program[end] !== '"') end += program[end] === '\\' ? 2 : 1;
+    if (end >= program.length) return program;
+    bare += '""';
+    i = end;
+  }
+  return bare;
 }
 
 // A copy writes its last argument (or -t <dir>); what lands in a directory keeps
@@ -995,6 +1137,7 @@ function copyWrites(parts, scope, fed) {
     const kind = reach(destination, scope);
     if (protectedKind(kind) || (kind === 'unknown' && scope.tainted)) return true;
     if (kind === 'holder' && (whole || sources.some(token => token.value.endsWith('/')))) return true;
+    if (whole && scope.tainted && aboveRoot(destination, scope)) return true;
     if (destination.computed || destination.glob) continue;
     for (const source of sources) {
       if (source.computed || source.glob) { if (kind === 'holder') return true; continue; }
@@ -1004,32 +1147,55 @@ function copyWrites(parts, scope, fed) {
   return false;
 }
 
-// What a find expression asks for: where it starts, the name tests that narrow it
-// (a negated test narrows nothing here, and with -o none does), how deep it goes,
-// and its actions: the commands of -exec and whether it deletes or writes itself.
+// What a find expression asks for: where it starts, how deep it goes, and its
+// actions (-delete, the writing prints, the command of each -exec). An action acts
+// on what the tests in front of it let through, in its own -o branch only: in
+// 'a -o b -delete' the delete follows b, and in '-delete -name x' nothing narrows
+// it. A negated test narrows nothing here, and neither does anything inside a
+// \( … \) that is negated or holds an -o.
 function findPlan(parts) {
   const tokens = parts.argTokens;
-  const plan = { starts: [], tests: [], runs: [], direct: false, depth: Infinity, empty: false, type: '', loose: false };
+  // `whole` is what the search can print, for a line that hands it on (find … | xargs)
+  const plan = { starts: [], actions: [], files: [], depth: Infinity, whole: { tests: [], type: '', empty: false } };
   let i = 0;
   while (tokens[i] && /^-[HLPEXdfsx]+$/.test(tokens[i].value)) i++;
   while (tokens[i] && !/^[-!(]/.test(tokens[i].value)) plan.starts.push(tokens[i++]);
+  const branch = () => ({ tests: [], type: '', empty: false });
+  let now = branch();
+  const groups = []; // for each open \( whether what is inside narrows nothing
+  let grouped = 0;
   let negated = false;
+  const act = (more) => plan.actions.push({ tests: [...now.tests], type: now.type, empty: now.empty, ...more });
   for (; i < tokens.length; i++) {
     const value = tokens[i].value;
+    const narrows = !negated && !grouped;
     if (value === '!' || value === '-not') { negated = true; continue; }
-    if (['-o', '-or', ','].includes(value)) plan.loose = true;
-    else if (/^-i?(name|path|wholename|regex|lname)$/.test(value)) { if (tokens[i + 1] && !negated) plan.tests.push({ token: tokens[i + 1], name: /name$/.test(value), regex: /regex$/.test(value) }); i++; }
+    if (value === '(') {
+      let end = i + 1;
+      for (let open = 1; end < tokens.length; end++) { if (tokens[end].value === '(') open++; else if (tokens[end].value === ')' && --open === 0) break; }
+      groups.push(negated || tokens.slice(i, end).some(token => ['-o', '-or', ','].includes(token.value)));
+      grouped = groups.filter(Boolean).length;
+    } else if (value === ')') { groups.pop(); grouped = groups.filter(Boolean).length; }
+    else if (['-o', '-or', ','].includes(value)) { plan.loose = true; if (!grouped) now = branch(); }
+    else if (/^-i?(name|path|wholename|regex|lname)$/.test(value)) {
+      const test = tokens[i + 1] && { token: tokens[i + 1], name: /name$/.test(value), regex: /regex$/.test(value) };
+      if (test && narrows) now.tests.push(test);
+      if (test && !negated) plan.whole.tests.push(test);
+      i++;
+    }
     else if (value === '-maxdepth' && tokens[i + 1]) { const depth = Number(tokens[++i].value); plan.depth = Number.isFinite(depth) ? depth : Infinity; }
-    else if (value === '-empty') plan.empty = !negated;
-    else if (value === '-type' && tokens[i + 1]) { if (!negated) plan.type = tokens[i + 1].value; i++; }
+    else if (value === '-empty') { if (narrows) now.empty = true; plan.whole.empty = !negated; }
+    else if (value === '-type' && tokens[i + 1]) { if (narrows) now.type = tokens[i + 1].value; if (!negated) plan.whole.type = tokens[i + 1].value; i++; }
     else if (/^-(exec|execdir|ok|okdir)$/.test(value)) {
       let end = i + 1;
       while (end < tokens.length && tokens[end].value !== ';' && tokens[end].value !== '+') end++;
-      plan.runs.push(tokens.slice(i + 1, end));
+      act({ run: tokens.slice(i + 1, end), each: Boolean(tokens[end]) && tokens[end].value === ';' });
       i = end;
-    } else if (/^-(delete|fprint|fprint0|fprintf|fls)$/.test(value)) plan.direct = true;
+    } else if (value === '-delete') act({ direct: true });
+    else if (/^-(fprint|fprint0|fprintf|fls)$/.test(value)) plan.files.push(tokens[++i] || null); // the file it writes its list to
     negated = false;
   }
+  if (plan.loose) plan.whole.tests = [];
   return plan;
 }
 function passesTest({ token, name, regex }, entry) {
@@ -1039,36 +1205,55 @@ function passesTest({ token, name, regex }, entry) {
   const forms = name ? [path.basename(entry.file)] : roots().flatMap(root => { const rel = slashed(path.relative(root, entry.file)); return [slashed(entry.file), rel, `./${rel}`]; });
   return forms.some(text => matcher.test(text));
 }
-// Whether what the search finds can be a protected file there is now. With literal
-// starting points this is looked up; with one the shell computes it is assumed,
-// unless a name test rules every protected file out.
-function findCovers(plan, scope) {
-  const tests = plan.loose ? [] : plan.tests;
-  if (plan.starts.length && plan.starts.every(token => !token.computed && !token.glob)) {
-    return knownProtected().some(entry => {
-      if (entry.kind === 'holder' || (plan.type === 'f' && entry.dir) || (plan.type === 'd' && !entry.dir)) return false;
-      if (plan.empty) { try { if (entry.dir || fs.statSync(entry.file).size) return false; } catch { return false; } }
-      const under = [...scope.cwds].some(cwd => plan.starts.some(start => {
-        const rel = path.relative(path.resolve(cwd, start.value), entry.file);
-        return !rel.startsWith('..') && !path.isAbsolute(rel) && (rel === '' ? 0 : rel.split(path.sep).length) <= plan.depth;
-      }));
-      return under && tests.every(test => passesTest(test, entry));
-    });
-  }
+// The protected files an action can be handed, where the search starts from paths
+// written out: those there are now, under a start, within the depth, that pass the
+// tests in front of the action.
+function findReach(plan, action, scope) {
+  return knownProtected().filter(entry => {
+    if ((action.type === 'f' && entry.dir) || (action.type === 'd' && !entry.dir)) return false;
+    if (action.empty) { try { if (entry.dir || fs.statSync(entry.file).size) return false; } catch { return false; } }
+    const under = [...scope.cwds].some(cwd => plan.starts.some(start => {
+      const rel = path.relative(path.resolve(cwd, start.value), entry.file);
+      return !rel.startsWith('..') && !path.isAbsolute(rel) && (rel === '' ? 0 : rel.split(path.sep).length) <= plan.depth;
+    }));
+    return under && action.tests.every(test => passesTest(test, entry));
+  });
+}
+const findLiteral = (plan) => plan.starts.length > 0 && plan.starts.every(token => !token.computed && !token.glob);
+// Whether what an action is handed can be a protected file. With a start the shell
+// computes it is assumed, unless a name test rules every protected file out.
+function findCovers(plan, action, scope) {
+  if (findLiteral(plan)) return findReach(plan, action, scope).length > 0;
+  const tests = action.tests;
   return !tests.length || tests.some(test => /^\*?t-[0-9*?[]/i.test(test.token.value) || mentions(test.token.value) || knownProtected().some(entry => passesTest(test, entry)));
 }
 const asCommand = (list) => {
   const kept = list.filter(token => token.value !== '{}');
   return { tokens: kept, words: kept.map(token => token.value), redirects: [], inputs: [], heredocs: [], separator: '' };
 };
-// find only reads until it is given an action. With one, it is a write when what it
-// finds can be a protected file and the action is not a command that only reads.
+// '-exec cp {} <elsewhere> \;' copies what it finds out, one file at a time: the same
+// copy is judged with each protected file it can be handed standing where {} is.
+function findCopiesOut(plan, action, scope, depth) {
+  const run = action.run;
+  if (!action.each || !findLiteral(plan) || !run.length || run[0].computed || run[0].value !== 'cp') return false;
+  if (run.filter(token => token.value.includes('{}')).length !== 1 || !run.some(token => token.value === '{}')) return false;
+  return findReach(plan, action, scope).every(entry => {
+    const tokens = run.map(token => (token.value === '{}' ? plain(entry.file) : token));
+    return !commandWrites({ tokens, words: tokens.map(token => token.value), redirects: [], inputs: [], heredocs: [], separator: '' }, scope, false, depth + 1);
+  });
+}
+// find only reads until it is given an action. An action is a write when what it is
+// handed can be a protected file and it is not a command that only reads.
 function findWrites(parts, scope, depth) {
   const plan = findPlan(parts);
-  if (!plan.direct && !plan.runs.length) return false;
-  const runs = plan.runs.map(asCommand);
-  if (!findCovers(plan, scope)) return runs.some(run => commandWrites(run, scope, false, depth + 1));
-  return plan.direct || runs.some(run => !reads(commandParts(run), scope) || commandWrites(run, scope, false, depth + 1));
+  if (plan.files.some(file => { const kind = file ? reach(file, scope) : 'unknown'; return protectedKind(kind) || (kind === 'unknown' && scope.tainted); })) return true;
+  return plan.actions.some(action => {
+    const run = action.run ? asCommand(action.run) : null;
+    if (!findCovers(plan, action, scope)) return Boolean(run) && commandWrites(run, scope, false, depth + 1);
+    if (!run) return true;
+    if (findCopiesOut(plan, action, scope, depth)) return false;
+    return !reads(commandParts(run), scope) || commandWrites(run, scope, false, depth + 1);
+  });
 }
 
 // git: the whole-tree forms, then any subcommand outside the safe list that names a
@@ -1088,14 +1273,18 @@ function gitWrites(parts, scope, fed, depth) {
     : scope;
   const after = (i, names) => i > 0 && names.includes(tokens[i - 1].value);
   // commands git is told to run: rebase --exec, an alias, a config value that starts with !
-  if (sub.name === 'rebase' && tokens.some((token, i) => (after(i, ['-x', '--exec']) && code(token.value)) || (token.value.startsWith('--exec=') && code(token.value.slice('--exec='.length))))) return true;
+  if (sub.name === 'rebase' && tokens.some((token, i) => {
+    const value = token.value;
+    const glued = /^--e(x(e(c)?)?)?=/.test(value) ? value.slice(value.indexOf('=') + 1) : /^-x./.test(value) ? value.slice(2) : null;
+    return (i > 0 && (tokens[i - 1].value === '-x' || longOption(tokens[i - 1].value, '--exec')) && code(value)) || (glued !== null && code(glued));
+  })) return true;
   if (sub.name === 'config') {
     const words = tokens.filter(token => !token.value.startsWith('-'));
     if (words[1] && words[1].value.startsWith('!') && code(words[1].value.slice(1))) return true;
     if (words[1] && /^alias\./.test(words[0].value) && !words[1].value.startsWith('!') && code(`git ${words[1].value}`)) return true;
     if (tokens.some((token, i) => (after(i, ['-f', '--file']) || token.value.startsWith('--file=')) && protectedKind(argReach(token, local)))) return true;
   }
-  if (sub.name === 'rm' && sub.args.includes('--cached')) return false; // the index only
+  if (sub.name === 'rm' && (sub.args.includes('--') ? sub.args.slice(0, sub.args.indexOf('--')) : sub.args).includes('--cached')) return false; // the index only
   const safe = GIT_SAFE.has(sub.name);
   // A branch name is not a path: it never makes the command blind.
   const lone = !sub.args.includes('--') && tokens.filter(token => !token.value.startsWith('-')).length === 1;
@@ -1135,6 +1324,17 @@ function otherWrites(parts, command, scope, fed, depth) {
   if (scope.lenient && !known) return false;
   const inline = !shell && inlineCode(executable, args);
   const near = scope.tainted || scope.holds;
+  // the whole command is a variable: what it holds may be the text this line names
+  if (parts.opaque && scope.tainted && (/^\$\{/.test(parts.head.value) || (/^\$[A-Za-z_]/.test(parts.head.value) && !parts.head.value.includes('/')))) return true;
+  // zsh: `- command` runs the command
+  if (executable === '-' && argTokens.length) return commandWrites({ tokens: argTokens, words: args, redirects: [], inputs: [], heredocs: [], separator: '' }, scope, false, depth + 1);
+  // commands handed down a pipe to parallel; an archive unpacked where the line stands
+  if (executable === 'parallel' && near) return true;
+  const unpacks = executable === 'unzip' || (['tar', 'bsdtar'].includes(executable) && (/^-?[A-Za-z]*x/.test(args[0] || '') || args.some(arg => ['--extract', '--get'].includes(arg))));
+  if (unpacks && near && !optionValues(argTokens, executable === 'unzip' ? 'd' : 'C', ['--directory', '--cd']).some(token => reach(token, scope) === 'other')) return true;
+  // a runner the guard does not know that is handed an interpreter runs the program in its quotes
+  const carries = !known && args.some(arg => { const base = path.basename(arg).toLowerCase(); return SHELLS.includes(base) || INTERPRETERS.includes(base) || /^python[0-9.]*$/.test(base); });
+  if (carries && command.heredocs.some(mentions)) return true;
   if (executable === 'patch' && near) return true;
   // git behind a runner that takes a command as its arguments (flock, xcrun, script)
   const git = args.findIndex(arg => path.basename(arg).toLowerCase() === 'git');
@@ -1145,21 +1345,28 @@ function otherWrites(parts, command, scope, fed, depth) {
   const text = shell ? shellText(args) : null;
   let script = null;
   if (text !== null) tokens = tokens.filter(token => token.value !== text);
-  else if ((shell || interpreter) && !inline) { script = tokens.find(token => !token.value.startsWith('-')) || null; tokens = tokens.filter(token => token !== script); }
+  else if ((SHELLS.includes(executable) || interpreter) && !inline) { script = tokens.find(token => !token.value.startsWith('-')) || null; tokens = tokens.filter(token => token !== script); }
   // xargs handing files to a shell line that only reads them is a read
   const fedReads = fed && text !== null && shellCommands(text).every(inner => !inner.redirects.length && (!commandParts(inner).head || reads(commandParts(inner), scope)));
   let blind = fed && !fedReads;
   for (const token of [...parts.assignments, ...tokens]) {
-    if (!known && token.quoted && /\s/.test(token.value)) continue;
+    if (!known && !carries && token.quoted && /\s/.test(token.value)) continue;
     const kind = argReach(token, scope);
-    if (protectedKind(kind) || (kind === 'holder' && (TREE.has(executable) || executable === 'tar'))) return true;
+    if (protectedKind(kind) || (kind === 'holder' && (TREE.has(executable) || executable === 'tar' || executable === 'watch' || parts.opaque))) return true;
     if (['rm', 'rmdir', 'chmod', 'chown', 'chgrp', 'chflags'].includes(executable) && !token.value.startsWith('-') && aboveRoot(token, scope)) return true;
     if (kind === 'unknown') blind = true;
   }
   if (interpreter || ['ed', 'ex'].includes(executable)) {
     // the paths a program names in quotes, read from where the line stands
     const programs = [...(inline ? tokens.filter(token => token.quoted).map(token => token.value) : []), ...command.heredocs];
-    for (const program of programs) for (const match of program.matchAll(/['"]([^'"\n]{1,200})['"]/g)) if (protectedKind(reach(plain(match[1]), scope))) return true;
+    let holder = false, named = false;
+    for (const program of programs) for (const match of program.matchAll(/['"]([^'"\n]{1,200})['"]/g)) {
+      if (protectedKind(reach({ ...plain(match[1]), glob: /[*?[]/.test(match[1]) }, scope))) return true;
+      holder ||= /^(\.\/)?tickets\/?$/i.test(match[1]);
+      named ||= /^T-[0-9*?[]/i.test(match[1]);
+    }
+    // the tickets directory and a ticket's name or pattern, put together by the program
+    if (holder && named) return true;
     if (command.heredocs.some(mentions)) return true;
     // a program written by here-document on this line, or one that arrives on standard input
     if (interpreter && scope.scripted) return true;
@@ -1185,7 +1392,7 @@ function marks(command, scope, depth = 0) {
     if (mentionsTicket(body)) found.add('ticket');
     if (mentionsEngine(body)) found.add('engine');
   }
-  if (parts.executable === 'find' && findCovers(findPlan(parts), scope)) found.add('ticket');
+  if (parts.executable === 'find') { const plan = findPlan(parts); if (findCovers(plan, plan.whole, scope)) found.add('ticket'); }
   for (const sub of substitutions(command)) for (const inner of shellCommands(sub)) for (const kind of marks(inner, scope, depth + 1)) found.add(kind);
   return found;
 }
@@ -1200,7 +1407,7 @@ function scopeOf(commands, outer) {
   const start = [typeof payload.cwd === 'string' && payload.cwd ? payload.cwd : projectRoot(), projectRoot(), process.cwd()];
   const scope = outer
     ? { ...outer, cwds: new Set(outer.cwds) }
-    : { cwds: new Set(start.map(dir => path.resolve(dir))), lost: false, tainted: false, ticketed: false, holds: false, scripted: false, retmp: false, lenient: false };
+    : { cwds: new Set(start.map(dir => path.resolve(dir))), lost: false, tainted: false, ticketed: false, holds: false, scripted: false, retmp: false, rehome: false, lenient: false };
   const stand = (target) => {
     if (!target) { scope.cwds.add(os.homedir()); return; }
     const known = /^(\$PWD|\$\{PWD\}|\$CLAUDE_PROJECT_DIR|\$\{CLAUDE_PROJECT_DIR\})(\/[^$`]*)?$/.exec(target.value);
@@ -1219,12 +1426,20 @@ function scopeOf(commands, outer) {
     for (const command of list) {
       const parts = commandParts(command);
       parts.chdirs.forEach(stand);
-      if (['cd', 'pushd', 'chdir'].includes(parts.executable)) stand(parts.argTokens.find(token => !token.value.startsWith('-') || token.value === '-'));
+      if (['cd', 'pushd', 'chdir'].includes(parts.executable)) {
+        const targets = parts.argTokens.filter(token => !token.value.startsWith('-') || token.value === '-');
+        if (targets.length > 1) scope.lost = true; // zsh: cd old new
+        stand(targets[0]);
+      }
       if (parts.executable === 'eval' && depth < 3) walk(shellCommands(parts.args.filter(arg => arg !== '--').join(' ')), depth + 1);
       if (command.tokens.some(token => /^TMPDIR\+?=/.test(token.value))) scope.retmp = true;
+      if (command.tokens.some(token => /^CDPATH\+?=/.test(token.value))) scope.lost = true; // cd may land anywhere
+      if (command.tokens.some(token => /^HOME\+?=/.test(token.value))) scope.rehome = true;
     }
   };
-  walk(commands, 0);
+  // the commands of a line need not run in the order they are written (a function, a loop)
+  for (let round = 0, size = -1; round < 4 && scope.cwds.size > size && scope.cwds.size < 256; round++) { size = scope.cwds.size; walk(commands, 0); }
+  if (scope.cwds.size >= 256) scope.lost = true;
   for (const command of commands) {
     const found = marks(command, scope);
     scope.ticketed ||= found.has('ticket');
@@ -1261,10 +1476,15 @@ function commandWrites(command, scope, piped, depth, previous = null) {
   if (readsScript(parts) && previous && previous.separator === '|' && printed(previous).some(code)) return true;
   if (executable === 'eval' && code(args.filter(arg => arg !== '--').join(' '))) return true;
   if (executable === 'trap' && args.some(code)) return true;
+  if (executable === 'alias' && args.some(arg => arg.includes('=') && code(arg.slice(arg.indexOf('=') + 1)))) return true;
+  // commands made on the spot and piped to a shell, beside a protected name
+  if (readsScript(parts) && previous && previous.separator === '|' && (scope.tainted || scope.holds) && !printed(previous).length) return true;
   if (TEXT_RUNNERS.includes(executable) && command.tokens.filter(token => token.quoted).some(token => code(token.value))) return true;
   // A lookalike of the writer anywhere but the project's own path is refused outright.
   if ([...command.words, ...command.redirects.filter(Boolean).map(token => token.value)].some(lookalikeWriter)) return true;
   if (!parts.head) return false;
+  // in text that is only saved, a line that opens with a capital is prose (At the end …, Install the …)
+  if (scope.lenient && /[A-Z]/.test(path.basename(parts.head.value))) return false;
   const fed = parts.wrappers.includes('xargs');
   const own = ownRun(parts);
   const reader = executable !== 'git' && executable !== 'find' && !own && reads(parts, scope);
@@ -1272,7 +1492,7 @@ function commandWrites(command, scope, piped, depth, previous = null) {
   // saved or passed on, in which only what is known to write counts.
   if (piped || !heredocIsData(parts, command, reader)) {
     const strict = shell || piped ? scope : { ...scope, lenient: true };
-    if (command.heredocs.some(body => shellWrites(body, strict, depth + 1))) return true;
+    if (command.heredocs.some(body => (strict === scope ? shellWrites(body, strict, depth + 1) : loosely(() => shellWrites(body, strict, depth + 1))))) return true;
   }
   if (executable === 'git') return gitWrites(parts, scope, fed, depth);
   if (own) return false;

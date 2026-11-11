@@ -36,13 +36,37 @@ with a hook.
   shell or an interpreter is handed one), zsh's `>!` and `>|`, and a program reached
   through `~`, a variable or a substitution. Only space, tab and new line separate
   words. A line nested more than eight levels deep is refused.
+- A line the guard cannot read with certainty is refused, not read on: a quote, a
+  `[[` test or a substitution that never closes, a `#` or a `<<` inside a `((…))` that
+  may be two subshells, a `#` straight after a paren (a comment in bash, part of a
+  pattern in zsh), `<<` in a subscript that is not an assignment, more than 64
+  substitutions inside each other. The hook also refuses when anything in it fails:
+  it used to end with status 1 on such a line, which lets the call run. Text that is
+  only saved or shown (a here-document for a file or a commit message) is still read
+  loosely, so prose with apostrophes and `(#links)` passes.
+- Readers are readers only in the forms that cannot write. Refused now: `sed` with a
+  `w` file in its script or `--in-place` shortened, `sort --out=`, `xz -C…`, `curl`
+  handed a protected path, `tar -I <program>`, `gawk --source`, `node script.js
+  --check <file>` and `bash script.sh -n <file>` (the option belongs to the script),
+  `find -fprint <file>`, `find` with its action in front of the test meant to narrow
+  it or in another `-o` branch, and `find … -exec rm -rf` on the directories that hold
+  the tickets, the engine or the hooks.
+- More ways to a protected file are followed: a program run through `uv run`,
+  `poetry run` or `pnpm exec`; a program glued to its option (`python3 -c"…"`); a
+  program that puts `tickets` and a ticket's name together; text kept in a variable
+  and run (`eval "$S"`, `$cmd`, `${x:-rm …}`); `tickets/$f`; `"$PWD/tickets"`; GNU
+  tools under their `g` names; commands made on the spot and piped to a shell; `git`
+  options in their shortened forms; `cd` inside a function and `CDPATH`; a whole tree
+  copied over the project on a line that names a protected file.
 - `NotebookEdit` is guarded like Edit and Write: it may not reach a ticket, the engine
   or the hooks. The ticket guard's matcher in `.claude/settings.json` is now
   `Edit|Write|MultiEdit|NotebookEdit|Bash`; `update` refreshes the file, or leaves the
   new one beside it as `.claude/settings.json.new` when the project changed its own.
 - The guard lets more reads through: copying a ticket or the engine out
-  (`cp tickets/T-02-x.md /tmp/`, `cat … | tee /tmp/copy.md`), a read after `cd` saved
-  to another path, quoted text that only mentions a ticket or the ticket script, a
+  (`cp tickets/T-02-x.md /tmp/`, `cat … | tee /tmp/copy.md`, `> ~/copy.md`, `find
+  tickets -name '*.md' -exec cp {} /tmp/backup/ \;`), a read after `cd` saved
+  to another path, `awk` that prints a bar or an arrow between columns, `find` that
+  deletes only what its own `-o` branch names, quoted text that only mentions a ticket or the ticket script, a
   here-document that is a commit message, and a comment. Still refused, on purpose:
   `T-NN*` in any directory named `tickets` is a ticket wherever it is, so a copy into
   a scratch clone's `tickets/` is refused, and a tool the guard does not know is

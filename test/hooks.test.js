@@ -230,7 +230,7 @@ for (const command of [
   'echo x > "tickets/T-01-example.md"', 'echo x > work/tickets/T-09-new.md', 'cat tickets/T-01-example.md >',
   // a target the shell computes cannot be shown to be harmless
   'F="tickets/T-01-example.md"; echo x > "$F"', 'cat tickets/T-01-example.md | sed s/done/open/ > $OUT', 'cat tickets/T-01-example.md > "$(dirname x)/t.md"',
-  'cat tickets/T-01-example.md > `echo out`', 'cat tickets/T-01-example.md > tickets/T-*', 'cat tickets/T-01-example.md > ~/copy.md', 'cat tickets/T-01-example.md >&$fd',
+  'cat tickets/T-01-example.md > `echo out`', 'cat tickets/T-01-example.md > tickets/T-*', 'cat tickets/T-01-example.md > ~user/copy.md', 'cat tickets/T-01-example.md >&$fd',
   'cd tickets && sed s/a/b/ ../tickets/T-01-example.md > T-01-example.md', '(cd tickets; cat ../tickets/T-01-example.md > T-01-example.md)',
   'pushd tickets; cat ../tickets/T-01-example.md > T-01-example.md', 'ln -s tickets/T-01-example.md alias.md; echo x > alias.md',
   // the other writers are not excused by a harmless redirect beside them
@@ -486,6 +486,110 @@ for (const command of [
   `tar -czf /tmp/t.tgz ${T}`, 'tar -czf /tmp/engine.tgz scripts/pincer', `gzip -c ${T} > /tmp/t.gz`, `sort ${T} -o /tmp/sorted.txt`, `chmod 755 ${ES}`,
   String.raw`sed -n 's|.*tickets/T-0\([0-9]\).*|\1|p' log.txt`, `git rm --cached ${T}`, 'echo ${x:-{}; ls', 'echo $[1<<2]\nls',
 ]) check('ticket', `review allowed: ${command}`, bash(command), 0);
+
+// --- second review of the 1.0.3 guard ------------------------------------------
+// Where the reader took for text what the shell takes for a command.
+const deep = (open) => open.repeat(6000);
+for (const [label, command] of [
+  ['a writer beside 6000 nested $((', `rm ${T}; echo ${deep('$((')}`], ['a writer beside 6000 nested "$(', `rm ${T}; echo "${deep('$(')}`],
+  ['an engine copy beside 6000 nested $((', `cp /tmp/x ${E}; echo ${deep('$((')}`],
+]) check('ticket', `second review blocked: ${label}`, bash(command), 2);
+check('dangerous', 'second review blocked: a force push beside 6000 nested $((', bash(`git push --force; echo ${deep('$((')}`), 2);
+for (const command of [
+  // `<<` between the brackets of $[ … ] is a shift, with spaces too
+  `echo $[ 1 << 2 ]\nrm ${T}\n2`, `echo $[1 <<2]\nrm ${T}\n2]`, `echo $[ a[1] << 2 ]\nrm ${T}\n2`, `echo $[ 1 << 2 ]\necho x > ${SJ}\n2`,
+  `echo $[ 1 << 2 ]\ncp /tmp/x ${E}\n2`, `echo $[ 1 > ${T} ]`, `echo "$[ 1 << 2 ]"\nrm ${T}\n2`,
+  // `#` inside (( … )) is not a comment
+  `(( c = #s )); rm ${T}`, `(( c = #s )); echo x > ${SJ}`, `echo $(( #x )); rm ${T}`, `echo "$(( #a ))"; rm ${T}`, `(( c = #s )); cp /tmp/x ${E}`,
+  // (( that is two subshells, not arithmetic: its here-document and its comment are real
+  `((cat <<EOF\nit's\nEOF\n) ; rm ${T} #')`, `echo $((cat <<EOF\nit's\nEOF\n) ; rm ${T} #')`, `((echo a) # it's\n); rm ${T} #'`,
+  // an empty quoted word is a word: the delimiter of a here-document, the value of an option
+  `cat << "" EOF\nx\n\nrm ${T}\nEOF`, `cat << '' EOF\nx\n\nrm ${T}\nEOF`, `cat <<- "" EOF\n\tx\n\n\trm ${T}\n\tEOF`, `cat << "" EOF\nx\n\ncp /tmp/x ${E}\nEOF`,
+  `sudo -u "" rm ${T}`, `env -u "" rm ${T}`, `git -C "" checkout -- ${T}`, `git -C '' restore ${T}`,
+  // [[ is a test only as the first word of a command
+  `X=1 [[ a > ${T} ]]`, `\\[[ a > ${T} ]]`, `'then' [[ a > ${T} ]]`, `X=1 [[ a > ${E} ]]`, `>/dev/null [[ a > ${T} ]]`, `2>&1 [[ a > ${T} ]]`, `</dev/null [[ a > ${T} ]]`,
+  // zsh: (# opens a glob flag, not a comment
+  `ls *(#qN); rm ${T}`, `ls (#i)readme*; rm ${T}`,
+  // the directory that holds the tickets, reached through a variable
+  'rm -rf "$PWD/tickets"', 'rm -rf $CLAUDE_PROJECT_DIR/tickets', 'rm -rf "$(pwd)/tickets"', 'mv "$PWD/tickets" /tmp/old', 'rm -rf "${PWD}/tickets/"',
+  // find: a test in another -o branch does not narrow the action; a copy onto what it finds
+  String.raw`find . \( -name '*.log' -o -name 'T-0*' \) -delete`, "find . -name '*.log' -o -delete", "find . -name '*.log' -o -name 'T-0*' -delete",
+  String.raw`find tickets -name '*.md' -exec cp /tmp/x {} \;`, String.raw`find tickets -name '*.md' -exec cp {} tickets/T-09-copy.md \;`, "find tickets -name '*.md' -exec cp {} /tmp/backup/ +",
+  String.raw`find tickets -name '*.md' -exec cp {} /tmp/{}.bak \;`, String.raw`find tickets -name '*.md' -exec cp -l {} /tmp/backup/ \;`, String.raw`find . -name '*.md' -exec mv {} /tmp/backup/ \;`,
+  // the action comes before the test that was meant to narrow it, or stands alone in its branch
+  "find . -delete -name '*.log'", String.raw`find tickets -exec rm {} \; -name '*.log'`, 'find tickets -type d -o -delete', "find . -name '*.log' -o -name '*.md' -delete",
+  String.raw`find . -name '*.log' -exec rm {} \; -o -name 'T-0*' -exec rm {} \;`, "find . ! -name '*.md' -delete", String.raw`find . \( -name '*.log' -o -name '*.md' \) -delete`,
+  `awk '{print "x" > "${T}"}' /dev/null`, `awk 'BEGIN{print "a" | "tee ${T}"}'`, `awk '{print $1 " | " $2 > "/tmp/x"}' ${T}`,
+  // a subscript that is not an assignment: newer bash reads `<<` in it as a shift, older bash as a here-document
+  `declare a[1<<2]=5\nrm ${T}\n2]=5`, `export a[1<<2]=5\nrm ${T}\n2]=5`, `typeset a[1<<2]=5\ngit stash\n2]=5`, `echo a[1<<2]\nrm ${T}\n2]`,
+  // text that names a ticket, kept in a variable and then run
+  `S=$(cat <<'EOF'\nrm ${T}\nEOF\n)\neval "$S"`, `S=$(cat <<'EOF'\nrm ${T}\nEOF\n)\nbash -c "$S"`, `read -r cmd <<'EOF'\nrm ${T}\nEOF\neval "$cmd"`, `cat ${T}; $CMD`,
+  // -c after the script belongs to the script
+  `node tools/fix.js -c ${T}`, `node tools/fix.js --check ${T}`,
+  // a program glued to its option
+  `cat ${T}; python3 -c"import os;os.remove(os.path.join('tickets','T-01-example.md'))"`, `cat ${T}; ruby -e'File.delete(File.join("tickets","T-01-example.md"))'`,
+  `head -1 ${T}; cd tickets; perl -e'unlink "T-01-example.md"'`,
+  // where the line can stand: a cd inside a function, CDPATH
+  `cat ${T}; f() { cd pincer; }; cd scripts; f; rm cli.cjs`, `cat ${T}; CDPATH=scripts cd pincer && rm cli.cjs`,
+  // a whole tree copied over the project beside a protected name
+  `cat ${T} && cp -R /tmp/restore/. .`, `cat ${T}; rsync -a /tmp/restore/ .`,
+  // sed writes a file with the w flag of s///
+  `sed -n 's/open/done/gw ${T}' /tmp/x`, `sed -n 's/open/done/gw ${T}' /tmp/x; rm /tmp/x`, `sed -n 's/open/done/w ${T}' /tmp/x`, `sed -n '/open/w ${T}' /tmp/x`,
+  // zsh: a paren glued to a word is part of the word, and so is the # after it
+  `v=a( x )#s; rm ${T}`, `1 << 2~x!(( x = 1 ))#s; echo x > ${T};`, `(echo a)#s; rm ${T}`,
+  // writes that 1.0.2 let through as well: readers in a form that writes
+  `sed --in-pl s/open/done/ ${T}`, `xz -Ccrc32 ${T}`, `sort --out=${T} /tmp/x`, `curl -s https://example.invalid/x --etag-save ${T}`, `curl -s https://example.invalid/x --libcurl ${E}`,
+  `tar -tf /tmp/x.tar -I 'rm -f ${T}'`, `gawk --source='BEGIN { printf "" > ARGV[1] }' ${T}`, `awk '{ print $0 \\\n > FILENAME }' ${T}`, `bash tools/fix.sh -n ${T}`,
+  `find /tmp -maxdepth 0 -fprint ${T}`, 'find . -type d -name tickets -exec rm -rf {} +', 'find . -maxdepth 1 -name .claude -exec rm -rf {} +',
+  `git rm --ignore-unmatch -- ${T} --cached`, 'git reset --h', 'git clean --f -d', 'git checkout --f main', `git rebase --exe 'rm ${T}' HEAD~1`, "git rebase -x'git stash' HEAD~1",
+  "bash -c +x 'git reset --hard'", "bash -c -o pipefail 'git reset --hard'",
+  // a program run through a project runner, and one that names the tickets directory and a ticket pattern
+  `uv run python -c "from pathlib import Path; Path('${T}').write_text('x')"`, `poetry run python -c "import os; os.remove('${T}')"`,
+  `pnpm exec node -e "require('fs').writeFileSync('${T}', '')"`, `uv run python - <<'EOF'\nfrom pathlib import Path\nPath('${T}').write_text('x')\nEOF`,
+  `python3 <<'EOF'\nimport pathlib\nfor p in pathlib.Path('tickets').glob('T-*.md'):\n    p.write_text('x')\nEOF`, `perl -e 'unlink glob "tickets/T*"'`,
+  `python3 -c "import os; os.remove(os.path.join('tickets','T-01-example.md'))"`,
+  // a name the shell works out under tickets/, GNU tools under their g names, commands made on the spot and piped to a shell
+  'for f in $(ls tickets); do sd open done tickets/$f; done', `f=${T}; gsed -i 's/open/done/' "$f"`, `grm ${T}`,
+  "ls tickets/T-* | sed 's/^/rm /' | sh", `ls tickets | awk '{print "rm tickets/" $0}' | bash`, 'ls tickets/T-01* | parallel rm',
+  // wrappers and shell forms that hid the command
+  'nice --adjustment 5 rm -rf tickets', 'watch rm -rf tickets', '- rm -rf tickets', '{ : } always { rm -rf tickets }', 'r{m,} -rf tickets',
+  `cmd="rm ${T}"; \${=cmd}`, `alias rmt='rm ${T}'\nrmt`, "alias z='git stash'\nz", 'cd tickets && tar -xf /tmp/t.tar', 'cd tickets && unzip -o /tmp/t.zip', 'cd x scripts/pincer && rm cli.cjs',
+  // found by running generated lines in bash and zsh: a quote, a test or a substitution that never closes
+  `x=(<< ''$"\nrm ${T}`, `echo "abc\nrm ${T}`, `echo 'abc; rm ${T}`, 'echo `rm ' + T, `echo $(rm ${T}`, `echo \${x:-a; rm ${T}`, `v=a( \n2\n [[ << "" exec && : > ${T}\n`, `[[ a && rm ${T}`,
+  // the default of \${x:-…} is run when it stands where a command does
+  `\${x:- rm ${T} }`, `\${x:-rm} ${T}`, `\${x:=rm ${T}}`, '``rm -f ' + T, `$()rm ${T}`,
+  // zsh: a paren glued to a word runs to its close, spaces and # included
+  `cat <<""x=1( # a[1; echo x > ${T}\nEOF\n`, `v=a( # x ); rm ${T}`, `] x=( #s ((; rm -f ${T}`, `echo x=( # a ); rm ${T}`,
+  // a script saved for later still counts; the home directory moved on the line is not known
+  `cat > fix.sh <<'EOF'\nrm ${T}\nEOF`, `HOME=$PWD; cat ${T} > ~/x.md`, `cat ${T} > ~/../x.md`, `cat ${T} > ~/$NAME.md`,
+  // a here-document that never ends is still expanded
+  "<<EOF\nit's`rm -f " + T + '`;', "cat <<EOF\n'`rm " + T + "`'",
+]) check('ticket', `second review blocked: ${command}`, bash(command), 2);
+for (const command of [
+  `echo $[ 1 + 2 ]; cat ${T}`, `echo $(( 1 << 4 )); cat ${T}`, `(( n = 1 << 4 )); cat ${T}`, `echo $(( 16#ff )); cat ${T}`, `n=$(( $(wc -l < ${T}) + 1 )); echo $n`,
+  `echo ""; cat ${T}`, `grep "" ${T}`, `git commit --allow-empty -m "" && cat ${T}`, `if [[ -f ${T} ]]; then cat ${T}; fi`, `! [[ -s ${T} ]] && echo empty`,
+  `cat <<'EOF' > /tmp/note.md\n# it's fine\nEOF\ncat ${T}`, `( # look at the ticket\n cat ${T} )`, `cat ${T} # (#1) see the ticket`,
+  'rm -rf "$PWD/build"', 'ls "$PWD/tickets"', 'ls -la $CLAUDE_PROJECT_DIR/tickets',
+  // awk that prints a bar or an arrow between columns writes nothing
+  `awk -F: '{print $1 " | " $2}' ${T}`, `awk '{print NR " > " $0}' ${T}`, `awk '{print $1 " -> " $2}' ${T}`,
+  // find: the action belongs to its own -o branch; a copy out of what it finds
+  "find . -name '*.log' -o -name '*.tmp' -delete", "find . -name node_modules -prune -o -name '*.orig' -delete", "find . -name '*.bak' -o -name '*.swp' -exec rm {} +",
+  String.raw`find tickets -name '*.md' -exec cp {} /tmp/backup/ \;`, "find . -name '*.log' -a -delete", String.raw`find . \( -name '*.tmp' \) -delete`,
+  "find . -name '*.log' -delete -o -name '*.md'", "find . -name 'T-0*' -o -name '*.tmp' -delete", "find . -type f -name '*.orig' -delete", "find tickets -name '*.md' | xargs grep -l open",
+  `node --check src/a.js && cat ${T}`, `S=$(cat ${T}); echo "$S"`, `cd scripts && ls pincer; cat ../${T}`, `bash -c "cd $HOME && ls"; cat ${T}`, 'cp -R /tmp/restore/. .',
+  `gzip -kc ${T} > /tmp/t.gz`, `xz -c ${T} > /tmp/t.xz`, `curl -s https://example.invalid/x; cat ${T}`, `tar -tzf /tmp/x.tgz; cat ${T}`, `bash -n ${ES}`, `sort -r ${T}`,
+  'uv run pytest -q; ls tickets', `uv run python -c "print(1)"; cat ${T}`, `gh pr create --title "T-01" --body "see ${T}"`, 'python3 -c "import json; print(json.load(open(\'package.json\'))[\'scripts\'])"',
+  `gsed -n 1,3p ${T}`, `ggrep -n status ${T}`, 'nice -n 5 npm test; ls tickets', "find . -type d -name node_modules -exec rm -rf {} +", 'find . -type d -empty -delete', "find . -type d -exec chmod 755 {} +",
+  'tar -xzf /tmp/pkg.tgz -C /tmp/out; ls tickets', "ls src | sed 's/^/echo /' | sh", "alias ll='ls -la'; ll tickets", `git rm --cached ${T}`, 'git reset --soft HEAD~1',
+  // prose in a here-document that is saved or is a message: apostrophes, bullets, a ticket's name
+  `cat > docs/plan.md <<'EOF'\n- Touch ${T} only through the engine\nEOF`, "cat > notes.md <<EOF\nit's fine, don't worry\nEOF", `cat > notes.md <<'EOF'\nit's about ${T}\nEOF`,
+  `git commit -m "$(cat <<'EOF'\nT-01: it's done\n\n- see ${T}\nEOF\n)"`, `git commit -F - <<'EOF'\nT-01: don't lose the receipt in ${T}\nEOF`, 'x=( # the list\n a b ); echo "${x[@]}"',
+  'if [[ -n "$A" && \\\n -n "$B" ]]; then ls tickets; fi', 'echo ${x:-none}; ls tickets', `: \${TMPDIR:=/tmp}; cat ${T}`,
+  "cat > NOTES.md <<'EOF'\nAt the end run scripts/pincer-ticket.sh done T-01.\nEOF", "cat > NOTES.md <<'EOF'\nInstall the hooks in .claude/hooks first.\nEOF",
+  'ls scripts/pincer; npm test 2>&1 | tee ~/test.log', 'cat .claude/settings.json && rm -rf ~/.cache/pincer-demo', // the home directory is known here, so ~/copy.md is a place like /tmp/copy.md (1.0.2 refused it as computed)
+  `cat ${T} > ~/copy.md`, `cat ${T} > "$HOME/t.md"`, `cp ${T} ~/backup/`,
+  `eval "$(ssh-agent -s)" && cat ${T}`, `sed -n 's/now/then/p' ${T}`, `python3 -c "print(1)"; ls tickets`, `a=$(wc -l < ${T}); [[ $a > $b ]] && echo more`,
+]) check('ticket', `second review allowed: ${command}`, bash(command), 0);
 for (const command of [
   '~/bin/git push --force', '$HOME/bin/git push -f origin main', '~/.claude/local/claude --dangerously-skip-permissions', '"$HOME"/.local/bin/claude --dangerously-skip-permissions',
   '$HOME/bin/rm -rf /tmp/pincer-test-target', "$SHELL <<'EOF'\ngit push --force\nEOF", "cat > /tmp/fix.sh <<'EOF'\ngit push --force\nEOF\nbash /tmp/fix.sh",
@@ -496,7 +600,13 @@ for (const command of [
   'eval -- git push --force', "$SHELL -c 'git push --force'", 'timeout .5 git push --force', 'git push --forc origin main', 'git push origin +main',
   "echo 'git push --force' | sh", 'flock /tmp/l git push --force', 'su -c "git push --force"', 'coproc git push --force', 'if [[ -n x ]] git push --force', '{git,push,--force}',
 ]) check('dangerous', `block ${command}`, bash(command), 2);
-for (const command of ['git push --force-with-lease origin main', 'echo ${x:-{}; git push origin main', 'git push origin main:main']) check('dangerous', `allow ${command}`, bash(command), 0);
+for (const command of [
+  'git push --force-with-lease origin main', 'echo ${x:-{}; git push origin main', 'git push origin main:main',
+  // prose that is saved or is a message is not a command line
+  "cat > notes.md <<EOF\nit's fine, don't worry: see [install](#install)\nEOF", `git commit -m "$(cat <<'EOF'\nfix: it's done (#12)\nEOF\n)"`, 'if [[ $x =~ ^(a|b)$ ]]; then echo yes; fi',
+]) check('dangerous', `allow ${command}`, bash(command), 0);
+// a quote or a test that never closes is not read on: the line is refused
+for (const command of ['echo "abc\ngit push --force', "echo 'abc; git push --force", '[[ a && git push --force', 'echo $(git push --force', '${x:-git push --force}']) check('dangerous', `block ${command}`, bash(command), 2);
 
 assert.equal(read(dir, file), completed, 'hooks are read-only and never execute tested command strings');
 assert.equal(failures.length, 0, `${failures.length}/${checked} hook regressions failed:\n${failures.join('\n')}`);
