@@ -9,9 +9,16 @@ Copilot from one kit, and it has no dependencies.
 
 ## Install
 
+PINCER 1.0 is available as a package attached to the [GitHub release](https://github.com/orchestratedbyalex/pincer-workflow/releases/tag/v1.0.0).
+npm's `latest` is still 0.7.0 pending publication. Download `pincer-workflow-1.0.0.tgz`
+into your project and install that exact release:
+
 ```bash
-npx pincer-workflow init          # asks which platforms; --platform claude|codex|copilot|all
+npx ./pincer-workflow-1.0.0.tgz init --platform all
 ```
+
+Node.js 22+, git and bash are required. PINCER uses your coding tool's own
+authentication; it does not require a provider API key.
 
 Then start your agent in the repository and run the blueprint:
 
@@ -129,8 +136,8 @@ each installed platform will run.
 ## Update
 
 ```bash
-npx pincer-workflow update        # refreshes the kit; edited files get a .new sidecar
-npx pincer-workflow doctor        # checks the install and the agreement
+npx ./pincer-workflow-1.0.0.tgz update   # edited files get a .new sidecar
+npx ./pincer-workflow-1.0.0.tgz doctor   # checks the install and agreement
 ```
 
 With an agreement in place, `update` also refreshes the library and regenerates the
@@ -151,7 +158,7 @@ scripts/pincer-status.sh                           # prints "no agreement yet" a
 - The Claude Code plugin channel is paused; the kit installs with `npx` on every platform.
 - The wiki under `docs/wiki/` is frozen at 0.7 and kept for history.
 - PRD v8 is superseded by the harness-builder design; its open tickets are marked so.
-- The site at `docs/index.html` describes 0.7 until it is updated.
+- The GitHub Pages site describes 1.0. See [CHANGELOG.md](CHANGELOG.md) before upgrading from 0.7.
 
 ## Design principles
 
