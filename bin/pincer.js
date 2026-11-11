@@ -184,8 +184,10 @@ function install(dir, platforms, baseline, generated) {
     const sidecar = dest + '.new';
     if (ownsAgreement(rel) && !wanted.equals(src) && fs.existsSync(sidecar)) {
       const proposed = fs.readFileSync(sidecar).toString();
-      const blank = withProjectParts(proposed, src.toString()) === proposed; // its agreement and conventions are the package's
-      if (blank && withProjectParts(proposed, wanted.toString()) === wanted.toString()) { fs.rmSync(sidecar); results.removed.push(`${rel}.new`); }
+      // what such a proposal can be: the project's file with the agreement and the conventions each either the package's or the project's own
+      const [shipped, mine] = [src.toString(), wanted.toString()];
+      const says = [shipped, mine].flatMap((agreement) => [shipped, mine].map((conventions) => withSectionOf(withAgreementOf(mine, agreement), conventions, CONVENTIONS)));
+      if (says.includes(proposed)) { fs.rmSync(sidecar); results.removed.push(`${rel}.new`); }
     }
   }
   for (const rel of EXECUTABLES) {

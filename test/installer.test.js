@@ -82,6 +82,25 @@ assert.equal(pincer(conventions, 'doctor').status, 1);
 assert.match(cli(conventions, 'update'), /removed {2}AGENTS\.md\.new/);
 assert.deepEqual(sidecars(conventions), []);
 assert.equal(pincer(conventions, 'doctor').status, 0);
+// the same with an agreement in place: 1.0.3 put the project's agreement into that sidecar
+write(conventions, 'harness.json', JSON.stringify({ schema: 1, project: { name: 'conventions', kind: 'greenfield' }, people: [{ name: 'Alex', accepts: true }] }));
+assert.equal(run(conventions, process.execPath, ['scripts/pincer-blueprint.cjs', 'write']).status, 0);
+const agreedConventions = read(conventions, 'AGENTS.md');
+assert.match(agreedConventions, /## Harness agreement — conventions/);
+write(conventions, 'AGENTS.md.new', agreedConventions.replace('\n\n- Tabs, not spaces.\n- Tests live beside the code.', ''));
+assert.notEqual(read(conventions, 'AGENTS.md.new'), agreedConventions);
+assert.match(cli(conventions, 'update'), /removed {2}AGENTS\.md\.new/);
+assert.deepEqual(sidecars(conventions), []);
+assert.equal(read(conventions, 'AGENTS.md'), agreedConventions);
+assert.equal(pincer(conventions, 'doctor').status, 0);
+// a sidecar that says something else is the person's to resolve
+write(conventions, 'AGENTS.md.new', agreedConventions + '\nSOMETHING ELSE\n');
+cli(conventions, 'update');
+assert.equal(read(conventions, 'AGENTS.md.new'), agreedConventions + '\nSOMETHING ELSE\n');
+fs.rmSync(path.join(conventions, 'AGENTS.md.new'));
+fs.rmSync(path.join(conventions, 'harness.json'));
+write(conventions, 'AGENTS.md', withConventions);
+cli(conventions, 'update');
 // the package changes its text elsewhere: refreshed in place, the project's conventions stay
 write(kit, 'template/AGENTS.md', shippedAgents + '\nUPSTREAM RULE C\n');
 assert.doesNotMatch(cli(conventions, 'update'), /CONFLICT/);
