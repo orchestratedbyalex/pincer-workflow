@@ -96,6 +96,12 @@ html:not(.js) .top{position:absolute}
 .play[aria-pressed="true"]{background:var(--yellow);color:var(--night)}
 .play[aria-pressed="true"] .pl{display:none}
 .play[aria-pressed="true"] .pa{display:block}
+.stepper{flex:none;width:30px;height:30px;border-radius:50%;border:1.5px solid rgba(241,244,255,.5);background:transparent;display:grid;place-items:center;padding:0}
+.stepper+.stepper{margin-left:calc(-1*clamp(4px,1vw,14px))}
+.stepper:hover{border-color:var(--yellow);color:var(--yellow)}
+.stepper:active{background:var(--yellow);border-color:var(--yellow);color:var(--night)}
+.stepper svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+@media (max-width:480px){.sheetno{display:none}}
 .sheetno{flex:none;font-size:13px;min-width:8.5em;white-space:nowrap}
 .sheetno b{font-family:"Martian Mono",monospace;font-weight:500;color:var(--yellow);margin-right:.5em}
 .ticks{flex:1;display:flex;gap:3px;height:100%;align-items:center;list-style:none;padding:0;position:relative}
@@ -410,7 +416,7 @@ html:not(.js) .closed{position:static;padding:1em}
 <main>
 
 <!-- 1 ─ hero -->
-<section class="scene t-blue" id="top" style="--len:1.9" data-title="PINCER" data-theme="blue">
+<section class="scene t-blue" id="top" data-beats="0" style="--len:1.9" data-title="PINCER" data-theme="blue">
   <div class="stage hero">
     <div class="markwrap">
       <h1 class="mark d"><span class="sr">PINCER</span><span class="jl" aria-hidden="true">PIN</span><span class="jr" aria-hidden="true">CER</span></h1>
@@ -422,12 +428,12 @@ html:not(.js) .closed{position:static;padding:1em}
       <div class="cmd"><code><span class="nb">npx pincer-workflow@latest</span> <span class="nb">init --platform all</span></code><button class="copy" type="button" data-copy="npx pincer-workflow@latest init --platform all">Copy</button></div>
       <p class="plat">Works in Claude Code, Codex CLI and GitHub Copilot. One kit, no dependencies.</p>
     </div>
-    <p class="cue" aria-hidden="true"><i></i>Scroll, or press play</p>
+    <p class="cue" aria-hidden="true"><i></i>Scroll, press play, or step with ← →</p>
   </div>
 </section>
 
 <!-- 2 ─ the claim -->
-<section class="scene t-paper" id="claim" style="--len:2.6" data-title="The problem" data-theme="paper">
+<section class="scene t-paper" id="claim" data-beats=".42 .62 .97" style="--len:2.6" data-title="The problem" data-theme="paper">
   <div class="stage claim">
     <div class="field">
       <h2 class="sr">An agent can say it is done. Says who?</h2>
@@ -449,7 +455,7 @@ html:not(.js) .closed{position:static;padding:1em}
 </section>
 
 <!-- 3 ─ install -->
-<section class="scene t-night" id="kit" style="--len:3" data-title="Install" data-theme="night">
+<section class="scene t-night" id="kit" data-beats=".38 .78 .96" style="--len:3" data-title="Install" data-theme="night">
   <div class="stage">
     <div class="wrap cols">
       <div>
@@ -483,7 +489,7 @@ html:not(.js) .closed{position:static;padding:1em}
 <div class="band" aria-hidden="true"><p class="run d" data-drift=".55"><span>greenfield</span><span class="ol">or</span><span>brownfield</span><span class="ol">or</span><span>greenfield</span><span class="ol">or</span><span>brownfield</span><span class="ol">or</span><span>greenfield</span><span class="ol">or</span><span>brownfield</span></p></div>
 
 <!-- 4 ─ blueprint: recon -->
-<section class="scene t-blue" id="blueprint" style="--len:3.4" data-title="Blueprint: the read" data-theme="blue">
+<section class="scene t-blue" id="blueprint" data-beats=".44 .87 .98" style="--len:3.4" data-title="Blueprint: the read" data-theme="blue">
   <div class="stage">
     <div class="wrap">
       <h2 class="d">Blueprint reads the repository before it asks you anything.</h2>
@@ -523,7 +529,7 @@ html:not(.js) .closed{position:static;padding:1em}
 </section>
 
 <!-- 5 ─ blueprint: interview -->
-<section class="scene t-paper" id="interview" style="--len:4.2" data-title="Blueprint: the interview" data-theme="paper">
+<section class="scene t-paper" id="interview" data-beats=".155 .28 .405 .53 .655 .78 .98" style="--len:4.2" data-title="Blueprint: the interview" data-theme="paper">
   <div class="stage">
     <div class="wrap">
       <h2 class="d">Then it interviews you, one question at a time.</h2>
@@ -596,7 +602,7 @@ html:not(.js) .closed{position:static;padding:1em}
 </section>
 
 <!-- 6 ─ pipeline -->
-<section class="scene t-blue" id="pipeline" style="--len:4.4" data-title="The pipeline" data-theme="blue">
+<section class="scene t-blue" id="pipeline" data-beats=".05 .195 .34 .485 .63 .775 .92" style="--len:4.4" data-title="The pipeline" data-theme="blue">
   <div class="stage">
     <div class="pipe wrap">
       <div>
@@ -658,7 +664,7 @@ html:not(.js) .closed{position:static;padding:1em}
 <div class="band rev" aria-hidden="true"><p class="run d" data-drift=".55"><span>verify</span><span class="ol">then</span><span>done</span><span class="ol">then</span><span>accept</span><span class="ol">then</span><span>verify</span><span class="ol">then</span><span>done</span><span class="ol">then</span><span>accept</span><span class="ol">then</span><span>verify</span></p></div>
 
 <!-- 7 ─ the floor -->
-<section class="scene t-night" id="floor" style="--len:5.2" data-title="The floor" data-theme="night">
+<section class="scene t-night" id="floor" data-beats=".05 .2 .47 .61 .845 .99" style="--len:5.2" data-title="The floor" data-theme="night">
   <div class="stage floor">
     <div class="heads deck">
       <h2 class="d fx" data-out=".85 .89" style="--oy:-40px">One floor never bends.</h2>
@@ -692,7 +698,7 @@ html:not(.js) .closed{position:static;padding:1em}
 </section>
 
 <!-- 8 ─ status -->
-<section class="scene t-paper status" id="status" style="--len:2.8" data-title="Status" data-theme="paper">
+<section class="scene t-paper status" id="status" data-beats="0 .4 .97" style="--len:2.8" data-title="Status" data-theme="paper">
   <div class="stage">
     <div class="wrap">
       <h2 class="d">State lives in files, not in the conversation.</h2>
@@ -716,7 +722,7 @@ html:not(.js) .closed{position:static;padding:1em}
 </section>
 
 <!-- 9 ─ platforms -->
-<section class="scene t-night" id="platforms" style="--len:2.8" data-title="Three platforms" data-theme="night">
+<section class="scene t-night" id="platforms" data-beats=".56 .95" style="--len:2.8" data-title="Three platforms" data-theme="night">
   <div class="stage">
     <div class="wrap">
       <h2 class="d">One kit, three agents, the same agreement.</h2>
@@ -763,7 +769,7 @@ html:not(.js) .closed{position:static;padding:1em}
 </section>
 
 <!-- 10 ─ finale -->
-<section class="scene t-blue finale" id="install" data-enter data-title="Get PINCER" data-theme="blue">
+<section class="scene t-blue finale" id="install" data-beats="0" data-enter data-title="Get PINCER" data-theme="blue">
   <div class="stage">
     <div class="wrap">
       <h2 class="d">Build your harness.</h2>
@@ -787,6 +793,8 @@ html:not(.js) .closed{position:static;padding:1em}
 
 <div class="reel">
   <button class="play" type="button" aria-pressed="false" aria-label="Play: scroll the page automatically"><svg class="pl" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 0l12 7-12 7z"/></svg><svg class="pa" viewBox="0 0 14 14" aria-hidden="true"><path d="M1 0h4v14H1zM9 0h4v14H9z"/></svg></button>
+  <button class="stepper" type="button" data-step="-1" aria-label="Previous step (left arrow key)"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M9.5 1.5L4 7l5.5 5.5"/></svg></button>
+  <button class="stepper" type="button" data-step="1" aria-label="Next step (right arrow key)"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M4.5 1.5L10 7l-5.5 5.5"/></svg></button>
   <p class="sheetno" aria-live="off"><b>01/10</b><span>PINCER</span></p>
   <ol class="ticks" aria-label="Chapters"></ol>
   <a class="get" href="#install">Install</a>
@@ -872,12 +880,14 @@ html:not(.js) .closed{position:static;padding:1em}
   let centers = [], areaWidth = 0, here = -1;
   const drifts = $('[data-drift]').map(node => ({ node, rate: Number(node.dataset.drift), top: 0 }));
 
-  let vh = innerHeight, total = 1;
+  let vh = innerHeight, total = 1, stops = [];
   const measure = () => {
     vh = innerHeight;
     total = Math.max(1, root.scrollHeight - vh);
     for (const scene of scenes) { const box = scene.el.getBoundingClientRect(); scene.top = box.top + scrollY; scene.height = box.height; scene.p = -1; }
     for (const drift of drifts) drift.top = drift.node.getBoundingClientRect().top + scrollY;
+    stops = [...new Set(scenes.flatMap(scene => (scene.el.dataset.beats || '').split(' ').filter(Boolean)
+      .map(p => Math.round(Math.min(total, scene.enter ? scene.top : scene.top + Number(p) * Math.max(0, scene.height - vh))))))].sort((a, b) => a - b);
     areaWidth = area.clientWidth;
     centers = stations.map(station => station.offsetLeft + station.offsetWidth / 2);
   };
@@ -977,16 +987,41 @@ html:not(.js) .closed{position:static;padding:1em}
     play.setAttribute('aria-label', 'Pause');
     requestAnimationFrame(roll);
   });
-  addEventListener('wheel', stop, { passive: true });
-  addEventListener('touchstart', event => { if (!play.contains(event.target)) stop(); }, { passive: true });
-  addEventListener('keydown', event => { if (event.target !== play && [' ', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', 'Escape'].includes(event.key)) stop(); });
+  // step: the arrow keys and the two buttons move to the next settled moment of the film, or the one before
+  let glide = null;
+  const slide = now => {
+    if (!glide) return;
+    const t = clamp((now - glide.start) / glide.time);
+    scrollTo(0, glide.from + (glide.to - glide.from) * (t < .5 ? 2 * t * t : 1 - (2 - 2 * t) ** 2 / 2));
+    if (t >= 1) glide = null; else requestAnimationFrame(slide);
+  };
+  const halt = () => { glide = null; stop(); };
+  const step = direction => {
+    stop();
+    const base = glide ? glide.to : scrollY;
+    const to = direction > 0 ? stops.find(y => y > base + 4) : stops.findLast(y => y < base - 4);
+    if (to === undefined) return;
+    const running = Boolean(glide);
+    glide = { from: scrollY, to, start: performance.now(), time: clamp(Math.abs(to - scrollY) / vh / .85, .55, 2.6) * 1000 };
+    if (!running) requestAnimationFrame(slide);
+  };
+  $('.stepper').forEach(button => button.addEventListener('click', () => step(Number(button.dataset.step))));
+  play.addEventListener('click', () => { glide = null; });
+
+  addEventListener('wheel', halt, { passive: true });
+  addEventListener('touchstart', event => { if (!event.target.closest('.play, .stepper')) halt(); }, { passive: true });
+  addEventListener('keydown', event => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') { event.preventDefault(); step(event.key === 'ArrowRight' ? 1 : -1); return; }
+    if (event.target !== play && [' ', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', 'Escape'].includes(event.key)) halt();
+  });
 
   document.addEventListener('click', event => {
     const link = event.target.closest('a[href^="#"]');
     const goal = link && document.querySelector(link.getAttribute('href'));
     if (!goal) return;
     event.preventDefault();
-    stop();
+    halt();
     scrollTo({ top: goal.getBoundingClientRect().top + scrollY, behavior: 'smooth' });
     history.replaceState(null, '', link.getAttribute('href'));
   });
