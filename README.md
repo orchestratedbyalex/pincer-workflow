@@ -9,13 +9,14 @@ Copilot from one kit, and it has no dependencies.
 
 ## Install
 
-PINCER 1.0 is available as a package attached to the [GitHub release](https://github.com/orchestratedbyalex/pincer-workflow/releases/tag/v1.0.0).
-npm's `latest` is still 0.7.0 pending publication. Download `pincer-workflow-1.0.0.tgz`
-into your project and install that exact release:
+PINCER 1.0 is live on [npm](https://www.npmjs.com/package/pincer-workflow).
+Install it in your project:
 
 ```bash
-npx ./pincer-workflow-1.0.0.tgz init --platform all
+npx pincer-workflow@latest init --platform all
 ```
+
+The same package is also attached to the [GitHub release](https://github.com/orchestratedbyalex/pincer-workflow/releases/tag/v1.0.0).
 
 Node.js 22+, git and bash are required. PINCER uses your coding tool's own
 authentication; it does not require a provider API key.
@@ -136,8 +137,8 @@ each installed platform will run.
 ## Update
 
 ```bash
-npx ./pincer-workflow-1.0.0.tgz update   # edited files get a .new sidecar
-npx ./pincer-workflow-1.0.0.tgz doctor   # checks the install and agreement
+npx pincer-workflow@latest update   # edited files get a .new sidecar
+npx pincer-workflow@latest doctor   # checks the install and agreement
 ```
 
 With an agreement in place, `update` also refreshes the library and regenerates the

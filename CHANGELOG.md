@@ -28,6 +28,6 @@ tickets and evidence separate: old verification and acceptance are not migrated
 into the new lifecycle automatically. Do not delete historical artifacts to make
 status appear clean.
 
-Use the GitHub release tarball while npm publication is pending; npm `latest`
-remains 0.7.0. This release has automated fixture and packaged-install validation;
+Available on npm as `pincer-workflow@1.0.0` (`latest`) and as a GitHub release
+tarball. This release has automated fixture and packaged-install validation;
 it makes no comparative productivity or best-in-class claim.
