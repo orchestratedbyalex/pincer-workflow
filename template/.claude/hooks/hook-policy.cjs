@@ -831,9 +831,28 @@ function absoluteToolPath(file) {
   return path.isAbsolute(file) ? file : path.resolve(root, file);
 }
 
+// The path a file system that ignores case would open: each part matched to the
+// entry there is, whatever its case. Null when there is none.
+function foldedPath(file) {
+  const absolute = path.resolve(file);
+  let at = path.parse(absolute).root;
+  for (const part of absolute.slice(at.length).split(path.sep).filter(Boolean)) {
+    let names;
+    try { names = fs.readdirSync(at); } catch { return null; }
+    const match = names.includes(part) ? part : names.find(name => name.toLowerCase() === part.toLowerCase());
+    if (!match) return null;
+    at = path.join(at, match);
+  }
+  return at;
+}
+// What is in the file now. A ticket is a ticket in any case (located), so where the
+// file system tells cases apart the ticket of that name is the one compared: the
+// guard answers the same on Linux as on macOS and Windows.
 function existingContent(file) {
-  try { return fs.readFileSync(absoluteToolPath(file), 'utf8'); }
-  catch { return null; }
+  const absolute = absoluteToolPath(file);
+  try { return fs.readFileSync(absolute, 'utf8'); } catch { /* not under this spelling */ }
+  const folded = foldedPath(absolute);
+  try { return folded ? fs.readFileSync(folded, 'utf8') : null; } catch { return null; }
 }
 
 function applyEdit(content, oldText, newText, replaceAll = false) {
