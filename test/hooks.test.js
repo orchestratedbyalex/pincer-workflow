@@ -706,6 +706,22 @@ for (const command of [
   `/bin/cat ${T}`, `/usr/bin/grep -c status ${T}`, `/usr/bin/env cat ${T}`, `f() { echo hi; }; f; cat ${T}`, `diff <(sort ${T}) <(sort /tmp/other.md)`, `while read -r l; do echo "$l"; done < <(grep status ${T})`,
 ]) check('ticket', `1.0.4 allowed: ${command}`, bash(command), 0);
 
+// --- 1.0.4: a refusal names the rule and the word it fired on ------------------------
+for (const [command, diagnostic] of [
+  [`cp ${T} "$DEST/y"`, /cannot be worked out here \(`\$DEST\/y`\)/],
+  [`echo x > ${T}`, /redirect onto a ticket.*tickets\/T-01-example\.md/],
+  [`cat ${T}; node -e "console.log(1)"`, /inline node program.*names a ticket/],
+  [`./cat /tmp/x ${T}`, /not the system's cat/],
+  [`${steps(12)}; cd tickets; echo x > T-01-example.md`, /more cd steps than the guard follows/],
+  ['git checkout -- .', /git checkout.*whole/],
+  [`rm ${T}`, /rm.*tickets\/T-01-example\.md/],
+  [`cat ${T}; npm test | tee "$LOG"`, /tee.*cannot be worked out here \(`\$LOG`\)/],
+  [`sed -i '' s/open/done/ ${T}`, /sed.*tickets\/T-01-example\.md/],
+  ['cp /tmp/T-09-new.md tickets/', /copy.*tickets/],
+  [`echo ok; cat /tmp/a > ${E}`, /In: `cat \/tmp\/a`/],
+]) check('ticket', `1.0.4 says why: ${command.slice(-60)}`, bash(command), 2, { diagnostic });
+for (const command of [`echo x > ${T}`, `rm ${ES}`]) check('ticket', `1.0.4 still names the writer: ${command}`, bash(command), 2, { diagnostic: /pincer-ticket\.sh.*pincer-workflow update/s });
+
 assert.equal(read(dir, file), completed, 'hooks are read-only and never execute tested command strings');
 assert.equal(failures.length, 0, `${failures.length}/${checked} hook regressions failed:\n${failures.join('\n')}`);
 console.log(`hooks: ok (${checked} payloads)`);

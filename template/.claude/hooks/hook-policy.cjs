@@ -12,6 +12,17 @@ function block(message) {
   process.exit(2);
 }
 
+// Why the ticket guard refuses a shell line: the rule that fired and the word it fired
+// on, noted where the decision is made and shown with the refusal, so that the line
+// can be written another way instead of tried again.
+let why = '';
+let refusedAt = '';
+let adriftLine = false;
+const because = (reason) => { why = reason; return true; };
+const shown = (token) => (token ? `\`${String(token.value ?? token).slice(0, 80)}\`` : 'nothing');
+const KIND = { ticket: 'a ticket', engine: 'the engine or the hooks', holder: 'a directory that holds tickets, the engine or the hooks' };
+const beside = (scope) => (scope.adrift ? 'on a line with more cd steps than the guard follows' : 'on a line that names a ticket, the engine or the hooks');
+
 // A hook that ends with any status but 2 lets the call run, so whatever goes wrong
 // in here refuses it: a line this file cannot read to the end is not waved through.
 process.on('uncaughtException', () => block('the hook could not read this call; write the command more plainly.'));
@@ -1253,17 +1264,19 @@ function copyWrites(parts, scope, fed) {
   for (const destination of destinations) {
     const sources = positional.filter(token => token !== destination);
     const kind = reach(destination, scope);
-    if (protectedKind(kind) || (kind === 'unknown' && scope.tainted)) return true;
-    if (kind === 'holder' && (whole || scope.adrift || sources.some(token => token.value.endsWith('/')))) return true;
-    if (whole && scope.tainted && aboveRoot(destination, scope)) return true;
+    if (protectedKind(kind)) return because(`a copy onto ${KIND[kind]} (${shown(destination)})`);
+    if (kind === 'unknown' && scope.tainted) return because(`a copy whose destination cannot be worked out here (${shown(destination)}) ${beside(scope)}`);
+    const into = `a copy into ${KIND.holder} (${shown(destination)})`;
+    if (kind === 'holder' && (whole || scope.adrift || sources.some(token => token.value.endsWith('/')))) return because(`${into} of a whole directory`);
+    if (whole && scope.tainted && aboveRoot(destination, scope)) return because(`a copy of a whole directory over the project (${shown(destination)})`);
     if (destination.computed || destination.glob) {
       // "$ROOT/tickets": what lands there keeps its name, and a name the shell works out may be any
-      if (kind === 'holder' && sources.some(source => source.computed || source.glob || landsProtected(destination.value, source.value))) return true;
+      if (kind === 'holder' && sources.some(source => source.computed || source.glob || landsProtected(destination.value, source.value))) return because(`${into} of a file that is protected there`);
       continue;
     }
     for (const source of sources) {
-      if (source.computed || source.glob) { if (kind === 'holder') return true; continue; }
-      if ([...scope.cwds].some(cwd => located(path.resolve(cwd, destination.value, path.basename(source.value))))) return true;
+      if (source.computed || source.glob) { if (kind === 'holder') return because(`${into} of a file whose name cannot be worked out here (${shown(source)})`); continue; }
+      if ([...scope.cwds].some(cwd => located(path.resolve(cwd, destination.value, path.basename(source.value))))) return because(`${into} of a file that is protected there (${shown(source)})`);
     }
   }
   return false;
@@ -1386,7 +1399,7 @@ function gitWrites(parts, scope, fed, depth) {
   // an option in front of the subcommand that names a protected path (-c core.pager='rm …')
   const leading = parts.argTokens.slice(0, Math.max(0, parts.argTokens.length - sub.args.length - (sub.name && sub.name !== 'alias' ? 1 : 0)));
   if (leading.some(token => protectedKind(argReach(token, scope)))) return true;
-  if (wholeTreeRestore(sub)) return true;
+  if (wholeTreeRestore(sub)) return because(`git ${sub.name} in this form can restore or reset the whole working tree, tickets included`);
   // a variable set for git that names a protected path (GIT_EXTERNAL_DIFF='cp … <ticket>')
   if (parts.assignments.some(token => protectedKind(argReach(token, scope)))) return true;
   const stdinPathspec = !sub.args.some(arg => !arg.startsWith('-')) || sub.args[sub.args.length - 1] === '--';
@@ -1429,12 +1442,12 @@ function gitWrites(parts, scope, fed, depth) {
       if (output && protectedKind(kind)) return true;
       continue;
     }
-    if (protectedKind(kind) || kind === 'holder') return true;
+    if (protectedKind(kind) || kind === 'holder') return because(`git ${sub.name} changes the files it is handed, here ${KIND[kind]} (${shown(token)})`);
     if (kind === 'unknown' && !branch(i)) blind = true;
   }
   // a patch says which files it changes only in its body: refused beside any protected name
   if (['apply', 'am'].includes(sub.name) && (scope.tainted || scope.holds)) return true;
-  return !safe && scope.tainted && blind;
+  return !safe && scope.tainted && blind && because(`git ${sub.name} is handed a path that cannot be worked out here ${beside(scope)}`);
 }
 
 // Any other command: refused when an argument names a protected path. A command
@@ -1454,7 +1467,7 @@ function otherWrites(parts, command, scope, fed, depth) {
   const inline = !shell && inlineCode(executable, args);
   const near = scope.tainted || scope.holds;
   // the whole command is a variable: what it holds may be the text this line names
-  if (parts.opaque && scope.tainted && (/^\$\{/.test(parts.head.value) || (/^\$[A-Za-z_@*0-9]/.test(parts.head.value) && !parts.head.value.includes('/')))) return true;
+  if (parts.opaque && scope.tainted && (/^\$\{/.test(parts.head.value) || (/^\$[A-Za-z_@*0-9]/.test(parts.head.value) && !parts.head.value.includes('/')))) return because(`the command itself is a variable (${shown(parts.head)}) ${beside(scope)}`);
   // zsh: `- command` runs the command
   if (executable === '-' && argTokens.length) return commandWrites({ tokens: argTokens, words: args, redirects: [], inputs: [], heredocs: [], separator: '' }, scope, false, depth + 1);
   // commands handed down a pipe to parallel; an archive unpacked where the line stands
@@ -1478,12 +1491,15 @@ function otherWrites(parts, command, scope, fed, depth) {
   // xargs handing files to a shell line that only reads them is a read
   const fedReads = fed && text !== null && shellCommands(text).every(inner => !inner.redirects.length && (!commandParts(inner).head || reads(commandParts(inner), scope)));
   let blind = fed && !fedReads;
+  let unknown = null;
+  const name = executable || 'the command';
   for (const token of [...parts.assignments, ...tokens]) {
     if (!known && !carries && token.quoted && /\s/.test(token.value)) continue;
     const kind = argReach(token, scope);
-    if (protectedKind(kind) || (kind === 'holder' && (TREE.has(executable) || executable === 'tar' || executable === 'watch' || parts.opaque || pre))) return true;
-    if (['rm', 'rmdir', 'chmod', 'chown', 'chgrp', 'chflags'].includes(executable) && !token.value.startsWith('-') && aboveRoot(token, scope)) return true;
-    if (kind === 'unknown') blind = true;
+    if (protectedKind(kind) || (kind === 'holder' && (TREE.has(executable) || executable === 'tar' || executable === 'watch' || parts.opaque || pre)))
+      return because(`${name} is not known to only read, and is handed ${KIND[kind]} (${shown(token)})`);
+    if (['rm', 'rmdir', 'chmod', 'chown', 'chgrp', 'chflags'].includes(executable) && !token.value.startsWith('-') && aboveRoot(token, scope)) return because(`${name} on the project directory or one above it (${shown(token)})`);
+    if (kind === 'unknown') { blind = true; unknown ??= token; }
   }
   if (interpreter || ['ed', 'ex'].includes(executable)) {
     // the paths a program names in quotes, read from where the line stands
@@ -1498,15 +1514,16 @@ function otherWrites(parts, command, scope, fed, depth) {
     }
     // the tickets directory and a ticket's name or pattern, put together by the program
     if (holder && named) return true;
-    if (command.heredocs.some(mentions) || printedPrograms.some(mentions)) return true;
+    if (command.heredocs.some(mentions) || printedPrograms.some(mentions)) return because(`the program handed to ${name} names a protected file`);
     // a program written by here-document on this line, or one that arrives on standard input
-    if (interpreter && scope.scripted) return true;
+    if (interpreter && scope.scripted) return because(`${name} on a line that saves a here-document naming a protected file`);
     // one that arrives on standard input from elsewhere: not a here-document, which was read above, and not `node -v`
     const version = !args.includes('-') && args.some(arg => ['--version', '--help', '-h', executable === 'python3' ? '-V' : '-v'].includes(arg));
-    if (interpreter && !inline && scope.tainted && !command.heredocs.length && !version && args.every(arg => arg === '-' || /^-[A-Za-z]$/.test(arg))) return true;
+    if (interpreter && !inline && scope.tainted && !command.heredocs.length && !version && args.every(arg => arg === '-' || /^-[A-Za-z]$/.test(arg))) return because(`${name} takes its program from standard input ${beside(scope)}`);
   }
-  if (near && ((fed && !fedReads) || (known && blind))) return true;
-  return known && inline && scope.ticketed;
+  if (near && fed && !fedReads) return because(`xargs hands ${name} its files ${beside(scope)}`);
+  if (near && known && blind) return because(`${name} can write files, and is handed a word that cannot be worked out here (${shown(unknown)}) ${beside(scope)}`);
+  return Boolean(known && inline && scope.ticketed) && because(`an inline ${name} program on a line that names a ticket; run it in a call of its own`);
 }
 
 // What a command names: a 'ticket', the 'engine', a 'holder' directory. It may be
@@ -1678,7 +1695,8 @@ function commandWrites(command, scope, piped, depth, previous = null) {
   // one that cannot be resolved is a write beside a protected name.
   for (const target of command.redirects) {
     const kind = target ? reach(target, scope) : 'unknown';
-    if (protectedKind(kind) || (kind === 'unknown' && scope.tainted)) return true;
+    if (protectedKind(kind)) return because(`a redirect onto ${KIND[kind]} (${shown(target)})`);
+    if (kind === 'unknown' && scope.tainted) return because(`a redirect whose target cannot be worked out here (${shown(target)}) ${beside(scope)}`);
   }
   const code = (text) => shellWrites(text, scope, depth + 1);
   if (substitutions(command).some(code)) return true;
@@ -1697,22 +1715,24 @@ function commandWrites(command, scope, piped, depth, previous = null) {
   if (executable === 'trap' && args.some(code)) return true;
   if (executable === 'alias' && args.some(arg => arg.includes('=') && code(arg.slice(arg.indexOf('=') + 1)))) return true;
   // commands made on the spot and piped to a shell, beside a protected name
-  if (readsScript(parts) && previous && previous.separator === '|' && (scope.tainted || scope.holds) && !printed(previous).length) return true;
+  if (readsScript(parts) && previous && previous.separator === '|' && (scope.tainted || scope.holds) && !printed(previous).length) return because(`commands made on the spot and piped to a shell ${beside(scope)}`);
   if (TEXT_RUNNERS.includes(executable) && command.tokens.filter(token => token.quoted).some(token => code(token.value))) return true;
   // A lookalike of the writer anywhere but the project's own path is refused outright.
   // A sentence that ends with the script's name, handed to a command that runs no text, is not one.
   const runsText = shell || INTERPRETERS.includes(executable) || ['eval', 'source', '.', 'trap', 'alias'].includes(executable) || TEXT_RUNNERS.includes(executable);
   const sentence = (token) => token.quoted && /\s/.test(token.value) && token !== parts.head && !runsText;
-  if ([...command.tokens, ...command.redirects.filter(Boolean)].some(token => lookalikeWriter(token.value) && !sentence(token))) return true;
+  const lookalike = [...command.tokens, ...command.redirects.filter(Boolean)].find(token => lookalikeWriter(token.value) && !sentence(token));
+  if (lookalike) return because(`${shown(lookalike)} is a copy of the ticket script or the engine, not the project's own`);
   if (!parts.head) return false;
   // in text that is only saved, a line that opens with a capital is prose (At the end …, Install the …)
   if (scope.lenient && /[A-Z]/.test(path.basename(parts.head.value))) return false;
   const fed = parts.wrappers.includes('xargs');
   const own = ownRun(parts, scope);
   // a variable that makes git run a command, set for a later git on the line
-  if (!own && command.tokens.some(token => /^GIT_[A-Z_]+\+?=/.test(token.value) && protectedKind(argReach(token, scope)))) return true;
+  if (!own && command.tokens.some(token => /^GIT_[A-Z_]+\+?=/.test(token.value) && protectedKind(argReach(token, scope)))) return because('a GIT_… variable whose value names a protected file');
   // under a reader's name, a program that is not the system's: refused with a protected path or a directory that holds them
-  if (!own && untrusted(parts, scope) && [...parts.assignments, ...parts.argTokens].some(token => { const kind = argReach(token, scope); return protectedKind(kind) || kind === 'holder'; })) return true;
+  if (!own && untrusted(parts, scope) && [...parts.assignments, ...parts.argTokens].some(token => { const kind = argReach(token, scope); return protectedKind(kind) || kind === 'holder'; }))
+    return because(`${shown(parts.head)} is not the system's ${executable} on this line (a path, a function, an alias, hash or PATH of the line's own) and is handed a protected path`);
   const reader = executable !== 'git' && executable !== 'find' && !own && reads(parts, scope);
   // A here-document that is more than a message: a script for a shell, or text that is
   // saved or passed on, in which only what is known to write counts.
@@ -1723,7 +1743,7 @@ function commandWrites(command, scope, piped, depth, previous = null) {
   if (executable === 'git') return gitWrites(parts, scope, fed, depth);
   if (own) return false;
   if (executable === 'find') return findWrites(parts, scope, depth);
-  if (executable === 'sed' && sedTargets(parts).some(target => { const kind = reach(target, scope); return protectedKind(kind) || (kind === 'unknown' && scope.tainted); })) return true;
+  if (executable === 'sed' && sedTargets(parts).some(target => { const kind = reach(target, scope); return protectedKind(kind) || (kind === 'unknown' && scope.tainted); })) return because('a sed script that writes a file with w');
   if (reader) return false;
   if (COPIERS.includes(executable)) return copyWrites(parts, scope, fed);
   return otherWrites(parts, command, scope, fed, depth);
@@ -1735,13 +1755,15 @@ function shellWrites(source, outer = null, depth = 0) {
   if (!outer && isExactPincerCall(source)) return false;
   const written = shellCommands(source);
   // a line that points CLAUDE_PROJECT_DIR elsewhere would make another script the project's own
-  if (written.some(command => command.tokens.some(token => /^CLAUDE_PROJECT_DIR\+?=/.test(token.value)))) return true;
+  if (written.some(command => command.tokens.some(token => /^CLAUDE_PROJECT_DIR\+?=/.test(token.value)))) return because('the line sets CLAUDE_PROJECT_DIR');
   const facts = lineFacts(source, written, outer);
   const commands = written.map(command => settleCommand(command, facts));
   const scope = scopeOf(commands, outer ? { ...outer, repwd: facts.repwd } : null);
   scope.repwd = facts.repwd;
   const piped = commands.some(command => readsScript(commandParts(command)));
-  return commands.some((command, i) => commandWrites(command, scope, piped, depth, i ? commands[i - 1] : null));
+  const at = commands.findIndex((command, i) => { if (!outer) why = ''; return commandWrites(command, scope, piped, depth, i ? commands[i - 1] : null); });
+  if (at !== -1 && !outer) { refusedAt = commands[at].words.join(' ').slice(0, 120); adriftLine = scope.adrift; }
+  return at !== -1;
 }
 
 // A notebook is edited by its own tool: a protected file is not a notebook.
@@ -1763,7 +1785,10 @@ if (mode === 'dangerous') {
   else if (payload.tool_name === 'NotebookEdit') guardNotebook(payload.tool_input);
   else if (payload.tool_name === 'Bash') {
     if (typeof payload.tool_input.command !== 'string') block('Bash payload must contain a string command.');
-    if (shellWrites(payload.tool_input.command)) block(`shell commands may not write, reset, or restore ticket files, including whole-tree checkout/restore, reset --hard, stash, clean -f; ticket lifecycle fields are written only by the project's own scripts/pincer-ticket.sh. ${ENGINE_MESSAGE}`);
+    if (shellWrites(payload.tool_input.command)) {
+      const reason = `${why || 'this command can write a ticket, the engine or the hooks'}.${refusedAt ? ` In: \`${refusedAt}\`.` : ''}${adriftLine ? ' The line has more cd steps than the guard follows, so a relative path on it is judged by its name: use absolute paths or fewer steps.' : ''}`;
+      block(`${reason} Shell commands may not write, reset, or restore ticket files, including whole-tree checkout/restore, reset --hard, stash, clean -f; ticket lifecycle fields are written only by the project's own scripts/pincer-ticket.sh. ${ENGINE_MESSAGE}`);
+    }
   }
 } else {
   block('hook policy mode is invalid.');
