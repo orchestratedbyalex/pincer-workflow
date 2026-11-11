@@ -22,6 +22,10 @@ const loosely = (read) => { prose++; try { return read(); } finally { prose--; }
 const unsure = () => { if (!prose) unreadable(); };
 const unreadable = () => block('this shell line cannot be read with certainty (a quote, a test or a substitution that never closes, deep nesting, $[…], a # or << inside ((…)) or straight after a paren); write it more plainly.');
 
+// The check is bounded in time as well: a line that takes this long to read is refused.
+const DEADLINE = Date.now() + 10000;
+const inTime = () => { if (Date.now() > DEADLINE) block('this line takes too long to check; split it into shorter commands.'); };
+
 let payload;
 try {
   payload = JSON.parse(input);
@@ -621,10 +625,22 @@ const ENGINE_REL = /^(scripts\/pincer(\/.*)?|scripts\/(pincer-[^/]*\.(sh|cjs)|sy
 const HOLDER_REL = /^(scripts|\.claude|(.*\/)?tickets)$/;
 
 // The real path of a file that may not exist yet: its longest existing part, resolved.
+// A path asked for once is not looked up again, and nothing is looked up under a
+// directory that is not there.
+const realPaths = new Map();
+function realPath(file) {
+  if (realPaths.has(file)) return realPaths.get(file);
+  const parent = path.dirname(file);
+  let real = null;
+  if (parent === file || realPath(parent) !== null) { try { real = fs.realpathSync(file); } catch { /* not there */ } }
+  realPaths.set(file, real);
+  return real;
+}
 function realish(file) {
   const tail = [];
   for (let head = file; ;) {
-    try { return path.join(fs.realpathSync(head), ...tail); } catch { /* not there: try its parent */ }
+    const real = realPath(head);
+    if (real !== null) return path.join(real, ...tail);
     const parent = path.dirname(head);
     if (parent === head) return file;
     tail.unshift(path.basename(head));
@@ -668,6 +684,7 @@ function knownProtected() {
 }
 // A second name of a protected file: a hard link made earlier.
 function aliasKind(file) {
+  if (realPath(file) === null) return ''; // nothing there
   let stat;
   try { stat = fs.statSync(file); } catch { return ''; }
   if (!stat.isFile() || stat.nlink < 2) return '';
@@ -679,6 +696,7 @@ function aliasKind(file) {
 }
 // What an absolute path is: 'ticket', 'engine', 'holder' or ''.
 function located(file) {
+  inTime();
   const absolute = path.resolve(file);
   let holder = false;
   for (const spelling of new Set([absolute, realish(absolute)])) {
@@ -771,7 +789,21 @@ function reach(token, scope) {
   const kinds = [...scope.cwds].map(cwd => (token.glob ? globbed(path.resolve(cwd, text)) : located(path.resolve(cwd, text))));
   const kind = ['ticket', 'engine', 'holder'].find(name => kinds.includes(name));
   if (kind) return kind;
+  if (scope.adrift) { const guess = adriftKind(text, token.glob); if (guess) return guess; }
   return token.glob || scope.lost || /^T-[0-9]+/i.test(path.basename(text)) ? 'unknown' : 'other';
+}
+// A line with more `cd` steps than are followed (`scope.adrift`) may stand anywhere,
+// so a relative word is taken for what its last part can name: a ticket, a file or a
+// directory of the engine, a directory that holds them, or the directory itself.
+function adriftKind(text, glob) {
+  const last = text.replace(/\/+$/, '').split('/').pop();
+  if (last === '' || last === '.' || last === '..') return 'holder';
+  if (/^t-[0-9*?[{]/i.test(last)) return 'ticket';
+  const matcher = glob ? globMatcher(last) : null;
+  if (glob && !matcher) return 'ticket';
+  const same = (name) => (matcher ? matcher.test(name) : name.toLowerCase() === last.toLowerCase());
+  const kinds = knownProtected().filter(entry => same(path.basename(entry.file))).map(entry => entry.kind);
+  return ['ticket', 'engine', 'holder'].find(kind => kinds.includes(kind)) || '';
 }
 const RANK = ['ticket', 'engine', 'holder', 'unknown', 'other'];
 const worst = (kinds) => RANK.find(kind => kinds.includes(kind)) || 'other';
@@ -791,6 +823,7 @@ function protectedKind(kind) { return kind === 'ticket' || kind === 'engine'; }
 // Whether a literal word is the project root or a directory above it.
 function aboveRoot(token, scope) {
   if (token.computed || token.glob) return false;
+  if (scope.adrift && !path.isAbsolute(token.value)) return true;
   return [...scope.cwds].some(cwd => {
     const lower = slashed(path.resolve(cwd, token.value)).toLowerCase();
     return roots().some(root => { const base = slashed(root).toLowerCase(); return base === lower || base.startsWith(`${lower === '/' ? '' : lower}/`); });
@@ -1156,7 +1189,7 @@ function copyWrites(parts, scope, fed) {
     const sources = positional.filter(token => token !== destination);
     const kind = reach(destination, scope);
     if (protectedKind(kind) || (kind === 'unknown' && scope.tainted)) return true;
-    if (kind === 'holder' && (whole || sources.some(token => token.value.endsWith('/')))) return true;
+    if (kind === 'holder' && (whole || scope.adrift || sources.some(token => token.value.endsWith('/')))) return true;
     if (whole && scope.tainted && aboveRoot(destination, scope)) return true;
     if (destination.computed || destination.glob) continue;
     for (const source of sources) {
@@ -1232,7 +1265,7 @@ function findReach(plan, action, scope) {
   return knownProtected().filter(entry => {
     if ((action.type === 'f' && entry.dir) || (action.type === 'd' && !entry.dir)) return false;
     if (action.empty) { try { if (entry.dir || fs.statSync(entry.file).size) return false; } catch { return false; } }
-    const under = [...scope.cwds].some(cwd => plan.starts.some(start => {
+    const under = (scope.adrift && plan.starts.some(start => !path.isAbsolute(start.value))) || [...scope.cwds].some(cwd => plan.starts.some(start => {
       const rel = path.relative(path.resolve(cwd, start.value), entry.file);
       return !rel.startsWith('..') && !path.isAbsolute(rel) && (rel === '' ? 0 : rel.split(path.sep).length) <= plan.depth;
     }));
@@ -1423,24 +1456,32 @@ function marks(command, scope, depth = 0) {
 // line names a protected path (`ticketed`: a ticket); `holds`: a directory that
 // holds them; `scripted`: a here-document that is saved or passed on names one;
 // `retmp`: the line sets TMPDIR; `lost`: it moves somewhere that is computed.
+// The directories are followed up to CWDS of them. A line with more `cd` steps
+// than that is `adrift`: it is judged as a line that names a protected file, and a
+// relative word on it from where the line started and by what its last part can
+// name (adriftKind).
+const CWDS = 1024;
 function scopeOf(commands, outer) {
   const start = [typeof payload.cwd === 'string' && payload.cwd ? payload.cwd : projectRoot(), projectRoot(), process.cwd()];
   const scope = outer
     ? { ...outer, cwds: new Set(outer.cwds) }
-    : { cwds: new Set(start.map(dir => path.resolve(dir))), lost: false, tainted: false, ticketed: false, holds: false, scripted: false, retmp: false, rehome: false, lenient: false };
+    : { cwds: new Set(start.map(dir => path.resolve(dir))), lost: false, adrift: false, tainted: false, ticketed: false, holds: false, scripted: false, retmp: false, rehome: false, lenient: false };
+  const started = [...scope.cwds];
+  const add = (dir) => { if (scope.cwds.size < CWDS) scope.cwds.add(dir); else if (!scope.cwds.has(dir)) scope.adrift = true; };
   const stand = (target) => {
-    if (!target) { scope.cwds.add(os.homedir()); return; }
+    if (scope.adrift) return;
+    if (!target) { add(os.homedir()); return; }
     const known = /^(\$PWD|\$\{PWD\}|\$CLAUDE_PROJECT_DIR|\$\{CLAUDE_PROJECT_DIR\})(\/[^$`]*)?$/.exec(target.value);
     if (known) {
-      for (const base of known[1].includes('PWD') ? [...scope.cwds] : [projectRoot()]) scope.cwds.add(path.resolve(base, (known[2] || '').slice(1)));
+      for (const base of known[1].includes('PWD') ? [...scope.cwds] : [projectRoot()]) add(path.resolve(base, (known[2] || '').slice(1)));
     } else if (target.computed || target.value === '-') scope.lost = true;
     else if (target.glob) {
       scope.lost = true;
       for (const cwd of [...scope.cwds]) {
         const matcher = globMatcher(slashed(path.resolve(cwd, target.value)));
-        for (const entry of knownProtected()) if (entry.dir && (!matcher || matcher.test(slashed(entry.file)))) scope.cwds.add(entry.file);
+        for (const entry of knownProtected()) if (entry.dir && (!matcher || matcher.test(slashed(entry.file)))) add(entry.file);
       }
-    } else for (const cwd of [...scope.cwds]) scope.cwds.add(path.resolve(cwd, target.value));
+    } else for (const cwd of [...scope.cwds]) add(path.resolve(cwd, target.value));
   };
   const walk = (list, depth) => {
     for (const command of list) {
@@ -1460,6 +1501,7 @@ function scopeOf(commands, outer) {
   // the commands of a line need not run in the order they are written (a function, a loop)
   for (let round = 0, size = -1; round < 4 && scope.cwds.size > size && scope.cwds.size < 256; round++) { size = scope.cwds.size; walk(commands, 0); }
   if (scope.cwds.size >= 256) scope.lost = true;
+  if (scope.adrift) { scope.lost = scope.tainted = scope.ticketed = true; scope.cwds = new Set(started); }
   for (const command of commands) {
     const found = marks(command, scope);
     scope.ticketed ||= found.has('ticket');

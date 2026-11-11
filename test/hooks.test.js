@@ -608,6 +608,42 @@ for (const command of [
 // a quote or a test that never closes is not read on: the line is refused
 for (const command of ['echo "abc\ngit push --force', "echo 'abc; git push --force", '[[ a && git push --force', 'echo $(git push --force', '${x:-git push --force}']) check('dangerous', `block ${command}`, bash(command), 2);
 
+// --- 1.0.4: a hook that dies refuses, and a long line of cd steps is bounded --------
+// A hook that ends with any status but 2 lets the call run. The guard used to follow
+// every order of the cd steps on a line: 12 took 26 seconds, 300 ran out of memory,
+// and the call then ran.
+const steps = (n) => Array.from({ length: n }, (_, i) => `cd d${i} 2>/dev/null`).join('; ');
+const timed = (label, command, expected, limit) => {
+  const start = Date.now();
+  check('ticket', label, bash(command), expected);
+  const took = Date.now() - start;
+  if (took > limit) failures.push(`ticket: ${label}: took ${took} ms, the limit is ${limit} ms`);
+};
+timed('300 cd steps, then a write to a ticket', `${steps(300)}; printf x >> ${absolute}`, 2, 5000);
+timed('12 cd steps, then a harmless command', `${steps(12)}; ls`, 0, 3000);
+timed('40 cd steps, then the tests', `${steps(40)}; npm test 2>&1`, 0, 3000);
+for (const tail of [
+  `printf x >> ${T}`, 'cd tickets; echo x > T-01-example.md', 'cd scripts; cd pincer; echo x > status.cjs', 'cd scripts/pincer; echo x > status.cjs',
+  'cd scripts; cd pincer; find . -type f -delete', 'cd tickets; cp /tmp/T-01-example.md .', 'cd tickets; rm -f T-01-example.md', 'cd .claude; cd hooks; cp /tmp/x hook-policy.cjs',
+  'cd .claude; cd hooks; rm -rf .', 'cd tickets; sed -i "" s/open/done/ T-01-example.md', 'cd tickets; git checkout HEAD -- .', 'cd scripts; cd pincer; node /tmp/x.js > cli.cjs',
+]) check('ticket', `still blocked after 12 cd steps: ${tail}`, bash(`${steps(12)}; ${tail}`), 2);
+for (const tail of ['ls', 'pwd', `cat ${T}`, 'echo x > /tmp/out.txt', 'git status --short', 'npm test', 'cat package.json | head -5'])
+  check('ticket', `allowed after 12 cd steps: ${tail}`, bash(`${steps(12)}; ${tail}`), 0);
+// The wrapper does not hand over to node: whatever node ends with that is not 0 is a refusal.
+{
+  const stub = path.join(dir, 'stub-bin');
+  for (const [name, body] of [['abort', 'kill -ABRT $'], ['fail', 'exit 1'], ['kill', 'kill -KILL $'], ['pass', 'exit 0']]) {
+    write(dir, `stub-bin/${name}/node`, `#!/bin/bash\n${body}\n`);
+    fs.chmodSync(path.join(stub, name, 'node'), 0o755);
+  }
+  for (const hook of Object.keys(hooks)) for (const [name, expected] of [['abort', 2], ['fail', 2], ['kill', 2], ['pass', 0]]) {
+    const result = run(dir, 'bash', [hooks[hook]], { input: JSON.stringify(bash('ls')), env: { ...process.env, CLAUDE_PROJECT_DIR: dir, PATH: `${path.join(stub, name)}:${process.env.PATH}` } });
+    checked++;
+    if (result.status !== expected) failures.push(`${hook}: a node that ends with "${name}" gives ${result.status}${result.signal ? '/' + result.signal : ''}, expected ${expected}`);
+    else if (expected === 2 && !/Blocked by PINCER/.test(result.stderr)) failures.push(`${hook}: a node that ends with "${name}" is refused without a message`);
+  }
+}
+
 assert.equal(read(dir, file), completed, 'hooks are read-only and never execute tested command strings');
 assert.equal(failures.length, 0, `${failures.length}/${checked} hook regressions failed:\n${failures.join('\n')}`);
 console.log(`hooks: ok (${checked} payloads)`);
