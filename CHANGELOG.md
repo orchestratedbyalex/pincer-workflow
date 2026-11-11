@@ -1,5 +1,73 @@
 # Changelog
 
+## 1.0.3 — unreleased
+
+Defects found while verifying 1.0.2 on Claude Code. The installer, status and skill
+fixes apply to every platform; the guard fixes apply to Claude Code, the only platform
+with a hook.
+
+- An update no longer leaves a blank `AGENTS.md.new`. The agreement between the
+  markers in `AGENTS.md` belongs to the blueprint: the installer compares and proposes
+  only the text around it, refreshes that text in place when the project did not
+  change it, and puts the project's agreement into any proposal it does write. A blank
+  proposal left by 1.0.2 is removed by the next update, and `doctor` no longer calls a
+  filled agreement a local edit.
+- `--help` and `-h` print usage, for the tool and for `init`, `update` and `doctor`,
+  and write nothing; `init --help` used to install. An unknown argument exits 2 and is
+  named. `init` without a terminal wants `--platform` instead of installing all three
+  platforms; `--platform=<name>` is read like `--platform <name>`.
+- The ticket guard keeps a list of commands that only read, instead of a list of
+  commands that write. A command that names a ticket, the engine or the hooks is
+  refused unless it is a known reader, a copy that only reads it, or one of the
+  engine's own entry points. This closes the writers the old list missed (`rsync`,
+  `dd`, `install`, `ditto`, `git restore`, `git checkout <rev> -- <path>`,
+  `git checkout-index`, `git apply`, `git rm`, `git mv`, `node -e`, `python3 -c`,
+  `perl`, `awk`, `vim -es`, `curl -o`, `wget -O`, `sort -o`, `patch`, `tar`, `unzip`,
+  `unlink`, `chmod`, `ln`, `find -exec` and others). It also splits a line at a single
+  `&`, follows `cd` and `pushd` so a bare name after them is resolved, looks through
+  `command -p`, `exec -a`, `sudo -u`, `stdbuf`, `caffeinate` and `arch`, refuses a
+  variable or computed target on any line that names a protected file, ignores case
+  and resolves `//`, `/./`, `..`, symbolic and hard links for shell targets and for
+  Edit, Write and MultiEdit paths, and treats every `scripts/pincer-*.sh` and
+  `scripts/pincer-*.cjs` as the engine. The destructive-command guard reads lines the
+  same way, so `true & git push --force` and `sudo -u root rm -rf /path` are refused.
+- The guard lets more reads through: copying a ticket or the engine out
+  (`cp tickets/T-02-x.md /tmp/`, `cat … | tee /tmp/copy.md`), a read after `cd` saved
+  to another path, quoted text that only mentions a ticket or the ticket script, a
+  here-document that is a commit message, and a comment. Still refused, on purpose:
+  `T-NN*` in any directory named `tickets` is a ticket wherever it is, so a copy into
+  a scratch clone's `tickets/` is refused, and a tool the guard does not know is
+  refused when it is given a protected path. `docs/engine.md` says so, and that the
+  guard is a guard rail against mistakes, not a sandbox.
+- Status notices a done ticket whose work was never committed: the ticket file at
+  `HEAD` is missing, not done or carries another receipt. It warns, lists the ticket
+  under `uncommitted` in `--json`, and `Next:` is `/pincer-code T-NN (done, not
+  committed)` before any other ticket is started. The code skill says how to resume
+  such a ticket.
+- `Next:` uses the first job the agreement names: on a new project, and when the
+  blueprint names another one after every ticket was accepted, instead of `all
+  tickets done and accepted`.
+- `doctor` looks at the generated project copies: a missing one is a problem, an
+  edited one a note, and one edited in a derived place (a Codex skill, a Copilot
+  prompt) is pointed back to the copy under `.claude/`.
+- `update --platform` says when the named platform is already installed, and ends
+  with the blueprint, not status, when the project has no agreement yet.
+- Skill wording: `done` comes only after `verify` passed and the self-review is
+  finished, and `done` prints that reminder; narrow and code say when the implementer
+  is on but no ticket is size M; narrow does not build the feature to try its checks;
+  narrow and evaluate remove their scratch directories; the evidence format says that
+  a gap in the `C-NN` numbers is not an error.
+
+Correction to 1.0.2: its release notes and commit message said the redirect-aware
+guard newly allowed no command with a protected or computed target. That was not
+true. 1.0.2 newly allowed a writer the guard did not list when a harmless redirect
+stood beside it (`rsync /tmp/x tickets/T-02-x.md 2>&1`, `git restore
+.claude/settings.json 2>&1`, `node -e "…writeFileSync('.claude/settings.json')" 2>&1`),
+a `git mv` round trip, a redirect onto an engine path spelled in another case on a
+line that names a ticket, and a write through a link made on the same line with
+`command -p ln`, `eval ln`, `bash -c 'ln …'` or `perl symlink`. Each had an equivalent
+form that 1.0.1 already allowed. 1.0.3 refuses all of them.
+
 ## 1.0.2 — 2026-11-11
 
 Defects found while running 1.0.1 on Claude Code. The status and installer fixes

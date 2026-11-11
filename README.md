@@ -156,8 +156,17 @@ had (its own `CLAUDE.md`) is kept with the kit's version beside it as `.new`, an
 stage copies are generated for the new platform. `init` refuses a second install and
 points here.
 
+The agreement the blueprint wrote between the markers in `AGENTS.md` is never part of
+an update: the installer compares and proposes only the text around it, so a filled
+agreement is not a conflict and is never proposed back to blank.
+
+`--help` on the tool or on a command prints its usage and changes nothing. An argument
+a command does not know is refused (exit 2), and `init` outside a terminal wants
+`--platform` named instead of installing every platform.
+
 `doctor` compares every installed file with the package that runs it, not only the
-version number. A file you changed is listed as locally edited. A file that is still
+version number. It also looks at the project copies the generator wrote: a missing one
+is a problem, an edited one is a note. A file you changed is listed as locally edited. A file that is still
 what was installed but differs from this package came from another build with the
 same version number (a pre-release, a local `npm pack`); `doctor` fails and names
 it, and `update` brings the install to this build.
