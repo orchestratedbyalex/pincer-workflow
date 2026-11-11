@@ -245,4 +245,113 @@ assert.equal(doctor.status, 1);
 assert.match(doctor.stdout, /FAIL {2}install is current \(v0\.0\.1\) — run: pincer update/);
 assert.doesNotMatch(doctor.stdout, /another build/);
 
+// The agreement between the markers in AGENTS.md is the blueprint's, not the installer's:
+// once it is filled in, an update neither calls it a local edit nor proposes it back to
+// blank, and the text around it still follows the package.
+const filled = tempDir();
+cli(filled, 'init', '--platform', 'codex');
+write(filled, 'harness.json', JSON.stringify({ schema: 1, project: { name: 'filled', kind: 'greenfield' }, people: [{ name: 'Alex', accepts: true }] }));
+const wrote = run(filled, process.execPath, ['scripts/pincer-blueprint.cjs', 'write']);
+assert.equal(wrote.status, 0, `${wrote.stdout}${wrote.stderr}`);
+const agreedText = read(filled, 'AGENTS.md');
+assert.match(agreedText, /## Harness agreement — filled/);
+const noSidecar = (dir) => fs.readdirSync(dir).filter((name) => name.startsWith('AGENTS.md.new'));
+for (const args of [['update'], ['update'], ['update', '--platform', 'claude'], ['update', '--platform', 'copilot']]) {
+  out = cli(filled, ...args);
+  assert.doesNotMatch(out, /CONFLICT/, `${args.join(' ')} after the blueprint`);
+  assert.deepEqual(noSidecar(filled), [], `${args.join(' ')} leaves no sidecar`);
+  assert.equal(read(filled, 'AGENTS.md'), agreedText, `${args.join(' ')} leaves the agreement alone`);
+  doctor = pincer(filled, 'doctor');
+  assert.equal(doctor.status, 0, `${doctor.stdout}${doctor.stderr}`);
+  assert.doesNotMatch(doctor.stdout, /locally edited/, 'a filled agreement is not a local edit');
+}
+// the blank proposal 1.0.2 left behind says nothing: the next update removes it
+write(filled, 'AGENTS.md.new', read(kit, 'template/AGENTS.md'));
+assert.equal(pincer(filled, 'doctor').status, 1);
+out = cli(filled, 'update');
+assert.match(out, /removed {2}AGENTS\.md\.new/);
+assert.deepEqual(noSidecar(filled), []);
+assert.equal(pincer(filled, 'doctor').status, 0);
+// a proposal that says something else is the person's to resolve
+write(filled, 'AGENTS.md.new', 'MERGE IN PROGRESS\n');
+cli(filled, 'update');
+assert.equal(read(filled, 'AGENTS.md.new'), 'MERGE IN PROGRESS\n');
+fs.rmSync(path.join(filled, 'AGENTS.md.new'));
+// the package changes the text around the agreement and the project has not: refreshed in place
+const kitAgents = read(kit, 'template/AGENTS.md');
+write(kit, 'template/AGENTS.md', kitAgents + '\nUPSTREAM RULE\n');
+out = cli(filled, 'update');
+assert.doesNotMatch(out, /CONFLICT/);
+assert.equal(read(filled, 'AGENTS.md'), agreedText + '\nUPSTREAM RULE\n', 'the new text arrives and the agreement stays');
+assert.deepEqual(noSidecar(filled), []);
+assert.equal(pincer(filled, 'doctor').status, 0);
+// both changed the text around it: the project's file is kept and the proposal carries the
+// project's agreement, never the blank one
+write(filled, 'AGENTS.md', read(filled, 'AGENTS.md') + '\nOUR RULE\n');
+write(kit, 'template/AGENTS.md', kitAgents + '\nUPSTREAM RULE 2\n');
+out = cli(filled, 'update');
+assert.match(out, /CONFLICT AGENTS\.md/);
+assert.match(read(filled, 'AGENTS.md'), /OUR RULE/);
+assert.equal(read(filled, 'AGENTS.md.new'), agreedText + '\nUPSTREAM RULE 2\n', 'the proposal is the package text with the agreement in place');
+assert.doesNotMatch(read(filled, 'AGENTS.md.new'), /Not agreed yet/);
+doctor = pincer(filled, 'doctor');
+assert.equal(doctor.status, 1);
+assert.match(doctor.stdout, /locally edited \(kept as-is on update\): AGENTS\.md$/m);
+// an agreement written into a file that never had the markers is kept the same way
+const unmarked = tempDir();
+write(unmarked, 'AGENTS.md', '# Ours\n\nTEAM CONVENTIONS\n');
+cli(unmarked, 'init', '--platform', 'codex');
+fs.rmSync(path.join(unmarked, 'AGENTS.md.new'));
+write(unmarked, 'harness.json', JSON.stringify({ schema: 1, project: { name: 'unmarked', kind: 'greenfield' }, people: [{ name: 'Alex', accepts: true }] }));
+assert.equal(run(unmarked, process.execPath, ['scripts/pincer-blueprint.cjs', 'write']).status, 0);
+cli(unmarked, 'update');
+assert.match(read(unmarked, 'AGENTS.md'), /TEAM CONVENTIONS/);
+assert.match(read(unmarked, 'AGENTS.md.new'), /## Harness agreement — unmarked/, 'the proposal keeps the agreement');
+assert.doesNotMatch(read(unmarked, 'AGENTS.md.new'), /Not agreed yet/);
+
+// --help prints the usage and writes nothing, for the tool and for each command
+const bare = tempDir();
+const untouchedDir = (label) => assert.deepEqual(fs.readdirSync(bare), [], `${label}: nothing written`);
+for (const args of [['--help'], ['-h'], ['init', '--help'], ['init', '-h'], ['init', '--platform', 'all', '--help'], ['init', '--help', '--platform', 'codex'], ['update', '--help'], ['doctor', '--help'], ['doctor', '-h']]) {
+  const r = pincer(bare, ...args);
+  assert.equal(r.status, 0, `${args.join(' ')}: ${r.stdout}${r.stderr}`);
+  assert.match(r.stdout, /Usage:/, args.join(' '));
+  assert.doesNotMatch(r.stdout, /Installing/, args.join(' '));
+  untouchedDir(args.join(' '));
+}
+assert.match(pincer(bare, 'init', '--help').stdout, /pincer-workflow init --platform/);
+assert.doesNotMatch(pincer(bare, 'init', '--help').stdout, /pincer-workflow doctor/, 'a command prints its own usage');
+assert.match(pincer(bare, 'update', '--help').stdout, /pincer-workflow update \[--platform/);
+assert.match(pincer(bare, 'doctor', '--help').stdout, /pincer-workflow doctor/);
+// an argument the command does not know is refused by name, exit 2, before anything is written
+for (const [args, named] of [
+  [['init', '--bogus'], /--bogus/], [['init', '--platform', 'codex', '--bogus'], /--bogus/], [['init', 'codex'], /"codex"/], [['init', '--platfrom', 'codex'], /--platfrom/],
+  [['update', '--bogus'], /--bogus/], [['doctor', '--bogus'], /--bogus/], [['doctor', '--platform', 'codex'], /--platform/],
+]) {
+  const r = pincer(bare, ...args);
+  assert.equal(r.status, 2, `${args.join(' ')}: ${r.stdout}${r.stderr}`);
+  assert.match(r.stderr, named, args.join(' '));
+  assert.match(r.stderr, /--help/, `${args.join(' ')}: points at the usage`);
+  untouchedDir(args.join(' '));
+}
+// an unknown command keeps its exit code 1 and is named
+const unknownCommand = pincer(bare, 'install');
+assert.equal(unknownCommand.status, 1);
+assert.match(unknownCommand.stderr, /unknown command "install"/);
+untouchedDir('an unknown command');
+// without a terminal to ask in, init wants the platform named instead of installing all three
+const silent = pincer(bare, 'init');
+assert.equal(silent.status, 2, `${silent.stdout}${silent.stderr}`);
+assert.match(silent.stderr, /--platform/);
+untouchedDir('init without a platform');
+// an unknown argument does not touch an existing install either
+const guarded = tempDir();
+cli(guarded, 'init', '--platform=codex');
+assert.deepEqual(JSON.parse(read(guarded, '.pincer.json')).platforms, ['codex'], '--platform=<name> is read like --platform <name>');
+const manifestBefore = read(guarded, '.pincer.json');
+assert.equal(pincer(guarded, 'update', '--platform', 'claude', '--force').status, 2);
+assert.equal(read(guarded, '.pincer.json'), manifestBefore);
+assert.equal(pincer(guarded, 'update', '--help').status, 0);
+assert.equal(read(guarded, '.pincer.json'), manifestBefore);
+
 console.log('installer: ok');

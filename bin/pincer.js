@@ -2,10 +2,11 @@
 // pincer — installer for PINCER, the harness builder
 // (blueprint · plan · narrow · code · evaluate · release · status)
 //
-//   npx pincer-workflow init      install the kit into the current repo (asks which platforms)
+//   npx pincer-workflow init --platform <name>     install the kit into the current repo (asks in a terminal when no platform is named)
 //   npx pincer-workflow update    refresh an install, preserving local edits; regenerate the project copies
 //   npx pincer-workflow update --platform <name>   the same, and add a platform to the install
 //   npx pincer-workflow doctor    check the health of an install, file by file against this package
+//   --help on the tool or on a command prints its usage and changes nothing
 //
 // No dependencies by design. The kit is markdown plus a small Node core; this tool
 // copies it carefully and never overwrites a file you edited: you get a *.new file
@@ -54,6 +55,25 @@ const OBSOLETE = [
 
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+// The agreement between the markers in AGENTS.md is written by the blueprint, not by
+// this installer: the installer owns the text around it. Every comparison and every
+// proposal for that file is therefore made with the project's agreement in place.
+const { AGREEMENT_START, AGREEMENT_END, AGENTS_FILE } = requireAbsolute(path.join(TEMPLATE, 'scripts/pincer/blueprint.cjs'));
+function agreementSpan(text) {
+  const start = text.indexOf(AGREEMENT_START), end = text.indexOf(AGREEMENT_END);
+  return start === -1 || end < start ? null : { start, end: end + AGREEMENT_END.length };
+}
+// `text` with the agreement of `other` between its markers; unchanged when either has none.
+function withAgreementOf(text, other) {
+  const mine = agreementSpan(text), theirs = agreementSpan(other);
+  if (!mine || !theirs) return text;
+  return text.slice(0, mine.start) + other.slice(theirs.start, theirs.end) + text.slice(mine.end);
+}
+const ownsAgreement = (rel) => rel === AGENTS_FILE;
+// The package's file as it belongs in this project, and the project's file as the installer sees it.
+const forProject = (rel, shipped, project) => (ownsAgreement(rel) ? Buffer.from(withAgreementOf(shipped.toString(), project.toString())) : shipped);
+const installerView = (rel, project, shipped) => (ownsAgreement(rel) ? Buffer.from(withAgreementOf(project.toString(), shipped.toString())) : project);
 
 function walk(root, rel = '') {
   const abs = path.join(root, rel);
@@ -110,7 +130,7 @@ function writeProposal(dest, content) {
 // Copies the template files into dir. `baseline` (the manifest's hashes) tells an
 // update which existing files are unmodified and therefore safe to refresh.
 function install(dir, platforms, baseline, generated) {
-  const results = { written: [], skipped: [], conflicted: [] };
+  const results = { written: [], skipped: [], conflicted: [], removed: [] };
   const hashes = {};
   for (const rel of filesFor(platforms)) {
     const src = fs.readFileSync(path.join(TEMPLATE, rel));
@@ -123,17 +143,27 @@ function install(dir, platforms, baseline, generated) {
       continue;
     }
     const current = fs.readFileSync(dest);
-    if (sha(current) === sha(src)) {
+    const wanted = forProject(rel, src, current);
+    if (current.equals(wanted)) {
       results.skipped.push(rel);
-    } else if (baseline && baseline[rel] === sha(current)) {
-      fs.writeFileSync(dest, src); // untouched since install: safe to refresh
+    } else if (baseline && baseline[rel] === sha(installerView(rel, current, src))) {
+      fs.writeFileSync(dest, wanted); // untouched since install: safe to refresh
       results.written.push(rel);
     } else {
-      const proposal = writeProposal(dest, src);
+      const proposal = writeProposal(dest, wanted);
       // Only a version this installer wrote grants overwrite permission later;
       // null means no trusted upstream baseline was ever established.
       hashes[rel] = baseline?.[rel] ?? null;
       results.conflicted.push({ rel, proposal: path.relative(dir, proposal) });
+      continue;
+    }
+    // 1.0.2 and earlier proposed the blank agreement beside a filled one on every update.
+    // A proposal that would change nothing but that is removed; any other is the person's.
+    const sidecar = dest + '.new';
+    if (ownsAgreement(rel) && !wanted.equals(src) && fs.existsSync(sidecar)) {
+      const proposed = fs.readFileSync(sidecar).toString();
+      const blank = withAgreementOf(proposed, src.toString()) === proposed; // its agreement is the package's placeholder
+      if (blank && withAgreementOf(proposed, wanted.toString()) === wanted.toString()) { fs.rmSync(sidecar); results.removed.push(`${rel}.new`); }
     }
   }
   for (const rel of EXECUTABLES) {
@@ -155,9 +185,10 @@ function ensureGitignore(dir) {
   fs.appendFileSync(p, `${lead}${existing ? '\n' : ''}# secrets (added by pincer init)\n${missing.join('\n')}\n`);
 }
 
-function report({ written, skipped, conflicted }) {
+function report({ written, skipped, conflicted, removed }) {
   if (written.length) console.log(`  wrote    ${written.length} file(s)`);
   if (skipped.length) console.log(`  skipped  ${skipped.length} file(s) already up to date`);
+  for (const rel of removed) console.log(`  removed  ${rel} — it proposed only the blank agreement; yours is kept`);
   for (const { rel, proposal } of conflicted) console.log(`  CONFLICT ${rel} — local content preserved; the new version is at ${proposal}`);
   if (conflicted.length) console.log('\n  Review and merge each reported proposal, then remove the resolved sidecars.');
 }
@@ -252,10 +283,27 @@ async function askPlatforms() {
   return map[answer] || fail(`invalid choice: ${answer}`);
 }
 
-function parsePlatformFlag(args) {
-  const i = args.indexOf('--platform');
-  if (i === -1) return null;
-  const value = args[i + 1] || '';
+// A command's arguments: --help or -h anywhere, --platform with its value where the
+// command takes one, and the first argument the command does not know.
+function readArgs(cmd, args) {
+  const read = { help: false, platform: null, unknown: null };
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--help' || arg === '-h') read.help = true;
+    else if (cmd !== 'doctor' && arg === '--platform') read.platform = args[++i] ?? '';
+    else if (cmd !== 'doctor' && arg.startsWith('--platform=')) read.platform = arg.slice('--platform='.length);
+    else read.unknown ??= arg;
+  }
+  return read;
+}
+// A mistake in how the tool was called: nothing was touched.
+function usageError(msg, cmd) {
+  console.error(`pincer: ${msg}\n        see: npx pincer-workflow ${cmd ? `${cmd} ` : ''}--help`);
+  process.exit(2);
+}
+
+function parsePlatformFlag(value) {
+  if (value === null) return null;
   if (value === 'all') return [...PLATFORMS];
   const list = value.split(',').map((s) => s.trim());
   if (list.length && list.every((p) => PLATFORMS.includes(p))) return [...new Set(list)];
@@ -265,7 +313,10 @@ function parsePlatformFlag(args) {
 async function cmdInit(args) {
   const dir = process.cwd();
   if (readManifest(dir)) fail(`this repo already has PINCER installed (${MANIFEST} exists) — use \`pincer update\`, or \`pincer update --platform <name>\` to add a platform.`);
-  const platforms = parsePlatformFlag(args) || (process.stdin.isTTY ? await askPlatforms() : [...PLATFORMS]);
+  const named = parsePlatformFlag(args.platform);
+  // With nobody to ask, a guess would write three platforms' files into the repo.
+  if (!named && !process.stdin.isTTY) usageError('name the platform to install: --platform claude, codex, copilot (comma-separated) or all.', 'init');
+  const platforms = named || await askPlatforms();
   console.log(`\nInstalling PINCER v${VERSION} for: ${platforms.join(', ')}\n`);
   report(install(dir, platforms, null, {}));
   nextSteps(platforms);
@@ -274,11 +325,11 @@ async function cmdInit(args) {
 // `--platform` adds to the install: the platforms already there stay, the named ones
 // that are new get their files the way init would write them, and an existing file
 // of theirs (a CLAUDE.md the project already had) is kept with a .new beside it.
-async function cmdUpdate(args = []) {
+async function cmdUpdate(args) {
   const dir = process.cwd();
   const manifest = readManifest(dir);
   if (!manifest) fail(`no ${MANIFEST} here — run \`pincer init\` first.`);
-  const added = (parsePlatformFlag(args) || []).filter((p) => !manifest.platforms.includes(p));
+  const added = (parsePlatformFlag(args.platform) || []).filter((p) => !manifest.platforms.includes(p));
   const platforms = [...manifest.platforms, ...added];
   console.log(`\nUpdating PINCER ${manifest.version} -> ${VERSION} for: ${platforms.join(', ')}${added.length ? ` (adding: ${added.join(', ')})` : ''}\n`);
   // A manifest without a schema could have adopted a local edit as its baseline;
@@ -326,8 +377,9 @@ function cmdDoctor() {
   for (const [rel, installed] of Object.entries(manifest.files)) {
     const p = path.join(dir, rel);
     if (!fs.existsSync(p)) continue;
-    const current = sha(fs.readFileSync(p));
-    if (shipped.has(rel) && current === sha(fs.readFileSync(path.join(TEMPLATE, rel)))) continue;
+    const packaged = shipped.has(rel) ? fs.readFileSync(path.join(TEMPLATE, rel)) : null;
+    const current = sha(packaged ? installerView(rel, fs.readFileSync(p), packaged) : fs.readFileSync(p));
+    if (packaged && current === sha(packaged)) continue;
     if (current !== installed) edited.push(rel);
     else foreign.push(rel);
   }
@@ -369,13 +421,37 @@ function cmdDoctor() {
   process.exit(problems ? 1 : 0);
 }
 
-function usage() {
+const USAGE = {
+  init: `Usage:
+  npx pincer-workflow init --platform <claude|codex|copilot|all>
+
+Installs the kit into the current repository. Name several platforms with commas
+(--platform claude,codex). In a terminal the platform may be left out and init asks;
+anywhere else it must be named. A repository that already has an install is refused:
+use update there.`,
+  update: `Usage:
+  npx pincer-workflow update [--platform <claude|codex|copilot|all>]
+
+Refreshes the install in the current repository to this version. A file you edited is
+kept and the new version is written beside it as <file>.new; the agreement in AGENTS.md
+is never replaced. With an agreement in place the project's stage copies are generated
+again. --platform adds the named platforms to the install and keeps the ones it has.`,
+  doctor: `Usage:
+  npx pincer-workflow doctor
+
+Checks the install in the current repository: every installed file against this
+package, the agreement, the model tiers and unmerged .new files. Changes nothing.
+Exit 0 when all is good, 1 when a problem was found.`,
+};
+function usage(cmd) {
+  if (USAGE[cmd]) { console.log(`pincer-workflow v${VERSION} — ${cmd}\n\n${USAGE[cmd]}`); return; }
   console.log(`pincer-workflow v${VERSION} — a harness builder for AI coding agents
 
 Usage:
-  npx pincer-workflow init [--platform claude|codex|copilot|all]
-  npx pincer-workflow update [--platform claude|codex|copilot|all]   (--platform adds a platform)
+  npx pincer-workflow init --platform <claude|codex|copilot|all>
+  npx pincer-workflow update [--platform <claude|codex|copilot|all>]   (--platform adds a platform)
   npx pincer-workflow doctor
+  npx pincer-workflow <command> --help
 
 After init, run the blueprint (/pincer-blueprint or $pincer-blueprint): it writes the
 agreement the other stages read. Docs: https://github.com/orchestratedbyalex/pincer-workflow`);
@@ -385,8 +461,13 @@ agreement the other stages read. Docs: https://github.com/orchestratedbyalex/pin
 const invoked = process.argv[1] && (() => { try { return fs.realpathSync(process.argv[1]) === fs.realpathSync(HERE); } catch { return false; } })();
 if (invoked) {
   const [cmd, ...rest] = process.argv.slice(2);
-  if (cmd === 'init') await cmdInit(rest);
-  else if (cmd === 'update') await cmdUpdate(rest);
-  else if (cmd === 'doctor') cmdDoctor();
-  else { usage(); process.exit(cmd ? 1 : 0); }
+  const commands = { init: cmdInit, update: cmdUpdate, doctor: cmdDoctor };
+  if (!cmd || cmd === '--help' || cmd === '-h') usage();
+  else if (!commands[cmd]) { usage(); fail(`unknown ${cmd.startsWith('-') ? 'option' : 'command'} "${cmd}".`); } // exit 1, as it always was
+  else {
+    const args = readArgs(cmd, rest);
+    if (args.help) usage(cmd);
+    else if (args.unknown !== null) usageError(`${cmd} does not take ${args.unknown.startsWith('-') ? 'the option' : 'the argument'} "${args.unknown}".`, cmd);
+    else await commands[cmd](args);
+  }
 }
