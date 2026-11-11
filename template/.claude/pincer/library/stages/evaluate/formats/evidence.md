@@ -14,7 +14,7 @@ Top-level keys, all required: `schema`, `candidate`, `base`, `created`, `spec`,
 - `created`: UTC timestamp, `YYYY-MM-DDTHH:MM:SSZ`.
 - `spec`: the spec path, which must exist.
 - `environment`: `tools` (what ran) and `limitations` (what could not run), each a list of short strings.
-- `checks`: one entry per check, `id` `C-NN`, `kind` `command`, `review` or `visual`, `required`, `result` `passed`, `failed` or `unverified`, `command` for a command check (the line as run), `log` naming an artifact, optional `note`. A required check must be `passed`. A tool that could not run is `unverified` with a note, never a fabricated result.
+- `checks`: one entry per check, `id` `C-NN` (unique within the manifest, numbered from `C-01` in the order the checks ran), `kind` `command`, `review` or `visual`, `required`, `result` `passed`, `failed` or `unverified`, `command` for a command check (the line as run), `log` naming an artifact, optional `note`. A required check must be `passed`. A tool that could not run is `unverified` with a note, never a fabricated result. A gap in the numbers is not an error: the validator refuses a repeated id and does not look at the sequence, so a check that was planned and dropped may leave its number unused.
 - `visual_review`: `applicable` true or false, `reason` required when not applicable.
 - `artifacts`: `{path: sha256}` for every file in the directory the manifest refers to; digests from `node scripts/pincer-evidence.cjs digest <file>...`.
 

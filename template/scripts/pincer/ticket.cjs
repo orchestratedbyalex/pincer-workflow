@@ -175,7 +175,8 @@ async function done(root, input, io = defaultIo()) {
   let text = parse.fmSet(after.text, 'status', 'done');
   text = parse.fmSet(text, 'finished', nowIso());
   writeTicket(root, file, text);
-  io.out(`✓ ${id} done. Inspect staged work, stage only this ticket's paths, review git diff --cached, then commit: ${id}: ${slugWords(file)}\n`);
+  // done runs the check itself, so it cannot know whether the diff was read: the reminder costs one line.
+  io.out(`✓ ${id} done. Inspect staged work, stage only this ticket's paths, review git diff --cached, then commit: ${id}: ${slugWords(file)}\n  The self-review of the diff comes before that commit; if it changes code, run verify again.\n`);
   return { exit: EXIT.OK };
 }
 

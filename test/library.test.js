@@ -230,6 +230,28 @@ for (const needle of ['running', 'passed', 'failed', 'interrupted', 'sha256', '1
 for (const stale of ['pincer-runtime', '.prd/', '.pincer/', 'PRD', 'NOTES.md']) assert.ok(!engine.includes(stale), `engine.md: no ${stale}`);
 assert.ok(!/^@/m.test(engine), 'engine.md: no @ imports');
 
+// What sessions were seen to need spelled out (1.0.3): the resume of a ticket that is
+// done but not committed, verify and self-review before done, an implementer that
+// will not run, where scratch work goes, and the numbering of the evidence checks.
+const codeSkill = read(STAGES_DIR, 'code', 'SKILL.md');
+const codeSteps = codeSkill.slice(codeSkill.indexOf('## Steps'), codeSkill.indexOf('## Checks')).split('\n');
+const step = (lines, n) => lines.find((line) => line.startsWith(`${n}. `)) || '';
+assert.match(step(codeSteps, 1), /`done` ticket that status marks not committed/, 'code: resuming a done ticket without its commit');
+assert.match(step(codeSteps, 1), /commit as `T-NN: <title>` before starting another ticket/);
+assert.match(step(codeSteps, 1), /implementer is on, but no ticket is M: building inline/, 'code: says when the implementer will not run');
+assert.match(step(codeSteps, 8), /only after step 6 passed on the code as it stands and the step 7 review is finished/, 'code: verify and self-review come before done');
+assert.match(codeSkill.slice(codeSkill.indexOf('## Checks')), /verified \(step 6\) and reviewed \(step 7\) before its `done`/);
+const narrowSkill = read(STAGES_DIR, 'narrow', 'SKILL.md');
+const narrowSteps = narrowSkill.slice(narrowSkill.indexOf('## Steps'), narrowSkill.indexOf('## Checks')).split('\n');
+assert.match(narrowSkill.slice(narrowSkill.indexOf('## Reads'), narrowSkill.indexOf('## Steps')), /`stages\.code\.implementer`, `roster\.code`/);
+assert.match(step(narrowSteps, 7), /no ticket is size M.*the code stage builds every ticket inline/, 'narrow: says when the implementer will not run');
+assert.match(step(narrowSteps, 5), /never build the feature to watch a check pass/, 'narrow: no throwaway implementation');
+assert.match(step(narrowSteps, 5), /`mktemp -d` directory and remove it before the stage ends/, 'narrow: scratch work is cleaned up');
+const evaluateSkill = read(STAGES_DIR, 'evaluate', 'SKILL.md');
+const evaluateSteps = evaluateSkill.slice(evaluateSkill.indexOf('## Steps'), evaluateSkill.indexOf('## Checks')).split('\n');
+assert.match(step(evaluateSteps, 9), /`mktemp -d` directory.*removed before you report/, 'evaluate: scratch work is cleaned up');
+assert.match(read(STAGES_DIR, 'evaluate', 'formats', 'evidence.md'), /unique within the manifest.*A gap in the numbers is not an error/s, 'evidence: says whether gaps are fine');
+
 // Course text is paraphrased, never copied: no eight-word run of a library file
 // appears in the masterclass playbook. Runs only where the playbook is checked out.
 const PLAYBOOK = '/Users/alex/Documents/harness-masterclass/harness-playbook';

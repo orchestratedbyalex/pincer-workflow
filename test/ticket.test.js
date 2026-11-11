@@ -110,6 +110,8 @@ r = ticket(dir, 'done', 'T-01');
 assert.equal(r.status, 0, both(r));
 assert.equal(fm(dir, file, 'status'), 'done');
 assert.match(fm(dir, file, 'finished'), parse.TIMESTAMP);
+// done runs the check itself, so it cannot tell whether the diff was reviewed: it says so
+assert.match(r.stdout, /✓ T-01 done\. .*commit: T-01: example\n  The self-review of the diff comes before that commit/s);
 assert.match(r.stdout, /T-01: example/);
 r = ticket(dir, 'done', 'T-01');
 assert.equal(r.status, 0, both(r));
