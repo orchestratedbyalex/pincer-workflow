@@ -129,15 +129,28 @@ on every platform.
 
 ## Acceptance
 
-The floor has two halves: a ticket is `done` only on a receipt, and accepted only when
-a named person said so. `accept` writes `accepted`, `accepted_by` and `accepted_words`
-together, and the validator refuses a ticket carrying one or two of the three. The name
-must be in `people` with `accepts: true`; the words are the person's, quoted as they
-said them, never a paraphrase. Acceptance gates nothing in the lifecycle (the next
-ticket may start), but status warns about every done ticket without it and names the
-next step: `/pincer-release` when that stage is on, else the `accept` command itself.
-Release passes only when every done ticket of the change carries it. The agent runs
-`accept` only after the person said so.
+A ticket is `done` only on a receipt and accepted only when a named person said so.
+`accept` writes `accepted`, `accepted_by` and `accepted_words` together; the validator
+refuses a partial trio. The name must be in `people` with `accepts: true`; quote the
+person's words verbatim. Acceptance does not block the next ticket, but status warns
+about each done ticket without it and points to release (or `accept` if release is off).
+Release passes only when every done ticket is accepted. Run `accept` only after the person says so; it never commits or publishes.
+
+Release first audits read-only, allowing only `done without acceptance` warnings; all other warnings fail.
+Record the manifest's evaluated `candidate` and current `audit_head` separately; only retained evidence
+and existing acceptance fields may differ, never implementation, checks, spec or agreement.
+Without evidence, `audit_head` is the candidate. The technical audit starts and ends with a clean tree.
+
+After the person accepts, inspect working-tree, staged and committed diffs against `audit_head`:
+only `accepted`, `accepted_by` and `accepted_words` in those tickets' frontmatter may change.
+Commit separately as `accept: <candidate short sha>`, recording its full `acceptance_commit`;
+skip an empty commit when nothing was newly accepted. Require a clean tree, status without warnings
+and unchanged evidence validated against the original candidate. The verdict names both identities;
+acceptance is not a newly tested candidate. Unexpected changes stop release for re-evaluation.
+
+Branch and PR rules still apply: a required acceptance PR must be merged with passing checks before PASS.
+Never push, merge or publish without the user's authorization. Unanswered acceptance or an incomplete
+required remote step is pending, not passed.
 
 ## Evidence manifest schema 1
 

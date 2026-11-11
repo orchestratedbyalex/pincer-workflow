@@ -1,42 +1,45 @@
 ---
 name: pincer-release
-description: "Read-only audit of the candidate against the release checklist, then the person's acceptance recorded on every ticket"
+description: "Audit the evaluated candidate, record the person's acceptance, and commit only that acceptance before the final clean-tree check"
 argument-hint: "[none]"
 ---
 # Release
 
-Audits the candidate against `docs/release-checklist.md` and records the person's
-acceptance. Read-only: it reports pass or fail per item and fixes nothing; a failure
-goes back to its stage through a new ticket. The one thing it writes is the
-acceptance, through the script, after the person said so. A step that changes the
-tree invalidates the audit: if `git status --short` is not empty afterwards the
-verdict is FAIL and names the change.
+Runs a read-only audit first, then records and commits the person's acceptance.
+The audit fixes nothing: a failed implementation or evidence check returns to its
+stage through a new ticket. Acceptance is a separate, narrowly scoped write after
+the person says yes. Keep the evaluated candidate, the audited checkout and the
+acceptance commit distinct; an acceptance commit is not a new tested implementation.
 
 ## Reads
 - `docs/release-checklist.md`: the items, grouped Tickets, Evidence, Review, Acceptance.
-- `harness.json`: `stages.release.audit` (`tree` or `pr`), `systems.deploy`, `repo.checks`, `repo.pr`, `homes.evidence`, `people` (who may accept).
+- `harness.json`: `stages.release.audit` (`tree` or `pr`), `systems.deploy`, `repo.checks`, `repo.pr`, `repo.branches`, `homes.evidence`, `people` (who may accept).
 - `scripts/pincer-status.sh`: every ticket's state, receipts, acceptances and warnings.
 - The evidence manifest under the evidence home when `stages.evaluate.evidence` is on; the review report.
 - With `pr`: `gh pr view <number> --json state,mergedAt,statusCheckRollup` and `gh pr checks <number>`.
 - Each ticket's `## Done when` and `## How the person checks`.
 
 ## Steps
-1. [session] Run `scripts/pincer-status.sh --stage release`; on a non-zero exit print its message and stop. Then read `harness.json` for the fields above and `docs/release-checklist.md`.
-2. [session] Run the plain `scripts/pincer-status.sh`. Every ticket of the change must be `done` with `verified` on its line and no `Warnings:` block; otherwise the audit already fails and names the ticket.
-3. [session] Audit by `stages.release.audit`. `tree`: `git status --short` is empty; run every command in `repo.checks` (or `npm test` when the list is empty) directly and quote the output; the tree is still empty afterwards. `pr`: the pull request is merged, its checks are green, and when `systems.deploy` names a deploy you observed it ran (a run listed by `gh run list`, or the URL the person gives you). Never run `verify`, `done` or any ticket write here.
-4. [session] Evidence and review: when `stages.evaluate.evidence` is on, `node scripts/pincer-evidence.cjs validate <manifest> --candidate <sha>` prints `ok`, and every artifact it lists is tracked; the review report exists and every finding has a disposition; every fix after evaluate has its own `T-NN:` commit.
-5. [session] Walk the checklist: for each item, pass or fail and one sentence of evidence from status output or git, never a bare pass. Present the table grouped as the checklist is.
-6. [session] Acceptance. Show the person the result and, for each ticket, its `## Done when` lines and how they can check. Ask whether they accept. Only after they say so, for each ticket: `scripts/pincer-ticket.sh accept T-NN --by "<name>" --words "<their words>"`, the name from `people` with `accepts: true`, the words theirs, not a paraphrase. A ticket they do not accept stays as it is and the audit fails on it.
-7. [session] Verdict, one line naming the candidate: `PASS — candidate <sha>: workflow artifacts complete and accepted` or `FAIL — candidate <sha>: <n> items failed; fix via <command>`. A failure that is a workflow bug rather than a run mistake names the project copy under `.claude/skills/` whose steps should be tightened. Then `scripts/pincer-status.sh`.
+1. [session] Run `scripts/pincer-status.sh --stage release`; on a non-zero exit print its message and stop. Read `harness.json` and `docs/release-checklist.md`. Record the full `audit_head` from `git rev-parse HEAD`. With evidence on, record the evaluated `candidate` from its manifest; without evidence, the candidate is `audit_head`. Compare the candidate to `audit_head`: only the retained evaluation artifacts and previously recorded acceptance fields may differ. Any implementation, check, spec or agreement change needs a new evaluation; never relabel an old manifest as the current candidate.
+2. [session] Run `scripts/pincer-status.sh`. Every ticket of the change must be `done` with `verified` on its line. Before acceptance, a `T-NN done without acceptance` warning is expected for an unaccepted ticket and does not block the technical audit; every other warning fails it. Record those tickets as pending acceptance, never as accepted.
+3. [session] Read-only audit. `git status --short` must be empty before and after it, including the index. With `tree`, run every command in `repo.checks` (or `npm test` when empty) directly and quote the output. With `pr`, the implementation pull request must be merged with green checks and the deploy named in `systems.deploy` must have been observed. Do not run `verify`, `done`, `accept` or any other file write during this phase. A check that changes the tree fails the audit; do not clear the change to make it pass.
+4. [session] Evidence and review: with evidence on, run `node scripts/pincer-evidence.cjs validate <manifest> --candidate <candidate>`; it must print `ok`, and every listed artifact must be tracked. The review report must exist and every finding have a disposition; every implementation fix after evaluate needs its own `T-NN:` commit and a new evaluation. Confirm `HEAD` is still `audit_head`.
+5. [session] Present the checklist with evidence per item. Technical items are pass or fail; acceptance items remain pending until the person responds. A technical failure stops here and names the stage to fix it. Otherwise show the result, each ticket's `## Done when` lines, and how to check it, then ask whether the person accepts. This is not a final PASS yet.
+6. [session] Only after the person says so, run `scripts/pincer-ticket.sh accept T-NN --by "<name>" --words "<their words>"` for each ticket they accept. The name must be an acceptor in `people`; quote their actual words, never a paraphrase or a synthetic approval. Do not rewrite an already accepted ticket unless the person explicitly replaces that acceptance. A declined or unanswered ticket stays unaccepted and the final verdict remains pending or failed.
+7. [session] Commit the acceptance separately. Inspect `git diff --name-only`, `git diff --unified=0 -- <accepted ticket paths>`, and the index. The entire diff from `audit_head` may change only `accepted`, `accepted_by`, and `accepted_words` in those tickets' frontmatter; no ticket body, verification receipt, other field, source file or evidence artifact may change. Unexpected changes stop release; do not hide, restore or include them. Stage only the explicit ticket paths, inspect `git diff --cached`, then commit as `accept: <candidate short sha>`. Record the full `acceptance_commit`. If no new acceptance was written, make no empty commit and retain the existing acceptance commit identity. Follow the agreement's branch and PR policy; pushing or merging needs the user's existing authorization or a new explicit instruction. When that policy requires an acceptance PR, keep release pending until it is merged and its required checks pass.
+8. [session] Final check. `git status --short` must be empty. Inspect the committed diff from `audit_head` through the acceptance commit again: only the three acceptance fields in the accepted tickets may differ. Run status: every ticket of the change must be done, verified and accepted by a named person, with no warnings. When evidence is on, revalidate the unchanged evidence against the original `candidate`, not the acceptance commit. A changed artifact, unexpected commit or implementation change fails this check and requires a new evaluation.
+9. [session] Verdict: `PASS — candidate <candidate>, acceptance commit <acceptance_commit>: workflow artifacts complete and accepted` only when all applicable items pass, including any required acceptance PR. Otherwise report `PENDING — candidate <candidate>: <remaining acceptance or publication step>` or `FAIL — candidate <candidate>: <failed items>; fix via <command>`. Name every failed item first. A workflow bug names the project copy under `.claude/skills/` whose steps should change. Finish with `scripts/pincer-status.sh`.
 
 ## Checks
-- `git status --short` is empty after the audit; nothing was repaired, rewritten or published.
-- Every acceptance recorded names a person from `people` with `accepts: true` and quotes their words.
-- The verdict names the candidate and every failed item appears before it.
+- The technical audit changed no files; the acceptance phase changed only the three allowed frontmatter fields and committed them separately.
+- `git status --short` is empty at the end; no implementation change was hidden inside acceptance.
+- Every acceptance names a person from `people` with `accepts: true` and quotes their words.
+- Evidence still validates against its original candidate; the verdict separately names the acceptance commit and any pending remote step.
 
 ## Writes
-- The acceptance fields of each ticket, only through `scripts/pincer-ticket.sh accept`, only after the person said so.
-- Nothing else.
+- The three acceptance fields, only through `scripts/pincer-ticket.sh accept`, only after the person said so.
+- One acceptance-only commit when new acceptance was recorded; any required branch or PR follows the agreement and the user's authorization.
+- No implementation, verification receipt, agreement or evidence edits; no implicit push, merge or publication.
 
 ## Without subagents
 No agents are involved; the audit is the session's own reading of status, git and the evidence.

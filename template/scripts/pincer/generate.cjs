@@ -158,7 +158,9 @@ function renderCodex(stage, fields, body, codex) {
   const sentence = optional
     ? `the text that follows the \`$pincer-${stage}\` mention, if any (when omitted, use the skill's documented default)`
     : `the text that follows the \`$pincer-${stage}\` mention in the user's message (ask only if the required input is missing)`;
-  const text = codexMentions(body.split('$ARGUMENTS').join(sentence));
+  // Replace the whole inline-code placeholder before bare occurrences so the
+  // sentence's own skill code span is not nested inside another pair of ticks.
+  const text = codexMentions(body.replace(/`\$ARGUMENTS`|\$ARGUMENTS/g, () => sentence));
   return `---\nname: pincer-${stage}\ndescription: ${quoted(describe(stage, fields))}\n---\n${generatedComment(skillFile(stage))}\n\n${codexHint(codex)}${bodyText(text)}`;
 }
 function renderCopilot(stage, fields, body, copilot) {

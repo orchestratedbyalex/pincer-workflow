@@ -27,6 +27,32 @@ assert.equal(status(dir, '--stage').status, 2);
 assert.equal(status(dir, '--stage', 'deploy').status, 2);
 assert.equal(status(dir, '--bogus').status, 2);
 
+// Installed platform determines command hints in text, JSON and gate errors.
+for (const [platforms, prefix] of [[['codex'], '$'], [['claude'], '/'], [['copilot'], '/'], [['claude', 'codex'], '/']]) {
+  const installed = tempDir();
+  write(installed, '.pincer.json', JSON.stringify({ platforms }));
+  assert.equal(JSON.parse(status(installed, '--json').stdout).next, `${prefix}pincer-blueprint`);
+  assert.ok(status(installed, '--stage', 'code').stderr.includes(`run ${prefix}pincer-blueprint`));
+  assert.ok(ticket(installed, 'start', 'T-01').stderr.includes(`run ${prefix}pincer-blueprint`));
+  createHarness(installed);
+  assert.equal(lastLine(status(installed).stdout), `Next: ${prefix}pincer-plan <brief>`);
+  createSpec(installed, 'greeting', 'draft');
+  assert.equal(lastLine(status(installed).stdout), `Next: ${prefix}pincer-plan specs/greeting.md (awaiting approval)`);
+  createSpec(installed, 'greeting', 'approved');
+  assert.equal(lastLine(status(installed).stdout), `Next: ${prefix}pincer-narrow`);
+  createTicket(installed);
+  ticket(installed, 'start', 'T-01');
+  assert.equal(JSON.parse(status(installed, '--json').stdout).next, 'scripts/pincer-ticket.sh verify T-01');
+}
+
+// Disabled narrow is never suggested; draft/unknown spec approval is still first.
+const noNarrow = tempDir();
+createHarness(noNarrow, { stages: { narrow: { on: false } } });
+createSpec(noNarrow, 'pending', 'draft');
+assert.match(status(noNarrow).stdout, /Next: \/pincer-plan specs\/pending.md \(awaiting approval\)/);
+createSpec(noNarrow, 'pending', 'approved');
+assert.equal(lastLine(status(noNarrow).stdout), 'Next: /pincer-code');
+
 // A broken harness.json: the report still renders, the problem is a warning, exit 3, no stack trace
 dir = tempDir();
 write(dir, 'harness.json', '{');
@@ -150,6 +176,11 @@ assert.equal(json.harness.project.name, 'example');
 assert.equal(json.harnessProblem, null);
 assert.deepEqual(json.warnings, []);
 assert.equal(json.next, 'all tickets done and accepted');
+
+// A later draft must not disappear behind already accepted historical tickets.
+createSpec(dir, 'next-change', 'draft');
+assert.equal(JSON.parse(status(dir, '--json').stdout).next, '/pincer-plan specs/next-change.md (awaiting approval)');
+createSpec(dir, 'next-change', 'built');
 
 // Models: the agreed tiers appear on their own line after Stages, and in the JSON
 createHarness(dir, { models: { stages: { evaluate: { tier: 'strong', effort: 'high' } }, agents: { 'security-reviewer': 'strong' } }, roster: { evaluate: ['security-reviewer'] } });

@@ -28,7 +28,7 @@ says; add no tool, step or role they did not choose.
   `.claude/skills/pincer-blueprint/formats/harness.md` (every field of `harness.json`)
   and `.claude/skills/pincer-blueprint/formats/roster-rules.md` (how the roster follows the answers).
 - The prompts under `.claude/skills/pincer-blueprint/prompts/`, one per question, named in the steps.
-- `the text that follows the `$pincer-blueprint` mention, if any (when omitted, use the skill's documented default)`: notes the person gave up front. Treat them as pre-filled answers to confirm, not as answers.
+- the text that follows the `$pincer-blueprint` mention, if any (when omitted, use the skill's documented default): notes the person gave up front. Treat them as pre-filled answers to confirm, not as answers.
 
 ## Steps
 1. [session] Run `scripts/pincer-status.sh --stage blueprint` (always `on`; the plain report also says whether `harness.json` exists), then `node scripts/pincer-blueprint.cjs recon --json --network` and read the whole result: `kind`, `reasons`, `facts`, `prefill`, `unavailable`.

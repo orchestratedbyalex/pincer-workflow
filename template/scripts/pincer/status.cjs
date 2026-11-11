@@ -12,6 +12,13 @@ const generate = require('./generate.cjs');
 const SCRIPT = 'scripts/pincer-ticket.sh';
 const { STAGES, ALWAYS_ON, HARNESS_FILE } = harnessModule;
 
+// Only a Codex-only install unambiguously chooses dollar-style skill mentions.
+// Mixed installs keep the shared slash spelling; shell paths are never rewritten.
+function commandMentions(root, text) {
+  const platforms = generate.manifestPlatforms(root);
+  return platforms.length === 1 && platforms[0] === 'codex' ? generate.codexMentions(text) : text;
+}
+
 // Is a ticket's receipt current? Lifted from 0.7: the wording is what a done
 // ticket that needs attention has always shown.
 function readiness(text, fields) {
@@ -97,7 +104,7 @@ function gather(root) {
     if (t.status === 'done' && !t.ready) report.warnings.push(`${t.id} done: ${t.readiness}`);
     if (t.status === 'done' && !t.accepted) report.warnings.push(`${t.id} done without acceptance`);
   }
-  report.next = nextCommand(report);
+  report.next = commandMentions(root, nextCommand(report));
   return report;
 }
 
@@ -107,13 +114,18 @@ function nextCommand(report) {
   const tickets = report.tickets;
   const broken = tickets.find((t) => t.problem);
   if (broken) return `fix ${broken.file}`;
+  const draft = report.stages.plan === 'on' && report.specs.find((s) => !['approved', 'built'].includes(s.status));
   if (report.stages.plan === 'on' && report.specs.length === 0 && tickets.length === 0) return '/pincer-plan <brief>';
-  if (tickets.length === 0) return '/pincer-narrow';
+  if (tickets.length === 0) {
+    if (draft) return `/pincer-plan ${draft.file} (awaiting approval)`;
+    return report.stages.narrow === 'on' ? '/pincer-narrow' : '/pincer-code';
+  }
   const inProgress = tickets.find((t) => t.status === 'in_progress');
   if (inProgress) return `${SCRIPT} verify ${inProgress.id}`;
   if (tickets.some((t) => t.status === 'open')) return '/pincer-code';
   const stale = tickets.find((t) => t.status === 'done' && !t.ready);
   if (stale) return `${SCRIPT} verify ${stale.id}`;
+  if (draft) return `/pincer-plan ${draft.file} (awaiting approval)`;
   if (report.stages.evaluate === 'on' && report.harness.stages.evaluate.evidence && report.evidence.length === 0) return '/pincer-evaluate';
   const unaccepted = tickets.find((t) => t.status === 'done' && !t.accepted);
   if (unaccepted) {
@@ -153,9 +165,9 @@ function stageGate(root, name) {
   if (!STAGES.includes(name)) return { exit: 2, message: `${name} is not a stage (${STAGES.join(', ')})` };
   if (ALWAYS_ON.includes(name)) return { exit: 0, message: 'on' };
   const loaded = harnessModule.load(root);
-  if (!loaded.ok) return { exit: 3, message: loaded.missing ? loaded.message : `${HARNESS_FILE}: ${loaded.message}` };
+  if (!loaded.ok) return { exit: 3, message: loaded.missing ? commandMentions(root, loaded.message) : `${HARNESS_FILE}: ${loaded.message}` };
   if (!harnessModule.stageOn(loaded.harness, name)) return { exit: 3, message: `stage ${name} is off in ${HARNESS_FILE}` };
   return { exit: 0, message: 'on' };
 }
 
-module.exports = { readiness, gather, nextCommand, render, stageGate };
+module.exports = { readiness, gather, nextCommand, render, stageGate, commandMentions };

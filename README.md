@@ -16,7 +16,7 @@ Install it in your project:
 npx pincer-workflow@latest init --platform all
 ```
 
-The same package is also attached to the [GitHub release](https://github.com/orchestratedbyalex/pincer-workflow/releases/tag/v1.0.0).
+The same package is also attached to the [GitHub release](https://github.com/orchestratedbyalex/pincer-workflow/releases/tag/v1.0.1).
 
 Node.js 22+, git and bash are required. PINCER uses your coding tool's own
 authentication; it does not require a provider API key.
@@ -28,8 +28,9 @@ Then start your agent in the repository and run the blueprint:
 $pincer-blueprint                 # Codex CLI
 ```
 
-Until the blueprint has run there is no agreement, and every other stage refuses with
-`no agreement yet: run /pincer-blueprint`. `scripts/pincer-status.sh` works in any
+Until the blueprint has run there is no agreement, and every other stage refuses.
+Codex-only installs point to `$pincer-blueprint`; Claude Code, Copilot and mixed
+installs use `/pincer-blueprint`. A draft spec stays at the plan approval step. `scripts/pincer-status.sh` works in any
 shell from the first minute and always ends with the next command.
 
 ## The journey
@@ -54,7 +55,7 @@ The stages the agreement keeps, and what the interview can bend:
 | narrow | `/pincer-narrow` | spec to tickets with runnable checks | tickets as local files or as forge issues; one ticket per change |
 | code | `/pincer-code` | build tickets in order, one commit each, verify, done | branch per ticket or commit to main; PR or no PR; implementer agent or the main session |
 | evaluate | `/pincer-evaluate` | review the diff with the roster, run the checks, save evidence | review in the PR instead of a local report; evidence on or off; the roster |
-| release | `/pincer-release` | read-only audit, then acceptance recorded | audit a merged PR and a deploy instead of a clean tree; who accepts |
+| release | `/pincer-release` | read-only audit, then acceptance recorded and committed | audit a merged PR and a deploy instead of a clean tree; who accepts |
 | status | `/pincer-status` | where the work stands, the next command | nothing; always on |
 
 Each stage is a short skill with the same six sections (Reads, Steps, Checks, Writes,
@@ -69,7 +70,9 @@ yours to edit; the Codex skills and Copilot prompts are generated from them.
   check, or with an unticked criterion.
 - `scripts/pincer-ticket.sh accept T-NN --by "<name>" --words "<their words>"` records
   the acceptance of a done ticket: a person named in the agreement, quoted. The agent
-  runs it only after the person said so.
+  runs it only after the person said so. Release commits those three acceptance
+  fields separately, checks the final tree is clean, and keeps the evaluated
+  candidate distinct from the acceptance commit.
 - The eight lifecycle fields of a ticket are written only by that script. On Claude
   Code a hook enforces it; on Codex and Copilot it is a standing rule, and status flags
   a missing, failed or stale receipt and every done ticket without acceptance.
@@ -99,7 +102,7 @@ codes, the gate, the manifest, generation, recovery.
 | `.claude/agents/` | the review agents the roster names, with the model of their tier |
 | `.codex/agents/` | the same agents as Codex agent files, generated when Codex is installed |
 | `.claude/pincer/library/models.json` | the tier table: the model each platform runs a tier on |
-| `docs/engine.md`, `docs/release-checklist.md` | the engine contract and the fifteen-item release audit |
+| `docs/engine.md`, `docs/release-checklist.md` | the engine contract and the release audit |
 | `specs/`, `tickets/`, `evidence/` | the default homes, all overridable in `harness.json` |
 
 Secrets never enter the kit: `init` adds `.env`, `.env.*` and `!.env.example` to
@@ -148,9 +151,9 @@ it as `<file>.new`.
 ## Trying it locally before release
 
 ```bash
-npm pack                                           # in this repository: pincer-workflow-1.0.0.tgz
-cp pincer-workflow-1.0.0.tgz ../some-project/ && cd ../some-project
-npx ./pincer-workflow-1.0.0.tgz init --platform all   # the ./ matters: npx treats a bare path as a command
+npm pack                                           # in this repository: pincer-workflow-1.0.1.tgz
+cp pincer-workflow-1.0.1.tgz ../some-project/ && cd ../some-project
+npx ./pincer-workflow-1.0.1.tgz init --platform all   # the ./ matters: npx treats a bare path as a command
 scripts/pincer-status.sh                           # prints "no agreement yet" and "Next: /pincer-blueprint"
 ```
 

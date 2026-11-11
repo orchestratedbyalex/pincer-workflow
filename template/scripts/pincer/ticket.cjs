@@ -9,6 +9,7 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const parse = require('./parse.cjs');
 const harnessModule = require('./harness.cjs');
+const { commandMentions } = require('./status.cjs');
 const { nowIso, atomicWrite } = require('./util.cjs');
 
 const EXIT = { OK: 0, REFUSED: 1, USAGE: 2, HARNESS: 3, INTERRUPTED: 130 };
@@ -24,7 +25,7 @@ const refuse = (message, options) => { throw new Refusal(message, options); };
 // Every verb needs an agreement with the code stage on; tickets live in its home.
 function agreement(root) {
   const loaded = harnessModule.load(root);
-  if (!loaded.ok) refuse(`${harnessModule.HARNESS_FILE}: ${loaded.message}`, { exit: EXIT.HARNESS, prefix: '' });
+  if (!loaded.ok) refuse(`${harnessModule.HARNESS_FILE}: ${loaded.missing ? commandMentions(root, loaded.message) : loaded.message}`, { exit: EXIT.HARNESS, prefix: '' });
   if (!harnessModule.stageOn(loaded.harness, 'code')) refuse(`stage code is off in ${harnessModule.HARNESS_FILE}`, { exit: EXIT.HARNESS, prefix: '' });
   return { harness: loaded.harness, tickets: harnessModule.homes(loaded.harness).tickets };
 }

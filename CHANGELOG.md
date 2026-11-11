@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.1 — 2026-11-11
+
+- Codex-only status and missing-agreement hints use `$pincer-*`; draft specs stay
+  at approval, and disabled narrowing routes directly to code.
+- Generated Codex argument descriptions no longer nest Markdown code spans.
+- Release separates its read-only audit from actual human acceptance and an
+  acceptance-only commit, preserving the evaluated candidate identity.
+- A packed workflow integration test exercises real CLI checks, failure/recovery,
+  evidence integrity and a clearly synthetic acceptance commit.
+
+
 ## 1.0.0 — 2026-11-11
 
 PINCER becomes a harness builder: a project-specific agreement drives the coding
@@ -28,6 +39,6 @@ tickets and evidence separate: old verification and acceptance are not migrated
 into the new lifecycle automatically. Do not delete historical artifacts to make
 status appear clean.
 
-Available on npm as `pincer-workflow@1.0.0` (`latest`) and as a GitHub release
+Available on npm as `pincer-workflow@1.0.0` and as a GitHub release
 tarball. This release has automated fixture and packaged-install validation;
 it makes no comparative productivity or best-in-class claim.

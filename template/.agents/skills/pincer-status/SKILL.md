@@ -18,7 +18,7 @@ Run it first in any new session.
 - The ticket file of any `in_progress` ticket, and `git status`, to offer a resumption.
 
 ## Steps
-1. [session] Run `scripts/pincer-status.sh` with `the text that follows the `$pincer-status` mention, if any (when omitted, use the skill's documented default)` when given (for example `--json`). This stage is always on, so `--stage status` only prints `on`; the plain report is what you need. Read every line, the warnings included.
+1. [session] Run `scripts/pincer-status.sh` with the text that follows the `$pincer-status` mention, if any (when omitted, use the skill's documented default) when given (for example `--json`). This stage is always on, so `--stage status` only prints `on`; the plain report is what you need. Read every line, the warnings included.
 2. [session] Report in three lines: where the work is (project, stages, tickets done and open), what is blocked (warnings, invalid tickets, missing acceptances, a stage that is off and that the next step needs), and the `Next:` line quoted as the script printed it.
 3. [session] If a ticket is `in_progress`: read its file, run `git status`, say what is uncommitted, and offer to resume with the command the report names (usually `scripts/pincer-ticket.sh verify T-NN`).
 4. [session] If a warning names a ticket file (a missing, failed or stale receipt, lifecycle fields edited by hand): say what fixes it (run `verify` again; let the person repair the field) and never restore, reset or rewrite a ticket file to clear it.

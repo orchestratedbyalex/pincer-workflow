@@ -193,10 +193,13 @@ for (const needle of ['roster', 'stages.evaluate.where', 'gh pr comment', 'stage
 const release = read(STAGES_DIR, 'release/SKILL.md');
 for (const needle of ['docs/release-checklist.md', 'stages.release.audit', 'systems.deploy', 'accept', 'scripts/pincer-ticket.sh accept', '--by', '--words', 'PASS', 'FAIL']) assert.ok(release.includes(needle), `release: ${needle}`);
 assert.match(release, /read-only/i);
-// the release checklist: fifteen checkable items in four groups
+// Release explicitly separates source audit, human acceptance and its commit.
+for (const needle of ['audit_head', 'acceptance_commit', 'accepted_words', 'git diff --cached', 'accept: <candidate short sha>', 'PENDING', 'original `candidate`']) assert.ok(release.includes(needle), `release acceptance sequence: ${needle}`);
+// The release checklist keeps its four groups, including acceptance commit safety.
 const checklist = fs.readFileSync(path.join(repo, 'template/docs/release-checklist.md'), 'utf8');
 for (const group of ['## Tickets', '## Evidence', '## Review', '## Acceptance']) assert.ok(checklist.includes(group), `checklist: ${group}`);
-assert.equal(checklist.split('\n').filter((l) => /^- \[ \] /.test(l)).length, 15, 'checklist: fifteen items');
+assert.equal(checklist.split('\n').filter((l) => /^- \[ \] /.test(l)).length, 18, 'checklist: eighteen items');
+for (const needle of ['accepted_by', 'accepted_words', 'audit_head', 'acceptance commit', 'original candidate']) assert.ok(checklist.includes(needle), `checklist: ${needle}`);
 for (const stale of ['pincer-runtime', '.prd/', 'NOTES.md', 'PRD', 'Provenance', 'coverage']) assert.ok(!checklist.includes(stale), `checklist: no ${stale}`);
 // the stages that can be off say what happens then
 for (const stage of harness.OPTIONAL_STAGES) {

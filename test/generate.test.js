@@ -29,6 +29,7 @@ argument-hint: "<brief>"
 Run /pincer-status first, then \`/pincer-narrow\` when the spec is approved.
 Keep scripts/pincer-status.sh and .claude/skills/pincer-plan/prompts/ask.md as written.
 Arguments: $ARGUMENTS
+Quoted arguments: \`$ARGUMENTS\`
 `;
 const STATUS_SKILL = `---
 name: pincer-status
@@ -101,6 +102,8 @@ assert.ok(!/(^|[^A-Za-z0-9_./])\/pincer-/m.test(codex), 'no command mention left
 assert.ok(codex.includes('scripts/pincer-status.sh and .claude/skills/pincer-plan/prompts/ask.md'), codex);
 assert.ok(!codex.includes('$ARGUMENTS'), codex);
 assert.ok(codex.includes('Arguments: the text that follows the `$pincer-plan` mention in the user\'s message (ask only if the required input is missing)'), codex);
+assert.ok(codex.includes('Quoted arguments: the text that follows the `$pincer-plan` mention'), codex);
+assert.ok(!codex.includes('`the text that follows'), 'argument expansion must not nest code spans');
 const codexStatus = read(dir, '.agents/skills/pincer-status/SKILL.md');
 assert.ok(codexStatus.includes('the text that follows the `$pincer-status` mention, if any'), codexStatus);
 assert.ok(codexStatus.includes('\n$pincer-status prints the report.'), codexStatus);
