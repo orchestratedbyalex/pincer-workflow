@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.4 — not released yet
+## 1.0.4 — 2026-11-12
 
 Defects found while verifying 1.0.3 on Claude Code. The guard fixes apply to Claude
 Code, the only platform with a hook; the installer, ticket, status and skill changes

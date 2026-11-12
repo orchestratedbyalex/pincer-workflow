@@ -16,7 +16,7 @@ Install it in your project:
 npx pincer-workflow@latest init --platform all
 ```
 
-The same package is also attached to the [GitHub release](https://github.com/orchestratedbyalex/pincer-workflow/releases/tag/v1.0.3).
+The same package is also attached to the [GitHub release](https://github.com/orchestratedbyalex/pincer-workflow/releases/tag/v1.0.4).
 
 Node.js 22+, git and bash are required. PINCER uses your coding tool's own
 authentication; it does not require a provider API key.
@@ -180,9 +180,9 @@ it, and `update` brings the install to this build.
 ## Trying it locally before release
 
 ```bash
-npm pack                                           # in this repository: pincer-workflow-1.0.3.tgz
-cp pincer-workflow-1.0.3.tgz ../some-project/ && cd ../some-project
-npx ./pincer-workflow-1.0.3.tgz init --platform all   # the ./ matters: npx treats a bare path as a command
+npm pack                                           # in this repository: pincer-workflow-1.0.4.tgz
+cp pincer-workflow-1.0.4.tgz ../some-project/ && cd ../some-project
+npx ./pincer-workflow-1.0.4.tgz init --platform all   # the ./ matters: npx treats a bare path as a command
 scripts/pincer-status.sh                           # prints "no agreement yet" and "Next: /pincer-blueprint"
 ```
 
